@@ -54,8 +54,38 @@ msgstr "把缺耳泰迪熊带回玩具店"
 msgid "map.goal.after_teddy"
 msgstr "它想起了你的名字。"
 
+msgid "map.goal.buy_goldfish"
+msgstr "吃剩的鱼骨  ·  快餐店"
+
+msgid "map.goal.finish_goldfish"
+msgstr "把金鱼带回快餐店"
+
+msgid "map.goal.buy_tape"
+msgstr "反复倒带的磁带  ·  唱片店"
+
+msgid "map.goal.finish_tape"
+msgstr "把磁带带回唱片店"
+
+msgid "map.goal.after_all"
+msgstr "午夜还没有结束。"
+
 msgid "map.notice.teddy_complete"
 msgstr "第一件事，完成了。"
+
+msgid "map.notice.goldfish_complete"
+msgstr "水里多了一尾金色的影子。"
+
+msgid "map.notice.tape_complete"
+msgstr "三件被遗忘的事，回来了。"
+
+msgid "demo.complete.title"
+msgstr "今夜的购物指南"
+
+msgid "demo.complete.body"
+msgstr "泰迪熊记起了名字。\n鱼骨重新游过水面。\n磁带仍在世纪末缓慢转动。"
+
+msgid "demo.complete.continue"
+msgstr "继续逛一会"
 
 msgid "ui.language.tooltip"
 msgstr "Switch to English"
@@ -171,6 +201,12 @@ msgstr "泰迪熊已经不在这里了。"
 msgid "shop.requirement.mirror"
 msgstr "镜占上风"
 
+msgid "shop.requirement.warm"
+msgstr "灯或花占上风"
+
+msgid "shop.requirement.none"
+msgstr "只要恰好填满"
+
 msgid "shop.product.meta"
 msgstr "%s · ¥%d · %d"
 
@@ -248,6 +284,15 @@ msgstr "再逛一会"
 
 msgid "shop.feedback.submitted"
 msgstr "泰迪熊想起了一件事。"
+
+msgid "shop.feedback.submitted_teddy"
+msgstr "泰迪熊想起了一件事。"
+
+msgid "shop.feedback.submitted_goldfish"
+msgstr "鱼骨在水里轻轻摆尾。"
+
+msgid "shop.feedback.submitted_tape"
+msgstr "磁带开始缓慢转动。"
 
 msgid "shop.feedback.not_ready"
 msgstr "还缺一点。"

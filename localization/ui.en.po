@@ -54,8 +54,38 @@ msgstr "Take the one-eared teddy back to the toy store"
 msgid "map.goal.after_teddy"
 msgstr "It remembered your name."
 
+msgid "map.goal.buy_goldfish"
+msgstr "Leftover Fishbone  ·  Fast Food"
+
+msgid "map.goal.finish_goldfish"
+msgstr "Take the goldfish back to the fast-food shop"
+
+msgid "map.goal.buy_tape"
+msgstr "Endlessly Rewinding Tape  ·  Record Store"
+
+msgid "map.goal.finish_tape"
+msgstr "Take the tape back to the record store"
+
+msgid "map.goal.after_all"
+msgstr "Midnight is not over yet."
+
 msgid "map.notice.teddy_complete"
 msgstr "The first thing is done."
+
+msgid "map.notice.goldfish_complete"
+msgstr "A golden shadow has appeared in the water."
+
+msgid "map.notice.tape_complete"
+msgstr "Three forgotten things have returned."
+
+msgid "demo.complete.title"
+msgstr "Tonight's Shopping Guide"
+
+msgid "demo.complete.body"
+msgstr "The teddy remembered its name.\nThe fishbone crossed the water again.\nThe tape keeps turning at the end of the century."
+
+msgid "demo.complete.continue"
+msgstr "Keep Wandering"
 
 msgid "ui.language.tooltip"
 msgstr "切换到中文"
@@ -171,6 +201,12 @@ msgstr "The teddy bear is no longer here."
 msgid "shop.requirement.mirror"
 msgstr "Mirror leads"
 
+msgid "shop.requirement.warm"
+msgstr "Lamp or Flower leads"
+
+msgid "shop.requirement.none"
+msgstr "Just fill it exactly"
+
 msgid "shop.product.meta"
 msgstr "%s · ¥%d · %d"
 
@@ -248,6 +284,15 @@ msgstr "Keep Browsing"
 
 msgid "shop.feedback.submitted"
 msgstr "The teddy bear remembers something."
+
+msgid "shop.feedback.submitted_teddy"
+msgstr "The teddy bear remembers something."
+
+msgid "shop.feedback.submitted_goldfish"
+msgstr "The fishbone stirs softly in the water."
+
+msgid "shop.feedback.submitted_tape"
+msgstr "The tape begins to turn slowly."
 
 msgid "shop.feedback.not_ready"
 msgstr "Something is still missing."

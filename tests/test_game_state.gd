@@ -91,6 +91,42 @@ func test_twenty_one_day_advances_keep_calendar_money_and_inventory_stable() -> 
 	assert_eq(GameState.pieces, [owned])
 
 
+func test_three_events_unlock_in_order_and_complete_only_once() -> void:
+	var fast_food := GameState.transaction_for_store(DemoCatalog.STORE_FAST_FOOD)
+	var record := GameState.transaction_for_store(DemoCatalog.STORE_RECORD)
+	assert_eq(fast_food.available_stock(&"special_fishbone"), 0)
+	assert_eq(record.available_stock(&"special_tape"), 0)
+
+	assert_true(GameState.toy_transaction.add_to_cart(&"special_teddy").ok)
+	assert_true(GameState.checkout_store(DemoCatalog.STORE_TOY).ok)
+	_fill_task_with_monominoes(&"teddy", &"toy_marble", Vector2i(1, 1))
+	assert_true(GameState.submit_task(&"teddy").ok)
+	assert_eq(GameState.world_stage, 1)
+	assert_eq(fast_food.available_stock(&"special_fishbone"), 1)
+	assert_eq(GameState.shopping_goal_key(), &"map.goal.buy_goldfish")
+
+	assert_true(fast_food.add_to_cart(&"special_fishbone").ok)
+	assert_true(GameState.checkout_store(DemoCatalog.STORE_FAST_FOOD).ok)
+	_fill_task_with_monominoes(&"goldfish", &"fast_sugar", Vector2i(1, 2))
+	assert_true(GameState.submit_task(&"goldfish").ok)
+	assert_eq(GameState.world_stage, 2)
+	assert_eq(record.available_stock(&"special_tape"), 1)
+	assert_eq(GameState.shopping_goal_key(), &"map.goal.buy_tape")
+
+	GameState.advance_day()
+	record = GameState.transaction_for_store(DemoCatalog.STORE_RECORD)
+	assert_true(record.add_to_cart(&"special_tape").ok)
+	assert_true(GameState.checkout_store(DemoCatalog.STORE_RECORD).ok)
+	_fill_task_with_monominoes(&"tape", &"book_period", Vector2i(0, 0))
+	assert_true(GameState.submit_task(&"tape").ok)
+
+	assert_eq(GameState.world_stage, 3)
+	assert_true(GameState.all_tasks_completed())
+	assert_eq(GameState.shopping_goal_key(), &"map.goal.after_all")
+	assert_false(GameState.submit_task(&"tape").ok)
+	assert_eq(GameState.wallet.money, 136)
+
+
 func test_incomplete_event_does_not_consume_or_advance_world() -> void:
 	GameState.unlocked_tasks[&"teddy"] = true
 	var special := _placed_piece(1, &"special_teddy", Vector2i(1, 1))
@@ -124,6 +160,37 @@ func _fill_teddy_with_shop_solution() -> void:
 	GameState.pieces.append(_placed_piece(3, &"toy_blocks", Vector2i(3, 0), 2))
 	GameState.pieces.append(_placed_piece(4, &"toy_blocks", Vector2i(0, 3), 2))
 	GameState.pieces.append(_placed_piece(5, &"toy_blocks", Vector2i(3, 3), 1))
+
+
+func _fill_task_with_monominoes(
+	task_id: StringName,
+	filler_item_id: StringName,
+	special_position: Vector2i
+) -> void:
+	var task := DemoCatalog.task_by_id(task_id)
+	var special_id: StringName = GameState.TASK_SPECIALS[task_id]
+	var special: PuzzlePieceState
+	for piece in GameState.pieces:
+		if piece.definition.id == special_id:
+			special = piece
+			break
+	assert_not_null(special)
+	special.location = PuzzlePieceState.Location.BOARD
+	special.task_id = task_id
+	special.grid_position = special_position
+	var occupied: Dictionary = {}
+	for cell in special.occupied_cells():
+		occupied[cell] = true
+	var uid := 1
+	for piece in GameState.pieces:
+		uid = maxi(uid, piece.piece_uid + 1)
+	for cell in task.mask_cells:
+		if occupied.has(cell):
+			continue
+		var filler := _placed_piece(uid, filler_item_id, cell)
+		filler.task_id = task_id
+		GameState.pieces.append(filler)
+		uid += 1
 
 
 func _placed_piece(

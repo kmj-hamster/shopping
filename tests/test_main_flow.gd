@@ -136,6 +136,28 @@ func test_completed_teddy_event_returns_to_map_and_advances_stage() -> void:
 	LocaleManager.set_locale(original_locale, false)
 
 
+func test_third_event_opens_demo_summary_and_continue_keeps_map_playable() -> void:
+	var main = await _spawn_main()
+	for task_id in GameState.TASK_ORDER:
+		GameState.completed_tasks[task_id] = true
+	GameState.world_stage = 3
+
+	main._on_event_completed(&"tape")
+	await get_tree().process_frame
+
+	assert_eq(main.current_view, &"map")
+	assert_true(main.current_screen.demo_complete_panel.visible)
+	assert_true(main.current_screen.demo_complete_scrim.visible)
+	assert_eq(
+		main.current_screen.goal_label.text,
+		"□  " + TranslationServer.translate(&"map.goal.after_all")
+	)
+
+	main.current_screen._on_demo_continue_pressed()
+	assert_false(main.current_screen.demo_complete_panel.visible)
+	assert_eq(main.current_view, &"map")
+
+
 func _spawn_main():
 	var packed := load("res://scenes/main/main.tscn") as PackedScene
 	var main := packed.instantiate()

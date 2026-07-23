@@ -30,7 +30,7 @@ func _show_shop(store_id: StringName = DemoCatalog.STORE_TOY) -> void:
 	shop.store_id = store_id
 	shop.name = "%sShopScreen" % String(store_id).to_pascal_case()
 	shop.leave_requested.connect(_on_shop_leave_requested)
-	shop.event_completed.connect(_on_teddy_event_completed)
+	shop.event_completed.connect(_on_event_completed)
 	shop.next_day_requested.connect(_on_shop_next_day_requested)
 	add_child(shop)
 	current_screen = shop
@@ -54,8 +54,10 @@ func _on_shop_leave_requested() -> void:
 	_show_map()
 
 
-func _on_teddy_event_completed() -> void:
-	_show_map(&"map.notice.teddy_complete")
+func _on_event_completed(task_id: StringName) -> void:
+	_show_map(GameState.event_notice_key(task_id))
+	if GameState.all_tasks_completed():
+		current_screen.show_demo_complete()
 
 
 func _on_next_day_requested() -> void:

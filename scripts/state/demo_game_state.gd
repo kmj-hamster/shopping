@@ -6,6 +6,24 @@ signal task_unlocked(task_id: StringName)
 signal event_completed(task_id: StringName)
 
 const TASK_TEDDY := &"teddy"
+const TASK_GOLDFISH := &"goldfish"
+const TASK_TAPE := &"tape"
+const TASK_ORDER: Array[StringName] = [TASK_TEDDY, TASK_GOLDFISH, TASK_TAPE]
+const TASK_SPECIALS := {
+	TASK_TEDDY: &"special_teddy",
+	TASK_GOLDFISH: &"special_fishbone",
+	TASK_TAPE: &"special_tape",
+}
+const SPECIAL_TASKS := {
+	&"special_teddy": TASK_TEDDY,
+	&"special_fishbone": TASK_GOLDFISH,
+	&"special_tape": TASK_TAPE,
+}
+const TASK_STAGES := {
+	TASK_TEDDY: 0,
+	TASK_GOLDFISH: 1,
+	TASK_TAPE: 2,
+}
 
 var day := 1
 var world_stage := 0
@@ -64,12 +82,10 @@ func checkout_store(store_id: StringName) -> Dictionary:
 		return result
 	for item_id in pending_specials:
 		purchased_special_items[item_id] = true
-	if (
-		purchased_special_items.has(&"special_teddy")
-		and not unlocked_tasks.has(TASK_TEDDY)
-	):
-		unlocked_tasks[TASK_TEDDY] = true
-		task_unlocked.emit(TASK_TEDDY)
+		var task_id: StringName = SPECIAL_TASKS.get(item_id, &"")
+		if not task_id.is_empty() and not unlocked_tasks.has(task_id):
+			unlocked_tasks[task_id] = true
+			task_unlocked.emit(task_id)
 	state_changed.emit()
 	return result
 
@@ -140,14 +156,20 @@ func active_task_ids() -> Array[StringName]:
 func should_show_item(item: ItemDefinition) -> bool:
 	if not item.is_special:
 		return true
-	# The next two special items become player-facing with their events in CP5.
-	return item.id == &"special_teddy"
+	var task_id: StringName = SPECIAL_TASKS.get(item.id, &"")
+	return not task_id.is_empty() and world_stage >= int(TASK_STAGES[task_id])
 
 
 func submit_teddy_event() -> Dictionary:
-	if not is_task_unlocked(TASK_TEDDY) or is_task_completed(TASK_TEDDY):
+	return submit_task(TASK_TEDDY)
+
+
+func submit_task(task_id: StringName) -> Dictionary:
+	if not is_task_unlocked(task_id) or is_task_completed(task_id):
 		return {"ok": false, "reason": &"unavailable"}
-	var task := DemoCatalog.task_by_id(TASK_TEDDY)
+	var task := DemoCatalog.task_by_id(task_id)
+	if task == null:
+		return {"ok": false, "reason": &"unavailable"}
 	var evaluation := PuzzleRules.evaluate(task, pieces)
 	if not evaluation.is_complete:
 		return {"ok": false, "reason": &"incomplete", "evaluation": evaluation}
@@ -161,25 +183,37 @@ func submit_teddy_event() -> Dictionary:
 			consumed.append(piece)
 	for piece in consumed:
 		pieces.erase(piece)
-	completed_tasks[TASK_TEDDY] = true
-	world_stage = 1
+	completed_tasks[task_id] = true
+	world_stage = maxi(world_stage, TASK_ORDER.find(task_id) + 1)
+	_sync_special_stock()
 	state_changed.emit()
-	event_completed.emit(TASK_TEDDY)
+	event_completed.emit(task_id)
 	return {"ok": true, "reason": &"ok", "consumed_count": consumed.size()}
 
 
 func shopping_goal_key() -> StringName:
-	if is_task_completed(TASK_TEDDY):
-		return &"map.goal.after_teddy"
-	if is_task_unlocked(TASK_TEDDY):
-		return &"map.goal.finish_teddy"
-	return &"map.goal.buy_teddy"
+	for task_id in TASK_ORDER:
+		if is_task_completed(task_id):
+			continue
+		if is_task_unlocked(task_id):
+			return StringName("map.goal.finish_%s" % task_id)
+		return StringName("map.goal.buy_%s" % task_id)
+	return &"map.goal.after_all"
 
 
 func shopping_goal_store_id() -> StringName:
-	if not is_task_completed(TASK_TEDDY):
-		return DemoCatalog.STORE_TOY
+	for task_id in TASK_ORDER:
+		if not is_task_completed(task_id):
+			return DemoCatalog.task_by_id(task_id).submit_store_id
 	return &""
+
+
+func event_notice_key(task_id: StringName) -> StringName:
+	return StringName("map.notice.%s_complete" % task_id)
+
+
+func all_tasks_completed() -> bool:
+	return TASK_ORDER.all(func(task_id: StringName) -> bool: return is_task_completed(task_id))
 
 
 func _refresh_store_transactions() -> void:
@@ -192,7 +226,19 @@ func _refresh_store_transactions() -> void:
 			pieces,
 			wallet
 		)
-		for item in DemoCatalog.items_for_store(store_id):
-			if item.is_special and purchased_special_items.has(item.id):
-				transaction.stock_remaining[item.id] = 0
 		store_transactions[store_id] = transaction
+	_sync_special_stock()
+
+
+func _sync_special_stock() -> void:
+	for store_id in DemoCatalog.STORE_IDS:
+		var transaction := transaction_for_store(store_id)
+		if transaction == null:
+			continue
+		for item in DemoCatalog.items_for_store(store_id):
+			if not item.is_special:
+				continue
+			transaction.stock_remaining[item.id] = (
+				0 if purchased_special_items.has(item.id) or not should_show_item(item)
+				else item.daily_limit
+			)

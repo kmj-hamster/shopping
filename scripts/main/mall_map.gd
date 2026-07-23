@@ -21,6 +21,11 @@ var transition_panel: PanelContainer
 var transition_title_label: Label
 var transition_body_label: Label
 var transition_day := 0
+var demo_complete_scrim: ColorRect
+var demo_complete_panel: PanelContainer
+var demo_complete_title: Label
+var demo_complete_body: Label
+var demo_continue_button: Button
 
 
 func _ready() -> void:
@@ -48,6 +53,13 @@ func show_day_transition(result: Dictionary) -> void:
 	schedule_panel.visible = false
 	transition_panel.visible = true
 	_refresh_transition()
+
+
+func show_demo_complete() -> void:
+	schedule_panel.visible = false
+	transition_panel.visible = false
+	demo_complete_scrim.visible = true
+	demo_complete_panel.visible = true
 
 
 func refresh() -> void:
@@ -212,6 +224,40 @@ func _build_interface() -> void:
 	notice_label.add_theme_color_override("font_color", Color("efd18a"))
 	goal_row.add_child(notice_label)
 
+	demo_complete_scrim = ColorRect.new()
+	demo_complete_scrim.color = Color(0.005, 0.02, 0.028, 0.78)
+	demo_complete_scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	demo_complete_scrim.mouse_filter = Control.MOUSE_FILTER_STOP
+	demo_complete_scrim.visible = false
+	add_child(demo_complete_scrim)
+	demo_complete_panel = PanelContainer.new()
+	demo_complete_panel.position = Vector2(390, 175)
+	demo_complete_panel.size = Vector2(500, 350)
+	demo_complete_panel.visible = false
+	demo_complete_panel.add_theme_stylebox_override(
+		"panel", UiPalette.panel_style(Color("06171d", 0.99), Color("d4b66f", 0.95))
+	)
+	add_child(demo_complete_panel)
+	var demo_column := VBoxContainer.new()
+	demo_column.alignment = BoxContainer.ALIGNMENT_CENTER
+	demo_column.add_theme_constant_override("separation", 18)
+	demo_complete_panel.add_child(demo_column)
+	demo_complete_title = Label.new()
+	demo_complete_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	demo_complete_title.add_theme_font_size_override("font_size", 29)
+	demo_complete_title.add_theme_color_override("font_color", Color("efd18a"))
+	demo_column.add_child(demo_complete_title)
+	demo_complete_body = Label.new()
+	demo_complete_body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	demo_complete_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	demo_complete_body.add_theme_font_size_override("font_size", 17)
+	demo_complete_body.add_theme_color_override("font_color", Color("c4d8d4"))
+	demo_column.add_child(demo_complete_body)
+	demo_continue_button = Button.new()
+	demo_continue_button.custom_minimum_size = Vector2(150, 40)
+	demo_continue_button.pressed.connect(_on_demo_continue_pressed)
+	demo_column.add_child(demo_continue_button)
+
 
 func _on_locale_changed(_locale: String) -> void:
 	_apply_locale_texts()
@@ -225,6 +271,9 @@ func _apply_locale_texts() -> void:
 	schedule_button.text = TranslationServer.translate(&"map.schedule")
 	next_day_button.text = TranslationServer.translate(&"map.next_day")
 	schedule_title_label.text = TranslationServer.translate(&"map.schedule.title")
+	demo_complete_title.text = TranslationServer.translate(&"demo.complete.title")
+	demo_complete_body.text = TranslationServer.translate(&"demo.complete.body")
+	demo_continue_button.text = TranslationServer.translate(&"demo.complete.continue")
 	_refresh_transition()
 	_refresh_notice()
 
@@ -328,3 +377,8 @@ func _on_store_pressed(store_id: StringName) -> void:
 
 func _on_schedule_pressed() -> void:
 	schedule_panel.visible = not schedule_panel.visible
+
+
+func _on_demo_continue_pressed() -> void:
+	demo_complete_scrim.visible = false
+	demo_complete_panel.visible = false

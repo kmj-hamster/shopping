@@ -1,7 +1,7 @@
 extends Control
 
 signal leave_requested
-signal event_completed
+signal event_completed(task_id: StringName)
 signal next_day_requested
 
 var store_id: StringName = DemoCatalog.STORE_TOY
@@ -383,7 +383,7 @@ func _refresh_status() -> void:
 	stats_row.visible = task_active
 	locked_label.visible = not task_active
 	requirement_label.visible = task_active
-	if task_ids.is_empty() and GameState.is_task_completed(&"teddy"):
+	if task_ids.is_empty() and GameState.all_tasks_completed():
 		task_title_label.text = TranslationServer.translate(&"shop.event.complete_title")
 		locked_label.text = TranslationServer.translate(&"shop.event.complete_whisper")
 		talk_button.text = TranslationServer.translate(&"shop.talk")
@@ -398,6 +398,8 @@ func _refresh_status() -> void:
 		talk_button.text = TranslationServer.translate(&"shop.talk")
 	var result := PuzzleRules.evaluate(task, pieces)
 	coverage_label.text = "%d / %d" % [result.covered_count, result.total_count]
+	if task_active:
+		_refresh_requirement(result.attribute_ok)
 	for attribute in attribute_labels:
 		var label: Label = attribute_labels[attribute]
 		label.text = "%s %d" % [UiPalette.attribute_name(attribute), result.attribute_totals[attribute]]
@@ -458,16 +460,22 @@ func _on_next_day_cancelled() -> void:
 
 
 func _on_talk_pressed() -> void:
-	if task_ids.is_empty() and GameState.is_task_completed(&"teddy") and store_id == DemoCatalog.STORE_TOY:
+	if task_ids.is_empty() and GameState.all_tasks_completed():
 		_show_feedback(TranslationServer.translate(&"shop.feedback.owner_after"), true)
 		return
 	if task == null or not GameState.is_task_unlocked(task.id) or store_id != task.submit_store_id:
 		_show_feedback(TranslationServer.translate(&"shop.feedback.owner_quiet"))
 		return
-	var result := GameState.submit_teddy_event()
+	var completed_task_id := task.id
+	var result := GameState.submit_task(completed_task_id)
 	if result.ok:
-		_show_feedback(TranslationServer.translate(&"shop.feedback.submitted"), true)
-		event_completed.emit()
+		_show_feedback(
+			TranslationServer.translate(
+				StringName("shop.feedback.submitted_%s" % completed_task_id)
+			),
+			true
+		)
+		event_completed.emit(completed_task_id)
 	else:
 		_show_feedback(TranslationServer.translate(&"shop.feedback.not_ready"))
 	_queue_refresh()
@@ -520,8 +528,6 @@ func _apply_locale_texts() -> void:
 	next_day_button.text = TranslationServer.translate(&"map.next_day")
 	shelf_tabs.set_tab_title(0, TranslationServer.translate(&"shop.tab.goods"))
 	shelf_tabs.set_tab_title(1, TranslationServer.translate(&"shop.tab.bag"))
-	requirement_label.text = "◆ " + TranslationServer.translate(&"shop.requirement.mirror")
-	requirement_label.tooltip_text = TranslationServer.translate(&"ui.requirement.mirror_unmet")
 	cancel_button.text = TranslationServer.translate(&"shop.cancel")
 	checkout_button.text = TranslationServer.translate(&"shop.checkout")
 	next_day_confirmation_title.text = TranslationServer.translate(&"shop.next_day.title")
@@ -558,3 +564,27 @@ func _on_task_tab_changed(index: int) -> void:
 	task = DemoCatalog.task_by_id(task_ids[index])
 	puzzle_board.set_context(task, pieces)
 	_refresh_status()
+
+
+func _refresh_requirement(is_satisfied: bool) -> void:
+	match task.attribute_rule:
+		TaskDefinition.AttributeRule.MIRROR_STRICT:
+			requirement_label.text = "◆ " + TranslationServer.translate(&"shop.requirement.mirror")
+			requirement_label.tooltip_text = TranslationServer.translate(
+				&"ui.requirement.mirror_met" if is_satisfied else &"ui.requirement.mirror_unmet"
+			)
+			requirement_label.add_theme_color_override(
+				"font_color", UiPalette.attribute_color(ItemDefinition.ATTRIBUTE_MIRROR)
+			)
+		TaskDefinition.AttributeRule.LAMP_OR_FLOWER:
+			requirement_label.text = "◆ " + TranslationServer.translate(&"shop.requirement.warm")
+			requirement_label.tooltip_text = TranslationServer.translate(
+				&"ui.requirement.warm_met" if is_satisfied else &"ui.requirement.warm_unmet"
+			)
+			requirement_label.add_theme_color_override(
+				"font_color", UiPalette.attribute_color(ItemDefinition.ATTRIBUTE_LAMP)
+			)
+		_:
+			requirement_label.text = "◆ " + TranslationServer.translate(&"shop.requirement.none")
+			requirement_label.tooltip_text = TranslationServer.translate(&"ui.requirement.none")
+			requirement_label.add_theme_color_override("font_color", Color("a7bcb9"))
