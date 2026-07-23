@@ -10,7 +10,15 @@ const RESULT_INSUFFICIENT_FUNDS := &"insufficient_funds"
 const RESULT_WRONG_STORE := &"wrong_store"
 
 var store_id: StringName
-var money := 100
+var wallet: PlayerWallet
+var money: int:
+	get:
+		return wallet.money if wallet != null else 0
+	set(value):
+		if wallet == null:
+			wallet = PlayerWallet.new(value)
+		else:
+			wallet.money = value
 var pieces: Array[PuzzlePieceState] = []
 var stock_remaining: Dictionary = {}
 var item_definitions: Dictionary = {}
@@ -20,10 +28,11 @@ func _init(
 	selected_store_id: StringName = &"",
 	starting_money: int = 100,
 	store_items: Array[ItemDefinition] = [],
-	piece_states: Array[PuzzlePieceState] = []
+	piece_states: Array[PuzzlePieceState] = [],
+	shared_wallet: PlayerWallet = null
 ) -> void:
 	store_id = selected_store_id
-	money = starting_money
+	wallet = shared_wallet if shared_wallet != null else PlayerWallet.new(starting_money)
 	pieces = piece_states
 	for item in store_items:
 		item_definitions[item.id] = item

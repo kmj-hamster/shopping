@@ -18,9 +18,9 @@ func test_map_source_asset_exists() -> void:
 func test_player_facing_shop_scene_is_the_main_scene() -> void:
 	assert_eq(
 		ProjectSettings.get_setting("application/run/main_scene"),
-		"res://scenes/shop_lab/shop_lab.tscn"
+		"res://scenes/main/main.tscn"
 	)
-	var scene := load("res://scenes/shop_lab/shop_lab.tscn") as PackedScene
+	var scene := load("res://scenes/main/main.tscn") as PackedScene
 	assert_not_null(scene)
 
 

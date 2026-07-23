@@ -9,6 +9,27 @@ msgstr ""
 msgid "app.title"
 msgstr "Millennium Shopping Guide · Puzzle Lab"
 
+msgid "game.title"
+msgstr "Millennium Shopping Guide"
+
+msgid "map.day_money"
+msgstr "Night %d  ·  ¥%d"
+
+msgid "map.open"
+msgstr "LIGHTS ON"
+
+msgid "map.goal.buy_teddy"
+msgstr "One-Eared Teddy  ·  Toy Store"
+
+msgid "map.goal.finish_teddy"
+msgstr "Take the one-eared teddy back to the toy store"
+
+msgid "map.goal.after_teddy"
+msgstr "It remembered your name."
+
+msgid "map.notice.teddy_complete"
+msgstr "The first thing is done."
+
 msgid "ui.language.tooltip"
 msgstr "切换到中文"
 
@@ -102,6 +123,24 @@ msgstr "Put Back"
 msgid "shop.checkout"
 msgstr "Checkout"
 
+msgid "shop.talk"
+msgstr "Talk"
+
+msgid "shop.submit"
+msgstr "Hand Over"
+
+msgid "shop.counter.title"
+msgstr "Beyond the Counter"
+
+msgid "shop.counter.whisper"
+msgstr "Something is waiting."
+
+msgid "shop.event.complete_title"
+msgstr "The Empty Place"
+
+msgid "shop.event.complete_whisper"
+msgstr "The teddy bear is no longer here."
+
 msgid "shop.requirement.mirror"
 msgstr "Mirror leads"
 
@@ -155,6 +194,18 @@ msgstr "There is nothing to ring up yet."
 
 msgid "shop.feedback.failed"
 msgstr "The register stays silent."
+
+msgid "shop.feedback.owner_before"
+msgstr "The mannequin behind the shelves gives a small nod."
+
+msgid "shop.feedback.owner_after"
+msgstr "The owner passes you an old paper tag."
+
+msgid "shop.feedback.submitted"
+msgstr "The teddy bear remembers something."
+
+msgid "shop.feedback.not_ready"
+msgstr "Something is still missing."
 
 msgid "feedback.complete"
 msgstr "✓ Complete. Shape, special item, and attribute conditions all pass."

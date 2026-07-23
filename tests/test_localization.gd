@@ -55,6 +55,11 @@ func test_infinite_palette_and_drag_instructions_are_translated() -> void:
 
 func test_sparse_shop_interface_is_translated() -> void:
 	var keys := [
+		&"game.title",
+		&"map.day_money",
+		&"map.goal.buy_teddy",
+		&"map.goal.finish_teddy",
+		&"map.goal.after_teddy",
 		&"shop.tab.goods",
 		&"shop.tab.bag",
 		&"shop.product.meta",

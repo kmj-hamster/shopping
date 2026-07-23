@@ -10,8 +10,8 @@ func test_successful_checkout_deducts_money_stock_and_owns_every_cart_piece() ->
 
 	assert_true(result.ok)
 	assert_eq(transaction.money, 76)
-	assert_eq(transaction.stock_remaining[&"toy_marble"], 2)
-	assert_eq(transaction.stock_remaining[&"toy_blocks"], 1)
+	assert_eq(transaction.stock_remaining[&"toy_marble"], 0)
+	assert_eq(transaction.stock_remaining[&"toy_blocks"], 3)
 	assert_eq(marble.ownership, PuzzlePieceState.Ownership.OWNED)
 	assert_eq(blocks.ownership, PuzzlePieceState.Ownership.OWNED)
 

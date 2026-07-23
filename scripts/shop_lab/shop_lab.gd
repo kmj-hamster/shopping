@@ -1,5 +1,8 @@
 extends Control
 
+signal leave_requested
+signal event_completed
+
 var transaction: ShopTransaction
 var pieces: Array[PuzzlePieceState] = []
 var task: TaskDefinition
@@ -14,11 +17,15 @@ var shelf_tabs: TabBar
 var shelf_list: VBoxContainer
 var task_title_label: Label
 var requirement_label: Label
+var locked_label: Label
+var board_center: CenterContainer
 var puzzle_board: PuzzleBoard
 var coverage_label: Label
+var stats_row: HBoxContainer
 var attribute_labels: Dictionary = {}
 var feedback_label: Label
 var cart_label: Label
+var talk_button: Button
 var cancel_button: Button
 var checkout_button: Button
 
@@ -30,6 +37,7 @@ func _ready() -> void:
 	puzzle_board.return_removed_to_inventory = true
 	puzzle_board.state_changed.connect(_queue_refresh)
 	puzzle_board.interaction_message.connect(_show_feedback)
+	GameState.state_changed.connect(_queue_refresh)
 	LocaleManager.locale_changed.connect(_on_locale_changed)
 	_apply_locale_texts()
 	_show_feedback(TranslationServer.translate(&"shop.feedback.ready"))
@@ -72,17 +80,8 @@ func _rotate_drag_data(data: Variant) -> bool:
 
 func _create_model() -> void:
 	task = DemoCatalog.task_by_id(&"teddy")
-	var uid := 1
-	for item_id in [&"book_bookmark", &"fast_straw"]:
-		var piece := PuzzlePieceState.new(uid, DemoCatalog.item_by_id(item_id))
-		pieces.append(piece)
-		uid += 1
-	transaction = ShopTransaction.new(
-		DemoCatalog.STORE_TOY,
-		100,
-		DemoCatalog.items_for_store(DemoCatalog.STORE_TOY),
-		pieces
-	)
+	transaction = GameState.toy_transaction
+	pieces = GameState.pieces
 
 
 func _build_interface() -> void:
@@ -206,20 +205,28 @@ func _build_interface() -> void:
 	requirement_label.add_theme_color_override("font_color", UiPalette.attribute_color(ItemDefinition.ATTRIBUTE_MIRROR))
 	task_header.add_child(requirement_label)
 
-	var board_center := CenterContainer.new()
+	locked_label = Label.new()
+	locked_label.name = "CounterWhisper"
+	locked_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	locked_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	locked_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	locked_label.add_theme_font_size_override("font_size", 18)
+	locked_label.add_theme_color_override("font_color", Color("77999a"))
+	workspace.add_child(locked_label)
+	board_center = CenterContainer.new()
 	board_center.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	workspace.add_child(board_center)
 	puzzle_board = PuzzleBoard.new()
 	puzzle_board.name = "PuzzleBoard"
 	board_center.add_child(puzzle_board)
 
-	var stats := HBoxContainer.new()
-	stats.alignment = BoxContainer.ALIGNMENT_CENTER
-	stats.add_theme_constant_override("separation", 14)
-	workspace.add_child(stats)
+	stats_row = HBoxContainer.new()
+	stats_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	stats_row.add_theme_constant_override("separation", 14)
+	workspace.add_child(stats_row)
 	coverage_label = Label.new()
 	coverage_label.add_theme_color_override("font_color", Color("aec7c7"))
-	stats.add_child(coverage_label)
+	stats_row.add_child(coverage_label)
 	for attribute in [
 		ItemDefinition.ATTRIBUTE_LAMP,
 		ItemDefinition.ATTRIBUTE_MIRROR,
@@ -229,7 +236,7 @@ func _build_interface() -> void:
 		var label := Label.new()
 		label.add_theme_color_override("font_color", UiPalette.attribute_color(attribute))
 		attribute_labels[attribute] = label
-		stats.add_child(label)
+		stats_row.add_child(label)
 	feedback_label = Label.new()
 	feedback_label.name = "Whisper"
 	feedback_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -249,6 +256,10 @@ func _build_interface() -> void:
 	cart_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cart_label.add_theme_font_size_override("font_size", 18)
 	cart_row.add_child(cart_label)
+	talk_button = Button.new()
+	talk_button.custom_minimum_size = Vector2(84, 38)
+	talk_button.pressed.connect(_on_talk_pressed)
+	cart_row.add_child(talk_button)
 	cancel_button = Button.new()
 	cancel_button.custom_minimum_size = Vector2(84, 38)
 	cancel_button.pressed.connect(_on_cancel_pressed)
@@ -299,6 +310,25 @@ func _refresh_status() -> void:
 	]
 	cancel_button.disabled = transaction.cart_count() == 0
 	checkout_button.disabled = transaction.cart_count() == 0
+	var task_active := (
+		GameState.is_task_unlocked(&"teddy")
+		and not GameState.is_task_completed(&"teddy")
+	)
+	board_center.visible = task_active
+	stats_row.visible = task_active
+	locked_label.visible = not task_active
+	requirement_label.visible = task_active
+	if GameState.is_task_completed(&"teddy"):
+		task_title_label.text = TranslationServer.translate(&"shop.event.complete_title")
+		locked_label.text = TranslationServer.translate(&"shop.event.complete_whisper")
+		talk_button.text = TranslationServer.translate(&"shop.talk")
+	elif task_active:
+		task_title_label.text = TranslationServer.translate(&"task.teddy.title")
+		talk_button.text = TranslationServer.translate(&"shop.submit")
+	else:
+		task_title_label.text = TranslationServer.translate(&"shop.counter.title")
+		locked_label.text = TranslationServer.translate(&"shop.counter.whisper")
+		talk_button.text = TranslationServer.translate(&"shop.talk")
 	var result := PuzzleRules.evaluate(task, pieces)
 	coverage_label.text = "%d / %d" % [result.covered_count, result.total_count]
 	for attribute in attribute_labels:
@@ -322,7 +352,7 @@ func _on_remove_requested(piece: PuzzlePieceState) -> void:
 
 
 func _on_checkout_pressed() -> void:
-	var result := transaction.checkout()
+	var result := GameState.checkout_toy_store()
 	if result.ok:
 		_show_feedback(TranslationServer.translate(&"shop.feedback.paid"), true)
 	else:
@@ -331,14 +361,29 @@ func _on_checkout_pressed() -> void:
 
 
 func _on_cancel_pressed() -> void:
-	if transaction.cancel_cart() > 0:
+	if GameState.cancel_toy_cart() > 0:
 		_show_feedback(TranslationServer.translate(&"shop.feedback.cancelled"))
 	_queue_refresh()
 
 
 func _on_leave_pressed() -> void:
-	transaction.cancel_cart()
-	_show_feedback(TranslationServer.translate(&"shop.feedback.left"))
+	GameState.cancel_toy_cart()
+	leave_requested.emit()
+
+
+func _on_talk_pressed() -> void:
+	if GameState.is_task_completed(&"teddy"):
+		_show_feedback(TranslationServer.translate(&"shop.feedback.owner_after"), true)
+		return
+	if not GameState.is_task_unlocked(&"teddy"):
+		_show_feedback(TranslationServer.translate(&"shop.feedback.owner_before"))
+		return
+	var result := GameState.submit_teddy_event()
+	if result.ok:
+		_show_feedback(TranslationServer.translate(&"shop.feedback.submitted"), true)
+		event_completed.emit()
+	else:
+		_show_feedback(TranslationServer.translate(&"shop.feedback.not_ready"))
 	_queue_refresh()
 
 
@@ -386,7 +431,6 @@ func _apply_locale_texts() -> void:
 	leave_button.text = TranslationServer.translate(&"shop.leave")
 	shelf_tabs.set_tab_title(0, TranslationServer.translate(&"shop.tab.goods"))
 	shelf_tabs.set_tab_title(1, TranslationServer.translate(&"shop.tab.bag"))
-	task_title_label.text = TranslationServer.translate(&"task.teddy.title")
 	requirement_label.text = "◆ " + TranslationServer.translate(&"shop.requirement.mirror")
 	requirement_label.tooltip_text = TranslationServer.translate(&"ui.requirement.mirror_unmet")
 	cancel_button.text = TranslationServer.translate(&"shop.cancel")
