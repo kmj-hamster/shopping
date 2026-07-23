@@ -2,19 +2,24 @@ extends Control
 
 signal leave_requested
 signal event_completed
+signal next_day_requested
 
+var store_id: StringName = DemoCatalog.STORE_TOY
 var transaction: ShopTransaction
 var pieces: Array[PuzzlePieceState] = []
 var task: TaskDefinition
+var task_ids: Array[StringName] = []
 var refresh_queued := false
 
 var store_name_label: Label
 var clock_label: Label
 var money_label: Label
 var language_button: Button
+var next_day_button: Button
 var leave_button: Button
 var shelf_tabs: TabBar
 var shelf_list: VBoxContainer
+var task_tabs: TabBar
 var task_title_label: Label
 var requirement_label: Label
 var locked_label: Label
@@ -28,6 +33,12 @@ var cart_label: Label
 var talk_button: Button
 var cancel_button: Button
 var checkout_button: Button
+var next_day_scrim: ColorRect
+var next_day_confirmation: PanelContainer
+var next_day_confirmation_title: Label
+var next_day_confirmation_body: Label
+var next_day_confirm_button: Button
+var next_day_cancel_button: Button
 
 
 func _ready() -> void:
@@ -80,7 +91,7 @@ func _rotate_drag_data(data: Variant) -> bool:
 
 func _create_model() -> void:
 	task = DemoCatalog.task_by_id(&"teddy")
-	transaction = GameState.toy_transaction
+	transaction = GameState.transaction_for_store(store_id)
 	pieces = GameState.pieces
 
 
@@ -148,6 +159,10 @@ func _build_interface() -> void:
 	language_button.custom_minimum_size = Vector2(56, 38)
 	language_button.pressed.connect(LocaleManager.toggle_locale)
 	top_bar.add_child(language_button)
+	next_day_button = Button.new()
+	next_day_button.custom_minimum_size = Vector2(82, 38)
+	next_day_button.pressed.connect(_on_next_day_pressed)
+	top_bar.add_child(next_day_button)
 	leave_button = Button.new()
 	leave_button.custom_minimum_size = Vector2(68, 38)
 	leave_button.pressed.connect(_on_leave_pressed)
@@ -194,6 +209,11 @@ func _build_interface() -> void:
 	var workspace := VBoxContainer.new()
 	workspace.add_theme_constant_override("separation", 9)
 	work_frame.add_child(workspace)
+	task_tabs = TabBar.new()
+	task_tabs.name = "TaskTabs"
+	task_tabs.visible = false
+	task_tabs.tab_changed.connect(_on_task_tab_changed)
+	workspace.add_child(task_tabs)
 	var task_header := HBoxContainer.new()
 	workspace.add_child(task_header)
 	task_title_label = Label.new()
@@ -269,8 +289,50 @@ func _build_interface() -> void:
 	checkout_button.pressed.connect(_on_checkout_pressed)
 	cart_row.add_child(checkout_button)
 
+	next_day_scrim = ColorRect.new()
+	next_day_scrim.color = Color(0.005, 0.02, 0.028, 0.72)
+	next_day_scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	next_day_scrim.mouse_filter = Control.MOUSE_FILTER_STOP
+	next_day_scrim.visible = false
+	add_child(next_day_scrim)
+	next_day_confirmation = PanelContainer.new()
+	next_day_confirmation.position = Vector2(472, 235)
+	next_day_confirmation.size = Vector2(336, 210)
+	next_day_confirmation.visible = false
+	next_day_confirmation.add_theme_stylebox_override(
+		"panel", UiPalette.panel_style(Color("071a20", 0.99), Color("d4b66f", 0.94))
+	)
+	add_child(next_day_confirmation)
+	var confirmation_column := VBoxContainer.new()
+	confirmation_column.alignment = BoxContainer.ALIGNMENT_CENTER
+	confirmation_column.add_theme_constant_override("separation", 14)
+	next_day_confirmation.add_child(confirmation_column)
+	next_day_confirmation_title = Label.new()
+	next_day_confirmation_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	next_day_confirmation_title.add_theme_font_size_override("font_size", 22)
+	next_day_confirmation_title.add_theme_color_override("font_color", Color("efd18a"))
+	confirmation_column.add_child(next_day_confirmation_title)
+	next_day_confirmation_body = Label.new()
+	next_day_confirmation_body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	next_day_confirmation_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	next_day_confirmation_body.add_theme_color_override("font_color", Color("b8ceca"))
+	confirmation_column.add_child(next_day_confirmation_body)
+	var confirmation_actions := HBoxContainer.new()
+	confirmation_actions.alignment = BoxContainer.ALIGNMENT_CENTER
+	confirmation_actions.add_theme_constant_override("separation", 10)
+	confirmation_column.add_child(confirmation_actions)
+	next_day_cancel_button = Button.new()
+	next_day_cancel_button.custom_minimum_size = Vector2(112, 38)
+	next_day_cancel_button.pressed.connect(_on_next_day_cancelled)
+	confirmation_actions.add_child(next_day_cancel_button)
+	next_day_confirm_button = Button.new()
+	next_day_confirm_button.custom_minimum_size = Vector2(112, 38)
+	next_day_confirm_button.pressed.connect(_on_next_day_confirmed)
+	confirmation_actions.add_child(next_day_confirm_button)
+
 
 func _refresh_all() -> void:
+	_sync_task_tabs()
 	_refresh_shelf()
 	_refresh_status()
 	puzzle_board.queue_redraw()
@@ -280,7 +342,9 @@ func _refresh_shelf() -> void:
 	for child in shelf_list.get_children():
 		child.free()
 	if shelf_tabs.current_tab == 0:
-		for definition in DemoCatalog.items_for_store(DemoCatalog.STORE_TOY):
+		for definition in DemoCatalog.items_for_store(store_id):
+			if not GameState.should_show_item(definition):
+				continue
 			var card := ShopProductCard.new()
 			card.setup(definition, transaction.available_stock(definition.id), puzzle_board.cell_size)
 			card.add_requested.connect(_on_product_add_requested)
@@ -311,20 +375,23 @@ func _refresh_status() -> void:
 	cancel_button.disabled = transaction.cart_count() == 0
 	checkout_button.disabled = transaction.cart_count() == 0
 	var task_active := (
-		GameState.is_task_unlocked(&"teddy")
-		and not GameState.is_task_completed(&"teddy")
+		task != null
+		and GameState.is_task_unlocked(task.id)
+		and not GameState.is_task_completed(task.id)
 	)
 	board_center.visible = task_active
 	stats_row.visible = task_active
 	locked_label.visible = not task_active
 	requirement_label.visible = task_active
-	if GameState.is_task_completed(&"teddy"):
+	if task_ids.is_empty() and GameState.is_task_completed(&"teddy"):
 		task_title_label.text = TranslationServer.translate(&"shop.event.complete_title")
 		locked_label.text = TranslationServer.translate(&"shop.event.complete_whisper")
 		talk_button.text = TranslationServer.translate(&"shop.talk")
 	elif task_active:
-		task_title_label.text = TranslationServer.translate(&"task.teddy.title")
-		talk_button.text = TranslationServer.translate(&"shop.submit")
+		task_title_label.text = task.localized_name()
+		talk_button.text = TranslationServer.translate(
+			&"shop.submit" if store_id == task.submit_store_id else &"shop.talk"
+		)
 	else:
 		task_title_label.text = TranslationServer.translate(&"shop.counter.title")
 		locked_label.text = TranslationServer.translate(&"shop.counter.whisper")
@@ -352,7 +419,7 @@ func _on_remove_requested(piece: PuzzlePieceState) -> void:
 
 
 func _on_checkout_pressed() -> void:
-	var result := GameState.checkout_toy_store()
+	var result := GameState.checkout_store(store_id)
 	if result.ok:
 		_show_feedback(TranslationServer.translate(&"shop.feedback.paid"), true)
 	else:
@@ -361,22 +428,41 @@ func _on_checkout_pressed() -> void:
 
 
 func _on_cancel_pressed() -> void:
-	if GameState.cancel_toy_cart() > 0:
+	if GameState.cancel_store_cart(store_id) > 0:
 		_show_feedback(TranslationServer.translate(&"shop.feedback.cancelled"))
 	_queue_refresh()
 
 
 func _on_leave_pressed() -> void:
-	GameState.cancel_toy_cart()
+	GameState.cancel_store_cart(store_id)
 	leave_requested.emit()
 
 
+func _on_next_day_pressed() -> void:
+	if transaction.cart_count() > 0:
+		next_day_scrim.visible = true
+		next_day_confirmation.visible = true
+	else:
+		next_day_requested.emit()
+
+
+func _on_next_day_confirmed() -> void:
+	next_day_scrim.visible = false
+	next_day_confirmation.visible = false
+	next_day_requested.emit()
+
+
+func _on_next_day_cancelled() -> void:
+	next_day_scrim.visible = false
+	next_day_confirmation.visible = false
+
+
 func _on_talk_pressed() -> void:
-	if GameState.is_task_completed(&"teddy"):
+	if task_ids.is_empty() and GameState.is_task_completed(&"teddy") and store_id == DemoCatalog.STORE_TOY:
 		_show_feedback(TranslationServer.translate(&"shop.feedback.owner_after"), true)
 		return
-	if not GameState.is_task_unlocked(&"teddy"):
-		_show_feedback(TranslationServer.translate(&"shop.feedback.owner_before"))
+	if task == null or not GameState.is_task_unlocked(task.id) or store_id != task.submit_store_id:
+		_show_feedback(TranslationServer.translate(&"shop.feedback.owner_quiet"))
 		return
 	var result := GameState.submit_teddy_event()
 	if result.ok:
@@ -395,6 +481,8 @@ func _failure_text(reason: StringName) -> String:
 			return TranslationServer.translate(&"shop.feedback.no_stock")
 		ShopTransaction.RESULT_EMPTY:
 			return TranslationServer.translate(&"shop.feedback.empty_cart")
+		&"store_closed":
+			return TranslationServer.translate(&"shop.feedback.closed")
 		_:
 			return TranslationServer.translate(&"shop.feedback.failed")
 
@@ -425,13 +513,48 @@ func _on_locale_changed(_locale: String) -> void:
 
 
 func _apply_locale_texts() -> void:
-	store_name_label.text = TranslationServer.translate(&"store.toy")
+	store_name_label.text = TranslationServer.translate(DemoCatalog.store_name_key(store_id))
 	language_button.text = LocaleManager.switch_button_text()
 	language_button.tooltip_text = TranslationServer.translate(&"ui.language.tooltip")
 	leave_button.text = TranslationServer.translate(&"shop.leave")
+	next_day_button.text = TranslationServer.translate(&"map.next_day")
 	shelf_tabs.set_tab_title(0, TranslationServer.translate(&"shop.tab.goods"))
 	shelf_tabs.set_tab_title(1, TranslationServer.translate(&"shop.tab.bag"))
 	requirement_label.text = "◆ " + TranslationServer.translate(&"shop.requirement.mirror")
 	requirement_label.tooltip_text = TranslationServer.translate(&"ui.requirement.mirror_unmet")
 	cancel_button.text = TranslationServer.translate(&"shop.cancel")
 	checkout_button.text = TranslationServer.translate(&"shop.checkout")
+	next_day_confirmation_title.text = TranslationServer.translate(&"shop.next_day.title")
+	next_day_confirmation_body.text = TranslationServer.translate(&"shop.next_day.confirm")
+	next_day_confirm_button.text = TranslationServer.translate(&"shop.next_day.ok")
+	next_day_cancel_button.text = TranslationServer.translate(&"shop.next_day.cancel")
+
+
+func _sync_task_tabs() -> void:
+	var active_ids := GameState.active_task_ids()
+	var previous_id := task.id if task != null else &""
+	task_ids = active_ids
+	task_tabs.set_block_signals(true)
+	task_tabs.clear_tabs()
+	for task_id in task_ids:
+		task_tabs.add_tab(DemoCatalog.task_by_id(task_id).localized_name())
+	var selected_index := task_ids.find(previous_id)
+	if selected_index < 0:
+		selected_index = 0
+	if task_ids.is_empty():
+		task = DemoCatalog.task_by_id(&"teddy")
+	else:
+		task_tabs.current_tab = selected_index
+		task = DemoCatalog.task_by_id(task_ids[selected_index])
+	task_tabs.visible = task_ids.size() > 1
+	task_tabs.set_block_signals(false)
+	if puzzle_board.task != task:
+		puzzle_board.set_context(task, pieces)
+
+
+func _on_task_tab_changed(index: int) -> void:
+	if index < 0 or index >= task_ids.size():
+		return
+	task = DemoCatalog.task_by_id(task_ids[index])
+	puzzle_board.set_context(task, pieces)
+	_refresh_status()

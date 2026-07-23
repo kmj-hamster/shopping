@@ -9,12 +9,84 @@ func test_main_opens_map_and_navigates_to_toy_store() -> void:
 	var main = await _spawn_main()
 	assert_eq(main.current_view, &"map")
 	assert_eq(main.current_screen.name, "MallMapScreen")
+	assert_eq(main.current_screen.store_hotspots.size(), 5)
 
 	main._on_shop_requested(DemoCatalog.STORE_TOY)
 	await get_tree().process_frame
 
 	assert_eq(main.current_view, &"shop")
 	assert_eq(main.current_screen.name, "ToyShopScreen")
+	assert_eq(main.current_screen.store_id, DemoCatalog.STORE_TOY)
+
+
+func test_open_bookstore_uses_shared_shop_screen_and_its_own_stock() -> void:
+	var main = await _spawn_main()
+
+	main._on_shop_requested(DemoCatalog.STORE_BOOK)
+	await get_tree().process_frame
+
+	assert_eq(main.current_view, &"shop")
+	assert_eq(main.current_screen.name, "BookShopScreen")
+	assert_eq(main.current_screen.store_id, DemoCatalog.STORE_BOOK)
+	assert_eq(main.current_screen.transaction.store_id, DemoCatalog.STORE_BOOK)
+	assert_eq(main.current_screen.store_name_label.text, TranslationServer.translate(&"store.book"))
+
+
+func test_closed_store_stays_on_map_and_shows_next_open_day() -> void:
+	var main = await _spawn_main()
+
+	main._on_shop_requested(DemoCatalog.STORE_RECORD)
+	await get_tree().process_frame
+
+	assert_eq(main.current_view, &"map")
+	assert_true(main.current_screen.notice_label.visible)
+	assert_string_contains(
+		main.current_screen.notice_label.text,
+		str(TranslationServer.translate(&"store.record"))
+	)
+	assert_string_contains(
+		main.current_screen.notice_label.text,
+		str(TranslationServer.translate(&"weekday.tue"))
+	)
+
+
+func test_next_day_adds_income_changes_open_stores_and_shows_transition() -> void:
+	var main = await _spawn_main()
+
+	main._on_next_day_requested()
+	await get_tree().process_frame
+
+	assert_eq(GameState.day, 2)
+	assert_eq(GameState.wallet.money, 200)
+	assert_true(main.current_screen.transition_panel.visible)
+	assert_true(GameState.is_store_open(DemoCatalog.STORE_RECORD))
+	assert_false(GameState.is_store_open(DemoCatalog.STORE_TOY))
+	assert_string_contains(
+		main.current_screen.day_money_label.text,
+		str(TranslationServer.translate(&"weekday.tue"))
+	)
+
+
+func test_next_day_from_shop_confirms_and_cancels_unpaid_cart() -> void:
+	var main = await _spawn_main()
+	main._show_shop()
+	await get_tree().process_frame
+	var shop = main.current_screen
+	shop._on_product_add_requested(&"toy_marble")
+	shop._on_next_day_pressed()
+
+	assert_eq(GameState.day, 1)
+	assert_eq(shop.transaction.cart_count(), 1)
+	assert_true(shop.next_day_confirmation.visible)
+
+	shop._on_next_day_confirmed()
+	await get_tree().process_frame
+
+	assert_eq(main.current_view, &"map")
+	assert_eq(GameState.day, 2)
+	assert_eq(GameState.wallet.money, 200)
+	assert_true(GameState.pieces.is_empty())
+	assert_true(main.current_screen.transition_panel.visible)
 
 
 func test_buying_special_updates_map_goal_after_leaving() -> void:

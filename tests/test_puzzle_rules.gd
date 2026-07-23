@@ -62,6 +62,27 @@ func test_drag_candidate_can_replace_its_original_piece() -> void:
 	assert_true(PuzzleRules.can_place(task, candidate, pieces, Vector2i(1, 1), 0, original))
 
 
+func test_board_pieces_from_other_tasks_do_not_overlap_or_count() -> void:
+	var teddy := DemoCatalog.task_by_id(&"teddy")
+	var teddy_piece := _placed_piece(1, &"toy_marble", Vector2i(0, 0), 0)
+	teddy_piece.task_id = &"teddy"
+	var goldfish_piece := _placed_piece(2, &"fast_sugar", Vector2i(0, 0), 0)
+	goldfish_piece.task_id = &"goldfish"
+	var pieces: Array[PuzzlePieceState] = [teddy_piece, goldfish_piece]
+
+	var result := PuzzleRules.evaluate(teddy, pieces)
+
+	assert_eq(result.covered_count, 1)
+	assert_true(result.overlap_cells.is_empty())
+	assert_true(PuzzleRules.can_place(
+		teddy,
+		PuzzlePieceState.new(3, DemoCatalog.item_by_id(&"toy_marble")),
+		pieces,
+		Vector2i(1, 0),
+		0
+	))
+
+
 func _filled_solution(
 	task_id: StringName,
 	special_position: Vector2i,

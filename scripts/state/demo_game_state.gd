@@ -126,6 +126,24 @@ func is_task_completed(task_id: StringName) -> bool:
 	return completed_tasks.has(task_id)
 
 
+func active_task_ids() -> Array[StringName]:
+	var result: Array[StringName] = []
+	for task_definition in DemoCatalog.all_tasks():
+		if (
+			is_task_unlocked(task_definition.id)
+			and not is_task_completed(task_definition.id)
+		):
+			result.append(task_definition.id)
+	return result
+
+
+func should_show_item(item: ItemDefinition) -> bool:
+	if not item.is_special:
+		return true
+	# The next two special items become player-facing with their events in CP5.
+	return item.id == &"special_teddy"
+
+
 func submit_teddy_event() -> Dictionary:
 	if not is_task_unlocked(TASK_TEDDY) or is_task_completed(TASK_TEDDY):
 		return {"ok": false, "reason": &"unavailable"}
@@ -136,7 +154,10 @@ func submit_teddy_event() -> Dictionary:
 
 	var consumed: Array[PuzzlePieceState] = []
 	for piece in pieces:
-		if piece.location == PuzzlePieceState.Location.BOARD:
+		if (
+			piece.location == PuzzlePieceState.Location.BOARD
+			and (piece.task_id.is_empty() or piece.task_id == task.id)
+		):
 			consumed.append(piece)
 	for piece in consumed:
 		pieces.erase(piece)
@@ -153,6 +174,12 @@ func shopping_goal_key() -> StringName:
 	if is_task_unlocked(TASK_TEDDY):
 		return &"map.goal.finish_teddy"
 	return &"map.goal.buy_teddy"
+
+
+func shopping_goal_store_id() -> StringName:
+	if not is_task_completed(TASK_TEDDY):
+		return DemoCatalog.STORE_TOY
+	return &""
 
 
 func _refresh_store_transactions() -> void:

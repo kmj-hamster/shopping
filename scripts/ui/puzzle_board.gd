@@ -56,6 +56,8 @@ func _draw() -> void:
 	for piece in pieces:
 		if piece == dragged_piece or piece.location != PuzzlePieceState.Location.BOARD:
 			continue
+		if not piece.task_id.is_empty() and piece.task_id != task.id:
+			continue
 		var color := UiPalette.attribute_color(piece.definition.attribute)
 		var outline := (
 			Color("edb56f")
@@ -111,12 +113,14 @@ func _drop_data(at_position: Vector2, data: Variant) -> void:
 	if data.get("source") in [&"template", &"shop_template"]:
 		candidate.piece_uid = _allocate_piece_uid()
 		candidate.location = PuzzlePieceState.Location.BOARD
+		candidate.task_id = task.id
 		candidate.grid_position = target
 		pieces.append(candidate)
 	else:
 		original.rotation_steps = candidate.rotation_steps
 		original.grid_position = target
 		original.location = PuzzlePieceState.Location.BOARD
+		original.task_id = task.id
 	_clear_ghost()
 	state_changed.emit()
 
@@ -137,6 +141,7 @@ func _finish_piece_drag(was_successful: bool, local_position: Vector2) -> void:
 		will_change.emit()
 		if return_removed_to_inventory:
 			original.location = PuzzlePieceState.Location.INVENTORY
+			original.task_id = &""
 			original.grid_position = Vector2i(-1, -1)
 		else:
 			pieces.erase(original)
@@ -163,7 +168,11 @@ func _piece_at_local(local_position: Vector2) -> PuzzlePieceState:
 	var cell := _grid_cell(local_position)
 	for index in range(pieces.size() - 1, -1, -1):
 		var piece := pieces[index]
-		if piece.location == PuzzlePieceState.Location.BOARD and cell in piece.occupied_cells():
+		if (
+			piece.location == PuzzlePieceState.Location.BOARD
+			and (piece.task_id.is_empty() or piece.task_id == task.id)
+			and cell in piece.occupied_cells()
+		):
 			return piece
 	return null
 

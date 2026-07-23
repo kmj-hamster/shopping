@@ -2,14 +2,25 @@ class_name MallMapScreen
 extends Control
 
 signal shop_requested(store_id: StringName)
+signal next_day_requested
 
 var title_label: Label
 var day_money_label: Label
 var language_button: Button
-var toy_hotspot: Button
+var store_hotspots: Dictionary = {}
 var goal_label: Label
 var notice_label: Label
 var notice_key: StringName = &""
+var notice_store_id: StringName = &""
+var schedule_button: Button
+var next_day_button: Button
+var schedule_panel: PanelContainer
+var schedule_list: VBoxContainer
+var schedule_title_label: Label
+var transition_panel: PanelContainer
+var transition_title_label: Label
+var transition_body_label: Label
+var transition_day := 0
 
 
 func _ready() -> void:
@@ -22,16 +33,40 @@ func _ready() -> void:
 
 func show_notice(message_key: StringName) -> void:
 	notice_key = message_key
+	notice_store_id = &""
 	_refresh_notice()
+
+
+func show_closed_notice(store_id: StringName) -> void:
+	notice_key = &"map.notice.store_closed"
+	notice_store_id = store_id
+	_refresh_notice()
+
+
+func show_day_transition(result: Dictionary) -> void:
+	transition_day = result.day
+	schedule_panel.visible = false
+	transition_panel.visible = true
+	_refresh_transition()
 
 
 func refresh() -> void:
 	if not is_node_ready():
 		return
-	day_money_label.text = TranslationServer.translate(&"map.day_money") % [
-		GameState.day, GameState.wallet.money
+	day_money_label.text = TranslationServer.translate(&"map.day_week_money") % [
+		GameState.day,
+		TranslationServer.translate(ShopSchedule.weekday_key(GameState.day)),
+		GameState.wallet.money,
 	]
-	goal_label.text = "□  " + TranslationServer.translate(GameState.shopping_goal_key())
+	var goal_text := TranslationServer.translate(GameState.shopping_goal_key())
+	var goal_store_id := GameState.shopping_goal_store_id()
+	if not goal_store_id.is_empty() and not GameState.is_store_open(goal_store_id):
+		var next_day := ShopSchedule.next_open_day(goal_store_id, GameState.day)
+		goal_text += "  ·  " + TranslationServer.translate(&"map.goal.next_open") % \
+			TranslationServer.translate(ShopSchedule.weekday_key(next_day))
+	goal_label.text = "□  " + goal_text
+	_refresh_store_hotspots()
+	_refresh_schedule()
 
 
 func _build_interface() -> void:
@@ -76,24 +111,82 @@ func _build_interface() -> void:
 	day_money_label.add_theme_font_size_override("font_size", 20)
 	day_money_label.add_theme_color_override("font_color", Color("efd18a"))
 	top.add_child(day_money_label)
+	schedule_button = Button.new()
+	schedule_button.custom_minimum_size = Vector2(76, 38)
+	schedule_button.pressed.connect(_on_schedule_pressed)
+	top.add_child(schedule_button)
+	next_day_button = Button.new()
+	next_day_button.custom_minimum_size = Vector2(82, 38)
+	next_day_button.pressed.connect(func() -> void: next_day_requested.emit())
+	top.add_child(next_day_button)
 	language_button = Button.new()
 	language_button.custom_minimum_size = Vector2(58, 38)
 	language_button.pressed.connect(LocaleManager.toggle_locale)
 	top.add_child(language_button)
 
-	toy_hotspot = Button.new()
-	toy_hotspot.name = "ToyStoreHotspot"
-	toy_hotspot.position = Vector2(130, 322)
-	toy_hotspot.size = Vector2(252, 150)
-	toy_hotspot.add_theme_font_size_override("font_size", 18)
-	toy_hotspot.add_theme_stylebox_override(
-		"normal", UiPalette.panel_style(Color("071a20", 0.22), Color("76c8bc", 0.68))
+	var hotspot_layout := {
+		DemoCatalog.STORE_BOOK: Rect2(770, 150, 230, 130),
+		DemoCatalog.STORE_TOY: Rect2(130, 322, 252, 150),
+		DemoCatalog.STORE_FLOWER: Rect2(340, 402, 210, 145),
+		DemoCatalog.STORE_RECORD: Rect2(650, 392, 240, 150),
+		DemoCatalog.STORE_FAST_FOOD: Rect2(1010, 315, 220, 155),
+	}
+	for store_id in DemoCatalog.STORE_IDS:
+		_create_store_hotspot(store_id, hotspot_layout[store_id])
+
+	schedule_panel = PanelContainer.new()
+	schedule_panel.name = "WeeklySchedule"
+	schedule_panel.position = Vector2(760, 86)
+	schedule_panel.size = Vector2(468, 350)
+	schedule_panel.visible = false
+	schedule_panel.add_theme_stylebox_override(
+		"panel", UiPalette.panel_style(Color("06171d", 0.97), Color("76a9a4", 0.9))
 	)
-	toy_hotspot.add_theme_stylebox_override(
-		"hover", UiPalette.panel_style(Color("0b2c31", 0.66), Color("a4e2d3", 0.95))
+	add_child(schedule_panel)
+	var schedule_column := VBoxContainer.new()
+	schedule_column.add_theme_constant_override("separation", 7)
+	schedule_panel.add_child(schedule_column)
+	var schedule_header := HBoxContainer.new()
+	schedule_column.add_child(schedule_header)
+	schedule_title_label = Label.new()
+	schedule_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	schedule_title_label.add_theme_font_size_override("font_size", 20)
+	schedule_header.add_child(schedule_title_label)
+	var schedule_close := Button.new()
+	schedule_close.text = "×"
+	schedule_close.pressed.connect(func() -> void: schedule_panel.visible = false)
+	schedule_header.add_child(schedule_close)
+	schedule_list = VBoxContainer.new()
+	schedule_list.add_theme_constant_override("separation", 4)
+	schedule_column.add_child(schedule_list)
+
+	transition_panel = PanelContainer.new()
+	transition_panel.name = "DayTransition"
+	transition_panel.position = Vector2(420, 235)
+	transition_panel.size = Vector2(440, 220)
+	transition_panel.visible = false
+	transition_panel.add_theme_stylebox_override(
+		"panel", UiPalette.panel_style(Color("071a20", 0.98), Color("d4b66f", 0.92))
 	)
-	toy_hotspot.pressed.connect(func() -> void: shop_requested.emit(DemoCatalog.STORE_TOY))
-	add_child(toy_hotspot)
+	add_child(transition_panel)
+	var transition_column := VBoxContainer.new()
+	transition_column.alignment = BoxContainer.ALIGNMENT_CENTER
+	transition_column.add_theme_constant_override("separation", 12)
+	transition_panel.add_child(transition_column)
+	transition_title_label = Label.new()
+	transition_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	transition_title_label.add_theme_font_size_override("font_size", 25)
+	transition_title_label.add_theme_color_override("font_color", Color("efd18a"))
+	transition_column.add_child(transition_title_label)
+	transition_body_label = Label.new()
+	transition_body_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	transition_body_label.add_theme_font_size_override("font_size", 17)
+	transition_column.add_child(transition_body_label)
+	var transition_close := Button.new()
+	transition_close.custom_minimum_size = Vector2(100, 36)
+	transition_close.text = "OK"
+	transition_close.pressed.connect(func() -> void: transition_panel.visible = false)
+	transition_column.add_child(transition_close)
 
 	var goal_panel := PanelContainer.new()
 	goal_panel.name = "ShoppingList"
@@ -129,10 +222,10 @@ func _apply_locale_texts() -> void:
 	title_label.text = TranslationServer.translate(&"game.title")
 	language_button.text = LocaleManager.switch_button_text()
 	language_button.tooltip_text = TranslationServer.translate(&"ui.language.tooltip")
-	toy_hotspot.text = "%s\n%s" % [
-		TranslationServer.translate(&"store.toy"),
-		TranslationServer.translate(&"map.open"),
-	]
+	schedule_button.text = TranslationServer.translate(&"map.schedule")
+	next_day_button.text = TranslationServer.translate(&"map.next_day")
+	schedule_title_label.text = TranslationServer.translate(&"map.schedule.title")
+	_refresh_transition()
 	_refresh_notice()
 
 
@@ -141,6 +234,97 @@ func _refresh_notice() -> void:
 		return
 	if notice_key.is_empty():
 		notice_label.text = ""
+	elif not notice_store_id.is_empty():
+		var next_day := ShopSchedule.next_open_day(notice_store_id, GameState.day)
+		notice_label.text = TranslationServer.translate(notice_key) % [
+			TranslationServer.translate(DemoCatalog.store_name_key(notice_store_id)),
+			TranslationServer.translate(ShopSchedule.weekday_key(next_day)),
+		]
 	else:
 		notice_label.text = TranslationServer.translate(notice_key)
 	notice_label.visible = not notice_key.is_empty()
+
+
+func _create_store_hotspot(store_id: StringName, rect: Rect2) -> void:
+	var hotspot := Button.new()
+	hotspot.name = "%sHotspot" % String(store_id).to_pascal_case()
+	hotspot.position = rect.position
+	hotspot.size = rect.size
+	hotspot.add_theme_font_size_override("font_size", 17)
+	hotspot.pressed.connect(_on_store_pressed.bind(store_id))
+	store_hotspots[store_id] = hotspot
+	add_child(hotspot)
+
+
+func _refresh_store_hotspots() -> void:
+	for store_id in store_hotspots:
+		var hotspot := store_hotspots[store_id] as Button
+		var open := GameState.is_store_open(store_id)
+		var status_text := TranslationServer.translate(&"map.open")
+		if not open:
+			var next_day := ShopSchedule.next_open_day(store_id, GameState.day)
+			status_text = TranslationServer.translate(&"map.closed_until") % \
+				TranslationServer.translate(ShopSchedule.weekday_key(next_day))
+		hotspot.text = "%s\n%s" % [
+			TranslationServer.translate(DemoCatalog.store_name_key(store_id)),
+			status_text,
+		]
+		hotspot.add_theme_stylebox_override(
+			"normal",
+			UiPalette.panel_style(
+				Color("071a20", 0.24 if open else 0.66),
+				Color("76c8bc", 0.72) if open else Color("536566", 0.58)
+			)
+		)
+		hotspot.add_theme_stylebox_override(
+			"hover",
+			UiPalette.panel_style(
+				Color("0b2c31", 0.72),
+				Color("a4e2d3", 0.95) if open else Color("788d8c", 0.8)
+			)
+		)
+		hotspot.modulate = Color.WHITE if open else Color(0.7, 0.76, 0.76, 0.86)
+
+
+func _refresh_schedule() -> void:
+	if schedule_list == null:
+		return
+	for child in schedule_list.get_children():
+		child.free()
+	for index in range(7):
+		var row := Label.new()
+		var store_names: PackedStringArray = []
+		for store_id in ShopSchedule.OPEN_STORES[index]:
+			store_names.append(TranslationServer.translate(DemoCatalog.store_name_key(store_id)))
+		row.text = "%s   %s" % [
+			TranslationServer.translate(ShopSchedule.WEEKDAY_KEYS[index]),
+			" · ".join(store_names),
+		]
+		row.add_theme_font_size_override("font_size", 16)
+		row.add_theme_color_override(
+			"font_color",
+			Color("efd18a") if index == ShopSchedule.weekday_index(GameState.day) else Color("b8ceca")
+		)
+		schedule_list.add_child(row)
+
+
+func _refresh_transition() -> void:
+	if transition_title_label == null or transition_day <= 0:
+		return
+	transition_title_label.text = TranslationServer.translate(&"map.day.title") % [
+		transition_day,
+		TranslationServer.translate(ShopSchedule.weekday_key(transition_day)),
+	]
+	var store_names: PackedStringArray = []
+	for store_id in ShopSchedule.open_store_ids(transition_day):
+		store_names.append(TranslationServer.translate(DemoCatalog.store_name_key(store_id)))
+	transition_body_label.text = TranslationServer.translate(&"map.day.summary") % \
+		" · ".join(store_names)
+
+
+func _on_store_pressed(store_id: StringName) -> void:
+	shop_requested.emit(store_id)
+
+
+func _on_schedule_pressed() -> void:
+	schedule_panel.visible = not schedule_panel.visible

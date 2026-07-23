@@ -17,6 +17,7 @@ var location: Location = Location.INVENTORY
 var ownership: Ownership = Ownership.OWNED
 var grid_position := Vector2i(-1, -1)
 var rotation_steps: int = 0
+var task_id: StringName = &""
 
 
 func _init(uid: int = 0, item_definition: ItemDefinition = null) -> void:
@@ -41,4 +42,5 @@ func copy_for_drag() -> PuzzlePieceState:
 	copy.ownership = ownership
 	copy.grid_position = grid_position
 	copy.rotation_steps = rotation_steps
+	copy.task_id = task_id
 	return copy

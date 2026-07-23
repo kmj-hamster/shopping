@@ -15,8 +15,35 @@ msgstr "Millennium Shopping Guide"
 msgid "map.day_money"
 msgstr "Night %d  ·  ¥%d"
 
+msgid "map.day_week_money"
+msgstr "Night %d  ·  %s  ·  ¥%d"
+
 msgid "map.open"
 msgstr "LIGHTS ON"
+
+msgid "map.closed_until"
+msgstr "CLOSED · %s"
+
+msgid "map.schedule"
+msgstr "Hours"
+
+msgid "map.schedule.title"
+msgstr "This Week's Lights"
+
+msgid "map.next_day"
+msgstr "Next Night"
+
+msgid "map.goal.next_open"
+msgstr "reopens %s"
+
+msgid "map.notice.store_closed"
+msgstr "%s is closed tonight. It reopens %s."
+
+msgid "map.day.title"
+msgstr "Night %d · %s"
+
+msgid "map.day.summary"
+msgstr "Work income +¥100\nLights on: %s\nThe shelves have been restocked."
 
 msgid "map.goal.buy_teddy"
 msgstr "One-Eared Teddy  ·  Toy Store"
@@ -201,6 +228,24 @@ msgstr "The mannequin behind the shelves gives a small nod."
 msgid "shop.feedback.owner_after"
 msgstr "The owner passes you an old paper tag."
 
+msgid "shop.feedback.owner_quiet"
+msgstr "The owner glances over the shelf."
+
+msgid "shop.feedback.closed"
+msgstr "The shutters are already down."
+
+msgid "shop.next_day.title"
+msgstr "Leave tonight here?"
+
+msgid "shop.next_day.confirm"
+msgstr "Unpaid items will be returned to the shelf."
+
+msgid "shop.next_day.ok"
+msgstr "Next Night"
+
+msgid "shop.next_day.cancel"
+msgstr "Keep Browsing"
+
 msgid "shop.feedback.submitted"
 msgstr "The teddy bear remembers something."
 
@@ -272,6 +317,27 @@ msgstr "Record Store"
 
 msgid "store.fast_food"
 msgstr "Fast Food"
+
+msgid "weekday.mon"
+msgstr "Monday"
+
+msgid "weekday.tue"
+msgstr "Tuesday"
+
+msgid "weekday.wed"
+msgstr "Wednesday"
+
+msgid "weekday.thu"
+msgstr "Thursday"
+
+msgid "weekday.fri"
+msgstr "Friday"
+
+msgid "weekday.sat"
+msgstr "Saturday"
+
+msgid "weekday.sun"
+msgstr "Sunday"
 
 msgid "task.teddy.title"
 msgstr "Event 1: Teddy Bear"

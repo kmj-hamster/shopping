@@ -14,6 +14,8 @@ static func can_place(
 	for other in pieces:
 		if other == piece or other == ignored_piece or other.location != PuzzlePieceState.Location.BOARD:
 			continue
+		if not other.task_id.is_empty() and other.task_id != task.id:
+			continue
 		for cell in other.occupied_cells():
 			occupied_by_others[cell] = true
 
@@ -37,6 +39,8 @@ static func evaluate(task: TaskDefinition, pieces: Array[PuzzlePieceState]) -> D
 
 	for piece in pieces:
 		if piece.location != PuzzlePieceState.Location.BOARD:
+			continue
+		if not piece.task_id.is_empty() and piece.task_id != task.id:
 			continue
 		if piece.definition.id == task.required_special_item_id:
 			required_special_count += 1

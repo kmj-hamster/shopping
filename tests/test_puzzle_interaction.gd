@@ -13,6 +13,8 @@ func test_standard_template_drop_creates_a_fresh_piece_each_time() -> void:
 	assert_eq(pieces.size(), 2)
 	assert_ne(pieces[0].piece_uid, pieces[1].piece_uid)
 	assert_eq(pieces[0].definition.id, pieces[1].definition.id)
+	assert_eq(pieces[0].task_id, &"teddy")
+	assert_eq(pieces[1].task_id, &"teddy")
 
 
 func test_drag_preview_keeps_grab_offset_below_native_cursor_anchor() -> void:
@@ -104,6 +106,7 @@ func test_finite_board_returns_piece_to_inventory_when_dropped_outside() -> void
 
 	assert_eq(pieces, [piece])
 	assert_eq(piece.location, PuzzlePieceState.Location.INVENTORY)
+	assert_eq(piece.task_id, &"")
 	assert_eq(piece.grid_position, Vector2i(-1, -1))
 
 
@@ -119,6 +122,7 @@ func test_shop_template_drop_preserves_pending_purchase_ownership() -> void:
 
 	assert_eq(pieces.size(), 1)
 	assert_eq(pieces[0].ownership, PuzzlePieceState.Ownership.PENDING_PURCHASE)
+	assert_eq(pieces[0].task_id, &"teddy")
 
 
 func _drop_template(board: PuzzleBoard, definition: ItemDefinition, target: Vector2i) -> void:

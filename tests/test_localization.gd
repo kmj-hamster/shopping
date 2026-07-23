@@ -60,6 +60,14 @@ func test_sparse_shop_interface_is_translated() -> void:
 		&"map.goal.buy_teddy",
 		&"map.goal.finish_teddy",
 		&"map.goal.after_teddy",
+		&"map.day_week_money",
+		&"map.closed_until",
+		&"map.schedule",
+		&"map.next_day",
+		&"map.notice.store_closed",
+		&"map.day.summary",
+		&"weekday.mon",
+		&"weekday.sun",
 		&"shop.tab.goods",
 		&"shop.tab.bag",
 		&"shop.product.meta",
@@ -69,6 +77,12 @@ func test_sparse_shop_interface_is_translated() -> void:
 		&"shop.feedback.ready",
 		&"shop.feedback.paid",
 		&"shop.feedback.no_money",
+		&"shop.feedback.owner_quiet",
+		&"shop.feedback.closed",
+		&"shop.next_day.title",
+		&"shop.next_day.confirm",
+		&"shop.next_day.ok",
+		&"shop.next_day.cancel",
 	]
 	for locale in ["zh_CN", "en"]:
 		TranslationServer.set_locale(locale)
