@@ -63,12 +63,6 @@ func _draw() -> void:
 			if piece.definition.is_special:
 				draw_rect(rect.grow(-6.0), Color("f2eadf"), false, 2.0)
 
-	if not ghost_cells.is_empty():
-		var ghost_color := Color("78d6a8", 0.55) if ghost_valid else Color("e15f67", 0.62)
-		for cell in ghost_cells:
-			draw_rect(_cell_rect(cell).grow(-5.0), ghost_color, true)
-
-
 func _get_drag_data(at_position: Vector2) -> Variant:
 	var original := _piece_at_local(at_position)
 	if original == null:
