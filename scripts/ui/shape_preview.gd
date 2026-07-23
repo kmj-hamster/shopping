@@ -29,4 +29,3 @@ func _draw() -> void:
 		var rect := Rect2(origin + Vector2(cell) * cell_size, Vector2.ONE * cell_size)
 		draw_rect(rect.grow(-1.0), color, true)
 		draw_rect(rect.grow(-1.0), color.lightened(0.28), false, 1.0)
-

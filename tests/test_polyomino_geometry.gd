@@ -18,4 +18,3 @@ func test_shape_bounds_follow_rotation() -> void:
 	var shape := DemoCatalog.shape_cells(&"I3")
 	assert_eq(PolyominoGeometry.bounds_size(shape), Vector2i(3, 1))
 	assert_eq(PolyominoGeometry.bounds_size(PolyominoGeometry.rotated(shape, 1)), Vector2i(1, 3))
-

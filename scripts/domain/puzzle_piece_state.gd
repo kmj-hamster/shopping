@@ -27,4 +27,3 @@ func occupied_cells(
 	candidate_rotation: int = rotation_steps
 ) -> Array[Vector2i]:
 	return PolyominoGeometry.translated(local_cells(candidate_rotation), candidate_position)
-

@@ -39,4 +39,3 @@ func test_every_task_has_chinese_and_english_copy() -> void:
 func test_locale_manager_exposes_only_supported_locales() -> void:
 	assert_eq(LocaleManager.SUPPORTED_LOCALES, ["zh_CN", "en"])
 	assert_true(LocaleManager.current_locale in LocaleManager.SUPPORTED_LOCALES)
-

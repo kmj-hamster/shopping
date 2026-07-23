@@ -48,4 +48,3 @@ func _save_locale(locale: String) -> void:
 	config.load(SETTINGS_PATH)
 	config.set_value("accessibility", "locale", locale)
 	config.save(SETTINGS_PATH)
-

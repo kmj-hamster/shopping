@@ -53,4 +53,3 @@ static func translated(cells: Array[Vector2i], position: Vector2i) -> Array[Vect
 	for cell in cells:
 		result.append(cell + position)
 	return result
-

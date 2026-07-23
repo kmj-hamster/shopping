@@ -48,4 +48,3 @@ func test_each_store_has_seven_normal_items_per_refresh() -> void:
 				sku_count += 1
 		assert_eq(sku_count, 4)
 		assert_eq(total_units, 7)
-

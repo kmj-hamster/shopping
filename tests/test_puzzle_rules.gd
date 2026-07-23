@@ -90,4 +90,3 @@ func _total_price(pieces: Array[PuzzlePieceState]) -> int:
 	for piece in pieces:
 		total += piece.definition.price
 	return total
-
