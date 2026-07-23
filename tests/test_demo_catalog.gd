@@ -23,6 +23,23 @@ func test_catalog_ids_are_unique_and_shapes_match_attribute_values() -> void:
 		assert_gt(item.daily_limit, 0)
 
 
+func test_each_lab_palette_has_all_normals_and_one_large_special() -> void:
+	for task in DemoCatalog.all_tasks():
+		var palette := DemoCatalog.lab_palette_items(task.id)
+		assert_eq(palette.size(), 21)
+		var normal_count := 0
+		var special_count := 0
+		for item in palette:
+			if item.is_special:
+				special_count += 1
+				assert_eq(item.id, task.required_special_item_id)
+				assert_gte(item.cell_count(), 7)
+			else:
+				normal_count += 1
+		assert_eq(normal_count, 20)
+		assert_eq(special_count, 1)
+
+
 func test_task_masks_have_planned_sizes() -> void:
 	assert_eq(DemoCatalog.task_by_id(&"teddy").bounds_size(), Vector2i(5, 5))
 	assert_eq(DemoCatalog.task_by_id(&"teddy").mask_cells.size(), 19)

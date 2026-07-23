@@ -18,3 +18,12 @@ func test_shape_bounds_follow_rotation() -> void:
 	var shape := DemoCatalog.shape_cells(&"I3")
 	assert_eq(PolyominoGeometry.bounds_size(shape), Vector2i(3, 1))
 	assert_eq(PolyominoGeometry.bounds_size(PolyominoGeometry.rotated(shape, 1)), Vector2i(1, 3))
+
+
+func test_drag_anchor_stays_on_the_same_cell_during_rotation() -> void:
+	var shape := DemoCatalog.shape_cells(&"L3")
+	var anchor := Vector2i(0, 0)
+	var rotated_anchor := PolyominoGeometry.rotate_anchor_clockwise(shape, anchor)
+	var rotated_shape := PolyominoGeometry.rotate_clockwise(shape)
+	assert_has(rotated_shape, rotated_anchor)
+	assert_eq(rotated_anchor, Vector2i(1, 0))

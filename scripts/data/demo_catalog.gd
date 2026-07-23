@@ -28,16 +28,10 @@ const ITEM_ROWS := [
 	[&"fast_straw", &"item.fast_straw", STORE_FAST_FOOD, &"I3", ItemDefinition.ATTRIBUTE_FLOWER, 14, 2, false],
 	[&"fast_hash_brown", &"item.fast_hash_brown", STORE_FAST_FOOD, &"O4", ItemDefinition.ATTRIBUTE_FLOWER, 16, 1, false],
 	[&"fast_fries", &"item.fast_fries", STORE_FAST_FOOD, &"U5", ItemDefinition.ATTRIBUTE_FLOWER, 18, 1, false],
-	[&"special_teddy", &"item.special_teddy", STORE_TOY, &"P5", ItemDefinition.ATTRIBUTE_MIRROR, 22, 1, true],
-	[&"special_fishbone", &"item.special_fishbone", STORE_FAST_FOOD, &"X5", ItemDefinition.ATTRIBUTE_MIRROR, 20, 1, true],
-	[&"special_tape", &"item.special_tape", STORE_RECORD, &"O4", ItemDefinition.ATTRIBUTE_MIRROR, 22, 1, true],
+	[&"special_teddy", &"item.special_teddy", STORE_TOY, &"TEDDY7", ItemDefinition.ATTRIBUTE_MIRROR, 22, 1, true],
+	[&"special_fishbone", &"item.special_fishbone", STORE_FAST_FOOD, &"FISH7", ItemDefinition.ATTRIBUTE_MIRROR, 20, 1, true],
+	[&"special_tape", &"item.special_tape", STORE_RECORD, &"TAPE8", ItemDefinition.ATTRIBUTE_MIRROR, 22, 1, true],
 ]
-
-const LAB_ITEM_IDS := {
-	&"teddy": [&"special_teddy", &"book_manga", &"toy_blocks", &"flower_sunflower", &"fast_straw"],
-	&"goldfish": [&"special_fishbone", &"fast_fries", &"flower_roots", &"record_headphones", &"toy_blocks", &"book_period"],
-	&"tape": [&"special_tape", &"flower_roots", &"fast_fries", &"book_clipping", &"record_extension", &"book_bookmark", &"toy_blocks"],
-}
 
 
 static func all_items() -> Array[ItemDefinition]:
@@ -103,14 +97,16 @@ static func task_by_id(task_id: StringName) -> TaskDefinition:
 	return null
 
 
-static func create_lab_pieces(task_id: StringName) -> Array[PuzzlePieceState]:
-	var pieces: Array[PuzzlePieceState] = []
-	var uid := 1
-	var ids: Array = LAB_ITEM_IDS.get(task_id, [])
-	for item_id in ids:
-		pieces.append(PuzzlePieceState.new(uid, item_by_id(item_id)))
-		uid += 1
-	return pieces
+static func lab_palette_items(task_id: StringName) -> Array[ItemDefinition]:
+	var result: Array[ItemDefinition] = []
+	var task := task_by_id(task_id)
+	if task == null:
+		return result
+	result.append(item_by_id(task.required_special_item_id))
+	for item in all_items():
+		if not item.is_special:
+			result.append(item)
+	return result
 
 
 static func shape_cells(shape_code: StringName) -> Array[Vector2i]:
@@ -141,6 +137,24 @@ static func shape_cells(shape_code: StringName) -> Array[Vector2i]:
 			return [Vector2i(0, 0), Vector2i(0, 1), Vector2i(0, 2), Vector2i(0, 3), Vector2i(1, 1)]
 		&"L5":
 			return [Vector2i(0, 0), Vector2i(0, 1), Vector2i(0, 2), Vector2i(0, 3), Vector2i(1, 3)]
+		&"TEDDY7":
+			return [
+				Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0),
+				Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1),
+				Vector2i(1, 2),
+			]
+		&"FISH7":
+			return [
+				Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0),
+				Vector2i(4, 0), Vector2i(5, 0), Vector2i(6, 0),
+			]
+		&"TAPE8":
+			return [
+				Vector2i(0, 0), Vector2i(1, 0),
+				Vector2i(0, 1), Vector2i(1, 1),
+				Vector2i(0, 2), Vector2i(1, 2),
+				Vector2i(0, 3), Vector2i(1, 3),
+			]
 		_:
 			return []
 

@@ -7,11 +7,12 @@ static func can_place(
 	piece: PuzzlePieceState,
 	pieces: Array[PuzzlePieceState],
 	position: Vector2i,
-	rotation_steps: int
+	rotation_steps: int,
+	ignored_piece: PuzzlePieceState = null
 ) -> bool:
 	var occupied_by_others: Dictionary = {}
 	for other in pieces:
-		if other == piece or other.location != PuzzlePieceState.Location.BOARD:
+		if other == piece or other == ignored_piece or other.location != PuzzlePieceState.Location.BOARD:
 			continue
 		for cell in other.occupied_cells():
 			occupied_by_others[cell] = true
@@ -32,13 +33,13 @@ static func evaluate(task: TaskDefinition, pieces: Array[PuzzlePieceState]) -> D
 		ItemDefinition.ATTRIBUTE_FLOWER: 0,
 		ItemDefinition.ATTRIBUTE_FOG: 0,
 	}
-	var has_required_special := false
+	var required_special_count := 0
 
 	for piece in pieces:
 		if piece.location != PuzzlePieceState.Location.BOARD:
 			continue
 		if piece.definition.id == task.required_special_item_id:
-			has_required_special = true
+			required_special_count += 1
 		attribute_totals[piece.definition.attribute] += piece.definition.cell_count()
 		for cell in piece.occupied_cells():
 			if not task.has_cell(cell):
@@ -61,8 +62,10 @@ static func evaluate(task: TaskDefinition, pieces: Array[PuzzlePieceState]) -> D
 		reasons.append(TranslationServer.translate(&"puzzle.reason.overlap"))
 	if not missing_cells.is_empty():
 		reasons.append(TranslationServer.translate(&"puzzle.reason.missing_cells") % missing_cells.size())
-	if not has_required_special:
+	if required_special_count == 0:
 		reasons.append(TranslationServer.translate(&"puzzle.reason.missing_special"))
+	elif required_special_count > 1:
+		reasons.append(TranslationServer.translate(&"puzzle.reason.duplicate_special"))
 	if not attribute_ok:
 		reasons.append(_attribute_failure_text(task.attribute_rule))
 
@@ -73,7 +76,8 @@ static func evaluate(task: TaskDefinition, pieces: Array[PuzzlePieceState]) -> D
 		"missing_cells": missing_cells,
 		"overlap_cells": overlap_cells,
 		"outside_cells": outside_cells,
-		"has_required_special": has_required_special,
+		"has_required_special": required_special_count == 1,
+		"required_special_count": required_special_count,
 		"attribute_totals": attribute_totals,
 		"attribute_ok": attribute_ok,
 		"reasons": reasons,

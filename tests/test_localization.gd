@@ -36,6 +36,23 @@ func test_every_task_has_chinese_and_english_copy() -> void:
 			assert_ne(task.localized_description(), String(task.description_key), "%s description missing in %s" % [task.id, locale])
 
 
+func test_infinite_palette_and_drag_instructions_are_translated() -> void:
+	var keys := [
+		&"ui.inventory.hint",
+		&"ui.inventory.special_section",
+		&"ui.inventory.standard_section",
+		&"ui.item.palette_detail",
+		&"ui.item.special_detail",
+		&"ui.item.special_placed",
+		&"feedback.board_empty",
+		&"puzzle.reason.duplicate_special",
+	]
+	for locale in ["zh_CN", "en"]:
+		TranslationServer.set_locale(locale)
+		for key in keys:
+			assert_ne(TranslationServer.translate(key), String(key), "%s missing in %s" % [key, locale])
+
+
 func test_locale_manager_exposes_only_supported_locales() -> void:
 	assert_eq(LocaleManager.SUPPORTED_LOCALES, ["zh_CN", "en"])
 	assert_true(LocaleManager.current_locale in LocaleManager.SUPPORTED_LOCALES)

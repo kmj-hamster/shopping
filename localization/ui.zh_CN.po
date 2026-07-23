@@ -19,13 +19,28 @@ msgid "ui.inventory.title"
 msgstr "无限背包"
 
 msgid "ui.inventory.hint"
-msgstr "拖动物品进入格阵；右键旋转。\n★ 表示本事件必须使用的特殊物品。"
+msgstr "从骨牌本身拖进格阵；拖动途中按右键旋转。\n★ 特殊物品只有一个，标准骨牌可无限取用。"
+
+msgid "ui.inventory.special_section"
+msgstr "本事件的特殊大块"
+
+msgid "ui.inventory.standard_section"
+msgstr "无限标准骨牌"
 
 msgid "ui.inventory.empty"
 msgstr "背包暂时是空的。\n可以把格阵中的物品拖回来。"
 
 msgid "ui.item.tooltip"
-msgstr "拖到右侧格阵；右键旋转"
+msgstr "抓住骨牌拖到右侧；拖动途中按右键旋转"
+
+msgid "ui.item.special_placed"
+msgstr "特殊物品已经放入格阵；拿回来后可再次拖动"
+
+msgid "ui.item.palette_detail"
+msgstr "%s · %s%d · ∞"
+
+msgid "ui.item.special_detail"
+msgstr "%s · %s%d · 唯一"
 
 msgid "ui.item.detail"
 msgstr "%s · %s%d · %d元"
@@ -61,10 +76,10 @@ msgid "ui.validate"
 msgstr "检查完成条件"
 
 msgid "ui.footer"
-msgstr "实验室只验证拼图手感：拖动放置 · 右键旋转 · 不允许镜像 · 填满后检查属性"
+msgstr "抓住骨牌拖动 · 拖动途中右键旋转 · 标准件无限 · 特殊件唯一 · 不允许镜像"
 
 msgid "feedback.choose_item"
-msgstr "请选择物品开始试摆。"
+msgstr "从左侧无限工具箱抓一块骨牌开始试摆。"
 
 msgid "feedback.no_rotation_space"
 msgstr "这里没有足够空间旋转。"
@@ -78,8 +93,8 @@ msgstr "✓ 格阵完成。空间、特殊物品和属性条件全部成立。"
 msgid "feedback.incomplete"
 msgstr "还不能完成：%s"
 
-msgid "feedback.inventory_full"
-msgstr "所有物品已经在背包里。"
+msgid "feedback.board_empty"
+msgstr "格阵里还没有骨牌。"
 
 msgid "feedback.undone"
 msgstr "已撤销上一步。"
@@ -95,6 +110,9 @@ msgstr "还有 %d 格未填满"
 
 msgid "puzzle.reason.missing_special"
 msgstr "缺少指定的特殊物品"
+
+msgid "puzzle.reason.duplicate_special"
+msgstr "特殊物品只能放入一个"
 
 msgid "puzzle.reason.mirror"
 msgstr "镜属性必须严格最高"
@@ -139,19 +157,19 @@ msgid "task.teddy.title"
 msgstr "事件一：泰迪熊"
 
 msgid "task.teddy.description"
-msgstr "把夜晚买来的东西装进泰迪熊的轮廓。镜必须严格最高。"
+msgstr "先放入缺耳泰迪熊大块，再用无限标准骨牌填满轮廓。镜必须严格最高。"
 
 msgid "task.goldfish.title"
 msgstr "事件二：金鱼"
 
 msgid "task.goldfish.description"
-msgstr "鱼骨被放进水里。让灯或花压过镜与雾。"
+msgstr "先把长鱼骨放进水里，再用无限标准骨牌补完金鱼。让灯或花压过镜与雾。"
 
 msgid "task.tape.title"
 msgstr "事件三：磁带"
 
 msgid "task.tape.description"
-msgstr "填满磁带外壳与带轮之间的空间。这个事件没有属性限制。"
+msgstr "先放入磁带外壳大块，再自由填满剩余空间。这个事件没有属性限制。"
 
 msgid "item.book_period"
 msgstr "遗失的标点"

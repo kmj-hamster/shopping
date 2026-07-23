@@ -23,10 +23,26 @@ static func normalize(cells: Array[Vector2i]) -> Array[Vector2i]:
 
 
 static func rotate_clockwise(cells: Array[Vector2i]) -> Array[Vector2i]:
-	var rotated: Array[Vector2i] = []
+	var rotated_cells: Array[Vector2i] = []
 	for cell in cells:
-		rotated.append(Vector2i(-cell.y, cell.x))
-	return normalize(rotated)
+		rotated_cells.append(Vector2i(-cell.y, cell.x))
+	return normalize(rotated_cells)
+
+
+static func rotate_anchor_clockwise(cells: Array[Vector2i], anchor: Vector2i) -> Vector2i:
+	if cells.is_empty():
+		return Vector2i.ZERO
+
+	var raw_rotated: Array[Vector2i] = []
+	for cell in cells:
+		raw_rotated.append(Vector2i(-cell.y, cell.x))
+	var raw_anchor := Vector2i(-anchor.y, anchor.x)
+	var min_x := raw_rotated[0].x
+	var min_y := raw_rotated[0].y
+	for cell in raw_rotated:
+		min_x = mini(min_x, cell.x)
+		min_y = mini(min_y, cell.y)
+	return raw_anchor - Vector2i(min_x, min_y)
 
 
 static func rotated(cells: Array[Vector2i], rotation_steps: int) -> Array[Vector2i]:

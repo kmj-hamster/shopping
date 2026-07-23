@@ -3,6 +3,7 @@ extends Control
 var tasks: Array[TaskDefinition] = []
 var current_task: TaskDefinition
 var pieces: Array[PuzzlePieceState] = []
+var palette_items: Array[ItemDefinition] = []
 var undo_stack: Array[Array] = []
 
 var task_selector: OptionButton
@@ -32,6 +33,38 @@ func _ready() -> void:
 	LocaleManager.locale_changed.connect(_on_locale_changed)
 	_apply_locale_texts()
 	_load_task(0)
+
+
+func _input(event: InputEvent) -> void:
+	if not (event is InputEventMouseButton):
+		return
+	if event.button_index != MOUSE_BUTTON_RIGHT or not event.pressed:
+		return
+	var viewport := get_viewport()
+	if not viewport.gui_is_dragging():
+		return
+	var data: Variant = viewport.gui_get_drag_data()
+	if not _rotate_drag_data(data):
+		return
+	viewport.set_input_as_handled()
+
+
+func _rotate_drag_data(data: Variant) -> bool:
+	if typeof(data) != TYPE_DICTIONARY or data.get("kind") != &"puzzle_piece":
+		return false
+	var candidate := data.get("candidate") as PuzzlePieceState
+	if candidate == null:
+		return false
+	var current_anchor: Vector2i = data.get("grab_offset", Vector2i.ZERO)
+	var rotated_anchor := PolyominoGeometry.rotate_anchor_clockwise(candidate.local_cells(), current_anchor)
+	candidate.rotation_steps = posmod(candidate.rotation_steps + 1, 4)
+	data["grab_offset"] = rotated_anchor
+	var preview := data.get("preview") as ShapePreview
+	if preview != null:
+		preview.refresh_drag_geometry(rotated_anchor)
+	if puzzle_board != null:
+		puzzle_board.refresh_drag_state(data)
+	return true
 
 
 func _build_interface() -> void:
@@ -78,11 +111,11 @@ func _build_interface() -> void:
 
 	var content := HSplitContainer.new()
 	content.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	content.split_offset = 340
+	content.split_offset = 360
 	root_column.add_child(content)
 
 	var inventory_frame := PanelContainer.new()
-	inventory_frame.custom_minimum_size = Vector2(320, 0)
+	inventory_frame.custom_minimum_size = Vector2(340, 0)
 	inventory_frame.add_theme_stylebox_override("panel", UiPalette.panel_style())
 	content.add_child(inventory_frame)
 
@@ -191,11 +224,12 @@ func _load_task(index: int) -> void:
 	if index < 0 or index >= tasks.size():
 		return
 	current_task = tasks[index]
-	pieces = DemoCatalog.create_lab_pieces(current_task.id)
+	pieces = []
+	palette_items = DemoCatalog.lab_palette_items(current_task.id)
 	undo_stack.clear()
 	task_description.text = "%s\n%s" % [current_task.localized_name(), current_task.localized_description()]
 	puzzle_board.set_context(current_task, pieces)
-	inventory_panel.set_pieces(pieces)
+	inventory_panel.set_context(palette_items, pieces, puzzle_board.cell_size)
 	_show_feedback(TranslationServer.translate(&"feedback.choose_item"))
 	_update_status()
 
@@ -253,13 +287,11 @@ func _validate_current_board() -> void:
 
 
 func _return_all_to_inventory() -> void:
-	if not pieces.any(func(piece: PuzzlePieceState) -> bool: return piece.location == PuzzlePieceState.Location.BOARD):
-		_show_feedback(TranslationServer.translate(&"feedback.inventory_full"))
+	if pieces.is_empty():
+		_show_feedback(TranslationServer.translate(&"feedback.board_empty"))
 		return
 	_push_undo_snapshot()
-	for piece in pieces:
-		piece.location = PuzzlePieceState.Location.INVENTORY
-		piece.grid_position = Vector2i(-1, -1)
+	pieces.clear()
 	_on_piece_state_changed()
 
 
@@ -268,7 +300,7 @@ func _push_undo_snapshot() -> void:
 	for piece in pieces:
 		snapshot.append({
 			"uid": piece.piece_uid,
-			"location": piece.location,
+			"item_id": piece.definition.id,
 			"position": piece.grid_position,
 			"rotation": piece.rotation_steps,
 		})
@@ -281,13 +313,15 @@ func _undo() -> void:
 	if undo_stack.is_empty():
 		return
 	var snapshot: Array = undo_stack.pop_back()
+	pieces.clear()
 	for saved in snapshot:
-		for piece in pieces:
-			if piece.piece_uid == saved.uid:
-				piece.location = saved.location
-				piece.grid_position = saved.position
-				piece.rotation_steps = saved.rotation
-				break
+		var piece := PuzzlePieceState.new(saved.uid, DemoCatalog.item_by_id(saved.item_id))
+		piece.location = PuzzlePieceState.Location.BOARD
+		piece.grid_position = saved.position
+		piece.rotation_steps = saved.rotation
+		pieces.append(piece)
+	puzzle_board.set_context(current_task, pieces)
+	inventory_panel.set_context(palette_items, pieces, puzzle_board.cell_size)
 	_show_feedback(TranslationServer.translate(&"feedback.undone"))
 	_on_piece_state_changed()
 

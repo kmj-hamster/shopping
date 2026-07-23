@@ -19,13 +19,28 @@ msgid "ui.inventory.title"
 msgstr "Endless Bag"
 
 msgid "ui.inventory.hint"
-msgstr "Drag items onto the grid; right-click to rotate.\n★ marks the special item required by this event."
+msgstr "Grab the piece itself and drag it onto the grid; right-click while dragging to rotate.\n★ is unique; standard pieces are unlimited."
+
+msgid "ui.inventory.special_section"
+msgstr "Event Special"
+
+msgid "ui.inventory.standard_section"
+msgstr "Unlimited Standard Pieces"
 
 msgid "ui.inventory.empty"
 msgstr "The bag is empty for now.\nDrag an item back from the grid."
 
 msgid "ui.item.tooltip"
-msgstr "Drag onto the grid; right-click to rotate"
+msgstr "Grab the piece and drag it right; right-click while dragging to rotate"
+
+msgid "ui.item.special_placed"
+msgstr "The special piece is on the grid; return it to use it again"
+
+msgid "ui.item.palette_detail"
+msgstr "%s · %s%d · ∞"
+
+msgid "ui.item.special_detail"
+msgstr "%s · %s%d · unique"
 
 msgid "ui.item.detail"
 msgstr "%s · %s%d · ¥%d"
@@ -61,10 +76,10 @@ msgid "ui.validate"
 msgstr "Check Completion"
 
 msgid "ui.footer"
-msgstr "Puzzle lab: drag to place · right-click to rotate · no mirroring · fill the shape and check attributes"
+msgstr "Grab and drag · right-click during drag to rotate · unlimited standards · one special · no mirroring"
 
 msgid "feedback.choose_item"
-msgstr "Choose an item and start arranging."
+msgstr "Grab a piece from the unlimited toolbox and start arranging."
 
 msgid "feedback.no_rotation_space"
 msgstr "There is not enough room to rotate here."
@@ -78,8 +93,8 @@ msgstr "✓ Complete. Shape, special item, and attribute conditions all pass."
 msgid "feedback.incomplete"
 msgstr "Not complete: %s"
 
-msgid "feedback.inventory_full"
-msgstr "Every item is already in the bag."
+msgid "feedback.board_empty"
+msgstr "There are no pieces on the grid yet."
 
 msgid "feedback.undone"
 msgstr "Undid the last step."
@@ -95,6 +110,9 @@ msgstr "%d cells are still empty"
 
 msgid "puzzle.reason.missing_special"
 msgstr "The required special item is missing"
+
+msgid "puzzle.reason.duplicate_special"
+msgstr "Only one special item may be placed"
 
 msgid "puzzle.reason.mirror"
 msgstr "Mirror must be strictly highest"
@@ -139,19 +157,19 @@ msgid "task.teddy.title"
 msgstr "Event 1: Teddy Bear"
 
 msgid "task.teddy.description"
-msgstr "Pack the night's purchases into the teddy-bear outline. Mirror must be strictly highest."
+msgstr "Place the one-eared teddy block, then fill the outline with unlimited standard pieces. Mirror must be strictly highest."
 
 msgid "task.goldfish.title"
 msgstr "Event 2: Goldfish"
 
 msgid "task.goldfish.description"
-msgstr "The fishbone is lowered into water. Let Lamp or Flower overcome Mirror and Fog."
+msgstr "Lower the long fishbone into the water, then finish the goldfish with unlimited standard pieces. Lamp or Flower must lead."
 
 msgid "task.tape.title"
 msgstr "Event 3: Cassette Tape"
 
 msgid "task.tape.description"
-msgstr "Fill the space between the cassette shell and its reels. This event has no attribute restriction."
+msgstr "Place the large cassette shell, then fill the remaining space freely. This event has no attribute restriction."
 
 msgid "item.book_period"
 msgstr "Missing Punctuation"

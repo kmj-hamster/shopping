@@ -6,12 +6,15 @@ signal state_changed
 signal interaction_message(message: String)
 
 const BOARD_OFFSET := Vector2(10, 10)
+const DEFAULT_CELL_SIZE := 56.0
 
 var task: TaskDefinition
 var pieces: Array[PuzzlePieceState] = []
-var cell_size := 56.0
+var cell_size := DEFAULT_CELL_SIZE
 var ghost_cells: Array[Vector2i] = []
 var ghost_valid := false
+var dragged_piece: PuzzlePieceState
+var next_piece_uid := 1
 
 
 func _ready() -> void:
@@ -22,9 +25,22 @@ func _ready() -> void:
 func set_context(task_definition: TaskDefinition, piece_states: Array[PuzzlePieceState]) -> void:
 	task = task_definition
 	pieces = piece_states
+	next_piece_uid = 1
+	for piece in pieces:
+		next_piece_uid = maxi(next_piece_uid, piece.piece_uid + 1)
 	var board_size := task.bounds_size()
 	custom_minimum_size = Vector2(board_size) * cell_size + BOARD_OFFSET * 2.0
 	queue_redraw()
+
+
+func refresh_drag_state(data: Variant) -> void:
+	if typeof(data) != TYPE_DICTIONARY or data.get("kind") != &"puzzle_piece":
+		return
+	var local_position := get_local_mouse_position()
+	if not Rect2(Vector2.ZERO, size).has_point(local_position):
+		_clear_ghost()
+		return
+	_update_ghost(local_position, data)
 
 
 func _draw() -> void:
@@ -37,7 +53,7 @@ func _draw() -> void:
 		draw_rect(rect.grow(-1.0), Color("3c5064"), false, 1.0)
 
 	for piece in pieces:
-		if piece.location != PuzzlePieceState.Location.BOARD:
+		if piece == dragged_piece or piece.location != PuzzlePieceState.Location.BOARD:
 			continue
 		var color := UiPalette.attribute_color(piece.definition.attribute)
 		for cell in piece.occupied_cells():
@@ -53,73 +69,78 @@ func _draw() -> void:
 			draw_rect(_cell_rect(cell).grow(-5.0), ghost_color, true)
 
 
-func _gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
-		var piece := _piece_at_local(event.position)
-		if piece == null:
-			return
-		var next_rotation := posmod(piece.rotation_steps + 1, 4)
-		if PuzzleRules.can_place(task, piece, pieces, piece.grid_position, next_rotation):
-			will_change.emit()
-			piece.rotation_steps = next_rotation
-			state_changed.emit()
-		else:
-			interaction_message.emit(TranslationServer.translate(&"feedback.no_rotation_space"))
-		queue_redraw()
-		accept_event()
-
-
 func _get_drag_data(at_position: Vector2) -> Variant:
-	var piece := _piece_at_local(at_position)
-	if piece == null:
+	var original := _piece_at_local(at_position)
+	if original == null:
 		return null
+	var candidate := original.copy_for_drag()
 	var clicked_cell := _grid_cell(at_position)
+	var grab_offset := clicked_cell - original.grid_position
 	var preview := ShapePreview.new()
-	preview.piece = piece
-	preview.cell_size = 18.0
-	preview.draw_background = true
-	preview.custom_minimum_size = Vector2(110, 90)
+	preview.configure_for_drag(candidate, grab_offset, cell_size)
 	set_drag_preview(preview)
+	dragged_piece = original
+	queue_redraw()
 	return {
 		"kind": &"puzzle_piece",
-		"piece": piece,
-		"grab_offset": clicked_cell - piece.grid_position,
+		"source": &"board",
+		"candidate": candidate,
+		"original": original,
+		"grab_offset": grab_offset,
+		"preview": preview,
 	}
 
 
 func _can_drop_data(at_position: Vector2, data: Variant) -> bool:
-	var piece := _piece_from_drag(data)
-	if piece == null:
-		_clear_ghost()
-		return false
-	var grab_offset: Vector2i = data.get("grab_offset", Vector2i.ZERO)
-	var target := _grid_cell(at_position) - grab_offset
-	ghost_cells = piece.occupied_cells(target, piece.rotation_steps)
-	ghost_valid = PuzzleRules.can_place(task, piece, pieces, target, piece.rotation_steps)
-	queue_redraw()
-	return ghost_valid
+	return _update_ghost(at_position, data)
 
 
 func _drop_data(at_position: Vector2, data: Variant) -> void:
-	var piece := _piece_from_drag(data)
-	if piece == null:
+	var candidate := _candidate_from_drag(data)
+	if candidate == null:
 		return
 	var grab_offset: Vector2i = data.get("grab_offset", Vector2i.ZERO)
 	var target := _grid_cell(at_position) - grab_offset
-	if not PuzzleRules.can_place(task, piece, pieces, target, piece.rotation_steps):
+	var original := data.get("original") as PuzzlePieceState
+	if not PuzzleRules.can_place(task, candidate, pieces, target, candidate.rotation_steps, original):
 		interaction_message.emit(TranslationServer.translate(&"feedback.invalid_drop"))
 		_clear_ghost()
 		return
+
 	will_change.emit()
-	piece.location = PuzzlePieceState.Location.BOARD
-	piece.grid_position = target
+	if data.get("source") == &"template":
+		candidate.piece_uid = next_piece_uid
+		next_piece_uid += 1
+		candidate.location = PuzzlePieceState.Location.BOARD
+		candidate.grid_position = target
+		pieces.append(candidate)
+	else:
+		original.rotation_steps = candidate.rotation_steps
+		original.grid_position = target
+		original.location = PuzzlePieceState.Location.BOARD
 	_clear_ghost()
 	state_changed.emit()
 
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_DRAG_END:
+		dragged_piece = null
 		_clear_ghost()
+		queue_redraw()
+
+
+func _update_ghost(at_position: Vector2, data: Variant) -> bool:
+	var candidate := _candidate_from_drag(data)
+	if candidate == null:
+		_clear_ghost()
+		return false
+	var grab_offset: Vector2i = data.get("grab_offset", Vector2i.ZERO)
+	var target := _grid_cell(at_position) - grab_offset
+	ghost_cells = candidate.occupied_cells(target, candidate.rotation_steps)
+	var original := data.get("original") as PuzzlePieceState
+	ghost_valid = PuzzleRules.can_place(task, candidate, pieces, target, candidate.rotation_steps, original)
+	queue_redraw()
+	return ghost_valid
 
 
 func _piece_at_local(local_position: Vector2) -> PuzzlePieceState:
@@ -131,10 +152,10 @@ func _piece_at_local(local_position: Vector2) -> PuzzlePieceState:
 	return null
 
 
-func _piece_from_drag(data: Variant) -> PuzzlePieceState:
+func _candidate_from_drag(data: Variant) -> PuzzlePieceState:
 	if typeof(data) != TYPE_DICTIONARY or data.get("kind") != &"puzzle_piece":
 		return null
-	return data.get("piece") as PuzzlePieceState
+	return data.get("candidate") as PuzzlePieceState
 
 
 func _grid_cell(local_position: Vector2) -> Vector2i:

@@ -27,3 +27,11 @@ func occupied_cells(
 	candidate_rotation: int = rotation_steps
 ) -> Array[Vector2i]:
 	return PolyominoGeometry.translated(local_cells(candidate_rotation), candidate_position)
+
+
+func copy_for_drag() -> PuzzlePieceState:
+	var copy := PuzzlePieceState.new(piece_uid, definition)
+	copy.location = location
+	copy.grid_position = grid_position
+	copy.rotation_steps = rotation_steps
+	return copy
