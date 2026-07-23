@@ -70,6 +70,7 @@ func cart_quantity(item_id: StringName) -> int:
 	for piece in pieces:
 		if (
 			piece.ownership == PuzzlePieceState.Ownership.PENDING_PURCHASE
+			and piece.definition.store_id == store_id
 			and piece.definition.id == item_id
 		):
 			count += 1
@@ -79,7 +80,10 @@ func cart_quantity(item_id: StringName) -> int:
 func cart_count() -> int:
 	var count := 0
 	for piece in pieces:
-		if piece.ownership == PuzzlePieceState.Ownership.PENDING_PURCHASE:
+		if (
+			piece.ownership == PuzzlePieceState.Ownership.PENDING_PURCHASE
+			and piece.definition.store_id == store_id
+		):
 			count += 1
 	return count
 
@@ -87,7 +91,10 @@ func cart_count() -> int:
 func cart_total() -> int:
 	var total := 0
 	for piece in pieces:
-		if piece.ownership == PuzzlePieceState.Ownership.PENDING_PURCHASE:
+		if (
+			piece.ownership == PuzzlePieceState.Ownership.PENDING_PURCHASE
+			and piece.definition.store_id == store_id
+		):
 			total += piece.definition.price
 	return total
 
@@ -96,7 +103,10 @@ func checkout() -> Dictionary:
 	var counts: Dictionary = {}
 	var pending: Array[PuzzlePieceState] = []
 	for piece in pieces:
-		if piece.ownership != PuzzlePieceState.Ownership.PENDING_PURCHASE:
+		if (
+			piece.ownership != PuzzlePieceState.Ownership.PENDING_PURCHASE
+			or piece.definition.store_id != store_id
+		):
 			continue
 		pending.append(piece)
 		counts[piece.definition.id] = int(counts.get(piece.definition.id, 0)) + 1
@@ -122,7 +132,10 @@ func checkout() -> Dictionary:
 func cancel_cart() -> int:
 	var pending: Array[PuzzlePieceState] = []
 	for piece in pieces:
-		if piece.ownership == PuzzlePieceState.Ownership.PENDING_PURCHASE:
+		if (
+			piece.ownership == PuzzlePieceState.Ownership.PENDING_PURCHASE
+			and piece.definition.store_id == store_id
+		):
 			pending.append(piece)
 	for piece in pending:
 		pieces.erase(piece)

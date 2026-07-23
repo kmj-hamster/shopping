@@ -7,6 +7,14 @@ const STORE_FLOWER := &"flower"
 const STORE_RECORD := &"record"
 const STORE_FAST_FOOD := &"fast_food"
 
+const STORE_IDS: Array[StringName] = [
+	STORE_BOOK,
+	STORE_TOY,
+	STORE_FLOWER,
+	STORE_RECORD,
+	STORE_FAST_FOOD,
+]
+
 const ITEM_ROWS := [
 	[&"book_period", &"item.book_period", STORE_BOOK, &"M1", ItemDefinition.ATTRIBUTE_FOG, 10, 3, false],
 	[&"book_bookmark", &"item.book_bookmark", STORE_BOOK, &"I2", ItemDefinition.ATTRIBUTE_FOG, 12, 2, false],
@@ -64,6 +72,10 @@ static func items_for_store(store_id: StringName) -> Array[ItemDefinition]:
 		if item.store_id == store_id:
 			result.append(item)
 	return result
+
+
+static func store_name_key(store_id: StringName) -> StringName:
+	return StringName("store.%s" % store_id)
 
 
 static func all_tasks() -> Array[TaskDefinition]:

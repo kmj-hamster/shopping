@@ -74,6 +74,36 @@ func test_cancel_cart_preserves_owned_piece_and_its_board_position() -> void:
 	assert_eq(owned.grid_position, Vector2i(3, 2))
 
 
+func test_shared_piece_array_keeps_each_store_cart_isolated() -> void:
+	var pieces: Array[PuzzlePieceState] = []
+	var wallet := PlayerWallet.new(100)
+	var toy := ShopTransaction.new(
+		DemoCatalog.STORE_TOY,
+		wallet.money,
+		DemoCatalog.items_for_store(DemoCatalog.STORE_TOY),
+		pieces,
+		wallet
+	)
+	var book := ShopTransaction.new(
+		DemoCatalog.STORE_BOOK,
+		wallet.money,
+		DemoCatalog.items_for_store(DemoCatalog.STORE_BOOK),
+		pieces,
+		wallet
+	)
+	var toy_piece := toy.add_to_cart(&"toy_marble").piece as PuzzlePieceState
+	var book_piece := book.add_to_cart(&"book_period").piece as PuzzlePieceState
+
+	assert_eq(toy.cart_count(), 1)
+	assert_eq(book.cart_count(), 1)
+	assert_eq(toy.cart_total(), 10)
+	assert_true(toy.checkout().ok)
+	assert_eq(toy_piece.ownership, PuzzlePieceState.Ownership.OWNED)
+	assert_eq(book_piece.ownership, PuzzlePieceState.Ownership.PENDING_PURCHASE)
+	assert_eq(book.cancel_cart(), 1)
+	assert_eq(pieces, [toy_piece])
+
+
 func _toy_transaction(starting_money: int) -> ShopTransaction:
 	return ShopTransaction.new(
 		DemoCatalog.STORE_TOY,

@@ -14,7 +14,11 @@ var pieces: Array[PuzzlePieceState] = []
 var unlocked_tasks: Dictionary = {}
 var completed_tasks: Dictionary = {}
 var purchased_special_items: Dictionary = {}
-var toy_transaction: ShopTransaction
+var store_transactions: Dictionary = {}
+
+var toy_transaction: ShopTransaction:
+	get:
+		return transaction_for_store(DemoCatalog.STORE_TOY)
 
 
 func _ready() -> void:
@@ -29,25 +33,33 @@ func reset_demo() -> void:
 	unlocked_tasks = {}
 	completed_tasks = {}
 	purchased_special_items = {}
-	toy_transaction = ShopTransaction.new(
-		DemoCatalog.STORE_TOY,
-		wallet.money,
-		DemoCatalog.items_for_store(DemoCatalog.STORE_TOY),
-		pieces,
-		wallet
-	)
+	_refresh_store_transactions()
 	state_changed.emit()
 
 
-func checkout_toy_store() -> Dictionary:
+func transaction_for_store(store_id: StringName) -> ShopTransaction:
+	return store_transactions.get(store_id) as ShopTransaction
+
+
+func is_store_open(store_id: StringName) -> bool:
+	return ShopSchedule.is_store_open(store_id, day)
+
+
+func checkout_store(store_id: StringName) -> Dictionary:
+	if not is_store_open(store_id):
+		return {"ok": false, "reason": &"store_closed"}
+	var transaction := transaction_for_store(store_id)
+	if transaction == null:
+		return {"ok": false, "reason": &"wrong_store"}
 	var pending_specials: Array[StringName] = []
 	for piece in pieces:
 		if (
 			piece.ownership == PuzzlePieceState.Ownership.PENDING_PURCHASE
+			and piece.definition.store_id == store_id
 			and piece.definition.is_special
 		):
 			pending_specials.append(piece.definition.id)
-	var result := toy_transaction.checkout()
+	var result := transaction.checkout()
 	if not result.ok:
 		return result
 	for item_id in pending_specials:
@@ -62,11 +74,48 @@ func checkout_toy_store() -> Dictionary:
 	return result
 
 
-func cancel_toy_cart() -> int:
-	var removed := toy_transaction.cancel_cart()
+func checkout_toy_store() -> Dictionary:
+	return checkout_store(DemoCatalog.STORE_TOY)
+
+
+func cancel_store_cart(store_id: StringName) -> int:
+	var transaction := transaction_for_store(store_id)
+	if transaction == null:
+		return 0
+	var removed := transaction.cancel_cart()
 	if removed > 0:
 		state_changed.emit()
 	return removed
+
+
+func cancel_toy_cart() -> int:
+	return cancel_store_cart(DemoCatalog.STORE_TOY)
+
+
+func cancel_all_carts() -> int:
+	var removed := 0
+	for store_id in DemoCatalog.STORE_IDS:
+		var transaction := transaction_for_store(store_id)
+		if transaction != null:
+			removed += transaction.cancel_cart()
+	if removed > 0:
+		state_changed.emit()
+	return removed
+
+
+func advance_day() -> Dictionary:
+	var cancelled_count := cancel_all_carts()
+	day += 1
+	wallet.money += 100
+	_refresh_store_transactions()
+	state_changed.emit()
+	return {
+		"day": day,
+		"weekday_key": ShopSchedule.weekday_key(day),
+		"income": 100,
+		"cancelled_count": cancelled_count,
+		"open_stores": ShopSchedule.open_store_ids(day),
+	}
 
 
 func is_task_unlocked(task_id: StringName) -> bool:
@@ -104,3 +153,19 @@ func shopping_goal_key() -> StringName:
 	if is_task_unlocked(TASK_TEDDY):
 		return &"map.goal.finish_teddy"
 	return &"map.goal.buy_teddy"
+
+
+func _refresh_store_transactions() -> void:
+	store_transactions = {}
+	for store_id in DemoCatalog.STORE_IDS:
+		var transaction := ShopTransaction.new(
+			store_id,
+			wallet.money,
+			DemoCatalog.items_for_store(store_id),
+			pieces,
+			wallet
+		)
+		for item in DemoCatalog.items_for_store(store_id):
+			if item.is_special and purchased_special_items.has(item.id):
+				transaction.stock_remaining[item.id] = 0
+		store_transactions[store_id] = transaction
