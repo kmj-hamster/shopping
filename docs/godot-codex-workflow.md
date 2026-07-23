@@ -64,6 +64,25 @@
 | 视觉/UI | MCP 游戏截图 + editor/game 日志 + 人工体验 |
 | 导出相关 | 上述全部 + 目标平台 debug export |
 
+## 快速反馈回路
+
+完整检查仍是提交前的质量门，但开发中不必每次都重复全部步骤：
+
+```powershell
+# 先确认资源导入和脚本解析
+pwsh -File tools/check.ps1 -ImportOnly
+
+# 只运行正在修改的测试文件，不重复导入
+pwsh -File tools/check.ps1 -SkipImport -TestPath tests/test_example.gd
+
+# 提交或交付前仍执行完整检查
+pwsh -File tools/check.ps1
+```
+
+- 沙箱若出现 `CreateProcessAsUser`、`Path`/`PATH` 冲突或 GUT 用户缓存拒绝访问，立即用相同脚本申请一次沙箱外执行，不再尝试临时 PowerShell、进程封装或替代用户目录。
+- Godot API 优先通过已连接编辑器的 MCP API 查询；运行时优先读取已知节点或使用 `game_eval`，不要默认导出完整 UI 树。
+- MCP 合成鼠标只做一次拖动探测。若 Godot 没有进入 GUI drag 状态，改用聚焦的 GUT／`game_eval` 验证状态机，把真实鼠标手感交给用户。
+
 ## 故障恢复顺序
 
 1. `tools/check.ps1` 失败：先修解析、导入或测试，不启动运行时调试。

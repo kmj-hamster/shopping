@@ -1,7 +1,12 @@
 [CmdletBinding()]
-param()
+param(
+    [switch]$ImportOnly,
+    [switch]$SkipImport,
+    [string[]]$TestPath
+)
 
 $ErrorActionPreference = "Stop"
+if ($ImportOnly -and $SkipImport) { throw "ImportOnly and SkipImport cannot be used together." }
 $projectRoot = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot "common.ps1")
 $config = Get-GodotCodexConfig -ProjectRoot $projectRoot
@@ -35,17 +40,43 @@ if ($expectedVersion -and -not $actualVersion.StartsWith($expectedVersion)) {
 Write-Host "Godot $actualVersion"
 
 $testsEnabled = [bool]$config.tests.enabled
-$stepCount = if ($testsEnabled) { 2 } else { 1 }
-Write-Host "[1/$stepCount] Importing resources and parsing project scripts..."
-Invoke-GodotStep -Name "import" -Arguments @("--headless", "--path", $projectRoot, "--import")
+$shouldImport = -not $SkipImport
+$shouldRunTests = $testsEnabled -and -not $ImportOnly
+if (-not $shouldImport -and -not $shouldRunTests) { throw "No checks selected. Remove SkipImport or enable tests." }
 
-if ($testsEnabled) {
+$stepCount = [int]$shouldImport + [int]$shouldRunTests
+$stepNumber = 1
+if ($shouldImport) {
+    Write-Host "[$stepNumber/$stepCount] Importing resources and parsing project scripts..."
+    Invoke-GodotStep -Name "import" -Arguments @("--headless", "--path", $projectRoot, "--import")
+    $stepNumber += 1
+}
+
+if ($shouldRunTests) {
     if ($config.tests.runner -ne "gut") { throw "Unsupported test runner: $($config.tests.runner)" }
-    Write-Host "[2/$stepCount] Running GUT tests..."
-    Invoke-GodotStep -Name "gut" -Arguments @(
+    $gutArguments = @(
         "--headless", "--path", $projectRoot,
         "--script", [string]$config.tests.script,
         "-gexit", "-gdisable_colors"
     )
+    $stepName = "gut"
+    if ($TestPath.Count -gt 0) {
+        $projectPrefix = [IO.Path]::GetFullPath($projectRoot).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+        $testUris = foreach ($path in $TestPath) {
+            if ($path.StartsWith("res://")) { $path; continue }
+            $resolved = (Resolve-Path -LiteralPath (Join-Path $projectRoot $path)).Path
+            if (-not $resolved.StartsWith($projectPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+                throw "TestPath must be inside the project: $path"
+            }
+            "res://" + $resolved.Substring($projectPrefix.Length).Replace('\', '/')
+        }
+        $gutArguments += "-gdir="
+        $gutArguments += "-gtest=$($testUris -join ',')"
+        $stepName = "gut-targeted"
+        Write-Host "[$stepNumber/$stepCount] Running targeted GUT tests: $($testUris -join ', ')"
+    } else {
+        Write-Host "[$stepNumber/$stepCount] Running all GUT tests..."
+    }
+    Invoke-GodotStep -Name $stepName -Arguments $gutArguments
 }
-Write-Host "All project checks passed."
+Write-Host "All requested project checks passed."

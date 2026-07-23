@@ -24,6 +24,13 @@
 6. Stop the test game after automated runtime checks.
 7. Review `git diff --check`, `git diff`, and `git status` before handoff.
 
+## Efficiency guardrails
+
+- During iteration, use `tools/check.ps1 -ImportOnly`, then `tools/check.ps1 -SkipImport -TestPath <test.gd>` for affected tests. Run the unfiltered script once before commit or handoff.
+- On `CreateProcessAsUser`, duplicate `Path`/`PATH`, or denied Godot/GUT cache access inside a sandbox, retry the exact project script once with escalation instead of inventing alternate launch paths.
+- Prefer Godot MCP API lookup and targeted runtime-node reads over web search or a complete UI-tree dump.
+- Give synthetic MCP mouse dragging one probe. If Godot does not enter GUI drag state, switch to focused GUT tests or game evaluation and leave physical feel to the user.
+
 ## Quality gates
 
 - A task is incomplete while import, parsing, tests, or relevant runtime checks fail.

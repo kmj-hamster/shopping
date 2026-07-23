@@ -27,6 +27,14 @@
 6. Stop the test game after automated runtime checks.
 7. Review `git diff --check`, `git diff`, and `git status` before handoff.
 
+## Efficiency guardrails
+
+- During iteration, use `tools/check.ps1 -ImportOnly` for an early parse/import gate, then `tools/check.ps1 -SkipImport -TestPath <test.gd>` for the affected GUT file. Run the unfiltered `tools/check.ps1` once before commit or handoff.
+- If the Codex sandbox reports `CreateProcessAsUser`, duplicate `Path`/`PATH`, or denied Godot/GUT user-cache access, retry the exact project script once with sandbox escalation. Do not improvise alternate PowerShell, .NET process, or user-data paths.
+- Use Godot MCP `api_manage` for engine API discovery before web search, and query a known runtime node or `game_eval` before dumping the complete UI tree.
+- Synthetic MCP mouse dragging gets one probe. If `gui_is_dragging()` remains false, stop sending longer input sequences; validate state transitions with focused GUT tests or `game_eval`, then leave physical drag feel to the user.
+- Discover deferred tools by filtering `ALL_TOOLS` by exact tool name first. Do not print descriptions for broad keyword matches.
+
 ## Quality gates
 
 - A task is incomplete while import, parsing, GUT tests, or relevant runtime checks fail.
