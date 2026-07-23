@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://2ofyb3c02hbv"]
+
+[node name="McpSmoke" type="Node2D" unique_id=319234664]
+
+[node name="Status" type="Label" parent="." unique_id=1365850448]
+text = "MCP scene authoring is operational"
