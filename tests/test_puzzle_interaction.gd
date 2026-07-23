@@ -56,6 +56,38 @@ func test_lab_rotates_candidate_while_drag_data_remains_uncommitted() -> void:
 	assert_eq(lab.pieces.size(), 0)
 
 
+func test_board_piece_dropped_outside_returns_to_infinite_inventory() -> void:
+	var board := PuzzleBoard.new()
+	autofree(board)
+	var piece := PuzzlePieceState.new(1, DemoCatalog.item_by_id(&"teddy_special"))
+	piece.location = PuzzlePieceState.Location.BOARD
+	var pieces: Array[PuzzlePieceState] = [piece]
+	board.set_context(DemoCatalog.task_by_id(&"teddy"), pieces)
+	board.size = board.custom_minimum_size
+	board.dragged_piece = piece
+
+	board._finish_piece_drag(false, Vector2(-1, board.size.y * 0.5))
+
+	assert_true(pieces.is_empty())
+	assert_null(board.dragged_piece)
+
+
+func test_invalid_drop_inside_board_keeps_original_piece() -> void:
+	var board := PuzzleBoard.new()
+	autofree(board)
+	var piece := PuzzlePieceState.new(1, DemoCatalog.item_by_id(&"book_period"))
+	piece.location = PuzzlePieceState.Location.BOARD
+	var pieces: Array[PuzzlePieceState] = [piece]
+	board.set_context(DemoCatalog.task_by_id(&"teddy"), pieces)
+	board.size = board.custom_minimum_size
+	board.dragged_piece = piece
+
+	board._finish_piece_drag(false, board.size * 0.5)
+
+	assert_eq(pieces, [piece])
+	assert_null(board.dragged_piece)
+
+
 func _drop_template(board: PuzzleBoard, definition: ItemDefinition, target: Vector2i) -> void:
 	var candidate := PuzzlePieceState.new(-1, definition)
 	var local_drop := PuzzleBoard.BOARD_OFFSET + (Vector2(target) + Vector2(0.5, 0.5)) * board.cell_size

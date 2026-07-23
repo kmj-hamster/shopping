@@ -124,9 +124,22 @@ func _drop_data(at_position: Vector2, data: Variant) -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_DRAG_END:
-		dragged_piece = null
-		_clear_ghost()
-		queue_redraw()
+		_finish_piece_drag(is_drag_successful(), get_local_mouse_position())
+
+
+func _finish_piece_drag(was_successful: bool, local_position: Vector2) -> void:
+	var original := dragged_piece
+	dragged_piece = null
+	if (
+		original != null
+		and not was_successful
+		and not Rect2(Vector2.ZERO, size).has_point(local_position)
+	):
+		will_change.emit()
+		pieces.erase(original)
+		state_changed.emit()
+	_clear_ghost()
+	queue_redraw()
 
 
 func _update_ghost(at_position: Vector2, data: Variant) -> bool:
