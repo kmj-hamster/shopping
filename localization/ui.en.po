@@ -1,0 +1,223 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Millennium Shopping Guide\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "app.title"
+msgstr "Millennium Shopping Guide · Puzzle Lab"
+
+msgid "ui.language.tooltip"
+msgstr "切换到中文"
+
+msgid "ui.reset_task"
+msgstr "Reset Puzzle"
+
+msgid "ui.inventory.title"
+msgstr "Endless Bag"
+
+msgid "ui.inventory.hint"
+msgstr "Drag items onto the grid; right-click to rotate.\n★ marks the special item required by this event."
+
+msgid "ui.inventory.empty"
+msgstr "The bag is empty for now.\nDrag an item back from the grid."
+
+msgid "ui.item.tooltip"
+msgstr "Drag onto the grid; right-click to rotate"
+
+msgid "ui.item.detail"
+msgstr "%s · %s%d · ¥%d"
+
+msgid "ui.reason_separator"
+msgstr "; "
+
+msgid "ui.coverage"
+msgstr "Coverage %d/%d"
+
+msgid "ui.requirement.mirror_met"
+msgstr "Goal: Mirror is strictly highest (met)"
+
+msgid "ui.requirement.mirror_unmet"
+msgstr "Goal: Mirror is strictly highest (not met)"
+
+msgid "ui.requirement.warm_met"
+msgstr "Goal: Lamp or Flower exceeds Mirror and Fog (met)"
+
+msgid "ui.requirement.warm_unmet"
+msgstr "Goal: Lamp or Flower exceeds Mirror and Fog (not met)"
+
+msgid "ui.requirement.none"
+msgstr "Goal: No attribute restriction (met)"
+
+msgid "ui.undo"
+msgstr "Undo"
+
+msgid "ui.return_all"
+msgstr "Return All to Bag"
+
+msgid "ui.validate"
+msgstr "Check Completion"
+
+msgid "ui.footer"
+msgstr "Puzzle lab: drag to place · right-click to rotate · no mirroring · fill the shape and check attributes"
+
+msgid "feedback.choose_item"
+msgstr "Choose an item and start arranging."
+
+msgid "feedback.no_rotation_space"
+msgstr "There is not enough room to rotate here."
+
+msgid "feedback.invalid_drop"
+msgstr "An item cannot be placed on the red cells."
+
+msgid "feedback.complete"
+msgstr "✓ Complete. Shape, special item, and attribute conditions all pass."
+
+msgid "feedback.incomplete"
+msgstr "Not complete: %s"
+
+msgid "feedback.inventory_full"
+msgstr "Every item is already in the bag."
+
+msgid "feedback.undone"
+msgstr "Undid the last step."
+
+msgid "puzzle.reason.outside"
+msgstr "An item extends outside the grid"
+
+msgid "puzzle.reason.overlap"
+msgstr "Some items overlap"
+
+msgid "puzzle.reason.missing_cells"
+msgstr "%d cells are still empty"
+
+msgid "puzzle.reason.missing_special"
+msgstr "The required special item is missing"
+
+msgid "puzzle.reason.mirror"
+msgstr "Mirror must be strictly highest"
+
+msgid "puzzle.reason.warm"
+msgstr "Lamp or Flower must exceed Mirror and Fog"
+
+msgid "puzzle.reason.attribute"
+msgstr "The attribute condition is not met"
+
+msgid "attribute.lamp"
+msgstr "Lamp"
+
+msgid "attribute.mirror"
+msgstr "Mirror"
+
+msgid "attribute.flower"
+msgstr "Flower"
+
+msgid "attribute.fog"
+msgstr "Fog"
+
+msgid "attribute.unknown"
+msgstr "Unknown"
+
+msgid "store.book"
+msgstr "Bookstore"
+
+msgid "store.toy"
+msgstr "Toy Store"
+
+msgid "store.flower"
+msgstr "Flower Shop"
+
+msgid "store.record"
+msgstr "Record Store"
+
+msgid "store.fast_food"
+msgstr "Fast Food"
+
+msgid "task.teddy.title"
+msgstr "Event 1: Teddy Bear"
+
+msgid "task.teddy.description"
+msgstr "Pack the night's purchases into the teddy-bear outline. Mirror must be strictly highest."
+
+msgid "task.goldfish.title"
+msgstr "Event 2: Goldfish"
+
+msgid "task.goldfish.description"
+msgstr "The fishbone is lowered into water. Let Lamp or Flower overcome Mirror and Fog."
+
+msgid "task.tape.title"
+msgstr "Event 3: Cassette Tape"
+
+msgid "task.tape.description"
+msgstr "Fill the space between the cassette shell and its reels. This event has no attribute restriction."
+
+msgid "item.book_period"
+msgstr "Missing Punctuation"
+
+msgid "item.book_bookmark"
+msgstr "Night-Train Bookmark"
+
+msgid "item.book_manga"
+msgstr "Outdated Manga"
+
+msgid "item.book_clipping"
+msgstr "Urban-Legend Clipping"
+
+msgid "item.toy_marble"
+msgstr "Glass Marble"
+
+msgid "item.toy_blocks"
+msgstr "Clockwork Blocks"
+
+msgid "item.toy_puzzle"
+msgstr "Chipped Puzzle"
+
+msgid "item.toy_robot"
+msgstr "Plastic Robot"
+
+msgid "item.flower_seed"
+msgstr "Glowflower Seed"
+
+msgid "item.flower_lavender"
+msgstr "Lavender Bundle"
+
+msgid "item.flower_sunflower"
+msgstr "Potted Sunflower"
+
+msgid "item.flower_roots"
+msgstr "Greenhouse Roots"
+
+msgid "item.record_needle"
+msgstr "Spare Stylus"
+
+msgid "item.record_ticket"
+msgstr "Concert Stub"
+
+msgid "item.record_headphones"
+msgstr "Coiled Headphones"
+
+msgid "item.record_extension"
+msgstr "Midnight Extension Cord"
+
+msgid "item.fast_sugar"
+msgstr "Strawberry Sugar Packet"
+
+msgid "item.fast_straw"
+msgstr "Paper Straw"
+
+msgid "item.fast_hash_brown"
+msgstr "Cold Hash Brown"
+
+msgid "item.fast_fries"
+msgstr "Spilled Fries"
+
+msgid "item.special_teddy"
+msgstr "One-Eared Teddy Bear"
+
+msgid "item.special_fishbone"
+msgstr "Leftover Fishbone"
+
+msgid "item.special_tape"
+msgstr "Endlessly Rewinding Tape"

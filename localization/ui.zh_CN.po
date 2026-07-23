@@ -1,0 +1,223 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Millennium Shopping Guide\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "app.title"
+msgstr "千禧年购物指南 · 拼图实验室"
+
+msgid "ui.language.tooltip"
+msgstr "Switch to English"
+
+msgid "ui.reset_task"
+msgstr "重置本题"
+
+msgid "ui.inventory.title"
+msgstr "无限背包"
+
+msgid "ui.inventory.hint"
+msgstr "拖动物品进入格阵；右键旋转。\n★ 表示本事件必须使用的特殊物品。"
+
+msgid "ui.inventory.empty"
+msgstr "背包暂时是空的。\n可以把格阵中的物品拖回来。"
+
+msgid "ui.item.tooltip"
+msgstr "拖到右侧格阵；右键旋转"
+
+msgid "ui.item.detail"
+msgstr "%s · %s%d · %d元"
+
+msgid "ui.reason_separator"
+msgstr "；"
+
+msgid "ui.coverage"
+msgstr "覆盖 %d/%d"
+
+msgid "ui.requirement.mirror_met"
+msgstr "要求：镜严格最高（已满足）"
+
+msgid "ui.requirement.mirror_unmet"
+msgstr "要求：镜严格最高（未满足）"
+
+msgid "ui.requirement.warm_met"
+msgstr "要求：灯或花高于镜和雾（已满足）"
+
+msgid "ui.requirement.warm_unmet"
+msgstr "要求：灯或花高于镜和雾（未满足）"
+
+msgid "ui.requirement.none"
+msgstr "要求：无属性限制（已满足）"
+
+msgid "ui.undo"
+msgstr "撤销一步"
+
+msgid "ui.return_all"
+msgstr "全部放回背包"
+
+msgid "ui.validate"
+msgstr "检查完成条件"
+
+msgid "ui.footer"
+msgstr "实验室只验证拼图手感：拖动放置 · 右键旋转 · 不允许镜像 · 填满后检查属性"
+
+msgid "feedback.choose_item"
+msgstr "请选择物品开始试摆。"
+
+msgid "feedback.no_rotation_space"
+msgstr "这里没有足够空间旋转。"
+
+msgid "feedback.invalid_drop"
+msgstr "红色位置不能放置。"
+
+msgid "feedback.complete"
+msgstr "✓ 格阵完成。空间、特殊物品和属性条件全部成立。"
+
+msgid "feedback.incomplete"
+msgstr "还不能完成：%s"
+
+msgid "feedback.inventory_full"
+msgstr "所有物品已经在背包里。"
+
+msgid "feedback.undone"
+msgstr "已撤销上一步。"
+
+msgid "puzzle.reason.outside"
+msgstr "有物品超出格阵"
+
+msgid "puzzle.reason.overlap"
+msgstr "有物品互相重叠"
+
+msgid "puzzle.reason.missing_cells"
+msgstr "还有 %d 格未填满"
+
+msgid "puzzle.reason.missing_special"
+msgstr "缺少指定的特殊物品"
+
+msgid "puzzle.reason.mirror"
+msgstr "镜属性必须严格最高"
+
+msgid "puzzle.reason.warm"
+msgstr "灯或花必须高于镜和雾"
+
+msgid "puzzle.reason.attribute"
+msgstr "属性条件未满足"
+
+msgid "attribute.lamp"
+msgstr "灯"
+
+msgid "attribute.mirror"
+msgstr "镜"
+
+msgid "attribute.flower"
+msgstr "花"
+
+msgid "attribute.fog"
+msgstr "雾"
+
+msgid "attribute.unknown"
+msgstr "未知"
+
+msgid "store.book"
+msgstr "书店"
+
+msgid "store.toy"
+msgstr "玩具店"
+
+msgid "store.flower"
+msgstr "花店"
+
+msgid "store.record"
+msgstr "唱片店"
+
+msgid "store.fast_food"
+msgstr "快餐店"
+
+msgid "task.teddy.title"
+msgstr "事件一：泰迪熊"
+
+msgid "task.teddy.description"
+msgstr "把夜晚买来的东西装进泰迪熊的轮廓。镜必须严格最高。"
+
+msgid "task.goldfish.title"
+msgstr "事件二：金鱼"
+
+msgid "task.goldfish.description"
+msgstr "鱼骨被放进水里。让灯或花压过镜与雾。"
+
+msgid "task.tape.title"
+msgstr "事件三：磁带"
+
+msgid "task.tape.description"
+msgstr "填满磁带外壳与带轮之间的空间。这个事件没有属性限制。"
+
+msgid "item.book_period"
+msgstr "遗失的标点"
+
+msgid "item.book_bookmark"
+msgstr "夜车书签"
+
+msgid "item.book_manga"
+msgstr "过期漫画"
+
+msgid "item.book_clipping"
+msgstr "都市传说剪报"
+
+msgid "item.toy_marble"
+msgstr "玻璃弹珠"
+
+msgid "item.toy_blocks"
+msgstr "发条积木"
+
+msgid "item.toy_puzzle"
+msgstr "缺角拼板"
+
+msgid "item.toy_robot"
+msgstr "塑料机器人"
+
+msgid "item.flower_seed"
+msgstr "夜光花种"
+
+msgid "item.flower_lavender"
+msgstr "薰衣草束"
+
+msgid "item.flower_sunflower"
+msgstr "向日葵盆栽"
+
+msgid "item.flower_roots"
+msgstr "温室根系"
+
+msgid "item.record_needle"
+msgstr "备用唱针"
+
+msgid "item.record_ticket"
+msgstr "演出票根"
+
+msgid "item.record_headphones"
+msgstr "盘绕的耳机线"
+
+msgid "item.record_extension"
+msgstr "午夜延长线"
+
+msgid "item.fast_sugar"
+msgstr "草莓糖包"
+
+msgid "item.fast_straw"
+msgstr "纸吸管"
+
+msgid "item.fast_hash_brown"
+msgstr "冷掉的薯饼"
+
+msgid "item.fast_fries"
+msgstr "打翻的薯条"
+
+msgid "item.special_teddy"
+msgstr "缺耳泰迪熊"
+
+msgid "item.special_fishbone"
+msgstr "吃剩的鱼骨"
+
+msgid "item.special_tape"
+msgstr "反复倒带的磁带"
