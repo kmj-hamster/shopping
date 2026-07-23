@@ -59,7 +59,7 @@ func _rotate_drag_data(data: Variant) -> bool:
 	var rotated_anchor := PolyominoGeometry.rotate_anchor_clockwise(candidate.local_cells(), current_anchor)
 	candidate.rotation_steps = posmod(candidate.rotation_steps + 1, 4)
 	data["grab_offset"] = rotated_anchor
-	var preview := data.get("preview") as ShapePreview
+	var preview := data.get("preview") as PieceDragPreview
 	if preview != null:
 		preview.refresh_drag_geometry(rotated_anchor)
 	if puzzle_board != null:

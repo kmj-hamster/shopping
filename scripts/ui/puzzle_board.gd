@@ -76,7 +76,7 @@ func _get_drag_data(at_position: Vector2) -> Variant:
 	var candidate := original.copy_for_drag()
 	var clicked_cell := _grid_cell(at_position)
 	var grab_offset := clicked_cell - original.grid_position
-	var preview := ShapePreview.new()
+	var preview := PieceDragPreview.new()
 	preview.configure_for_drag(candidate, grab_offset, cell_size)
 	set_drag_preview(preview)
 	dragged_piece = original

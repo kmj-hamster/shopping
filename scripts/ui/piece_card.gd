@@ -79,7 +79,7 @@ func _get_drag_data(_at_position: Vector2) -> Variant:
 	var candidate := PuzzlePieceState.new(-1, definition)
 	var preview_local := shape_preview.get_local_mouse_position()
 	var grab_offset := shape_preview.closest_occupied_cell(preview_local)
-	var drag_preview := ShapePreview.new()
+	var drag_preview := PieceDragPreview.new()
 	drag_preview.configure_for_drag(candidate, grab_offset, drag_cell_size)
 	set_drag_preview(drag_preview)
 	return {
