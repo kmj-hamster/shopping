@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "project_name": "CHANGE_ME",
+  "dimension": "2D",
+  "language": "GDScript",
+  "godot": {
+    "binary": "",
+    "expected_version": "4.7.1"
+  },
+  "mcp": {
+    "endpoint": "http://127.0.0.1:8000/mcp",
+    "disable_telemetry": true
+  },
+  "tests": {
+    "enabled": true,
+    "runner": "gut",
+    "script": "res://addons/gut/gut_cmdln.gd"
+  },
+  "addons": {
+    "godot_ai": {
+      "version": "3.0.5",
+      "commit": "2313b6441ae605ee6cf49dd69f74cab30231da39",
+      "repository": "https://github.com/hi-godot/godot-ai.git",
+      "ref": "v3.0.5"
+    },
+    "gut": {
+      "version": "9.7.1",
+      "commit": "aeb5d4f3f7f0a6c9b5e178876d6c99b791fda605",
+      "repository": "https://github.com/bitwes/Gut.git",
+      "ref": "godot_4_7"
+    }
+  }
+}

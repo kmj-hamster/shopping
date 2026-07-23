@@ -2,7 +2,10 @@
 param()
 
 $ErrorActionPreference = "Stop"
-$endpoint = "http://127.0.0.1:8000/mcp"
+$projectRoot = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot "common.ps1")
+$config = Get-GodotCodexConfig -ProjectRoot $projectRoot
+$endpoint = [string]$config.mcp.endpoint
 
 function Send-McpMessage {
     param(
@@ -67,7 +70,7 @@ $initialize = Send-McpMessage -Message @{
     params = @{
         protocolVersion = "2025-06-18"
         capabilities = @{}
-        clientInfo = @{ name = "shopping-mcp-check"; version = "1.0" }
+        clientInfo = @{ name = "$($config.project_name)-mcp-check"; version = "1.0" }
     }
 }
 $session = $initialize.Session
