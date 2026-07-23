@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="shopping"
-run/main_scene="res://scenes/puzzle_lab/puzzle_lab.tscn"
+run/main_scene="res://scenes/shop_lab/shop_lab.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
 

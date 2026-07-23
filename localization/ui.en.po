@@ -85,7 +85,76 @@ msgid "feedback.no_rotation_space"
 msgstr "There is not enough room to rotate here."
 
 msgid "feedback.invalid_drop"
-msgstr "An item cannot be placed on the red cells."
+msgstr "It will not fit there."
+
+msgid "shop.tab.goods"
+msgstr "Shelf"
+
+msgid "shop.tab.bag"
+msgstr "Shopping Bag"
+
+msgid "shop.leave"
+msgstr "Leave"
+
+msgid "shop.cancel"
+msgstr "Put Back"
+
+msgid "shop.checkout"
+msgstr "Checkout"
+
+msgid "shop.requirement.mirror"
+msgstr "Mirror leads"
+
+msgid "shop.product.meta"
+msgstr "%s · ¥%d · %d"
+
+msgid "shop.product.tooltip"
+msgstr "Drag right to try it, or press + to put it in the bag"
+
+msgid "shop.item.pending"
+msgstr "○ Unpaid"
+
+msgid "shop.item.owned"
+msgstr "● Owned"
+
+msgid "shop.bag.tooltip"
+msgstr "Drag onto the outline; right-click while dragging to rotate"
+
+msgid "shop.bag.empty"
+msgstr "The bag feels light."
+
+msgid "shop.cart.summary"
+msgstr "Shopping Bag  %d  ·  ¥%d"
+
+msgid "shop.feedback.ready"
+msgstr "Take your time."
+
+msgid "shop.feedback.added"
+msgstr "Into the bag it goes."
+
+msgid "shop.feedback.removed"
+msgstr "Back on the shelf."
+
+msgid "shop.feedback.paid"
+msgstr "The register answers with a soft chime."
+
+msgid "shop.feedback.cancelled"
+msgstr "The things on the counter were put back."
+
+msgid "shop.feedback.left"
+msgstr "The unpaid things stayed at the counter."
+
+msgid "shop.feedback.no_money"
+msgstr "You are a little short."
+
+msgid "shop.feedback.no_stock"
+msgstr "There are none left tonight."
+
+msgid "shop.feedback.empty_cart"
+msgstr "There is nothing to ring up yet."
+
+msgid "shop.feedback.failed"
+msgstr "The register stays silent."
 
 msgid "feedback.complete"
 msgstr "✓ Complete. Shape, special item, and attribute conditions all pass."

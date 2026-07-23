@@ -85,7 +85,76 @@ msgid "feedback.no_rotation_space"
 msgstr "这里没有足够空间旋转。"
 
 msgid "feedback.invalid_drop"
-msgstr "红色位置不能放置。"
+msgstr "这里放不下。"
+
+msgid "shop.tab.goods"
+msgstr "货架"
+
+msgid "shop.tab.bag"
+msgstr "购物袋"
+
+msgid "shop.leave"
+msgstr "离开"
+
+msgid "shop.cancel"
+msgstr "放回"
+
+msgid "shop.checkout"
+msgstr "结账"
+
+msgid "shop.requirement.mirror"
+msgstr "镜占上风"
+
+msgid "shop.product.meta"
+msgstr "%s · ¥%d · %d"
+
+msgid "shop.product.tooltip"
+msgstr "拖到右侧试摆，或按＋放进购物袋"
+
+msgid "shop.item.pending"
+msgstr "○ 待结账"
+
+msgid "shop.item.owned"
+msgstr "● 已拥有"
+
+msgid "shop.bag.tooltip"
+msgstr "拖进格阵；拖动时右键旋转"
+
+msgid "shop.bag.empty"
+msgstr "袋子很轻。"
+
+msgid "shop.cart.summary"
+msgstr "购物袋  %d件  ·  ¥%d"
+
+msgid "shop.feedback.ready"
+msgstr "慢慢挑。"
+
+msgid "shop.feedback.added"
+msgstr "放进袋里了。"
+
+msgid "shop.feedback.removed"
+msgstr "放回货架了。"
+
+msgid "shop.feedback.paid"
+msgstr "收银机轻响了一声。"
+
+msgid "shop.feedback.cancelled"
+msgstr "柜台上的东西放回去了。"
+
+msgid "shop.feedback.left"
+msgstr "未结账的东西留在了柜台。"
+
+msgid "shop.feedback.no_money"
+msgstr "钱还差一点。"
+
+msgid "shop.feedback.no_stock"
+msgstr "今晚已经没有了。"
+
+msgid "shop.feedback.empty_cart"
+msgstr "还没有要结账的东西。"
+
+msgid "shop.feedback.failed"
+msgstr "收银机没有反应。"
 
 msgid "feedback.complete"
 msgstr "✓ 格阵完成。空间、特殊物品和属性条件全部成立。"

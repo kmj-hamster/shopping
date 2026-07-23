@@ -15,6 +15,15 @@ func test_map_source_asset_exists() -> void:
 	assert_true(FileAccess.file_exists("res://pic/map.png"))
 
 
+func test_player_facing_shop_scene_is_the_main_scene() -> void:
+	assert_eq(
+		ProjectSettings.get_setting("application/run/main_scene"),
+		"res://scenes/shop_lab/shop_lab.tscn"
+	)
+	var scene := load("res://scenes/shop_lab/shop_lab.tscn") as PackedScene
+	assert_not_null(scene)
+
+
 func test_mcp_authored_scene_loads() -> void:
 	var scene := load("res://tests/fixtures/mcp_smoke.tscn") as PackedScene
 	assert_not_null(scene)

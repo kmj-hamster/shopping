@@ -15,6 +15,7 @@ var ghost_cells: Array[Vector2i] = []
 var ghost_valid := false
 var dragged_piece: PuzzlePieceState
 var next_piece_uid := 1
+var return_removed_to_inventory := false
 
 
 func _ready() -> void:
@@ -56,10 +57,15 @@ func _draw() -> void:
 		if piece == dragged_piece or piece.location != PuzzlePieceState.Location.BOARD:
 			continue
 		var color := UiPalette.attribute_color(piece.definition.attribute)
+		var outline := (
+			Color("edb56f")
+			if piece.ownership == PuzzlePieceState.Ownership.PENDING_PURCHASE
+			else color.lightened(0.28)
+		)
 		for cell in piece.occupied_cells():
 			var rect := _cell_rect(cell)
 			draw_rect(rect.grow(-3.0), color, true)
-			draw_rect(rect.grow(-3.0), color.lightened(0.28), false, 2.0)
+			draw_rect(rect.grow(-3.0), outline, false, 2.0)
 			if piece.definition.is_special:
 				draw_rect(rect.grow(-6.0), Color("f2eadf"), false, 2.0)
 
@@ -102,9 +108,8 @@ func _drop_data(at_position: Vector2, data: Variant) -> void:
 		return
 
 	will_change.emit()
-	if data.get("source") == &"template":
-		candidate.piece_uid = next_piece_uid
-		next_piece_uid += 1
+	if data.get("source") in [&"template", &"shop_template"]:
+		candidate.piece_uid = _allocate_piece_uid()
 		candidate.location = PuzzlePieceState.Location.BOARD
 		candidate.grid_position = target
 		pieces.append(candidate)
@@ -130,7 +135,11 @@ func _finish_piece_drag(was_successful: bool, local_position: Vector2) -> void:
 		and not Rect2(Vector2.ZERO, size).has_point(local_position)
 	):
 		will_change.emit()
-		pieces.erase(original)
+		if return_removed_to_inventory:
+			original.location = PuzzlePieceState.Location.INVENTORY
+			original.grid_position = Vector2i(-1, -1)
+		else:
+			pieces.erase(original)
 		state_changed.emit()
 	_clear_ghost()
 	queue_redraw()
@@ -163,6 +172,14 @@ func _candidate_from_drag(data: Variant) -> PuzzlePieceState:
 	if typeof(data) != TYPE_DICTIONARY or data.get("kind") != &"puzzle_piece":
 		return null
 	return data.get("candidate") as PuzzlePieceState
+
+
+func _allocate_piece_uid() -> int:
+	for piece in pieces:
+		next_piece_uid = maxi(next_piece_uid, piece.piece_uid + 1)
+	var result := next_piece_uid
+	next_piece_uid += 1
+	return result
 
 
 func _grid_cell(local_position: Vector2) -> Vector2i:

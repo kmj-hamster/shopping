@@ -58,6 +58,14 @@ static func item_by_id(item_id: StringName) -> ItemDefinition:
 	return null
 
 
+static func items_for_store(store_id: StringName) -> Array[ItemDefinition]:
+	var result: Array[ItemDefinition] = []
+	for item in all_items():
+		if item.store_id == store_id:
+			result.append(item)
+	return result
+
+
 static func all_tasks() -> Array[TaskDefinition]:
 	var tasks: Array[TaskDefinition] = []
 	tasks.append(_task(

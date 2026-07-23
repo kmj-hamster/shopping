@@ -17,6 +17,14 @@
 - Keep gameplay rules separate from presentation where practical so deterministic logic can be tested without rendering.
 - Check both locales after changing UI copy, layouts, item names, dialogue, or validation messages; English text must not overflow layouts designed around Chinese copy.
 
+## Player-facing UI
+
+- Treat `PuzzleLab` as a developer-only validation scene. Do not carry its toolbox/debug-panel presentation into the game flow.
+- Player-facing screens should evoke a quiet, dreamlike shopping mall at night: deep blue-green shadows, isolated warm or fluorescent light, translucent layers, and restrained accent colors.
+- Prefer spatial composition, object shapes, price tags, icons, and short status lines over instructional paragraphs. Keep persistent instructions to one short line at most; move secondary detail into tooltips or contextual feedback.
+- Avoid developer-facing terms such as “实验室”, “工具箱”, “验证” and raw rule explanations in the formal game UI.
+- Preserve full `zh_CN` / `en` support while checking that both languages keep the same sparse visual hierarchy.
+
 ## Required workflow
 
 1. Inspect the relevant files, active Godot session, and current scene before changing anything.

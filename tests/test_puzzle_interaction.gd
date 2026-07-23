@@ -59,7 +59,7 @@ func test_lab_rotates_candidate_while_drag_data_remains_uncommitted() -> void:
 func test_board_piece_dropped_outside_returns_to_infinite_inventory() -> void:
 	var board := PuzzleBoard.new()
 	autofree(board)
-	var piece := PuzzlePieceState.new(1, DemoCatalog.item_by_id(&"teddy_special"))
+	var piece := PuzzlePieceState.new(1, DemoCatalog.item_by_id(&"special_teddy"))
 	piece.location = PuzzlePieceState.Location.BOARD
 	var pieces: Array[PuzzlePieceState] = [piece]
 	board.set_context(DemoCatalog.task_by_id(&"teddy"), pieces)
@@ -88,12 +88,54 @@ func test_invalid_drop_inside_board_keeps_original_piece() -> void:
 	assert_null(board.dragged_piece)
 
 
+func test_finite_board_returns_piece_to_inventory_when_dropped_outside() -> void:
+	var board := PuzzleBoard.new()
+	autofree(board)
+	var piece := PuzzlePieceState.new(1, DemoCatalog.item_by_id(&"book_period"))
+	piece.location = PuzzlePieceState.Location.BOARD
+	piece.grid_position = Vector2i(1, 1)
+	var pieces: Array[PuzzlePieceState] = [piece]
+	board.set_context(DemoCatalog.task_by_id(&"teddy"), pieces)
+	board.size = board.custom_minimum_size
+	board.return_removed_to_inventory = true
+	board.dragged_piece = piece
+
+	board._finish_piece_drag(false, Vector2(-1, board.size.y * 0.5))
+
+	assert_eq(pieces, [piece])
+	assert_eq(piece.location, PuzzlePieceState.Location.INVENTORY)
+	assert_eq(piece.grid_position, Vector2i(-1, -1))
+
+
+func test_shop_template_drop_preserves_pending_purchase_ownership() -> void:
+	var board := PuzzleBoard.new()
+	autofree(board)
+	var pieces: Array[PuzzlePieceState] = []
+	board.set_context(DemoCatalog.task_by_id(&"teddy"), pieces)
+	var candidate := PuzzlePieceState.new(-1, DemoCatalog.item_by_id(&"toy_marble"))
+	candidate.ownership = PuzzlePieceState.Ownership.PENDING_PURCHASE
+
+	_drop_candidate(board, candidate, Vector2i(0, 0), &"shop_template")
+
+	assert_eq(pieces.size(), 1)
+	assert_eq(pieces[0].ownership, PuzzlePieceState.Ownership.PENDING_PURCHASE)
+
+
 func _drop_template(board: PuzzleBoard, definition: ItemDefinition, target: Vector2i) -> void:
 	var candidate := PuzzlePieceState.new(-1, definition)
+	_drop_candidate(board, candidate, target, &"template")
+
+
+func _drop_candidate(
+	board: PuzzleBoard,
+	candidate: PuzzlePieceState,
+	target: Vector2i,
+	source: StringName
+) -> void:
 	var local_drop := PuzzleBoard.BOARD_OFFSET + (Vector2(target) + Vector2(0.5, 0.5)) * board.cell_size
 	board._drop_data(local_drop, {
 		"kind": &"puzzle_piece",
-		"source": &"template",
+		"source": source,
 		"candidate": candidate,
 		"original": null,
 		"grab_offset": Vector2i.ZERO,

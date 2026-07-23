@@ -6,9 +6,15 @@ enum Location {
 	BOARD,
 }
 
+enum Ownership {
+	OWNED,
+	PENDING_PURCHASE,
+}
+
 var piece_uid: int
 var definition: ItemDefinition
 var location: Location = Location.INVENTORY
+var ownership: Ownership = Ownership.OWNED
 var grid_position := Vector2i(-1, -1)
 var rotation_steps: int = 0
 
@@ -32,6 +38,7 @@ func occupied_cells(
 func copy_for_drag() -> PuzzlePieceState:
 	var copy := PuzzlePieceState.new(piece_uid, definition)
 	copy.location = location
+	copy.ownership = ownership
 	copy.grid_position = grid_position
 	copy.rotation_steps = rotation_steps
 	return copy

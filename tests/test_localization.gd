@@ -53,6 +53,24 @@ func test_infinite_palette_and_drag_instructions_are_translated() -> void:
 			assert_ne(TranslationServer.translate(key), String(key), "%s missing in %s" % [key, locale])
 
 
+func test_sparse_shop_interface_is_translated() -> void:
+	var keys := [
+		&"shop.tab.goods",
+		&"shop.tab.bag",
+		&"shop.product.meta",
+		&"shop.item.pending",
+		&"shop.item.owned",
+		&"shop.cart.summary",
+		&"shop.feedback.ready",
+		&"shop.feedback.paid",
+		&"shop.feedback.no_money",
+	]
+	for locale in ["zh_CN", "en"]:
+		TranslationServer.set_locale(locale)
+		for key in keys:
+			assert_ne(TranslationServer.translate(key), String(key), "%s missing in %s" % [key, locale])
+
+
 func test_locale_manager_exposes_only_supported_locales() -> void:
 	assert_eq(LocaleManager.SUPPORTED_LOCALES, ["zh_CN", "en"])
 	assert_true(LocaleManager.current_locale in LocaleManager.SUPPORTED_LOCALES)
