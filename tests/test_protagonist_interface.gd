@@ -38,6 +38,27 @@ func test_empty_bag_is_a_shared_eight_by_eight_popup() -> void:
 	assert_false(popup.empty_bag_toggle_button.visible)
 
 
+func test_task_card_toggles_its_grid_popup_without_closing_other_grids() -> void:
+	GameState.unlocked_tasks[&"teddy"] = true
+	var interface := ProtagonistInterface.new()
+	add_child_autoqfree(interface)
+	await get_tree().process_frame
+	var daily_card := interface.card_buttons[DemoCatalog.DAILY_TASK_ID] as Button
+	var teddy_card := interface.card_buttons[&"teddy"] as Button
+	daily_card.pressed.emit()
+	teddy_card.pressed.emit()
+	assert_has(interface.task_popups, DemoCatalog.DAILY_TASK_ID)
+	assert_has(interface.task_popups, &"teddy")
+
+	daily_card.pressed.emit()
+	assert_false(interface.task_popups.has(DemoCatalog.DAILY_TASK_ID))
+	assert_has(interface.task_popups, &"teddy")
+
+	daily_card.pressed.emit()
+	assert_has(interface.task_popups, DemoCatalog.DAILY_TASK_ID)
+	assert_has(interface.task_popups, &"teddy")
+
+
 func test_task_popup_icon_opens_and_closes_shared_empty_bag() -> void:
 	var interface := ProtagonistInterface.new()
 	add_child_autoqfree(interface)

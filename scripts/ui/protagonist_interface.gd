@@ -224,7 +224,7 @@ func _rebuild_cards() -> void:
 				"hover",
 				UiPalette.panel_style(Color("1a2325", 0.98), Color("c0aa70", 0.9))
 			)
-		card.pressed.connect(open_task.bind(task_id))
+		card.pressed.connect(_on_task_card_pressed.bind(task_id))
 		card_field.add_child(card)
 		card_buttons[task_id] = card
 		card_origins[task_id] = card.position
@@ -314,6 +314,14 @@ func _on_task_close_requested(task_id: StringName) -> void:
 	task_popups.erase(task_id)
 	popup.queue_free()
 	_refresh_empty_bag_toggles()
+
+
+func _on_task_card_pressed(task_id: StringName) -> void:
+	if task_popups.has(task_id) and is_instance_valid(task_popups[task_id]):
+		_on_task_close_requested(task_id)
+	else:
+		task_popups.erase(task_id)
+		open_task(task_id)
 
 
 func _on_empty_bag_toggle_requested(source_popup: TaskPuzzlePopup = null) -> void:
