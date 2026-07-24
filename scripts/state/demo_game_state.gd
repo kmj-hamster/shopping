@@ -26,6 +26,7 @@ const RESULT_PENDING_PURCHASE := &"pending_purchase"
 const RESULT_WRONG_OWNER := &"wrong_owner"
 const RESULT_ALREADY_UNLOCKED := &"already_unlocked"
 const RESULT_INVALID_SPECIAL_TASK := &"invalid_special_task"
+const RESULT_RECYCLE_PENDING := &"recycle_pending"
 
 var day := 1
 var world_stage := 0
@@ -35,6 +36,7 @@ var unlocked_tasks: Dictionary = {}
 var completed_tasks: Dictionary = {}
 var purchased_special_items: Dictionary = {}
 var store_transactions: Dictionary = {}
+var recycle_transaction: RecycleTransaction
 var daily_goal := DailyGoalState.new()
 
 var toy_transaction: ShopTransaction:
@@ -55,6 +57,7 @@ func reset_demo() -> void:
 	completed_tasks = {}
 	purchased_special_items = {}
 	daily_goal = DailyGoalState.new(day, DemoCatalog.daily_template_id_for_day(day))
+	recycle_transaction = RecycleTransaction.new(pieces, wallet)
 	_refresh_store_transactions()
 	state_changed.emit()
 
@@ -114,11 +117,34 @@ func cancel_all_carts() -> int:
 	return removed
 
 
+func stage_recycle_piece(piece: PuzzlePieceState) -> Dictionary:
+	var result := recycle_transaction.stage(piece)
+	if result.ok:
+		state_changed.emit()
+	return result
+
+
+func checkout_recycling() -> Dictionary:
+	var result := recycle_transaction.checkout()
+	if result.ok:
+		state_changed.emit()
+	return result
+
+
+func cancel_recycling() -> int:
+	var restored := recycle_transaction.cancel()
+	if restored > 0:
+		state_changed.emit()
+	return restored
+
+
 func advance_day() -> Dictionary:
 	if not daily_goal.submitted:
 		return {"ok": false, "reason": RESULT_DAILY_INCOMPLETE}
 	if has_pending_purchases():
 		return {"ok": false, "reason": RESULT_PENDING_PURCHASE}
+	if recycle_transaction.cart_count() > 0:
+		return {"ok": false, "reason": RESULT_RECYCLE_PENDING}
 	var consumed_count := _consume_task_pieces(DemoCatalog.DAILY_TASK_ID)
 	day += 1
 	wallet.money += 100
