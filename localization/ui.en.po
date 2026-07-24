@@ -289,13 +289,13 @@ msgid "shop.leave_pending.title"
 msgstr "Some items are still unpaid"
 
 msgid "shop.leave_pending.body"
-msgstr "Unpaid items will return to the shelf when you leave."
+msgstr "Leave now, or settle the things on the counter first."
 
-msgid "shop.leave_pending.back"
-msgstr "Go Back to Pay"
+msgid "shop.leave_pending.direct"
+msgstr "Leave Now"
 
-msgid "shop.leave_pending.leave"
-msgstr "Leave"
+msgid "shop.leave_pending.checkout"
+msgstr "Pay & Leave"
 
 msgid "shop.feedback.submitted_teddy"
 msgstr "The teddy bear remembers something."

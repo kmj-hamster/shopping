@@ -116,7 +116,7 @@ func test_next_day_is_blocked_until_daily_goal_is_submitted() -> void:
 	)
 
 
-func test_leaving_with_unpaid_items_requires_confirmation() -> void:
+func test_leave_confirmation_x_keeps_cart_and_direct_leave_returns_it() -> void:
 	var shop := await _spawn_shop()
 	var marble := shop.transaction.add_to_cart(&"toy_marble").piece as PuzzlePieceState
 	_place_piece(marble, DemoCatalog.DAILY_TASK_ID, Vector2i.ZERO)
@@ -132,14 +132,36 @@ func test_leaving_with_unpaid_items_requires_confirmation() -> void:
 		shop.exit_confirmation_title.text,
 		TranslationServer.translate(&"shop.leave_pending.title")
 	)
-	shop._on_exit_cancelled()
+	shop._on_exit_close_pressed()
 	assert_false(shop.exit_confirmation.visible)
 	assert_true(GameState.pieces.has(marble))
 	shop._on_leave_pressed()
-	shop._on_exit_confirmed()
+	shop._on_exit_cancelled()
 	assert_eq(leave_count[0], 1)
 	assert_false(GameState.pieces.has(marble))
 	assert_eq(shop.transaction.available_stock(&"toy_marble"), 1)
+
+
+func test_checkout_and_leave_pays_for_cart_and_keeps_piece() -> void:
+	var shop := await _spawn_shop()
+	var marble := shop.transaction.add_to_cart(&"toy_marble").piece as PuzzlePieceState
+	_place_piece(marble, DemoCatalog.DAILY_TASK_ID, Vector2i.ZERO)
+	var leave_count := [0]
+	shop.leave_requested.connect(func() -> void: leave_count[0] += 1)
+	shop._on_leave_pressed()
+	assert_eq(
+		shop.exit_confirm_button.text,
+		TranslationServer.translate(&"shop.leave_pending.checkout")
+	)
+	assert_eq(
+		shop.exit_cancel_button.text,
+		TranslationServer.translate(&"shop.leave_pending.direct")
+	)
+	shop._on_exit_confirmed()
+	assert_eq(leave_count[0], 1)
+	assert_eq(GameState.wallet.money, 90)
+	assert_true(GameState.pieces.has(marble))
+	assert_eq(marble.ownership, PuzzlePieceState.Ownership.OWNED)
 
 
 func test_leaving_without_unpaid_items_needs_no_confirmation() -> void:

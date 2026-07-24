@@ -143,7 +143,7 @@ func test_leaving_shop_confirms_unpaid_items_and_closes_bag_popups() -> void:
 	assert_eq(main.current_view, &"shop")
 	assert_true(shop.exit_confirmation.visible)
 	assert_false(main.protagonist_interface.task_popups.is_empty())
-	shop._on_exit_confirmed()
+	shop._on_exit_cancelled()
 	await get_tree().process_frame
 	assert_eq(main.current_view, &"map")
 	assert_false(GameState.pieces.has(pending))

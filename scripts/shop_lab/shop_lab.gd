@@ -34,6 +34,7 @@ var exit_confirmation_title: Label
 var exit_confirmation_body: Label
 var exit_confirm_button: Button
 var exit_cancel_button: Button
+var exit_close_button: Button
 
 
 func _ready() -> void:
@@ -246,11 +247,19 @@ func _build_exit_confirmation() -> void:
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
 	column.add_theme_constant_override("separation", 14)
 	exit_confirmation.add_child(column)
+	var title_row := HBoxContainer.new()
+	column.add_child(title_row)
 	exit_confirmation_title = Label.new()
+	exit_confirmation_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	exit_confirmation_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	exit_confirmation_title.add_theme_font_size_override("font_size", 22)
 	exit_confirmation_title.add_theme_color_override("font_color", Color("efd18a"))
-	column.add_child(exit_confirmation_title)
+	title_row.add_child(exit_confirmation_title)
+	exit_close_button = Button.new()
+	exit_close_button.text = "×"
+	exit_close_button.custom_minimum_size = Vector2(32, 30)
+	exit_close_button.pressed.connect(_on_exit_close_pressed)
+	title_row.add_child(exit_close_button)
 	exit_confirmation_body = Label.new()
 	exit_confirmation_body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	exit_confirmation_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -364,16 +373,28 @@ func _show_exit_confirmation(mode: StringName) -> void:
 
 func _on_exit_confirmed() -> void:
 	var confirmed_mode := exit_confirmation_mode
-	_hide_exit_confirmation()
 	if confirmed_mode == CONFIRM_LEAVE:
-		GameState.cancel_store_cart(store_id)
+		var result := GameState.checkout_store(store_id)
+		_hide_exit_confirmation()
+		if not result.ok:
+			_show_feedback(_failure_text(result.reason))
+			_queue_refresh()
+			return
 		leave_requested.emit()
 	else:
+		_hide_exit_confirmation()
 		GameState.cancel_all_carts()
 		next_day_requested.emit()
 
 
 func _on_exit_cancelled() -> void:
+	_hide_exit_confirmation()
+	if exit_confirmation_mode == CONFIRM_LEAVE:
+		GameState.cancel_store_cart(store_id)
+		leave_requested.emit()
+
+
+func _on_exit_close_pressed() -> void:
 	_hide_exit_confirmation()
 
 
@@ -478,8 +499,8 @@ func _refresh_exit_confirmation_texts() -> void:
 	if exit_confirmation_mode == CONFIRM_LEAVE:
 		exit_confirmation_title.text = TranslationServer.translate(&"shop.leave_pending.title")
 		exit_confirmation_body.text = TranslationServer.translate(&"shop.leave_pending.body")
-		exit_confirm_button.text = TranslationServer.translate(&"shop.leave_pending.leave")
-		exit_cancel_button.text = TranslationServer.translate(&"shop.leave_pending.back")
+		exit_confirm_button.text = TranslationServer.translate(&"shop.leave_pending.checkout")
+		exit_cancel_button.text = TranslationServer.translate(&"shop.leave_pending.direct")
 	else:
 		exit_confirmation_title.text = TranslationServer.translate(&"shop.next_day.title")
 		exit_confirmation_body.text = TranslationServer.translate(&"shop.next_day.confirm")
