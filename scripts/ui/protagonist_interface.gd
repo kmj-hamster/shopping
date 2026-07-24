@@ -70,8 +70,11 @@ func set_view_context(context: StringName) -> void:
 		var task_popup := popup as TaskPuzzlePopup
 		task_popup.view_context = context
 		if not task_popup.user_moved:
-			task_popup.position = task_popup.default_position() + Vector2(index * 26, index * 22)
-		index += 1
+			if task_popup.task_id == DemoCatalog.EMPTY_BAG_TASK_ID:
+				task_popup.position = task_popup.default_position()
+			else:
+				task_popup.position = task_popup.default_position() + Vector2(index * 26, index * 22)
+				index += 1
 
 
 func refresh() -> void:
@@ -93,7 +96,8 @@ func open_task(task_id: StringName) -> TaskPuzzlePopup:
 	var popup := TaskPuzzlePopup.new()
 	root.add_child(popup)
 	popup.setup(task_id, view_context)
-	popup.position += Vector2(task_popups.size() * 26, task_popups.size() * 22)
+	if task_id != DemoCatalog.EMPTY_BAG_TASK_ID:
+		popup.position += Vector2(task_popups.size() * 26, task_popups.size() * 22)
 	popup.close_requested.connect(_on_task_close_requested)
 	popup.focus_requested.connect(_bring_to_front)
 	popup.interaction_message.connect(_show_feedback)

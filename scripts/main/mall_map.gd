@@ -9,11 +9,11 @@ var day_money_label: Label
 var language_button: Button
 var store_hotspots: Dictionary = {}
 var notice_label: Label
+var notice_panel: PanelContainer
 var notice_key: StringName = &""
 var notice_store_id: StringName = &""
 var schedule_button: Button
 var next_day_button: Button
-var next_day_hint_label: Label
 var schedule_panel: PanelContainer
 var schedule_list: VBoxContainer
 var schedule_title_label: Label
@@ -75,8 +75,10 @@ func refresh() -> void:
 	if not GameState.daily_goal.submitted:
 		next_day_tooltip_key = &"map.next_day.locked"
 	next_day_button.tooltip_text = TranslationServer.translate(next_day_tooltip_key)
-	if GameState.daily_goal.submitted:
-		next_day_hint_label.visible = false
+	if GameState.daily_goal.submitted and notice_key == &"map.next_day.locked":
+		notice_key = &""
+		notice_store_id = &""
+		_refresh_notice()
 	_refresh_store_hotspots()
 	_refresh_schedule()
 
@@ -127,21 +129,10 @@ func _build_interface() -> void:
 	schedule_button.custom_minimum_size = Vector2(76, 38)
 	schedule_button.pressed.connect(_on_schedule_pressed)
 	top.add_child(schedule_button)
-	var next_day_box := VBoxContainer.new()
-	next_day_box.custom_minimum_size = Vector2(108, 0)
-	next_day_box.add_theme_constant_override("separation", 2)
-	top.add_child(next_day_box)
 	next_day_button = Button.new()
 	next_day_button.custom_minimum_size = Vector2(82, 38)
 	next_day_button.pressed.connect(_on_next_day_pressed)
-	next_day_box.add_child(next_day_button)
-	next_day_hint_label = Label.new()
-	next_day_hint_label.visible = false
-	next_day_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	next_day_hint_label.add_theme_font_size_override("font_size", 10)
-	next_day_hint_label.add_theme_color_override("font_color", Color("d9b96f"))
-	next_day_hint_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	next_day_box.add_child(next_day_hint_label)
+	top.add_child(next_day_button)
 	language_button = Button.new()
 	language_button.custom_minimum_size = Vector2(58, 38)
 	language_button.pressed.connect(LocaleManager.toggle_locale)
@@ -149,11 +140,11 @@ func _build_interface() -> void:
 
 	var hotspot_layout := {
 		DemoCatalog.STORE_BOOK: Rect2(770, 150, 230, 130),
-		DemoCatalog.STORE_TOY: Rect2(130, 322, 252, 150),
-		DemoCatalog.STORE_FLOWER: Rect2(340, 402, 210, 145),
-		DemoCatalog.STORE_RECORD: Rect2(650, 392, 240, 150),
-		DemoCatalog.STORE_FAST_FOOD: Rect2(1010, 315, 220, 155),
-		DemoCatalog.STORE_RECYCLING: Rect2(76, 512, 208, 96),
+		DemoCatalog.STORE_TOY: Rect2(105, 322, 230, 140),
+		DemoCatalog.STORE_FLOWER: Rect2(370, 402, 190, 135),
+		DemoCatalog.STORE_RECORD: Rect2(650, 392, 220, 145),
+		DemoCatalog.STORE_FAST_FOOD: Rect2(1010, 315, 220, 150),
+		DemoCatalog.STORE_RECYCLING: Rect2(64, 148, 210, 104),
 	}
 	for store_id in DemoCatalog.STORE_IDS:
 		_create_store_hotspot(store_id, hotspot_layout[store_id])
@@ -212,10 +203,13 @@ func _build_interface() -> void:
 	transition_close.pressed.connect(func() -> void: transition_panel.visible = false)
 	transition_column.add_child(transition_close)
 
-	var notice_panel := PanelContainer.new()
+	notice_panel = PanelContainer.new()
 	notice_panel.name = "NightNotice"
-	notice_panel.position = Vector2(28, 630)
-	notice_panel.size = Vector2(720, 52)
+	notice_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	notice_panel.offset_left = 300.0
+	notice_panel.offset_top = -82.0
+	notice_panel.offset_right = -300.0
+	notice_panel.offset_bottom = -24.0
 	notice_panel.add_theme_stylebox_override(
 		"panel", UiPalette.panel_style(Color("06171d", 0.88), Color("587a78", 0.84))
 	)
@@ -276,8 +270,6 @@ func _apply_locale_texts() -> void:
 	language_button.tooltip_text = TranslationServer.translate(&"ui.language.tooltip")
 	schedule_button.text = TranslationServer.translate(&"map.schedule")
 	next_day_button.text = TranslationServer.translate(&"map.next_day")
-	if next_day_hint_label.visible:
-		next_day_hint_label.text = TranslationServer.translate(&"map.next_day.locked")
 	schedule_title_label.text = TranslationServer.translate(&"map.schedule.title")
 	demo_complete_title.text = TranslationServer.translate(&"demo.complete.title")
 	demo_complete_body.text = TranslationServer.translate(&"demo.complete.body")
@@ -389,8 +381,7 @@ func _on_schedule_pressed() -> void:
 
 func _on_next_day_pressed() -> void:
 	if not GameState.daily_goal.submitted:
-		next_day_hint_label.text = TranslationServer.translate(&"map.next_day.locked")
-		next_day_hint_label.visible = true
+		show_notice(&"map.next_day.locked")
 		return
 	next_day_requested.emit()
 

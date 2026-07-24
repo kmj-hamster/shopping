@@ -38,10 +38,14 @@ func test_task_popup_icon_opens_and_closes_shared_empty_bag() -> void:
 	var interface := ProtagonistInterface.new()
 	add_child_autoqfree(interface)
 	await get_tree().process_frame
+	interface.set_view_context(&"shop")
 	var daily := interface.open_task(DemoCatalog.DAILY_TASK_ID)
 	assert_eq(daily.empty_bag_toggle_button.text, "▦")
 	interface._on_empty_bag_toggle_requested()
+	await get_tree().process_frame
 	assert_has(interface.task_popups, DemoCatalog.EMPTY_BAG_TASK_ID)
+	var empty_bag := interface.task_popups[DemoCatalog.EMPTY_BAG_TASK_ID] as TaskPuzzlePopup
+	assert_lt(empty_bag.position.x + empty_bag.size.x, daily.position.x + 1.0)
 	assert_eq(daily.empty_bag_toggle_button.text, "▣")
 	interface._on_empty_bag_toggle_requested()
 	assert_false(interface.task_popups.has(DemoCatalog.EMPTY_BAG_TASK_ID))

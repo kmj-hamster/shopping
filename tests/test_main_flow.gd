@@ -22,6 +22,24 @@ func test_main_opens_map_with_bag_entry_and_navigates_to_shop() -> void:
 	assert_eq(main.protagonist_interface.view_context, &"shop")
 
 
+func test_six_map_hotspots_do_not_overlap_and_recycling_uses_upper_left() -> void:
+	var main = await _spawn_main()
+	var hotspots: Array = main.current_screen.store_hotspots.values()
+	for first_index in range(hotspots.size()):
+		var first := hotspots[first_index] as Button
+		var first_rect := Rect2(first.position, first.size)
+		for second_index in range(first_index + 1, hotspots.size()):
+			var second := hotspots[second_index] as Button
+			var second_rect := Rect2(second.position, second.size)
+			assert_false(
+				first_rect.intersects(second_rect),
+				"%s overlaps %s" % [first.name, second.name]
+			)
+	var recycling := main.current_screen.store_hotspots[DemoCatalog.STORE_RECYCLING] as Button
+	assert_lt(recycling.position.x, 100.0)
+	assert_lt(recycling.position.y, 260.0)
+
+
 func test_recycling_hotspot_opens_dedicated_nonretail_screen() -> void:
 	var main = await _spawn_main()
 	main._on_shop_requested(DemoCatalog.STORE_RECYCLING)
@@ -60,16 +78,18 @@ func test_daily_submission_unlocks_next_day_and_transition_consumes_daily_grid()
 	)
 	main.current_screen._on_next_day_pressed()
 	assert_eq(GameState.day, 1)
-	assert_true(main.current_screen.next_day_hint_label.visible)
+	assert_true(main.current_screen.notice_panel.visible)
+	assert_true(main.current_screen.notice_label.visible)
 	assert_eq(
-		main.current_screen.next_day_hint_label.text,
+		main.current_screen.notice_label.text,
 		TranslationServer.translate(&"map.next_day.locked")
 	)
+	assert_eq(main.current_screen.next_day_button.size.y, main.current_screen.schedule_button.size.y)
 	_fill_daily_goal()
 	assert_true(GameState.submit_daily_goal().ok)
 	await get_tree().process_frame
 	assert_false(main.current_screen.next_day_button.disabled)
-	assert_false(main.current_screen.next_day_hint_label.visible)
+	assert_false(main.current_screen.notice_panel.visible)
 	main.current_screen._on_next_day_pressed()
 	await get_tree().process_frame
 	assert_eq(GameState.day, 2)

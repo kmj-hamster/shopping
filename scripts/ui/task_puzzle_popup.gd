@@ -35,6 +35,8 @@ func setup(selected_task_id: StringName, context: StringName) -> void:
 
 
 func default_position() -> Vector2:
+	if task_id == DemoCatalog.EMPTY_BAG_TASK_ID:
+		return Vector2(24, 120)
 	if view_context == &"shop":
 		return Vector2(650, 120)
 	return Vector2(385, 150)
