@@ -18,6 +18,10 @@ var popup_dragging := false
 var elapsed := 0.0
 var feedback_label: Label
 var protagonist_title: Label
+var suspended_task_popups: Array[Dictionary] = []
+var suspended_protagonist_visible := false
+var suspended_protagonist_position := Vector2.ZERO
+var restore_pending := false
 
 
 func _ready() -> void:
@@ -226,6 +230,9 @@ func _rebuild_cards() -> void:
 
 
 func _on_bag_pressed() -> void:
+	if restore_pending:
+		_restore_suspended_popups()
+		return
 	protagonist_popup.visible = not protagonist_popup.visible
 	if protagonist_popup.visible:
 		root.move_child(protagonist_popup, root.get_child_count() - 1)
@@ -238,7 +245,11 @@ func _position_bag_button() -> void:
 	bag_button.offset_bottom = 0.0
 
 
-func close_all_popups() -> void:
+func close_all_popups(preserve_for_restore: bool = false) -> void:
+	if preserve_for_restore:
+		_snapshot_open_popups()
+	else:
+		_clear_popup_snapshot()
 	protagonist_popup.visible = false
 	feedback_label.text = ""
 	for popup in task_popups.values():
@@ -246,6 +257,46 @@ func close_all_popups() -> void:
 			(popup as TaskPuzzlePopup).queue_free()
 	task_popups.clear()
 	_refresh_empty_bag_toggles()
+
+
+func _snapshot_open_popups() -> void:
+	suspended_task_popups.clear()
+	for task_id in task_popups:
+		var popup := task_popups[task_id] as TaskPuzzlePopup
+		if popup == null or not is_instance_valid(popup):
+			continue
+		suspended_task_popups.append({
+			"task_id": task_id,
+			"position": popup.position,
+			"user_moved": popup.user_moved,
+		})
+	suspended_protagonist_visible = protagonist_popup.visible
+	suspended_protagonist_position = protagonist_popup.position
+	restore_pending = suspended_protagonist_visible or not suspended_task_popups.is_empty()
+
+
+func _restore_suspended_popups() -> void:
+	var popup_snapshots := suspended_task_popups.duplicate(true)
+	var show_protagonist := suspended_protagonist_visible
+	var protagonist_position := suspended_protagonist_position
+	_clear_popup_snapshot()
+	protagonist_popup.position = protagonist_position
+	protagonist_popup.visible = show_protagonist
+	for snapshot in popup_snapshots:
+		var task_id := snapshot.task_id as StringName
+		if not GameState.protagonist_task_ids().has(task_id):
+			continue
+		var popup := open_task(task_id)
+		popup.position = snapshot.position
+		popup.user_moved = snapshot.user_moved
+	if protagonist_popup.visible:
+		root.move_child(protagonist_popup, root.get_child_count() - 1)
+
+
+func _clear_popup_snapshot() -> void:
+	suspended_task_popups.clear()
+	suspended_protagonist_visible = false
+	restore_pending = false
 
 
 func _on_task_close_requested(task_id: StringName) -> void:

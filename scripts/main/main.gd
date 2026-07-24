@@ -15,7 +15,7 @@ func _ready() -> void:
 
 func _show_map(notice_key: StringName = &"") -> void:
 	if protagonist_interface != null:
-		protagonist_interface.close_all_popups()
+		protagonist_interface.close_all_popups(true)
 	_clear_screen()
 	var map := MallMapScreen.new()
 	map.name = "MallMapScreen"
@@ -78,7 +78,7 @@ func _on_event_completed(task_id: StringName) -> void:
 func _on_next_day_requested() -> void:
 	var result := GameState.advance_day()
 	if result.ok and current_view == &"map" and current_screen is MallMapScreen:
-		protagonist_interface.close_all_popups()
+		protagonist_interface.close_all_popups(true)
 		current_screen.show_day_transition(result)
 
 

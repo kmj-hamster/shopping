@@ -66,6 +66,41 @@ func test_task_popup_icon_opens_and_closes_shared_empty_bag() -> void:
 	assert_eq(empty_bag.position, ProtagonistInterface.EMPTY_BAG_FALLBACK_POSITION)
 
 
+func test_automatic_cleanup_restores_open_popups_and_exact_positions_from_bag() -> void:
+	GameState.unlocked_tasks[&"teddy"] = true
+	var interface := ProtagonistInterface.new()
+	add_child_autoqfree(interface)
+	await get_tree().process_frame
+	interface.set_view_context(&"shop")
+	interface._on_bag_pressed()
+	interface.protagonist_popup.position = Vector2(702, 244)
+	var daily := interface.open_task(DemoCatalog.DAILY_TASK_ID)
+	var teddy := interface.open_task(&"teddy")
+	daily.position = Vector2(618, 96)
+	teddy.position = Vector2(770, 172)
+	daily.user_moved = true
+	teddy.user_moved = true
+	interface.close_all_popups(true)
+	await get_tree().process_frame
+	assert_true(interface.restore_pending)
+	assert_false(interface.protagonist_popup.visible)
+	assert_true(interface.task_popups.is_empty())
+
+	interface.set_view_context(&"map")
+	interface._on_bag_pressed()
+	assert_false(interface.restore_pending)
+	assert_true(interface.protagonist_popup.visible)
+	assert_eq(interface.protagonist_popup.position, Vector2(702, 244))
+	assert_eq(
+		(interface.task_popups[DemoCatalog.DAILY_TASK_ID] as TaskPuzzlePopup).position,
+		Vector2(618, 96)
+	)
+	assert_eq(
+		(interface.task_popups[&"teddy"] as TaskPuzzlePopup).position,
+		Vector2(770, 172)
+	)
+
+
 func test_completed_daily_and_story_cards_use_completed_color() -> void:
 	GameState.unlocked_tasks[&"teddy"] = true
 	var interface := ProtagonistInterface.new()
