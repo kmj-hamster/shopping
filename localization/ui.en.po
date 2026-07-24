@@ -318,6 +318,12 @@ msgstr "Drag an item here"
 msgid "recycle.summary"
 msgstr "%d held  ·  +¥%d"
 
+msgid "recycle.item.meta"
+msgstr "%s · recycle +¥%d"
+
+msgid "recycle.item.tooltip"
+msgstr "Drag back to any open grid"
+
 msgid "recycle.cancel"
 msgstr "Take back"
 

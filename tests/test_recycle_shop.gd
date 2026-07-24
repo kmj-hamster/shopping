@@ -12,7 +12,7 @@ func after_each() -> void:
 	LocaleManager.set_locale(original_locale, false)
 
 
-func test_drop_zone_stages_owned_piece_without_showing_a_product_card() -> void:
+func test_drop_zone_shows_staged_piece_as_a_draggable_card() -> void:
 	var shop := await _spawn_shop()
 	var piece := _owned_piece(1, &"toy_marble")
 	GameState.pieces.append(piece)
@@ -22,7 +22,11 @@ func test_drop_zone_stages_owned_piece_without_showing_a_product_card() -> void:
 	assert_eq(piece.location, PuzzlePieceState.Location.RECYCLE_CART)
 	assert_eq(shop.transaction.cart_count(), 1)
 	assert_string_contains(shop.cart_label.text, "+¥8")
-	assert_null(shop.drop_zone.find_child("ShopProductCard", true, false))
+	assert_eq(shop.recycle_list.get_child_count(), 1)
+	var card := shop.recycle_list.get_child(0) as RecyclePieceCard
+	assert_eq(card.piece, piece)
+	assert_string_contains(card.meta_label.text, "+¥8")
+	assert_true(card.has_method(&"_get_drag_data"))
 
 
 func test_checkout_pays_and_removes_recycled_piece() -> void:
@@ -34,6 +38,7 @@ func test_checkout_pays_and_removes_recycled_piece() -> void:
 	await get_tree().process_frame
 	assert_eq(GameState.wallet.money, 111)
 	assert_false(GameState.pieces.has(piece))
+	assert_eq(shop.recycle_list.get_child_count(), 0)
 	assert_string_contains(shop.feedback_label.text, "+¥11")
 
 

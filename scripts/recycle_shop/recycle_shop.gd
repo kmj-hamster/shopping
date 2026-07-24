@@ -15,6 +15,7 @@ var leave_button: Button
 var drop_zone: RecycleDropZone
 var counter_heading: Label
 var counter_hint: Label
+var recycle_list: VBoxContainer
 var cart_label: Label
 var cancel_button: Button
 var checkout_button: Button
@@ -32,7 +33,7 @@ func _ready() -> void:
 	LocaleManager.locale_changed.connect(_on_locale_changed)
 	_apply_locale_texts()
 	_show_feedback_key(&"recycle.feedback.ready")
-	_refresh_status()
+	_refresh_all()
 
 
 func _build_interface() -> void:
@@ -126,8 +127,7 @@ func _build_interface() -> void:
 	counter_column.add_child(drop_zone)
 	var drop_column := VBoxContainer.new()
 	drop_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	drop_column.alignment = BoxContainer.ALIGNMENT_CENTER
-	drop_column.add_theme_constant_override("separation", 18)
+	drop_column.add_theme_constant_override("separation", 10)
 	drop_zone.add_child(drop_column)
 	counter_heading = Label.new()
 	counter_heading.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -135,13 +135,17 @@ func _build_interface() -> void:
 	counter_heading.add_theme_font_size_override("font_size", 18)
 	counter_heading.add_theme_color_override("font_color", Color("a9beb4"))
 	drop_column.add_child(counter_heading)
-	var aperture := Label.new()
-	aperture.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	aperture.text = "▱"
-	aperture.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	aperture.add_theme_font_size_override("font_size", 150)
-	aperture.add_theme_color_override("font_color", Color("263c39", 0.86))
-	drop_column.add_child(aperture)
+	var scroll := ScrollContainer.new()
+	scroll.name = "RecycleItemsScroll"
+	scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	drop_column.add_child(scroll)
+	recycle_list = VBoxContainer.new()
+	recycle_list.name = "RecycleItems"
+	recycle_list.mouse_filter = Control.MOUSE_FILTER_PASS
+	recycle_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	recycle_list.add_theme_constant_override("separation", 8)
+	scroll.add_child(recycle_list)
 	counter_hint = Label.new()
 	counter_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	counter_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -265,6 +269,22 @@ func _refresh_status() -> void:
 	checkout_button.disabled = transaction.cart_count() == 0
 
 
+func _refresh_items() -> void:
+	for child in recycle_list.get_children():
+		child.free()
+	var staged := transaction.staged_pieces()
+	counter_hint.visible = staged.is_empty()
+	for piece in staged:
+		var card := RecyclePieceCard.new()
+		card.setup(piece, transaction.payout_for(piece), TaskPuzzlePopup.CELL_SIZE)
+		recycle_list.add_child(card)
+
+
+func _refresh_all() -> void:
+	_refresh_items()
+	_refresh_status()
+
+
 func _queue_refresh() -> void:
 	if refresh_queued:
 		return
@@ -275,7 +295,7 @@ func _queue_refresh() -> void:
 func _run_queued_refresh() -> void:
 	refresh_queued = false
 	transaction = GameState.recycle_transaction
-	_refresh_status()
+	_refresh_all()
 
 
 func _show_feedback_key(
@@ -301,7 +321,7 @@ func _render_feedback() -> void:
 
 func _on_locale_changed(_locale: String) -> void:
 	_apply_locale_texts()
-	_refresh_status()
+	_refresh_all()
 	_render_feedback()
 
 

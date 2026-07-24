@@ -97,7 +97,20 @@ func staged_pieces() -> Array[PuzzlePieceState]:
 	for piece in pieces:
 		if piece.location == PuzzlePieceState.Location.RECYCLE_CART:
 			result.append(piece)
+	_prune_return_origins(result)
 	return result
+
+
+func _prune_return_origins(staged: Array[PuzzlePieceState]) -> void:
+	var staged_uids: Dictionary = {}
+	for piece in staged:
+		staged_uids[piece.piece_uid] = true
+	var released_uids: Array = []
+	for piece_uid in _origins_by_uid:
+		if not staged_uids.has(piece_uid):
+			released_uids.append(piece_uid)
+	for piece_uid in released_uids:
+		_origins_by_uid.erase(piece_uid)
 
 
 func cart_count() -> int:

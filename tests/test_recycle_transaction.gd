@@ -44,6 +44,20 @@ func test_cancel_restores_exact_source_layout() -> void:
 	assert_eq(transaction.wallet.money, 100)
 
 
+func test_piece_dragged_out_of_recycle_cart_is_not_restored_by_cancel() -> void:
+	var setup := _transaction_with_piece(&"toy_blocks")
+	var piece := setup.piece as PuzzlePieceState
+	var transaction := setup.transaction as RecycleTransaction
+	assert_true(transaction.stage(piece).ok)
+	piece.location = PuzzlePieceState.Location.BOARD
+	piece.task_id = &"teddy"
+	piece.grid_position = Vector2i(1, 2)
+	assert_eq(transaction.cart_count(), 0)
+	assert_eq(transaction.cancel(), 0)
+	assert_eq(piece.task_id, &"teddy")
+	assert_eq(piece.grid_position, Vector2i(1, 2))
+
+
 func test_checkout_pays_combined_floor_values_and_consumes_pieces() -> void:
 	var wallet := PlayerWallet.new(100)
 	var marble := _owned_piece(1, &"toy_marble", Vector2i.ZERO)

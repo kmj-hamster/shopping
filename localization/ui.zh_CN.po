@@ -318,6 +318,12 @@ msgstr "把东西拖到这里"
 msgid "recycle.summary"
 msgstr "暂存 %d件  ·  +¥%d"
 
+msgid "recycle.item.meta"
+msgstr "%s · 回收 +¥%d"
+
+msgid "recycle.item.tooltip"
+msgstr "拖回任意打开的格阵"
+
 msgid "recycle.cancel"
 msgstr "拿回"
 
