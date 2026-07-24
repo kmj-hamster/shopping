@@ -10,6 +10,7 @@ func test_bag_panel_opens_daily_card_and_multiple_draggable_task_popups() -> voi
 	var interface := ProtagonistInterface.new()
 	add_child_autoqfree(interface)
 	await get_tree().process_frame
+	assert_eq(interface.root.mouse_filter, Control.MOUSE_FILTER_IGNORE)
 	interface._on_bag_pressed()
 	assert_true(interface.protagonist_popup.visible)
 	assert_has(interface.card_buttons, DemoCatalog.DAILY_TASK_ID)

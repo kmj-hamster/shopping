@@ -104,6 +104,7 @@ func _build_interface() -> void:
 	root = Control.new()
 	root.name = "ProtagonistInterface"
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
 
 	protagonist_popup = PanelContainer.new()
