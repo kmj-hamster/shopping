@@ -237,9 +237,11 @@ func _on_bag_pressed() -> void:
 	if restore_pending:
 		_restore_suspended_popups()
 		return
-	protagonist_popup.visible = not protagonist_popup.visible
-	if protagonist_popup.visible:
-		root.move_child(protagonist_popup, root.get_child_count() - 1)
+	if protagonist_popup.visible or not task_popups.is_empty():
+		close_all_popups(true)
+		return
+	protagonist_popup.visible = true
+	root.move_child(protagonist_popup, root.get_child_count() - 1)
 
 
 func _position_bag_button() -> void:

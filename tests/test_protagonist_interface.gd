@@ -103,6 +103,43 @@ func test_automatic_cleanup_restores_open_popups_and_exact_positions_from_bag() 
 	)
 
 
+func test_bag_button_hides_and_restores_the_entire_popup_group() -> void:
+	GameState.unlocked_tasks[&"teddy"] = true
+	var interface := ProtagonistInterface.new()
+	add_child_autoqfree(interface)
+	await get_tree().process_frame
+	interface._on_bag_pressed()
+	var daily := interface.open_task(DemoCatalog.DAILY_TASK_ID)
+	var teddy := interface.open_task(&"teddy")
+	daily.position = Vector2(580, 82)
+	teddy.position = Vector2(748, 164)
+
+	interface._on_bag_pressed()
+	await get_tree().process_frame
+	assert_true(interface.restore_pending)
+	assert_false(interface.protagonist_popup.visible)
+	assert_true(interface.task_popups.is_empty())
+
+	interface._on_bag_pressed()
+	assert_false(interface.restore_pending)
+	assert_true(interface.protagonist_popup.visible)
+	assert_eq(interface.task_popups.size(), 2)
+	assert_eq(
+		(interface.task_popups[DemoCatalog.DAILY_TASK_ID] as TaskPuzzlePopup).position,
+		Vector2(580, 82)
+	)
+	assert_eq(
+		(interface.task_popups[&"teddy"] as TaskPuzzlePopup).position,
+		Vector2(748, 164)
+	)
+
+	interface._on_bag_pressed()
+	await get_tree().process_frame
+	assert_true(interface.restore_pending)
+	assert_false(interface.protagonist_popup.visible)
+	assert_true(interface.task_popups.is_empty())
+
+
 func test_task_cards_have_visible_two_axis_drift() -> void:
 	var interface := ProtagonistInterface.new()
 	add_child_autoqfree(interface)
