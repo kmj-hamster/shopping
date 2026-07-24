@@ -6,6 +6,17 @@ const STORE_TOY := &"toy"
 const STORE_FLOWER := &"flower"
 const STORE_RECORD := &"record"
 const STORE_FAST_FOOD := &"fast_food"
+const DAILY_TASK_ID := &"daily"
+
+const DAILY_TEMPLATE_ROWS := [
+	[&"daily_mon", ["XXX", "XXX"]],
+	[&"daily_tue", ["XX.", "XXX"]],
+	[&"daily_wed", ["XXXX", "XXXX"]],
+	[&"daily_thu", ["XXX", "XXX", ".XX"]],
+	[&"daily_fri", [".XX.", "XXXX", ".X.."]],
+	[&"daily_sat", ["XXXX", "XXX.", "XXX."]],
+	[&"daily_sun", ["XXXX", "XXXX", "XX..", "XX.."]],
+]
 
 const STORE_IDS: Array[StringName] = [
 	STORE_BOOK,
@@ -117,6 +128,26 @@ static func task_by_id(task_id: StringName) -> TaskDefinition:
 	return null
 
 
+static func daily_task_for_day(day: int) -> TaskDefinition:
+	var row: Array = DAILY_TEMPLATE_ROWS[posmod(day - 1, DAILY_TEMPLATE_ROWS.size())]
+	var mask_rows: Array[String] = []
+	for mask_row in row[1]:
+		mask_rows.append(mask_row)
+	return _task(
+		DAILY_TASK_ID,
+		&"task.daily.title",
+		&"task.daily.description",
+		mask_rows,
+		&"",
+		&"",
+		TaskDefinition.AttributeRule.NONE
+	)
+
+
+static func daily_template_id_for_day(day: int) -> StringName:
+	return DAILY_TEMPLATE_ROWS[posmod(day - 1, DAILY_TEMPLATE_ROWS.size())][0]
+
+
 static func lab_palette_items(task_id: StringName) -> Array[ItemDefinition]:
 	var result: Array[ItemDefinition] = []
 	var task := task_by_id(task_id)
@@ -165,8 +196,9 @@ static func shape_cells(shape_code: StringName) -> Array[Vector2i]:
 			]
 		&"FISH7":
 			return [
-				Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0),
-				Vector2i(4, 0), Vector2i(5, 0), Vector2i(6, 0),
+				Vector2i(1, 0),
+				Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1),
+				Vector2i(1, 2), Vector2i(3, 2),
 			]
 		&"TAPE8":
 			return [

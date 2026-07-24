@@ -33,8 +33,17 @@ msgstr "本周灯牌"
 msgid "map.next_day"
 msgstr "下一夜"
 
-msgid "map.goal.next_open"
-msgstr "%s再开"
+msgid "map.next_day.locked"
+msgstr "先完成每日目标"
+
+msgid "map.next_day.ready"
+msgstr "今晚已经准备好了"
+
+msgid "map.notice.daily_required"
+msgstr "购物袋里，今晚的形状还空着。"
+
+msgid "map.notice.organizer_required"
+msgstr "有东西还留在整理夹层里。"
 
 msgid "map.notice.store_closed"
 msgstr "%s今夜休息。%s再开。"
@@ -44,30 +53,6 @@ msgstr "第%d夜 · %s"
 
 msgid "map.day.summary"
 msgstr "上班收入 +¥100\n今夜亮灯：%s\n货架重新摆好了。"
-
-msgid "map.goal.buy_teddy"
-msgstr "缺耳泰迪熊  ·  玩具店"
-
-msgid "map.goal.finish_teddy"
-msgstr "把缺耳泰迪熊带回玩具店"
-
-msgid "map.goal.after_teddy"
-msgstr "它想起了你的名字。"
-
-msgid "map.goal.buy_goldfish"
-msgstr "吃剩的鱼骨  ·  快餐店"
-
-msgid "map.goal.finish_goldfish"
-msgstr "把金鱼带回快餐店"
-
-msgid "map.goal.buy_tape"
-msgstr "反复倒带的磁带  ·  唱片店"
-
-msgid "map.goal.finish_tape"
-msgstr "把磁带带回唱片店"
-
-msgid "map.goal.after_all"
-msgstr "午夜还没有结束。"
 
 msgid "map.notice.teddy_complete"
 msgstr "第一件事，完成了。"
@@ -90,6 +75,60 @@ msgstr "继续逛一会"
 msgid "ui.language.tooltip"
 msgstr "Switch to English"
 
+msgid "protagonist.title"
+msgstr "购物袋之脑"
+
+msgid "protagonist.open"
+msgstr "打开购物清单"
+
+msgid "task.daily.title"
+msgstr "每日目标"
+
+msgid "task.daily.description"
+msgstr "填满今晚留下的形状。"
+
+msgid "task.memory"
+msgstr "记忆"
+
+msgid "task.popup.progress"
+msgstr "%d/%d · %s"
+
+msgid "task.popup.owner_submit"
+msgstr "填满后，带回店主那里。"
+
+msgid "task.organizer.title"
+msgstr "夹层"
+
+msgid "task.organizer.open"
+msgstr "展开整理夹层"
+
+msgid "task.organizer.close"
+msgstr "收起整理夹层"
+
+msgid "task.organizer.must_empty"
+msgstr "夹层里还留着东西。"
+
+msgid "task.daily.submit"
+msgstr "确认今晚"
+
+msgid "task.daily.not_ready"
+msgstr "还没有整理好。"
+
+msgid "daily.result.lamp"
+msgstr "街角的灯一直醒着。"
+
+msgid "daily.result.mirror"
+msgstr "玻璃里，有人晚了一步。"
+
+msgid "daily.result.flower"
+msgstr "枕边浮起苏打水的气泡。"
+
+msgid "daily.result.fog"
+msgstr "远古的鱼游过卧室墙面。"
+
+msgid "daily.result.mixed"
+msgstr "几种夜色在袋底交叠。"
+
 msgid "ui.reset_task"
 msgstr "重置本题"
 
@@ -105,9 +144,6 @@ msgstr "本事件的特殊大块"
 msgid "ui.inventory.standard_section"
 msgstr "无限标准骨牌"
 
-msgid "ui.inventory.empty"
-msgstr "背包暂时是空的。\n可以把格阵中的物品拖回来。"
-
 msgid "ui.item.tooltip"
 msgstr "抓住骨牌拖到右侧；拖动途中按右键旋转"
 
@@ -119,9 +155,6 @@ msgstr "%s · %s%d · ∞"
 
 msgid "ui.item.special_detail"
 msgstr "%s · %s%d · 唯一"
-
-msgid "ui.item.detail"
-msgstr "%s · %s%d · %d元"
 
 msgid "ui.reason_separator"
 msgstr "；"
@@ -168,9 +201,6 @@ msgstr "这里放不下。"
 msgid "shop.tab.goods"
 msgstr "货架"
 
-msgid "shop.tab.bag"
-msgstr "购物袋"
-
 msgid "shop.leave"
 msgstr "离开"
 
@@ -183,47 +213,11 @@ msgstr "结账"
 msgid "shop.talk"
 msgstr "交谈"
 
-msgid "shop.submit"
-msgstr "递交"
-
-msgid "shop.counter.title"
-msgstr "柜台另一侧"
-
-msgid "shop.counter.whisper"
-msgstr "有什么在等。"
-
-msgid "shop.event.complete_title"
-msgstr "空下来的位置"
-
-msgid "shop.event.complete_whisper"
-msgstr "泰迪熊已经不在这里了。"
-
-msgid "shop.requirement.mirror"
-msgstr "镜占上风"
-
-msgid "shop.requirement.warm"
-msgstr "灯或花占上风"
-
-msgid "shop.requirement.none"
-msgstr "只要恰好填满"
-
 msgid "shop.product.meta"
 msgstr "%s · ¥%d · %d"
 
 msgid "shop.product.tooltip"
-msgstr "拖到右侧试摆，或按＋放进购物袋"
-
-msgid "shop.item.pending"
-msgstr "○ 待结账"
-
-msgid "shop.item.owned"
-msgstr "● 已拥有"
-
-msgid "shop.bag.tooltip"
-msgstr "拖进格阵；拖动时右键旋转"
-
-msgid "shop.bag.empty"
-msgstr "袋子很轻。"
+msgstr "打开一张购物清单，再把它拖进格阵"
 
 msgid "shop.cart.summary"
 msgstr "购物袋  %d件  ·  ¥%d"
@@ -231,20 +225,11 @@ msgstr "购物袋  %d件  ·  ¥%d"
 msgid "shop.feedback.ready"
 msgstr "慢慢挑。"
 
-msgid "shop.feedback.added"
-msgstr "放进袋里了。"
-
-msgid "shop.feedback.removed"
-msgstr "放回货架了。"
-
 msgid "shop.feedback.paid"
 msgstr "收银机轻响了一声。"
 
 msgid "shop.feedback.cancelled"
 msgstr "柜台上的东西放回去了。"
-
-msgid "shop.feedback.left"
-msgstr "未结账的东西留在了柜台。"
 
 msgid "shop.feedback.no_money"
 msgstr "钱还差一点。"
@@ -258,8 +243,23 @@ msgstr "还没有要结账的东西。"
 msgid "shop.feedback.failed"
 msgstr "收银机没有反应。"
 
-msgid "shop.feedback.owner_before"
-msgstr "货架后的人偶轻轻点头。"
+msgid "shop.feedback.unplaced"
+msgstr "要买的东西还没有放进格阵。"
+
+msgid "shop.feedback.special_task"
+msgstr "它只属于那一张清单。"
+
+msgid "shop.feedback.daily_required"
+msgstr "今晚的购物清单还没有完成。"
+
+msgid "shop.feedback.unlocked_teddy"
+msgstr "一张画着泰迪熊的旧纸片落进袋里。"
+
+msgid "shop.feedback.unlocked_goldfish"
+msgstr "袋底传来一点水声。"
+
+msgid "shop.feedback.unlocked_tape"
+msgstr "一段空白磁带开始转动。"
 
 msgid "shop.feedback.owner_after"
 msgstr "老板把一张旧标签递给你。"
@@ -281,9 +281,6 @@ msgstr "下一夜"
 
 msgid "shop.next_day.cancel"
 msgstr "再逛一会"
-
-msgid "shop.feedback.submitted"
-msgstr "泰迪熊想起了一件事。"
 
 msgid "shop.feedback.submitted_teddy"
 msgstr "泰迪熊想起了一件事。"
@@ -348,6 +345,9 @@ msgstr "雾"
 msgid "attribute.unknown"
 msgstr "未知"
 
+msgid "attribute.mixed"
+msgstr "交叠"
+
 msgid "store.book"
 msgstr "书店"
 
@@ -388,19 +388,19 @@ msgid "task.teddy.title"
 msgstr "事件一：泰迪熊"
 
 msgid "task.teddy.description"
-msgstr "先放入缺耳泰迪熊大块，再用无限标准骨牌填满轮廓。镜必须严格最高。"
+msgstr "把缺耳泰迪熊放进轮廓，再用买来的物品填满。镜必须严格最高。"
 
 msgid "task.goldfish.title"
 msgstr "事件二：金鱼"
 
 msgid "task.goldfish.description"
-msgstr "先把长鱼骨放进水里，再用无限标准骨牌补完金鱼。让灯或花压过镜与雾。"
+msgstr "先把鱼骨放进水里，再用买来的物品补完金鱼。让灯或花压过镜与雾。"
 
 msgid "task.tape.title"
 msgstr "事件三：磁带"
 
 msgid "task.tape.description"
-msgstr "先放入磁带外壳大块，再自由填满剩余空间。这个事件没有属性限制。"
+msgstr "先放入磁带外壳，再用买来的物品填满剩余空间。这个事件没有属性限制。"
 
 msgid "item.book_period"
 msgstr "遗失的标点"

@@ -47,6 +47,27 @@ func test_task_masks_have_planned_sizes() -> void:
 	assert_eq(DemoCatalog.task_by_id(&"goldfish").mask_cells.size(), 23)
 	assert_eq(DemoCatalog.task_by_id(&"tape").bounds_size(), Vector2i(7, 5))
 	assert_eq(DemoCatalog.task_by_id(&"tape").mask_cells.size(), 29)
+	assert_eq(DemoCatalog.item_by_id(&"special_fishbone").cells_at_rotation(0).size(), 7)
+	var fish_bounds := PolyominoGeometry.bounds_size(
+		DemoCatalog.item_by_id(&"special_fishbone").shape_cells
+	)
+	assert_lte(fish_bounds.x, 4)
+	assert_lte(fish_bounds.y, 4)
+
+
+func test_daily_templates_form_a_seven_day_connected_hole_free_loop() -> void:
+	var template_ids: Dictionary = {}
+	for day in range(1, 8):
+		var task := DemoCatalog.daily_task_for_day(day)
+		assert_eq(task.id, DemoCatalog.DAILY_TASK_ID)
+		assert_lte(task.bounds_size().x, 4)
+		assert_lte(task.bounds_size().y, 4)
+		assert_true(task.required_special_item_id.is_empty())
+		assert_true(_is_connected(task.mask_cells))
+		assert_false(_has_internal_hole(task.mask_cells, task.bounds_size()))
+		template_ids[DemoCatalog.daily_template_id_for_day(day)] = true
+	assert_eq(template_ids.size(), 7)
+	assert_eq(DemoCatalog.daily_template_id_for_day(8), &"daily_mon")
 
 
 func test_each_store_has_seven_normal_items_per_refresh() -> void:
@@ -65,3 +86,38 @@ func test_each_store_has_seven_normal_items_per_refresh() -> void:
 				sku_count += 1
 		assert_eq(sku_count, 4)
 		assert_eq(total_units, 7)
+
+
+func _is_connected(cells: Array[Vector2i]) -> bool:
+	if cells.is_empty():
+		return false
+	var visited: Dictionary = {cells[0]: true}
+	var pending: Array[Vector2i] = [cells[0]]
+	while not pending.is_empty():
+		var cell: Vector2i = pending.pop_back()
+		for direction: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+			var neighbor := cell + direction
+			if neighbor in cells and not visited.has(neighbor):
+				visited[neighbor] = true
+				pending.append(neighbor)
+	return visited.size() == cells.size()
+
+
+func _has_internal_hole(cells: Array[Vector2i], bounds: Vector2i) -> bool:
+	var outside: Dictionary = {}
+	var pending: Array[Vector2i] = [Vector2i(-1, -1)]
+	while not pending.is_empty():
+		var cell: Vector2i = pending.pop_back()
+		if outside.has(cell) or cell in cells:
+			continue
+		if cell.x < -1 or cell.y < -1 or cell.x > bounds.x or cell.y > bounds.y:
+			continue
+		outside[cell] = true
+		for direction: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+			pending.append(cell + direction)
+	for y in range(bounds.y):
+		for x in range(bounds.x):
+			var cell := Vector2i(x, y)
+			if cell not in cells and not outside.has(cell):
+				return true
+	return false

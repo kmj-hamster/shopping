@@ -15,7 +15,9 @@ var ghost_cells: Array[Vector2i] = []
 var ghost_valid := false
 var dragged_piece: PuzzlePieceState
 var next_piece_uid := 1
-var return_removed_to_inventory := false
+var target_location := PuzzlePieceState.Location.BOARD
+var remove_on_failed_external_drop := true
+var interaction_locked := false
 
 
 func _ready() -> void:
@@ -54,7 +56,7 @@ func _draw() -> void:
 		draw_rect(rect.grow(-1.0), Color("3c5064"), false, 1.0)
 
 	for piece in pieces:
-		if piece == dragged_piece or piece.location != PuzzlePieceState.Location.BOARD:
+		if piece == dragged_piece or piece.location != target_location:
 			continue
 		if not piece.task_id.is_empty() and piece.task_id != task.id:
 			continue
@@ -72,6 +74,8 @@ func _draw() -> void:
 				draw_rect(rect.grow(-6.0), Color("f2eadf"), false, 2.0)
 
 func _get_drag_data(at_position: Vector2) -> Variant:
+	if interaction_locked:
+		return null
 	var original := _piece_at_local(at_position)
 	if original == null:
 		return null
@@ -85,7 +89,7 @@ func _get_drag_data(at_position: Vector2) -> Variant:
 	queue_redraw()
 	return {
 		"kind": &"puzzle_piece",
-		"source": &"board",
+		"source": &"organizer" if target_location == PuzzlePieceState.Location.ORGANIZER else &"board",
 		"candidate": candidate,
 		"original": original,
 		"grab_offset": grab_offset,
@@ -94,6 +98,8 @@ func _get_drag_data(at_position: Vector2) -> Variant:
 
 
 func _can_drop_data(at_position: Vector2, data: Variant) -> bool:
+	if interaction_locked:
+		return false
 	return _update_ghost(at_position, data)
 
 
@@ -104,7 +110,9 @@ func _drop_data(at_position: Vector2, data: Variant) -> void:
 	var grab_offset: Vector2i = data.get("grab_offset", Vector2i.ZERO)
 	var target := _grid_cell(at_position) - grab_offset
 	var original := data.get("original") as PuzzlePieceState
-	if not PuzzleRules.can_place(task, candidate, pieces, target, candidate.rotation_steps, original):
+	if not PuzzleRules.can_place(
+		task, candidate, pieces, target, candidate.rotation_steps, original, target_location
+	):
 		interaction_message.emit(TranslationServer.translate(&"feedback.invalid_drop"))
 		_clear_ghost()
 		return
@@ -112,14 +120,14 @@ func _drop_data(at_position: Vector2, data: Variant) -> void:
 	will_change.emit()
 	if data.get("source") in [&"template", &"shop_template"]:
 		candidate.piece_uid = _allocate_piece_uid()
-		candidate.location = PuzzlePieceState.Location.BOARD
+		candidate.location = target_location
 		candidate.task_id = task.id
 		candidate.grid_position = target
 		pieces.append(candidate)
 	else:
 		original.rotation_steps = candidate.rotation_steps
 		original.grid_position = target
-		original.location = PuzzlePieceState.Location.BOARD
+		original.location = target_location
 		original.task_id = task.id
 	_clear_ghost()
 	state_changed.emit()
@@ -137,14 +145,10 @@ func _finish_piece_drag(was_successful: bool, local_position: Vector2) -> void:
 		original != null
 		and not was_successful
 		and not Rect2(Vector2.ZERO, size).has_point(local_position)
+		and remove_on_failed_external_drop
 	):
 		will_change.emit()
-		if return_removed_to_inventory:
-			original.location = PuzzlePieceState.Location.INVENTORY
-			original.task_id = &""
-			original.grid_position = Vector2i(-1, -1)
-		else:
-			pieces.erase(original)
+		pieces.erase(original)
 		state_changed.emit()
 	_clear_ghost()
 	queue_redraw()
@@ -159,7 +163,9 @@ func _update_ghost(at_position: Vector2, data: Variant) -> bool:
 	var target := _grid_cell(at_position) - grab_offset
 	ghost_cells = candidate.occupied_cells(target, candidate.rotation_steps)
 	var original := data.get("original") as PuzzlePieceState
-	ghost_valid = PuzzleRules.can_place(task, candidate, pieces, target, candidate.rotation_steps, original)
+	ghost_valid = PuzzleRules.can_place(
+		task, candidate, pieces, target, candidate.rotation_steps, original, target_location
+	)
 	queue_redraw()
 	return ghost_valid
 
@@ -169,7 +175,7 @@ func _piece_at_local(local_position: Vector2) -> PuzzlePieceState:
 	for index in range(pieces.size() - 1, -1, -1):
 		var piece := pieces[index]
 		if (
-			piece.location == PuzzlePieceState.Location.BOARD
+			piece.location == target_location
 			and (piece.task_id.is_empty() or piece.task_id == task.id)
 			and cell in piece.occupied_cells()
 		):

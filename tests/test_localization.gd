@@ -34,6 +34,9 @@ func test_every_task_has_chinese_and_english_copy() -> void:
 		for task in DemoCatalog.all_tasks():
 			assert_ne(task.localized_name(), String(task.display_name_key), "%s title missing in %s" % [task.id, locale])
 			assert_ne(task.localized_description(), String(task.description_key), "%s description missing in %s" % [task.id, locale])
+		var daily := DemoCatalog.daily_task_for_day(1)
+		assert_ne(daily.localized_name(), String(daily.display_name_key))
+		assert_ne(daily.localized_description(), String(daily.description_key))
 
 
 func test_infinite_palette_and_drag_instructions_are_translated() -> void:
@@ -57,14 +60,6 @@ func test_sparse_shop_interface_is_translated() -> void:
 	var keys := [
 		&"game.title",
 		&"map.day_money",
-		&"map.goal.buy_teddy",
-		&"map.goal.finish_teddy",
-		&"map.goal.after_teddy",
-		&"map.goal.buy_goldfish",
-		&"map.goal.finish_goldfish",
-		&"map.goal.buy_tape",
-		&"map.goal.finish_tape",
-		&"map.goal.after_all",
 		&"map.notice.goldfish_complete",
 		&"map.notice.tape_complete",
 		&"demo.complete.title",
@@ -79,18 +74,28 @@ func test_sparse_shop_interface_is_translated() -> void:
 		&"weekday.mon",
 		&"weekday.sun",
 		&"shop.tab.goods",
-		&"shop.tab.bag",
+		&"protagonist.title",
+		&"protagonist.open",
+		&"task.daily.title",
+		&"task.popup.progress",
+		&"task.organizer.title",
+		&"task.organizer.must_empty",
+		&"task.daily.submit",
+		&"daily.result.lamp",
+		&"daily.result.mirror",
+		&"daily.result.flower",
+		&"daily.result.fog",
+		&"daily.result.mixed",
 		&"shop.product.meta",
-		&"shop.item.pending",
-		&"shop.item.owned",
 		&"shop.cart.summary",
 		&"shop.feedback.ready",
 		&"shop.feedback.paid",
 		&"shop.feedback.no_money",
+		&"shop.feedback.unplaced",
+		&"shop.feedback.daily_required",
+		&"shop.feedback.unlocked_teddy",
 		&"shop.feedback.owner_quiet",
 		&"shop.feedback.closed",
-		&"shop.requirement.warm",
-		&"shop.requirement.none",
 		&"shop.feedback.submitted_teddy",
 		&"shop.feedback.submitted_goldfish",
 		&"shop.feedback.submitted_tape",

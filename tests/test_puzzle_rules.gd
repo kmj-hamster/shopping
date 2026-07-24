@@ -10,7 +10,7 @@ func test_teddy_can_be_filled_from_unlimited_mirror_monominoes() -> void:
 
 
 func test_goldfish_can_be_filled_from_unlimited_flower_monominoes() -> void:
-	var setup := _filled_solution(&"goldfish", Vector2i(1, 2), 0, &"fast_sugar")
+	var setup := _filled_solution(&"goldfish", Vector2i(1, 1), 0, &"fast_sugar")
 	var result := PuzzleRules.evaluate(setup.task, setup.pieces)
 	assert_true(result.is_complete, str(result.reasons))
 	assert_eq(result.attribute_totals[ItemDefinition.ATTRIBUTE_MIRROR], 7)
@@ -83,6 +83,30 @@ func test_board_pieces_from_other_tasks_do_not_overlap_or_count() -> void:
 	))
 
 
+func test_daily_goal_needs_no_special_and_reports_dominant_attribute() -> void:
+	var task := DemoCatalog.daily_task_for_day(1)
+	var pieces: Array[PuzzlePieceState] = []
+	for cell in task.mask_cells:
+		pieces.append(_placed_piece(pieces.size() + 1, &"book_period", cell, 0, task.id))
+	var result := PuzzleRules.evaluate(task, pieces)
+	assert_true(result.is_complete, str(result.reasons))
+	assert_true(result.has_required_special)
+	assert_eq(
+		PuzzleRules.dominant_attribute_result_key(result.attribute_totals),
+		&"daily.result.fog"
+	)
+
+
+func test_special_item_cannot_enter_daily_or_another_story_task() -> void:
+	var teddy := PuzzlePieceState.new(1, DemoCatalog.item_by_id(&"special_teddy"))
+	assert_false(PuzzleRules.can_place(
+		DemoCatalog.daily_task_for_day(1), teddy, [], Vector2i.ZERO, 0
+	))
+	assert_false(PuzzleRules.can_place(
+		DemoCatalog.task_by_id(&"goldfish"), teddy, [], Vector2i(1, 1), 0
+	))
+
+
 func _filled_solution(
 	task_id: StringName,
 	special_position: Vector2i,
@@ -92,6 +116,7 @@ func _filled_solution(
 	var task := DemoCatalog.task_by_id(task_id)
 	var pieces: Array[PuzzlePieceState] = []
 	var special := _placed_piece(1, task.required_special_item_id, special_position, special_rotation)
+	special.task_id = task_id
 	pieces.append(special)
 	var occupied: Dictionary = {}
 	for cell in special.occupied_cells():
@@ -100,7 +125,7 @@ func _filled_solution(
 	for cell in task.mask_cells:
 		if occupied.has(cell):
 			continue
-		pieces.append(_placed_piece(uid, filler_item_id, cell, 0))
+		pieces.append(_placed_piece(uid, filler_item_id, cell, 0, task_id))
 		uid += 1
 	return {
 		"task": task,
@@ -108,9 +133,16 @@ func _filled_solution(
 	}
 
 
-func _placed_piece(uid: int, item_id: StringName, position: Vector2i, rotation: int) -> PuzzlePieceState:
+func _placed_piece(
+	uid: int,
+	item_id: StringName,
+	position: Vector2i,
+	rotation: int,
+	task_id: StringName = &"teddy"
+) -> PuzzlePieceState:
 	var piece := PuzzlePieceState.new(uid, DemoCatalog.item_by_id(item_id))
 	piece.location = PuzzlePieceState.Location.BOARD
 	piece.grid_position = position
 	piece.rotation_steps = rotation
+	piece.task_id = task_id
 	return piece

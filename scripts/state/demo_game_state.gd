@@ -4,6 +4,7 @@ extends Node
 signal state_changed
 signal task_unlocked(task_id: StringName)
 signal event_completed(task_id: StringName)
+signal daily_goal_submitted(result_key: StringName)
 
 const TASK_TEDDY := &"teddy"
 const TASK_GOLDFISH := &"goldfish"
@@ -19,11 +20,13 @@ const SPECIAL_TASKS := {
 	&"special_fishbone": TASK_GOLDFISH,
 	&"special_tape": TASK_TAPE,
 }
-const TASK_STAGES := {
-	TASK_TEDDY: 0,
-	TASK_GOLDFISH: 1,
-	TASK_TAPE: 2,
-}
+const RESULT_DAILY_INCOMPLETE := &"daily_incomplete"
+const RESULT_DAILY_ALREADY_SUBMITTED := &"daily_already_submitted"
+const RESULT_ORGANIZER_NOT_EMPTY := &"organizer_not_empty"
+const RESULT_PENDING_PURCHASE := &"pending_purchase"
+const RESULT_WRONG_OWNER := &"wrong_owner"
+const RESULT_ALREADY_UNLOCKED := &"already_unlocked"
+const RESULT_INVALID_SPECIAL_TASK := &"invalid_special_task"
 
 var day := 1
 var world_stage := 0
@@ -33,6 +36,7 @@ var unlocked_tasks: Dictionary = {}
 var completed_tasks: Dictionary = {}
 var purchased_special_items: Dictionary = {}
 var store_transactions: Dictionary = {}
+var daily_goal := DailyGoalState.new()
 
 var toy_transaction: ShopTransaction:
 	get:
@@ -51,6 +55,7 @@ func reset_demo() -> void:
 	unlocked_tasks = {}
 	completed_tasks = {}
 	purchased_special_items = {}
+	daily_goal = DailyGoalState.new(day, DemoCatalog.daily_template_id_for_day(day))
 	_refresh_store_transactions()
 	state_changed.emit()
 
@@ -76,22 +81,17 @@ func checkout_store(store_id: StringName) -> Dictionary:
 			and piece.definition.store_id == store_id
 			and piece.definition.is_special
 		):
+			var expected_task_id: StringName = SPECIAL_TASKS.get(piece.definition.id, &"")
+			if piece.task_id != expected_task_id:
+				return {"ok": false, "reason": RESULT_INVALID_SPECIAL_TASK}
 			pending_specials.append(piece.definition.id)
 	var result := transaction.checkout()
 	if not result.ok:
 		return result
 	for item_id in pending_specials:
 		purchased_special_items[item_id] = true
-		var task_id: StringName = SPECIAL_TASKS.get(item_id, &"")
-		if not task_id.is_empty() and not unlocked_tasks.has(task_id):
-			unlocked_tasks[task_id] = true
-			task_unlocked.emit(task_id)
 	state_changed.emit()
 	return result
-
-
-func checkout_toy_store() -> Dictionary:
-	return checkout_store(DemoCatalog.STORE_TOY)
 
 
 func cancel_store_cart(store_id: StringName) -> int:
@@ -102,10 +102,6 @@ func cancel_store_cart(store_id: StringName) -> int:
 	if removed > 0:
 		state_changed.emit()
 	return removed
-
-
-func cancel_toy_cart() -> int:
-	return cancel_store_cart(DemoCatalog.STORE_TOY)
 
 
 func cancel_all_carts() -> int:
@@ -120,18 +116,95 @@ func cancel_all_carts() -> int:
 
 
 func advance_day() -> Dictionary:
-	var cancelled_count := cancel_all_carts()
+	if not daily_goal.submitted:
+		return {"ok": false, "reason": RESULT_DAILY_INCOMPLETE}
+	if has_organizer_pieces():
+		return {"ok": false, "reason": RESULT_ORGANIZER_NOT_EMPTY}
+	if has_pending_purchases():
+		return {"ok": false, "reason": RESULT_PENDING_PURCHASE}
+	var consumed_count := _consume_task_pieces(DemoCatalog.DAILY_TASK_ID)
 	day += 1
 	wallet.money += 100
+	daily_goal = DailyGoalState.new(day, DemoCatalog.daily_template_id_for_day(day))
 	_refresh_store_transactions()
 	state_changed.emit()
 	return {
+		"ok": true,
 		"day": day,
 		"weekday_key": ShopSchedule.weekday_key(day),
 		"income": 100,
-		"cancelled_count": cancelled_count,
+		"cancelled_count": 0,
+		"consumed_count": consumed_count,
 		"open_stores": ShopSchedule.open_store_ids(day),
 	}
+
+
+func daily_task() -> TaskDefinition:
+	return DemoCatalog.daily_task_for_day(day)
+
+
+func submit_daily_goal() -> Dictionary:
+	if daily_goal.submitted:
+		return {"ok": false, "reason": RESULT_DAILY_ALREADY_SUBMITTED}
+	if has_organizer_pieces(DemoCatalog.DAILY_TASK_ID):
+		return {"ok": false, "reason": RESULT_ORGANIZER_NOT_EMPTY}
+	var evaluation := PuzzleRules.evaluate(daily_task(), pieces)
+	if not evaluation.is_complete:
+		return {"ok": false, "reason": RESULT_DAILY_INCOMPLETE, "evaluation": evaluation}
+	var result_key := PuzzleRules.dominant_attribute_result_key(evaluation.attribute_totals)
+	daily_goal.mark_submitted(result_key, evaluation.attribute_totals)
+	state_changed.emit()
+	daily_goal_submitted.emit(result_key)
+	return {"ok": true, "reason": &"ok", "result_key": result_key}
+
+
+func talk_to_owner(store_id: StringName) -> Dictionary:
+	if world_stage < 0 or world_stage >= TASK_ORDER.size():
+		return {"ok": false, "reason": RESULT_WRONG_OWNER}
+	var task_id: StringName = TASK_ORDER[world_stage]
+	var task := DemoCatalog.task_by_id(task_id)
+	if task == null or task.submit_store_id != store_id:
+		return {"ok": false, "reason": RESULT_WRONG_OWNER}
+	if is_task_unlocked(task_id):
+		return {"ok": false, "reason": RESULT_ALREADY_UNLOCKED, "task_id": task_id}
+	unlocked_tasks[task_id] = true
+	_sync_special_stock()
+	state_changed.emit()
+	task_unlocked.emit(task_id)
+	return {"ok": true, "reason": &"ok", "task_id": task_id}
+
+
+func task_definition(task_id: StringName) -> TaskDefinition:
+	if task_id == DemoCatalog.DAILY_TASK_ID:
+		return daily_task()
+	return DemoCatalog.task_by_id(task_id)
+
+
+func protagonist_task_ids() -> Array[StringName]:
+	var result: Array[StringName] = [DemoCatalog.DAILY_TASK_ID]
+	for task_id in TASK_ORDER:
+		if is_task_unlocked(task_id) or is_task_completed(task_id):
+			result.append(task_id)
+	return result
+
+
+func has_organizer_pieces(task_id: StringName = &"") -> bool:
+	for piece in pieces:
+		if piece.location != PuzzlePieceState.Location.ORGANIZER:
+			continue
+		if task_id.is_empty() or piece.task_id == task_id:
+			return true
+	return false
+
+
+func has_pending_purchases() -> bool:
+	return pieces.any(func(piece: PuzzlePieceState) -> bool:
+		return piece.ownership == PuzzlePieceState.Ownership.PENDING_PURCHASE
+	)
+
+
+func notify_piece_layout_changed() -> void:
+	state_changed.emit()
 
 
 func is_task_unlocked(task_id: StringName) -> bool:
@@ -142,26 +215,16 @@ func is_task_completed(task_id: StringName) -> bool:
 	return completed_tasks.has(task_id)
 
 
-func active_task_ids() -> Array[StringName]:
-	var result: Array[StringName] = []
-	for task_definition in DemoCatalog.all_tasks():
-		if (
-			is_task_unlocked(task_definition.id)
-			and not is_task_completed(task_definition.id)
-		):
-			result.append(task_definition.id)
-	return result
-
-
 func should_show_item(item: ItemDefinition) -> bool:
 	if not item.is_special:
 		return true
 	var task_id: StringName = SPECIAL_TASKS.get(item.id, &"")
-	return not task_id.is_empty() and world_stage >= int(TASK_STAGES[task_id])
-
-
-func submit_teddy_event() -> Dictionary:
-	return submit_task(TASK_TEDDY)
+	return (
+		not task_id.is_empty()
+		and is_task_unlocked(task_id)
+		and not is_task_completed(task_id)
+		and not purchased_special_items.has(item.id)
+	)
 
 
 func submit_task(task_id: StringName) -> Dictionary:
@@ -178,7 +241,7 @@ func submit_task(task_id: StringName) -> Dictionary:
 	for piece in pieces:
 		if (
 			piece.location == PuzzlePieceState.Location.BOARD
-			and (piece.task_id.is_empty() or piece.task_id == task.id)
+			and piece.task_id == task.id
 		):
 			consumed.append(piece)
 	for piece in consumed:
@@ -189,23 +252,6 @@ func submit_task(task_id: StringName) -> Dictionary:
 	state_changed.emit()
 	event_completed.emit(task_id)
 	return {"ok": true, "reason": &"ok", "consumed_count": consumed.size()}
-
-
-func shopping_goal_key() -> StringName:
-	for task_id in TASK_ORDER:
-		if is_task_completed(task_id):
-			continue
-		if is_task_unlocked(task_id):
-			return StringName("map.goal.finish_%s" % task_id)
-		return StringName("map.goal.buy_%s" % task_id)
-	return &"map.goal.after_all"
-
-
-func shopping_goal_store_id() -> StringName:
-	for task_id in TASK_ORDER:
-		if not is_task_completed(task_id):
-			return DemoCatalog.task_by_id(task_id).submit_store_id
-	return &""
 
 
 func event_notice_key(task_id: StringName) -> StringName:
@@ -242,3 +288,13 @@ func _sync_special_stock() -> void:
 				0 if purchased_special_items.has(item.id) or not should_show_item(item)
 				else item.daily_limit
 			)
+
+
+func _consume_task_pieces(task_id: StringName) -> int:
+	var consumed: Array[PuzzlePieceState] = []
+	for piece in pieces:
+		if piece.task_id == task_id:
+			consumed.append(piece)
+	for piece in consumed:
+		pieces.erase(piece)
+	return consumed.size()

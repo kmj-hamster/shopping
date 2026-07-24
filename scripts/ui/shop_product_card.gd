@@ -1,15 +1,12 @@
 class_name ShopProductCard
 extends PanelContainer
 
-signal add_requested(item_id: StringName)
-
 var definition: ItemDefinition
 var available_count := 0
 var drag_cell_size := PuzzleBoard.DEFAULT_CELL_SIZE
 var shape_preview: ShapePreview
 var title_label: Label
 var meta_label: Label
-var add_button: Button
 
 
 func _ready() -> void:
@@ -58,14 +55,6 @@ func _build_card() -> void:
 	meta_label.add_theme_color_override("font_color", Color("9fb8bd"))
 	copy.add_child(meta_label)
 
-	add_button = Button.new()
-	add_button.custom_minimum_size = Vector2(36, 36)
-	add_button.text = "+"
-	add_button.add_theme_font_size_override("font_size", 20)
-	add_button.pressed.connect(func() -> void: add_requested.emit(definition.id))
-	row.add_child(add_button)
-
-
 func _refresh() -> void:
 	if definition == null or shape_preview == null:
 		return
@@ -76,7 +65,6 @@ func _refresh() -> void:
 		definition.price,
 		available_count,
 	]
-	add_button.disabled = available_count <= 0
 	mouse_default_cursor_shape = Control.CURSOR_DRAG if available_count > 0 else Control.CURSOR_FORBIDDEN
 	tooltip_text = TranslationServer.translate(&"shop.product.tooltip")
 	var border := Color("d5a96c") if definition.is_special else Color("4d7778")

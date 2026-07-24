@@ -2,11 +2,15 @@ extends Control
 
 var current_screen: Control
 var current_view: StringName = &""
+var protagonist_interface: ProtagonistInterface
 
 
 func _ready() -> void:
 	GameState.reset_demo()
 	_show_map()
+	protagonist_interface = ProtagonistInterface.new()
+	add_child(protagonist_interface)
+	protagonist_interface.set_view_context(current_view)
 
 
 func _show_map(notice_key: StringName = &"") -> void:
@@ -19,6 +23,7 @@ func _show_map(notice_key: StringName = &"") -> void:
 	add_child(map)
 	current_screen = map
 	current_view = &"map"
+	_sync_protagonist_context()
 	if not notice_key.is_empty():
 		map.call_deferred("show_notice", notice_key)
 
@@ -35,6 +40,7 @@ func _show_shop(store_id: StringName = DemoCatalog.STORE_TOY) -> void:
 	add_child(shop)
 	current_screen = shop
 	current_view = &"shop"
+	_sync_protagonist_context()
 
 
 func _clear_screen() -> void:
@@ -62,11 +68,18 @@ func _on_event_completed(task_id: StringName) -> void:
 
 func _on_next_day_requested() -> void:
 	var result := GameState.advance_day()
-	if current_view == &"map" and current_screen is MallMapScreen:
+	if result.ok and current_view == &"map" and current_screen is MallMapScreen:
 		current_screen.show_day_transition(result)
 
 
 func _on_shop_next_day_requested() -> void:
 	var result := GameState.advance_day()
+	if not result.ok:
+		return
 	_show_map()
 	current_screen.show_day_transition(result)
+
+
+func _sync_protagonist_context() -> void:
+	if protagonist_interface != null:
+		protagonist_interface.set_view_context(current_view)

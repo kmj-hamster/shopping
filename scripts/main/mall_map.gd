@@ -8,7 +8,6 @@ var title_label: Label
 var day_money_label: Label
 var language_button: Button
 var store_hotspots: Dictionary = {}
-var goal_label: Label
 var notice_label: Label
 var notice_key: StringName = &""
 var notice_store_id: StringName = &""
@@ -70,13 +69,10 @@ func refresh() -> void:
 		TranslationServer.translate(ShopSchedule.weekday_key(GameState.day)),
 		GameState.wallet.money,
 	]
-	var goal_text := TranslationServer.translate(GameState.shopping_goal_key())
-	var goal_store_id := GameState.shopping_goal_store_id()
-	if not goal_store_id.is_empty() and not GameState.is_store_open(goal_store_id):
-		var next_day := ShopSchedule.next_open_day(goal_store_id, GameState.day)
-		goal_text += "  ·  " + TranslationServer.translate(&"map.goal.next_open") % \
-			TranslationServer.translate(ShopSchedule.weekday_key(next_day))
-	goal_label.text = "□  " + goal_text
+	next_day_button.disabled = not GameState.daily_goal.submitted or GameState.has_organizer_pieces()
+	next_day_button.tooltip_text = TranslationServer.translate(
+		&"map.next_day.ready" if not next_day_button.disabled else &"map.next_day.locked"
+	)
 	_refresh_store_hotspots()
 	_refresh_schedule()
 
@@ -129,7 +125,7 @@ func _build_interface() -> void:
 	top.add_child(schedule_button)
 	next_day_button = Button.new()
 	next_day_button.custom_minimum_size = Vector2(82, 38)
-	next_day_button.pressed.connect(func() -> void: next_day_requested.emit())
+	next_day_button.pressed.connect(_on_next_day_pressed)
 	top.add_child(next_day_button)
 	language_button = Button.new()
 	language_button.custom_minimum_size = Vector2(58, 38)
@@ -200,29 +196,23 @@ func _build_interface() -> void:
 	transition_close.pressed.connect(func() -> void: transition_panel.visible = false)
 	transition_column.add_child(transition_close)
 
-	var goal_panel := PanelContainer.new()
-	goal_panel.name = "ShoppingList"
-	goal_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	goal_panel.offset_left = 28
-	goal_panel.offset_right = -28
-	goal_panel.offset_top = -92
-	goal_panel.offset_bottom = -22
-	goal_panel.add_theme_stylebox_override(
+	var notice_panel := PanelContainer.new()
+	notice_panel.name = "NightNotice"
+	notice_panel.position = Vector2(28, 630)
+	notice_panel.size = Vector2(720, 52)
+	notice_panel.add_theme_stylebox_override(
 		"panel", UiPalette.panel_style(Color("06171d", 0.88), Color("587a78", 0.84))
 	)
-	add_child(goal_panel)
-	var goal_row := HBoxContainer.new()
-	goal_row.add_theme_constant_override("separation", 16)
-	goal_panel.add_child(goal_row)
-	goal_label = Label.new()
-	goal_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	goal_label.add_theme_font_size_override("font_size", 18)
-	goal_row.add_child(goal_label)
+	add_child(notice_panel)
 	notice_label = Label.new()
 	notice_label.visible = false
+	notice_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	notice_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	notice_label.add_theme_font_size_override("font_size", 16)
 	notice_label.add_theme_color_override("font_color", Color("efd18a"))
-	goal_row.add_child(notice_label)
+	notice_panel.add_child(notice_label)
+	notice_panel.visible = false
+	notice_label.visibility_changed.connect(func() -> void: notice_panel.visible = notice_label.visible)
 
 	demo_complete_scrim = ColorRect.new()
 	demo_complete_scrim.color = Color(0.005, 0.02, 0.028, 0.78)
@@ -377,6 +367,16 @@ func _on_store_pressed(store_id: StringName) -> void:
 
 func _on_schedule_pressed() -> void:
 	schedule_panel.visible = not schedule_panel.visible
+
+
+func _on_next_day_pressed() -> void:
+	if not GameState.daily_goal.submitted:
+		show_notice(&"map.notice.daily_required")
+		return
+	if GameState.has_organizer_pieces():
+		show_notice(&"map.notice.organizer_required")
+		return
+	next_day_requested.emit()
 
 
 func _on_demo_continue_pressed() -> void:

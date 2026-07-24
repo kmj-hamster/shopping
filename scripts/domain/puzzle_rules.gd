@@ -8,11 +8,16 @@ static func can_place(
 	pieces: Array[PuzzlePieceState],
 	position: Vector2i,
 	rotation_steps: int,
-	ignored_piece: PuzzlePieceState = null
+	ignored_piece: PuzzlePieceState = null,
+	target_location: PuzzlePieceState.Location = PuzzlePieceState.Location.BOARD
 ) -> bool:
+	if task == null or piece == null or piece.definition == null:
+		return false
+	if piece.definition.is_special and piece.definition.id != task.required_special_item_id:
+		return false
 	var occupied_by_others: Dictionary = {}
 	for other in pieces:
-		if other == piece or other == ignored_piece or other.location != PuzzlePieceState.Location.BOARD:
+		if other == piece or other == ignored_piece or other.location != target_location:
 			continue
 		if not other.task_id.is_empty() and other.task_id != task.id:
 			continue
@@ -66,10 +71,12 @@ static func evaluate(task: TaskDefinition, pieces: Array[PuzzlePieceState]) -> D
 		reasons.append(TranslationServer.translate(&"puzzle.reason.overlap"))
 	if not missing_cells.is_empty():
 		reasons.append(TranslationServer.translate(&"puzzle.reason.missing_cells") % missing_cells.size())
-	if required_special_count == 0:
-		reasons.append(TranslationServer.translate(&"puzzle.reason.missing_special"))
-	elif required_special_count > 1:
-		reasons.append(TranslationServer.translate(&"puzzle.reason.duplicate_special"))
+	var requires_special := not task.required_special_item_id.is_empty()
+	if requires_special:
+		if required_special_count == 0:
+			reasons.append(TranslationServer.translate(&"puzzle.reason.missing_special"))
+		elif required_special_count > 1:
+			reasons.append(TranslationServer.translate(&"puzzle.reason.duplicate_special"))
 	if not attribute_ok:
 		reasons.append(_attribute_failure_text(task.attribute_rule))
 
@@ -80,12 +87,33 @@ static func evaluate(task: TaskDefinition, pieces: Array[PuzzlePieceState]) -> D
 		"missing_cells": missing_cells,
 		"overlap_cells": overlap_cells,
 		"outside_cells": outside_cells,
-		"has_required_special": required_special_count == 1,
+		"has_required_special": not requires_special or required_special_count == 1,
 		"required_special_count": required_special_count,
 		"attribute_totals": attribute_totals,
 		"attribute_ok": attribute_ok,
 		"reasons": reasons,
 	}
+
+
+static func dominant_attribute_result_key(totals: Dictionary) -> StringName:
+	var attributes: Array[StringName] = [
+		ItemDefinition.ATTRIBUTE_LAMP,
+		ItemDefinition.ATTRIBUTE_MIRROR,
+		ItemDefinition.ATTRIBUTE_FLOWER,
+		ItemDefinition.ATTRIBUTE_FOG,
+	]
+	var highest := -1
+	var leaders: Array[StringName] = []
+	for attribute in attributes:
+		var value := int(totals.get(attribute, 0))
+		if value > highest:
+			highest = value
+			leaders = [attribute]
+		elif value == highest:
+			leaders.append(attribute)
+	if leaders.size() != 1:
+		return &"daily.result.mixed"
+	return StringName("daily.result.%s" % leaders[0])
 
 
 static func _attribute_rule_is_satisfied(rule: TaskDefinition.AttributeRule, totals: Dictionary) -> bool:

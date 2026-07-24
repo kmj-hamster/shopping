@@ -13,6 +13,8 @@ func test_project_name_is_shopping() -> void:
 
 func test_map_source_asset_exists() -> void:
 	assert_true(FileAccess.file_exists("res://pic/map.png"))
+	assert_true(FileAccess.file_exists("res://pic/bag.png"))
+	assert_true(FileAccess.file_exists("res://pic/bag-light.png"))
 
 
 func test_player_facing_shop_scene_is_the_main_scene() -> void:

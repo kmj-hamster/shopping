@@ -2,8 +2,8 @@ class_name PuzzlePieceState
 extends RefCounted
 
 enum Location {
-	INVENTORY,
 	BOARD,
+	ORGANIZER,
 }
 
 enum Ownership {
@@ -13,7 +13,7 @@ enum Ownership {
 
 var piece_uid: int
 var definition: ItemDefinition
-var location: Location = Location.INVENTORY
+var location: Location = Location.BOARD
 var ownership: Ownership = Ownership.OWNED
 var grid_position := Vector2i(-1, -1)
 var rotation_steps: int = 0

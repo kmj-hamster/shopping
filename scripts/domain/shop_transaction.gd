@@ -8,6 +8,8 @@ const RESULT_EMPTY := &"empty"
 const RESULT_OUT_OF_STOCK := &"out_of_stock"
 const RESULT_INSUFFICIENT_FUNDS := &"insufficient_funds"
 const RESULT_WRONG_STORE := &"wrong_store"
+const RESULT_UNPLACED := &"unplaced"
+const RESULT_ORGANIZER_NOT_EMPTY := &"organizer_not_empty"
 
 var store_id: StringName
 var wallet: PlayerWallet
@@ -103,12 +105,17 @@ func checkout() -> Dictionary:
 	var counts: Dictionary = {}
 	var pending: Array[PuzzlePieceState] = []
 	for piece in pieces:
+		if piece.location == PuzzlePieceState.Location.ORGANIZER:
+			return _result(false, RESULT_ORGANIZER_NOT_EMPTY)
+	for piece in pieces:
 		if (
 			piece.ownership != PuzzlePieceState.Ownership.PENDING_PURCHASE
 			or piece.definition.store_id != store_id
 		):
 			continue
 		pending.append(piece)
+		if piece.location != PuzzlePieceState.Location.BOARD or piece.task_id.is_empty():
+			return _result(false, RESULT_UNPLACED)
 		counts[piece.definition.id] = int(counts.get(piece.definition.id, 0)) + 1
 	if pending.is_empty():
 		return _result(false, RESULT_EMPTY)

@@ -58,7 +58,7 @@ func test_lab_rotates_candidate_while_drag_data_remains_uncommitted() -> void:
 	assert_eq(lab.pieces.size(), 0)
 
 
-func test_board_piece_dropped_outside_returns_to_infinite_inventory() -> void:
+func test_developer_board_can_remove_piece_dropped_outside() -> void:
 	var board := PuzzleBoard.new()
 	autofree(board)
 	var piece := PuzzlePieceState.new(1, DemoCatalog.item_by_id(&"special_teddy"))
@@ -90,7 +90,7 @@ func test_invalid_drop_inside_board_keeps_original_piece() -> void:
 	assert_null(board.dragged_piece)
 
 
-func test_finite_board_returns_piece_to_inventory_when_dropped_outside() -> void:
+func test_formal_task_board_keeps_piece_after_failed_external_drop() -> void:
 	var board := PuzzleBoard.new()
 	autofree(board)
 	var piece := PuzzlePieceState.new(1, DemoCatalog.item_by_id(&"book_period"))
@@ -99,15 +99,14 @@ func test_finite_board_returns_piece_to_inventory_when_dropped_outside() -> void
 	var pieces: Array[PuzzlePieceState] = [piece]
 	board.set_context(DemoCatalog.task_by_id(&"teddy"), pieces)
 	board.size = board.custom_minimum_size
-	board.return_removed_to_inventory = true
+	board.remove_on_failed_external_drop = false
 	board.dragged_piece = piece
 
 	board._finish_piece_drag(false, Vector2(-1, board.size.y * 0.5))
 
 	assert_eq(pieces, [piece])
-	assert_eq(piece.location, PuzzlePieceState.Location.INVENTORY)
-	assert_eq(piece.task_id, &"")
-	assert_eq(piece.grid_position, Vector2i(-1, -1))
+	assert_eq(piece.location, PuzzlePieceState.Location.BOARD)
+	assert_eq(piece.grid_position, Vector2i(1, 1))
 
 
 func test_shop_template_drop_preserves_pending_purchase_ownership() -> void:

@@ -33,8 +33,17 @@ msgstr "This Week's Lights"
 msgid "map.next_day"
 msgstr "Next Night"
 
-msgid "map.goal.next_open"
-msgstr "reopens %s"
+msgid "map.next_day.locked"
+msgstr "Finish the daily errand first"
+
+msgid "map.next_day.ready"
+msgstr "Tonight is ready"
+
+msgid "map.notice.daily_required"
+msgstr "Tonight's shape is still empty inside the bag."
+
+msgid "map.notice.organizer_required"
+msgstr "Something is still inside an inner fold."
 
 msgid "map.notice.store_closed"
 msgstr "%s is closed tonight. It reopens %s."
@@ -44,30 +53,6 @@ msgstr "Night %d · %s"
 
 msgid "map.day.summary"
 msgstr "Work income +¥100\nLights on: %s\nThe shelves have been restocked."
-
-msgid "map.goal.buy_teddy"
-msgstr "One-Eared Teddy  ·  Toy Store"
-
-msgid "map.goal.finish_teddy"
-msgstr "Take the one-eared teddy back to the toy store"
-
-msgid "map.goal.after_teddy"
-msgstr "It remembered your name."
-
-msgid "map.goal.buy_goldfish"
-msgstr "Leftover Fishbone  ·  Fast Food"
-
-msgid "map.goal.finish_goldfish"
-msgstr "Take the goldfish back to the fast-food shop"
-
-msgid "map.goal.buy_tape"
-msgstr "Endlessly Rewinding Tape  ·  Record Store"
-
-msgid "map.goal.finish_tape"
-msgstr "Take the tape back to the record store"
-
-msgid "map.goal.after_all"
-msgstr "Midnight is not over yet."
 
 msgid "map.notice.teddy_complete"
 msgstr "The first thing is done."
@@ -90,6 +75,60 @@ msgstr "Keep Wandering"
 msgid "ui.language.tooltip"
 msgstr "切换到中文"
 
+msgid "protagonist.title"
+msgstr "Inside the Shopping Bag"
+
+msgid "protagonist.open"
+msgstr "Open the shopping list"
+
+msgid "task.daily.title"
+msgstr "Daily Errand"
+
+msgid "task.daily.description"
+msgstr "Fill the shape the night left behind."
+
+msgid "task.memory"
+msgstr "Memory"
+
+msgid "task.popup.progress"
+msgstr "%d/%d · %s"
+
+msgid "task.popup.owner_submit"
+msgstr "When it is full, take it back to the owner."
+
+msgid "task.organizer.title"
+msgstr "Inner Fold"
+
+msgid "task.organizer.open"
+msgstr "Open the inner fold"
+
+msgid "task.organizer.close"
+msgstr "Close the inner fold"
+
+msgid "task.organizer.must_empty"
+msgstr "Something is still inside the fold."
+
+msgid "task.daily.submit"
+msgstr "Keep This Night"
+
+msgid "task.daily.not_ready"
+msgstr "It is not settled yet."
+
+msgid "daily.result.lamp"
+msgstr "The street-corner light stays awake."
+
+msgid "daily.result.mirror"
+msgstr "Someone in the glass arrived one step late."
+
+msgid "daily.result.flower"
+msgstr "Soda bubbles rise beside the pillow."
+
+msgid "daily.result.fog"
+msgstr "Ancient fish cross the bedroom wall."
+
+msgid "daily.result.mixed"
+msgstr "Several shades of night overlap at the bottom of the bag."
+
 msgid "ui.reset_task"
 msgstr "Reset Puzzle"
 
@@ -105,9 +144,6 @@ msgstr "Event Special"
 msgid "ui.inventory.standard_section"
 msgstr "Unlimited Standard Pieces"
 
-msgid "ui.inventory.empty"
-msgstr "The bag is empty for now.\nDrag an item back from the grid."
-
 msgid "ui.item.tooltip"
 msgstr "Grab the piece and drag it right; right-click while dragging to rotate"
 
@@ -119,9 +155,6 @@ msgstr "%s · %s%d · ∞"
 
 msgid "ui.item.special_detail"
 msgstr "%s · %s%d · unique"
-
-msgid "ui.item.detail"
-msgstr "%s · %s%d · ¥%d"
 
 msgid "ui.reason_separator"
 msgstr "; "
@@ -168,9 +201,6 @@ msgstr "It will not fit there."
 msgid "shop.tab.goods"
 msgstr "Shelf"
 
-msgid "shop.tab.bag"
-msgstr "Shopping Bag"
-
 msgid "shop.leave"
 msgstr "Leave"
 
@@ -183,47 +213,11 @@ msgstr "Checkout"
 msgid "shop.talk"
 msgstr "Talk"
 
-msgid "shop.submit"
-msgstr "Hand Over"
-
-msgid "shop.counter.title"
-msgstr "Beyond the Counter"
-
-msgid "shop.counter.whisper"
-msgstr "Something is waiting."
-
-msgid "shop.event.complete_title"
-msgstr "The Empty Place"
-
-msgid "shop.event.complete_whisper"
-msgstr "The teddy bear is no longer here."
-
-msgid "shop.requirement.mirror"
-msgstr "Mirror leads"
-
-msgid "shop.requirement.warm"
-msgstr "Lamp or Flower leads"
-
-msgid "shop.requirement.none"
-msgstr "Just fill it exactly"
-
 msgid "shop.product.meta"
 msgstr "%s · ¥%d · %d"
 
 msgid "shop.product.tooltip"
-msgstr "Drag right to try it, or press + to put it in the bag"
-
-msgid "shop.item.pending"
-msgstr "○ Unpaid"
-
-msgid "shop.item.owned"
-msgstr "● Owned"
-
-msgid "shop.bag.tooltip"
-msgstr "Drag onto the outline; right-click while dragging to rotate"
-
-msgid "shop.bag.empty"
-msgstr "The bag feels light."
+msgstr "Open a shopping list, then drag this piece into its grid"
 
 msgid "shop.cart.summary"
 msgstr "Shopping Bag  %d  ·  ¥%d"
@@ -231,20 +225,11 @@ msgstr "Shopping Bag  %d  ·  ¥%d"
 msgid "shop.feedback.ready"
 msgstr "Take your time."
 
-msgid "shop.feedback.added"
-msgstr "Into the bag it goes."
-
-msgid "shop.feedback.removed"
-msgstr "Back on the shelf."
-
 msgid "shop.feedback.paid"
 msgstr "The register answers with a soft chime."
 
 msgid "shop.feedback.cancelled"
 msgstr "The things on the counter were put back."
-
-msgid "shop.feedback.left"
-msgstr "The unpaid things stayed at the counter."
 
 msgid "shop.feedback.no_money"
 msgstr "You are a little short."
@@ -258,8 +243,23 @@ msgstr "There is nothing to ring up yet."
 msgid "shop.feedback.failed"
 msgstr "The register stays silent."
 
-msgid "shop.feedback.owner_before"
-msgstr "The mannequin behind the shelves gives a small nod."
+msgid "shop.feedback.unplaced"
+msgstr "The things you chose are not inside a grid yet."
+
+msgid "shop.feedback.special_task"
+msgstr "It belongs to that one particular list."
+
+msgid "shop.feedback.daily_required"
+msgstr "Tonight's shopping list is not finished."
+
+msgid "shop.feedback.unlocked_teddy"
+msgstr "An old scrap with a teddy bear falls into the bag."
+
+msgid "shop.feedback.unlocked_goldfish"
+msgstr "A little water moves at the bottom of the bag."
+
+msgid "shop.feedback.unlocked_tape"
+msgstr "A blank cassette begins to turn."
 
 msgid "shop.feedback.owner_after"
 msgstr "The owner passes you an old paper tag."
@@ -281,9 +281,6 @@ msgstr "Next Night"
 
 msgid "shop.next_day.cancel"
 msgstr "Keep Browsing"
-
-msgid "shop.feedback.submitted"
-msgstr "The teddy bear remembers something."
 
 msgid "shop.feedback.submitted_teddy"
 msgstr "The teddy bear remembers something."
@@ -348,6 +345,9 @@ msgstr "Fog"
 msgid "attribute.unknown"
 msgstr "Unknown"
 
+msgid "attribute.mixed"
+msgstr "Mixed"
+
 msgid "store.book"
 msgstr "Bookstore"
 
@@ -388,19 +388,19 @@ msgid "task.teddy.title"
 msgstr "Event 1: Teddy Bear"
 
 msgid "task.teddy.description"
-msgstr "Place the one-eared teddy block, then fill the outline with unlimited standard pieces. Mirror must be strictly highest."
+msgstr "Place the one-eared teddy, then fill the outline with the things you bought. Mirror must be strictly highest."
 
 msgid "task.goldfish.title"
 msgstr "Event 2: Goldfish"
 
 msgid "task.goldfish.description"
-msgstr "Lower the long fishbone into the water, then finish the goldfish with unlimited standard pieces. Lamp or Flower must lead."
+msgstr "Lower the fishbone into the water, then finish the goldfish with the things you bought. Lamp or Flower must lead."
 
 msgid "task.tape.title"
 msgstr "Event 3: Cassette Tape"
 
 msgid "task.tape.description"
-msgstr "Place the large cassette shell, then fill the remaining space freely. This event has no attribute restriction."
+msgstr "Place the cassette shell, then fill the remaining space with the things you bought. This event has no attribute restriction."
 
 msgid "item.book_period"
 msgstr "Missing Punctuation"
