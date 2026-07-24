@@ -108,6 +108,12 @@ msgstr "When it is full, take it back to the owner."
 msgid "task.daily.submit"
 msgstr "Keep This Night"
 
+msgid "task.story.synthesize"
+msgstr "Synthesize"
+
+msgid "task.story.ready"
+msgstr "Synthesized. Take it back to the owner."
+
 msgid "task.daily.not_ready"
 msgstr "It is not settled yet."
 

@@ -124,6 +124,28 @@ func test_completed_daily_and_story_cards_use_completed_color() -> void:
 	)
 
 
+func test_complete_story_grid_must_be_synthesized_before_owner_delivery() -> void:
+	GameState.unlocked_tasks[&"teddy"] = true
+	_fill_teddy_solution()
+	var interface := ProtagonistInterface.new()
+	add_child_autoqfree(interface)
+	await get_tree().process_frame
+	var popup := interface.open_task(&"teddy")
+	assert_true(popup.submit_button.visible)
+	assert_eq(popup.submit_button.text, TranslationServer.translate(&"task.story.synthesize"))
+	assert_eq(GameState.submit_task(&"teddy").reason, GameState.RESULT_NOT_SYNTHESIZED)
+	popup._on_submit_pressed()
+	assert_true(GameState.is_task_synthesized(&"teddy"))
+	assert_true(popup.puzzle_board.interaction_locked)
+	assert_false(popup.submit_button.visible)
+	assert_eq(popup.result_label.text, TranslationServer.translate(&"task.story.ready"))
+	var card := interface.card_buttons[&"teddy"] as Button
+	assert_eq(
+		(card.get_theme_stylebox("normal") as StyleBoxFlat).border_color,
+		ProtagonistInterface.COMPLETED_CARD_BORDER
+	)
+
+
 func test_owned_piece_moves_directly_between_open_task_boards_without_copying() -> void:
 	GameState.unlocked_tasks[&"teddy"] = true
 	var piece := PuzzlePieceState.new(1, DemoCatalog.item_by_id(&"book_period"))
@@ -220,3 +242,18 @@ func _place_piece(piece: PuzzlePieceState, task_id: StringName, position: Vector
 	piece.location = PuzzlePieceState.Location.BOARD
 	piece.task_id = task_id
 	piece.grid_position = position
+
+
+func _fill_teddy_solution() -> void:
+	var rows := [
+		[1, &"special_teddy", Vector2i(1, 1), 0],
+		[2, &"toy_blocks", Vector2i(0, 0), 1],
+		[3, &"toy_blocks", Vector2i(3, 0), 2],
+		[4, &"toy_blocks", Vector2i(0, 3), 2],
+		[5, &"toy_blocks", Vector2i(3, 3), 1],
+	]
+	for row in rows:
+		var piece := PuzzlePieceState.new(row[0], DemoCatalog.item_by_id(row[1]))
+		_place_piece(piece, &"teddy", row[2])
+		piece.rotation_steps = row[3]
+		GameState.pieces.append(piece)

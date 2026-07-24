@@ -173,6 +173,7 @@ func test_completed_teddy_event_returns_to_map_and_advances_stage() -> void:
 	_add_teddy_solution_to_cart(shop.transaction)
 	shop._on_checkout_pressed()
 	await get_tree().process_frame
+	assert_true(GameState.synthesize_task(&"teddy").ok)
 	shop._on_talk_pressed()
 	await get_tree().process_frame
 	assert_eq(GameState.world_stage, 1)

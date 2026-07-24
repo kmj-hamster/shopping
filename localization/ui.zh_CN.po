@@ -108,6 +108,12 @@ msgstr "填满后，带回店主那里。"
 msgid "task.daily.submit"
 msgstr "确认今晚"
 
+msgid "task.story.synthesize"
+msgstr "合成"
+
+msgid "task.story.ready"
+msgstr "已经合成。带回店主那里。"
+
 msgid "task.daily.not_ready"
 msgstr "还没有整理好。"
 

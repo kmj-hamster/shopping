@@ -49,7 +49,11 @@ func refresh() -> void:
 	if task == null:
 		return
 	title_label.text = task.localized_name()
-	submit_button.text = TranslationServer.translate(&"task.daily.submit")
+	submit_button.text = TranslationServer.translate(
+		&"task.daily.submit"
+		if task_id == DemoCatalog.DAILY_TASK_ID
+		else &"task.story.synthesize"
+	)
 	puzzle_board.set_context(task, GameState.pieces)
 	var locked := _is_locked()
 	puzzle_board.interaction_locked = locked
@@ -77,9 +81,14 @@ func refresh() -> void:
 		submit_button.visible = false
 		result_label.visible = true
 		result_label.text = TranslationServer.translate(GameState.event_notice_key(task_id))
-	else:
+	elif GameState.is_task_synthesized(task_id):
 		status_label.visible = true
 		submit_button.visible = false
+		result_label.visible = true
+		result_label.text = TranslationServer.translate(&"task.story.ready")
+	else:
+		status_label.visible = true
+		submit_button.visible = evaluation.is_complete
 		result_label.visible = true
 		result_label.text = TranslationServer.translate(&"task.popup.owner_submit")
 	if not GameState.has_pending_purchases(task_id):
@@ -177,7 +186,10 @@ func _is_locked() -> bool:
 		(task_id == DemoCatalog.DAILY_TASK_ID and GameState.daily_goal.submitted)
 		or (
 			task_id not in [DemoCatalog.DAILY_TASK_ID, DemoCatalog.EMPTY_BAG_TASK_ID]
-			and GameState.is_task_completed(task_id)
+			and (
+				GameState.is_task_synthesized(task_id)
+				or GameState.is_task_completed(task_id)
+			)
 		)
 	)
 
@@ -195,7 +207,11 @@ func _on_board_changed() -> void:
 
 
 func _on_submit_pressed() -> void:
-	var result := GameState.submit_daily_goal()
+	var result := (
+		GameState.submit_daily_goal()
+		if task_id == DemoCatalog.DAILY_TASK_ID
+		else GameState.synthesize_task(task_id)
+	)
 	if not result.ok:
 		var message := TranslationServer.translate(
 			&"task.checkout_first"

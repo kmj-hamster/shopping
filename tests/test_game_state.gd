@@ -144,6 +144,7 @@ func test_three_events_unlock_by_talk_and_complete_in_order() -> void:
 	_place_piece(teddy, &"teddy", Vector2i(1, 1))
 	assert_true(GameState.checkout_store(DemoCatalog.STORE_TOY).ok)
 	_fill_task_with_monominoes(&"teddy", &"toy_marble")
+	assert_true(GameState.synthesize_task(&"teddy").ok)
 	assert_true(GameState.submit_task(&"teddy").ok)
 	assert_eq(GameState.world_stage, 1)
 	assert_eq(fast_food.available_stock(&"special_fishbone"), 0)
@@ -154,6 +155,7 @@ func test_three_events_unlock_by_talk_and_complete_in_order() -> void:
 	_place_piece(fishbone, &"goldfish", Vector2i(1, 1))
 	assert_true(GameState.checkout_store(DemoCatalog.STORE_FAST_FOOD).ok)
 	_fill_task_with_monominoes(&"goldfish", &"fast_sugar")
+	assert_true(GameState.synthesize_task(&"goldfish").ok)
 	assert_true(GameState.submit_task(&"goldfish").ok)
 	assert_eq(GameState.world_stage, 2)
 	assert_eq(record.available_stock(&"special_tape"), 0)
@@ -167,18 +169,19 @@ func test_three_events_unlock_by_talk_and_complete_in_order() -> void:
 	_place_piece(tape, &"tape", Vector2i(0, 0))
 	assert_true(GameState.checkout_store(DemoCatalog.STORE_RECORD).ok)
 	_fill_task_with_monominoes(&"tape", &"book_period")
+	assert_true(GameState.synthesize_task(&"tape").ok)
 	assert_true(GameState.submit_task(&"tape").ok)
 	assert_eq(GameState.world_stage, 3)
 	assert_true(GameState.all_tasks_completed())
 	assert_false(GameState.submit_task(&"tape").ok)
 
 
-func test_incomplete_event_does_not_consume_or_advance_world() -> void:
+func test_incomplete_event_cannot_be_synthesized_or_advance_world() -> void:
 	GameState.unlocked_tasks[&"teddy"] = true
 	var special := _new_piece(1, &"special_teddy")
 	_place_piece(special, &"teddy", Vector2i(1, 1))
 	GameState.pieces.append(special)
-	var result := GameState.submit_task(&"teddy")
+	var result := GameState.synthesize_task(&"teddy")
 	assert_false(result.ok)
 	assert_eq(result.reason, &"incomplete")
 	assert_eq(GameState.pieces, [special])
@@ -190,7 +193,7 @@ func test_complete_story_task_with_unpaid_piece_is_not_consumed() -> void:
 	_fill_teddy_with_shop_solution()
 	var unpaid := GameState.pieces[0] as PuzzlePieceState
 	unpaid.ownership = PuzzlePieceState.Ownership.PENDING_PURCHASE
-	var result := GameState.submit_task(&"teddy")
+	var result := GameState.synthesize_task(&"teddy")
 	assert_false(result.ok)
 	assert_eq(result.reason, GameState.RESULT_PENDING_PURCHASE)
 	assert_false(GameState.is_task_completed(&"teddy"))
@@ -203,11 +206,15 @@ func test_completed_event_consumes_only_its_own_board() -> void:
 	_place_piece(daily_piece, DemoCatalog.DAILY_TASK_ID, Vector2i.ZERO)
 	GameState.pieces.append(daily_piece)
 	_fill_teddy_with_shop_solution()
+	assert_eq(GameState.submit_task(&"teddy").reason, GameState.RESULT_NOT_SYNTHESIZED)
+	assert_true(GameState.synthesize_task(&"teddy").ok)
+	assert_true(GameState.is_task_synthesized(&"teddy"))
 	var result := GameState.submit_task(&"teddy")
 	assert_true(result.ok)
 	assert_eq(result.consumed_count, 5)
 	assert_eq(GameState.pieces, [daily_piece])
 	assert_true(GameState.is_task_completed(&"teddy"))
+	assert_false(GameState.is_task_synthesized(&"teddy"))
 
 
 func _fill_teddy_with_shop_solution() -> void:

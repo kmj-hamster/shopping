@@ -27,12 +27,14 @@ const RESULT_WRONG_OWNER := &"wrong_owner"
 const RESULT_ALREADY_UNLOCKED := &"already_unlocked"
 const RESULT_INVALID_SPECIAL_TASK := &"invalid_special_task"
 const RESULT_RECYCLE_PENDING := &"recycle_pending"
+const RESULT_NOT_SYNTHESIZED := &"not_synthesized"
 
 var day := 1
 var world_stage := 0
 var wallet := PlayerWallet.new(100)
 var pieces: Array[PuzzlePieceState] = []
 var unlocked_tasks: Dictionary = {}
+var synthesized_tasks: Dictionary = {}
 var completed_tasks: Dictionary = {}
 var purchased_special_items: Dictionary = {}
 var store_transactions: Dictionary = {}
@@ -54,6 +56,7 @@ func reset_demo() -> void:
 	wallet = PlayerWallet.new(100)
 	pieces = []
 	unlocked_tasks = {}
+	synthesized_tasks = {}
 	completed_tasks = {}
 	purchased_special_items = {}
 	daily_goal = DailyGoalState.new(day, DemoCatalog.daily_template_id_for_day(day))
@@ -232,6 +235,10 @@ func is_task_completed(task_id: StringName) -> bool:
 	return completed_tasks.has(task_id)
 
 
+func is_task_synthesized(task_id: StringName) -> bool:
+	return synthesized_tasks.has(task_id)
+
+
 func should_show_item(item: ItemDefinition) -> bool:
 	if not item.is_special:
 		return true
@@ -247,6 +254,8 @@ func should_show_item(item: ItemDefinition) -> bool:
 func submit_task(task_id: StringName) -> Dictionary:
 	if not is_task_unlocked(task_id) or is_task_completed(task_id):
 		return {"ok": false, "reason": &"unavailable"}
+	if not is_task_synthesized(task_id):
+		return {"ok": false, "reason": RESULT_NOT_SYNTHESIZED}
 	var task := DemoCatalog.task_by_id(task_id)
 	if task == null:
 		return {"ok": false, "reason": &"unavailable"}
@@ -265,12 +274,37 @@ func submit_task(task_id: StringName) -> Dictionary:
 			consumed.append(piece)
 	for piece in consumed:
 		pieces.erase(piece)
+	synthesized_tasks.erase(task_id)
 	completed_tasks[task_id] = true
 	world_stage = maxi(world_stage, TASK_ORDER.find(task_id) + 1)
 	_sync_special_stock()
 	state_changed.emit()
 	event_completed.emit(task_id)
 	return {"ok": true, "reason": &"ok", "consumed_count": consumed.size()}
+
+
+func synthesize_task(task_id: StringName) -> Dictionary:
+	if (
+		not is_task_unlocked(task_id)
+		or is_task_completed(task_id)
+		or is_task_synthesized(task_id)
+	):
+		return {"ok": false, "reason": &"unavailable"}
+	var task := DemoCatalog.task_by_id(task_id)
+	if task == null:
+		return {"ok": false, "reason": &"unavailable"}
+	var evaluation := PuzzleRules.evaluate(task, pieces)
+	if not evaluation.is_complete:
+		return {"ok": false, "reason": &"incomplete", "evaluation": evaluation}
+	if has_pending_purchases(task_id):
+		return {
+			"ok": false,
+			"reason": RESULT_PENDING_PURCHASE,
+			"evaluation": evaluation,
+		}
+	synthesized_tasks[task_id] = true
+	state_changed.emit()
+	return {"ok": true, "reason": &"ok", "evaluation": evaluation}
 
 
 func event_notice_key(task_id: StringName) -> StringName:

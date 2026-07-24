@@ -354,7 +354,7 @@ func _is_task_card_completed(task_id: StringName) -> bool:
 		return GameState.daily_goal.submitted
 	if task_id == DemoCatalog.EMPTY_BAG_TASK_ID:
 		return false
-	return GameState.is_task_completed(task_id)
+	return GameState.is_task_synthesized(task_id) or GameState.is_task_completed(task_id)
 
 
 func _show_feedback(message: String) -> void:
