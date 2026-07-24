@@ -85,6 +85,8 @@ func test_automatic_cleanup_restores_open_popups_and_exact_positions_from_bag() 
 	assert_true(interface.restore_pending)
 	assert_false(interface.protagonist_popup.visible)
 	assert_true(interface.task_popups.is_empty())
+	interface.close_all_popups(true)
+	assert_true(interface.restore_pending)
 
 	interface.set_view_context(&"map")
 	interface._on_bag_pressed()
@@ -99,6 +101,18 @@ func test_automatic_cleanup_restores_open_popups_and_exact_positions_from_bag() 
 		(interface.task_popups[&"teddy"] as TaskPuzzlePopup).position,
 		Vector2(770, 172)
 	)
+
+
+func test_task_cards_have_visible_two_axis_drift() -> void:
+	var interface := ProtagonistInterface.new()
+	add_child_autoqfree(interface)
+	await get_tree().process_frame
+	var task_id := DemoCatalog.DAILY_TASK_ID
+	var origin: Vector2 = interface.card_origins[task_id]
+	interface._process(1.5)
+	var card := interface.card_buttons[task_id] as Button
+	assert_gt(absf(card.position.x - origin.x), 2.0)
+	assert_gt(absf(card.position.y - origin.y), 2.0)
 
 
 func test_completed_daily_and_story_cards_use_completed_color() -> void:

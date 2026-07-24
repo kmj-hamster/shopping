@@ -38,7 +38,11 @@ func _process(delta: float) -> void:
 	for task_id in card_buttons:
 		var card := card_buttons[task_id] as Button
 		var origin: Vector2 = card_origins.get(task_id, card.position)
-		card.position = origin + Vector2(0, sin(elapsed * 0.72 + index * 1.7) * 3.0)
+		var phase := elapsed * 0.86 + index * 1.7
+		card.position = origin + Vector2(
+			cos(phase * 0.73) * 5.0,
+			sin(phase) * 8.0
+		)
 		index += 1
 
 
@@ -260,6 +264,8 @@ func close_all_popups(preserve_for_restore: bool = false) -> void:
 
 
 func _snapshot_open_popups() -> void:
+	if task_popups.is_empty() and not protagonist_popup.visible and restore_pending:
+		return
 	suspended_task_popups.clear()
 	for task_id in task_popups:
 		var popup := task_popups[task_id] as TaskPuzzlePopup
