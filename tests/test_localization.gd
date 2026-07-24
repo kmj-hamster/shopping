@@ -69,6 +69,7 @@ func test_sparse_shop_interface_is_translated() -> void:
 		&"map.closed_until",
 		&"map.schedule",
 		&"map.next_day",
+		&"map.next_day.locked",
 		&"map.notice.store_closed",
 		&"map.day.summary",
 		&"weekday.mon",

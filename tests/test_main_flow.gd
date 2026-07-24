@@ -43,12 +43,24 @@ func test_closed_store_stays_on_map_and_shows_next_open_day() -> void:
 
 func test_daily_submission_unlocks_next_day_and_transition_consumes_daily_grid() -> void:
 	var main = await _spawn_main()
-	assert_true(main.current_screen.next_day_button.disabled)
+	assert_false(main.current_screen.next_day_button.disabled)
+	assert_eq(
+		main.current_screen.next_day_button.tooltip_text,
+		TranslationServer.translate(&"map.next_day.locked")
+	)
+	main.current_screen._on_next_day_pressed()
+	assert_eq(GameState.day, 1)
+	assert_true(main.current_screen.next_day_hint_label.visible)
+	assert_eq(
+		main.current_screen.next_day_hint_label.text,
+		TranslationServer.translate(&"map.next_day.locked")
+	)
 	_fill_daily_goal()
 	assert_true(GameState.submit_daily_goal().ok)
 	await get_tree().process_frame
 	assert_false(main.current_screen.next_day_button.disabled)
-	main._on_next_day_requested()
+	assert_false(main.current_screen.next_day_hint_label.visible)
+	main.current_screen._on_next_day_pressed()
 	await get_tree().process_frame
 	assert_eq(GameState.day, 2)
 	assert_eq(GameState.wallet.money, 200)

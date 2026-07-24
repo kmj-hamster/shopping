@@ -13,6 +13,7 @@ var notice_key: StringName = &""
 var notice_store_id: StringName = &""
 var schedule_button: Button
 var next_day_button: Button
+var next_day_hint_label: Label
 var schedule_panel: PanelContainer
 var schedule_list: VBoxContainer
 var schedule_title_label: Label
@@ -69,10 +70,15 @@ func refresh() -> void:
 		TranslationServer.translate(ShopSchedule.weekday_key(GameState.day)),
 		GameState.wallet.money,
 	]
-	next_day_button.disabled = not GameState.daily_goal.submitted or GameState.has_organizer_pieces()
-	next_day_button.tooltip_text = TranslationServer.translate(
-		&"map.next_day.ready" if not next_day_button.disabled else &"map.next_day.locked"
-	)
+	next_day_button.disabled = false
+	var next_day_tooltip_key := &"map.next_day.ready"
+	if not GameState.daily_goal.submitted:
+		next_day_tooltip_key = &"map.next_day.locked"
+	elif GameState.has_organizer_pieces():
+		next_day_tooltip_key = &"map.notice.organizer_required"
+	next_day_button.tooltip_text = TranslationServer.translate(next_day_tooltip_key)
+	if GameState.daily_goal.submitted:
+		next_day_hint_label.visible = false
 	_refresh_store_hotspots()
 	_refresh_schedule()
 
@@ -123,10 +129,21 @@ func _build_interface() -> void:
 	schedule_button.custom_minimum_size = Vector2(76, 38)
 	schedule_button.pressed.connect(_on_schedule_pressed)
 	top.add_child(schedule_button)
+	var next_day_box := VBoxContainer.new()
+	next_day_box.custom_minimum_size = Vector2(108, 0)
+	next_day_box.add_theme_constant_override("separation", 2)
+	top.add_child(next_day_box)
 	next_day_button = Button.new()
 	next_day_button.custom_minimum_size = Vector2(82, 38)
 	next_day_button.pressed.connect(_on_next_day_pressed)
-	top.add_child(next_day_button)
+	next_day_box.add_child(next_day_button)
+	next_day_hint_label = Label.new()
+	next_day_hint_label.visible = false
+	next_day_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	next_day_hint_label.add_theme_font_size_override("font_size", 10)
+	next_day_hint_label.add_theme_color_override("font_color", Color("d9b96f"))
+	next_day_hint_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	next_day_box.add_child(next_day_hint_label)
 	language_button = Button.new()
 	language_button.custom_minimum_size = Vector2(58, 38)
 	language_button.pressed.connect(LocaleManager.toggle_locale)
@@ -260,6 +277,8 @@ func _apply_locale_texts() -> void:
 	language_button.tooltip_text = TranslationServer.translate(&"ui.language.tooltip")
 	schedule_button.text = TranslationServer.translate(&"map.schedule")
 	next_day_button.text = TranslationServer.translate(&"map.next_day")
+	if next_day_hint_label.visible:
+		next_day_hint_label.text = TranslationServer.translate(&"map.next_day.locked")
 	schedule_title_label.text = TranslationServer.translate(&"map.schedule.title")
 	demo_complete_title.text = TranslationServer.translate(&"demo.complete.title")
 	demo_complete_body.text = TranslationServer.translate(&"demo.complete.body")
@@ -371,7 +390,8 @@ func _on_schedule_pressed() -> void:
 
 func _on_next_day_pressed() -> void:
 	if not GameState.daily_goal.submitted:
-		show_notice(&"map.notice.daily_required")
+		next_day_hint_label.text = TranslationServer.translate(&"map.next_day.locked")
+		next_day_hint_label.visible = true
 		return
 	if GameState.has_organizer_pieces():
 		show_notice(&"map.notice.organizer_required")
