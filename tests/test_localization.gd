@@ -39,6 +39,15 @@ func test_every_task_has_chinese_and_english_copy() -> void:
 		assert_ne(daily.localized_description(), String(daily.description_key))
 
 
+func test_daily_list_copy_feels_personal_in_both_locales() -> void:
+	TranslationServer.set_locale("zh_CN")
+	assert_eq(TranslationServer.translate(&"task.daily.title"), "今日清单")
+	assert_false(TranslationServer.translate(&"map.next_day.locked").contains("每日目标"))
+	TranslationServer.set_locale("en")
+	assert_eq(TranslationServer.translate(&"task.daily.title"), "Tonight's List")
+	assert_false(TranslationServer.translate(&"map.next_day.locked").to_lower().contains("errand"))
+
+
 func test_infinite_palette_and_drag_instructions_are_translated() -> void:
 	var keys := [
 		&"ui.inventory.hint",

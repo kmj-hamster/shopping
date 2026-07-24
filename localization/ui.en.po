@@ -34,13 +34,13 @@ msgid "map.next_day"
 msgstr "Next Night"
 
 msgid "map.next_day.locked"
-msgstr "Finish the daily errand first"
+msgstr "Finish tonight's list first"
 
 msgid "map.next_day.ready"
 msgstr "Tonight is ready"
 
 msgid "map.notice.daily_required"
-msgstr "Tonight's shape is still empty inside the bag."
+msgstr "Tonight's list still has a little empty space."
 
 msgid "map.notice.store_closed"
 msgstr "%s is closed tonight. It reopens %s."
@@ -79,10 +79,10 @@ msgid "protagonist.open"
 msgstr "Open the shopping list"
 
 msgid "task.daily.title"
-msgstr "Daily Errand"
+msgstr "Tonight's List"
 
 msgid "task.daily.description"
-msgstr "Fill the shape the night left behind."
+msgstr "Fit the things you want tonight into this list."
 
 msgid "task.empty_bag.title"
 msgstr "Empty Bag"

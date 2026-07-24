@@ -34,13 +34,13 @@ msgid "map.next_day"
 msgstr "下一夜"
 
 msgid "map.next_day.locked"
-msgstr "先完成每日目标"
+msgstr "先完成今日清单"
 
 msgid "map.next_day.ready"
 msgstr "今晚已经准备好了"
 
 msgid "map.notice.daily_required"
-msgstr "购物袋里，今晚的形状还空着。"
+msgstr "今日清单里，还留着一点空白。"
 
 msgid "map.notice.store_closed"
 msgstr "%s今夜休息。%s再开。"
@@ -79,10 +79,10 @@ msgid "protagonist.open"
 msgstr "打开购物清单"
 
 msgid "task.daily.title"
-msgstr "每日目标"
+msgstr "今日清单"
 
 msgid "task.daily.description"
-msgstr "填满今晚留下的形状。"
+msgstr "把今晚想带走的东西，填进这张清单。"
 
 msgid "task.empty_bag.title"
 msgstr "空袋子"
