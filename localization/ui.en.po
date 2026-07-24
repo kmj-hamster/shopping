@@ -285,6 +285,18 @@ msgstr "Next Night"
 msgid "shop.next_day.cancel"
 msgstr "Keep Browsing"
 
+msgid "shop.leave_pending.title"
+msgstr "Some items are still unpaid"
+
+msgid "shop.leave_pending.body"
+msgstr "Unpaid items will return to the shelf when you leave."
+
+msgid "shop.leave_pending.back"
+msgstr "Go Back to Pay"
+
+msgid "shop.leave_pending.leave"
+msgstr "Leave"
+
 msgid "shop.feedback.submitted_teddy"
 msgstr "The teddy bear remembers something."
 

@@ -285,6 +285,18 @@ msgstr "下一夜"
 msgid "shop.next_day.cancel"
 msgstr "再逛一会"
 
+msgid "shop.leave_pending.title"
+msgstr "还有东西没有结账"
+
+msgid "shop.leave_pending.body"
+msgstr "离开后，未结账的物品会放回货架。"
+
+msgid "shop.leave_pending.back"
+msgstr "回去结账"
+
+msgid "shop.leave_pending.leave"
+msgstr "离开"
+
 msgid "shop.feedback.submitted_teddy"
 msgstr "泰迪熊想起了一件事。"
 

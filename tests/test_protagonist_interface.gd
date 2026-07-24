@@ -22,6 +22,10 @@ func test_bag_panel_opens_daily_card_and_multiple_draggable_task_popups() -> voi
 	assert_eq(daily.task_id, DemoCatalog.DAILY_TASK_ID)
 	assert_eq(teddy.task_id, &"teddy")
 	assert_ne(daily.position, teddy.position)
+	assert_eq(interface.bag_button.size, Vector2(168, 168))
+	assert_eq(interface.bag_button.get_global_rect().end.y, get_viewport().get_visible_rect().end.y)
+	assert_lt(interface.bag_button.z_index, interface.protagonist_popup.z_index)
+	assert_lt(interface.bag_button.z_index, daily.z_index)
 
 
 func test_empty_bag_is_a_shared_eight_by_eight_popup() -> void:
@@ -41,15 +45,48 @@ func test_task_popup_icon_opens_and_closes_shared_empty_bag() -> void:
 	interface.set_view_context(&"shop")
 	var daily := interface.open_task(DemoCatalog.DAILY_TASK_ID)
 	assert_eq(daily.empty_bag_toggle_button.text, "▦")
-	interface._on_empty_bag_toggle_requested()
+	interface._on_empty_bag_toggle_requested(daily)
 	await get_tree().process_frame
 	assert_has(interface.task_popups, DemoCatalog.EMPTY_BAG_TASK_ID)
 	var empty_bag := interface.task_popups[DemoCatalog.EMPTY_BAG_TASK_ID] as TaskPuzzlePopup
-	assert_lt(empty_bag.position.x + empty_bag.size.x, daily.position.x + 1.0)
+	assert_almost_eq(
+		empty_bag.position.x + empty_bag.size.x,
+		daily.position.x - ProtagonistInterface.EMPTY_BAG_POPUP_GAP,
+		0.1
+	)
+	assert_gt(empty_bag.position.x, 200.0)
 	assert_eq(daily.empty_bag_toggle_button.text, "▣")
-	interface._on_empty_bag_toggle_requested()
+	interface._on_empty_bag_toggle_requested(daily)
 	assert_false(interface.task_popups.has(DemoCatalog.EMPTY_BAG_TASK_ID))
 	assert_eq(daily.empty_bag_toggle_button.text, "▦")
+	daily.position = Vector2(100, 80)
+	interface._on_empty_bag_toggle_requested(daily)
+	await get_tree().process_frame
+	empty_bag = interface.task_popups[DemoCatalog.EMPTY_BAG_TASK_ID] as TaskPuzzlePopup
+	assert_eq(empty_bag.position, ProtagonistInterface.EMPTY_BAG_FALLBACK_POSITION)
+
+
+func test_completed_daily_and_story_cards_use_completed_color() -> void:
+	GameState.unlocked_tasks[&"teddy"] = true
+	var interface := ProtagonistInterface.new()
+	add_child_autoqfree(interface)
+	await get_tree().process_frame
+	var daily := interface.card_buttons[DemoCatalog.DAILY_TASK_ID] as Button
+	var pending_style := daily.get_theme_stylebox("normal") as StyleBoxFlat
+	assert_ne(pending_style.bg_color, ProtagonistInterface.COMPLETED_CARD_FILL)
+	GameState.daily_goal.submitted = true
+	GameState.completed_tasks[&"teddy"] = true
+	interface.refresh()
+	var completed_daily := interface.card_buttons[DemoCatalog.DAILY_TASK_ID] as Button
+	var completed_teddy := interface.card_buttons[&"teddy"] as Button
+	assert_eq(
+		(completed_daily.get_theme_stylebox("normal") as StyleBoxFlat).bg_color,
+		ProtagonistInterface.COMPLETED_CARD_FILL
+	)
+	assert_eq(
+		(completed_teddy.get_theme_stylebox("normal") as StyleBoxFlat).border_color,
+		ProtagonistInterface.COMPLETED_CARD_BORDER
+	)
 
 
 func test_owned_piece_moves_directly_between_open_task_boards_without_copying() -> void:

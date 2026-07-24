@@ -1,6 +1,11 @@
 class_name ProtagonistInterface
 extends CanvasLayer
 
+const COMPLETED_CARD_FILL := Color("1b302e")
+const COMPLETED_CARD_BORDER := Color("d4b66f")
+const EMPTY_BAG_FALLBACK_POSITION := Vector2(24, 120)
+const EMPTY_BAG_POPUP_GAP := 12.0
+
 var view_context: StringName = &"map"
 var root: Control
 var bag_button: TextureButton
@@ -101,7 +106,7 @@ func open_task(task_id: StringName) -> TaskPuzzlePopup:
 	popup.close_requested.connect(_on_task_close_requested)
 	popup.focus_requested.connect(_bring_to_front)
 	popup.interaction_message.connect(_show_feedback)
-	popup.empty_bag_toggle_requested.connect(_on_empty_bag_toggle_requested)
+	popup.empty_bag_toggle_requested.connect(_on_empty_bag_toggle_requested.bind(popup))
 	task_popups[task_id] = popup
 	_bring_to_front(popup)
 	_refresh_empty_bag_toggles()
@@ -161,6 +166,7 @@ func _build_interface() -> void:
 	bag_button.texture_hover = load("res://pic/bag-light.png") as Texture2D
 	bag_button.ignore_texture_size = true
 	bag_button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	bag_button.z_index = -100
 	bag_button.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
 	_position_bag_button()
 	bag_button.tooltip_text = TranslationServer.translate(&"protagonist.open")
@@ -189,18 +195,27 @@ func _rebuild_cards() -> void:
 		card.pivot_offset = card.size * 0.5
 		var task := GameState.task_definition(task_id)
 		card.text = task.localized_name()
+		var completed := _is_task_card_completed(task_id)
 		if task_id != DemoCatalog.DAILY_TASK_ID and GameState.is_task_completed(task_id):
 			card.text += "  ·  " + TranslationServer.translate(&"task.memory")
-			card.modulate = Color(0.55, 0.62, 0.6, 0.72)
 		card.add_theme_font_size_override("font_size", 15)
-		card.add_theme_stylebox_override(
-			"normal",
-			UiPalette.panel_style(Color("111418", 0.96), Color("596461", 0.78))
-		)
-		card.add_theme_stylebox_override(
-			"hover",
-			UiPalette.panel_style(Color("1a2325", 0.98), Color("c0aa70", 0.9))
-		)
+		if completed:
+			card.add_theme_color_override("font_color", Color("efd18a"))
+			card.add_theme_stylebox_override(
+				"normal", UiPalette.panel_style(COMPLETED_CARD_FILL, COMPLETED_CARD_BORDER)
+			)
+			card.add_theme_stylebox_override(
+				"hover", UiPalette.panel_style(Color("29433e"), Color("f0d391"))
+			)
+		else:
+			card.add_theme_stylebox_override(
+				"normal",
+				UiPalette.panel_style(Color("111418", 0.96), Color("596461", 0.78))
+			)
+			card.add_theme_stylebox_override(
+				"hover",
+				UiPalette.panel_style(Color("1a2325", 0.98), Color("c0aa70", 0.9))
+			)
 		card.pressed.connect(open_task.bind(task_id))
 		card_field.add_child(card)
 		card_buttons[task_id] = card
@@ -214,18 +229,23 @@ func _on_bag_pressed() -> void:
 	protagonist_popup.visible = not protagonist_popup.visible
 	if protagonist_popup.visible:
 		root.move_child(protagonist_popup, root.get_child_count() - 1)
-		root.move_child(bag_button, root.get_child_count() - 1)
 
 
 func _position_bag_button() -> void:
-	bag_button.offset_left = -126.0
-	bag_button.offset_right = -14.0
-	if view_context == &"shop":
-		bag_button.offset_top = -190.0
-		bag_button.offset_bottom = -78.0
-	else:
-		bag_button.offset_top = -126.0
-		bag_button.offset_bottom = -14.0
+	bag_button.offset_left = -174.0
+	bag_button.offset_top = -168.0
+	bag_button.offset_right = -6.0
+	bag_button.offset_bottom = 0.0
+
+
+func close_all_popups() -> void:
+	protagonist_popup.visible = false
+	feedback_label.text = ""
+	for popup in task_popups.values():
+		if is_instance_valid(popup):
+			(popup as TaskPuzzlePopup).queue_free()
+	task_popups.clear()
+	_refresh_empty_bag_toggles()
 
 
 func _on_task_close_requested(task_id: StringName) -> void:
@@ -237,12 +257,29 @@ func _on_task_close_requested(task_id: StringName) -> void:
 	_refresh_empty_bag_toggles()
 
 
-func _on_empty_bag_toggle_requested() -> void:
+func _on_empty_bag_toggle_requested(source_popup: TaskPuzzlePopup = null) -> void:
 	var empty_bag_id := DemoCatalog.EMPTY_BAG_TASK_ID
 	if task_popups.has(empty_bag_id) and is_instance_valid(task_popups[empty_bag_id]):
 		_on_task_close_requested(empty_bag_id)
 	else:
-		open_task(empty_bag_id)
+		var empty_bag := open_task(empty_bag_id)
+		if source_popup != null and source_popup.task_id != empty_bag_id:
+			_position_empty_bag_beside(empty_bag, source_popup)
+			call_deferred("_position_empty_bag_beside", empty_bag, source_popup)
+
+
+func _position_empty_bag_beside(
+	empty_bag: TaskPuzzlePopup,
+	source_popup: TaskPuzzlePopup
+) -> void:
+	if not is_instance_valid(empty_bag) or not is_instance_valid(source_popup):
+		return
+	var desired_x := source_popup.position.x - empty_bag.size.x - EMPTY_BAG_POPUP_GAP
+	if desired_x < EMPTY_BAG_FALLBACK_POSITION.x:
+		empty_bag.position = EMPTY_BAG_FALLBACK_POSITION
+	else:
+		empty_bag.position = Vector2(desired_x, source_popup.position.y)
+	empty_bag.user_moved = false
 
 
 func _refresh_empty_bag_toggles() -> void:
@@ -259,7 +296,14 @@ func _bring_to_front(popup: TaskPuzzlePopup) -> void:
 	if popup == null or not is_instance_valid(popup):
 		return
 	root.move_child(popup, root.get_child_count() - 1)
-	root.move_child(bag_button, root.get_child_count() - 1)
+
+
+func _is_task_card_completed(task_id: StringName) -> bool:
+	if task_id == DemoCatalog.DAILY_TASK_ID:
+		return GameState.daily_goal.submitted
+	if task_id == DemoCatalog.EMPTY_BAG_TASK_ID:
+		return false
+	return GameState.is_task_completed(task_id)
 
 
 func _show_feedback(message: String) -> void:

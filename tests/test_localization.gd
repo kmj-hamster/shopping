@@ -124,6 +124,10 @@ func test_sparse_shop_interface_is_translated() -> void:
 		&"shop.next_day.confirm",
 		&"shop.next_day.ok",
 		&"shop.next_day.cancel",
+		&"shop.leave_pending.title",
+		&"shop.leave_pending.body",
+		&"shop.leave_pending.back",
+		&"shop.leave_pending.leave",
 	]
 	for locale in ["zh_CN", "en"]:
 		TranslationServer.set_locale(locale)

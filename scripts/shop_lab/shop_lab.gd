@@ -4,6 +4,9 @@ signal leave_requested
 signal event_completed(task_id: StringName)
 signal next_day_requested
 
+const CONFIRM_LEAVE := &"leave"
+const CONFIRM_NEXT_DAY := &"next_day"
+
 var store_id: StringName = DemoCatalog.STORE_TOY
 var transaction: ShopTransaction
 var refresh_queued := false
@@ -23,12 +26,14 @@ var cart_label: Label
 var talk_button: Button
 var cancel_button: Button
 var checkout_button: Button
-var next_day_scrim: ColorRect
-var next_day_confirmation: PanelContainer
-var next_day_confirmation_title: Label
-var next_day_confirmation_body: Label
-var next_day_confirm_button: Button
-var next_day_cancel_button: Button
+var exit_confirmation_mode: StringName = CONFIRM_NEXT_DAY
+var exit_confirmation_layer: CanvasLayer
+var exit_scrim: ColorRect
+var exit_confirmation: PanelContainer
+var exit_confirmation_title: Label
+var exit_confirmation_body: Label
+var exit_confirm_button: Button
+var exit_cancel_button: Button
 
 
 func _ready() -> void:
@@ -214,50 +219,55 @@ func _build_interface() -> void:
 	talk_button.pressed.connect(_on_talk_pressed)
 	owner_column.add_child(talk_button)
 
-	_build_next_day_confirmation()
+	_build_exit_confirmation()
 
 
-func _build_next_day_confirmation() -> void:
-	next_day_scrim = ColorRect.new()
-	next_day_scrim.color = Color(0.005, 0.02, 0.028, 0.72)
-	next_day_scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	next_day_scrim.mouse_filter = Control.MOUSE_FILTER_STOP
-	next_day_scrim.visible = false
-	add_child(next_day_scrim)
-	next_day_confirmation = PanelContainer.new()
-	next_day_confirmation.position = Vector2(472, 235)
-	next_day_confirmation.size = Vector2(336, 210)
-	next_day_confirmation.visible = false
-	next_day_confirmation.add_theme_stylebox_override(
+func _build_exit_confirmation() -> void:
+	exit_confirmation_layer = CanvasLayer.new()
+	exit_confirmation_layer.name = "ExitConfirmationLayer"
+	exit_confirmation_layer.layer = 40
+	add_child(exit_confirmation_layer)
+	exit_scrim = ColorRect.new()
+	exit_scrim.color = Color(0.005, 0.02, 0.028, 0.72)
+	exit_scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	exit_scrim.mouse_filter = Control.MOUSE_FILTER_STOP
+	exit_scrim.visible = false
+	exit_confirmation_layer.add_child(exit_scrim)
+	exit_confirmation = PanelContainer.new()
+	exit_confirmation.name = "ExitConfirmation"
+	exit_confirmation.position = Vector2(472, 235)
+	exit_confirmation.size = Vector2(336, 210)
+	exit_confirmation.visible = false
+	exit_confirmation.add_theme_stylebox_override(
 		"panel", UiPalette.panel_style(Color("071a20", 0.99), Color("d4b66f", 0.94))
 	)
-	add_child(next_day_confirmation)
+	exit_confirmation_layer.add_child(exit_confirmation)
 	var column := VBoxContainer.new()
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
 	column.add_theme_constant_override("separation", 14)
-	next_day_confirmation.add_child(column)
-	next_day_confirmation_title = Label.new()
-	next_day_confirmation_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	next_day_confirmation_title.add_theme_font_size_override("font_size", 22)
-	next_day_confirmation_title.add_theme_color_override("font_color", Color("efd18a"))
-	column.add_child(next_day_confirmation_title)
-	next_day_confirmation_body = Label.new()
-	next_day_confirmation_body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	next_day_confirmation_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	next_day_confirmation_body.add_theme_color_override("font_color", Color("b8ceca"))
-	column.add_child(next_day_confirmation_body)
+	exit_confirmation.add_child(column)
+	exit_confirmation_title = Label.new()
+	exit_confirmation_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	exit_confirmation_title.add_theme_font_size_override("font_size", 22)
+	exit_confirmation_title.add_theme_color_override("font_color", Color("efd18a"))
+	column.add_child(exit_confirmation_title)
+	exit_confirmation_body = Label.new()
+	exit_confirmation_body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	exit_confirmation_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	exit_confirmation_body.add_theme_color_override("font_color", Color("b8ceca"))
+	column.add_child(exit_confirmation_body)
 	var actions := HBoxContainer.new()
 	actions.alignment = BoxContainer.ALIGNMENT_CENTER
 	actions.add_theme_constant_override("separation", 10)
 	column.add_child(actions)
-	next_day_cancel_button = Button.new()
-	next_day_cancel_button.custom_minimum_size = Vector2(112, 38)
-	next_day_cancel_button.pressed.connect(_on_next_day_cancelled)
-	actions.add_child(next_day_cancel_button)
-	next_day_confirm_button = Button.new()
-	next_day_confirm_button.custom_minimum_size = Vector2(112, 38)
-	next_day_confirm_button.pressed.connect(_on_next_day_confirmed)
-	actions.add_child(next_day_confirm_button)
+	exit_cancel_button = Button.new()
+	exit_cancel_button.custom_minimum_size = Vector2(112, 38)
+	exit_cancel_button.pressed.connect(_on_exit_cancelled)
+	actions.add_child(exit_cancel_button)
+	exit_confirm_button = Button.new()
+	exit_confirm_button.custom_minimum_size = Vector2(112, 38)
+	exit_confirm_button.pressed.connect(_on_exit_confirmed)
+	actions.add_child(exit_confirm_button)
 
 
 func _refresh_all() -> void:
@@ -329,8 +339,10 @@ func _on_cancel_pressed() -> void:
 
 
 func _on_leave_pressed() -> void:
-	GameState.cancel_store_cart(store_id)
-	leave_requested.emit()
+	if transaction.cart_count() > 0:
+		_show_exit_confirmation(CONFIRM_LEAVE)
+	else:
+		leave_requested.emit()
 
 
 func _on_next_day_pressed() -> void:
@@ -338,22 +350,36 @@ func _on_next_day_pressed() -> void:
 		_show_feedback(TranslationServer.translate(&"shop.feedback.daily_required"))
 		return
 	if transaction.cart_count() > 0:
-		next_day_scrim.visible = true
-		next_day_confirmation.visible = true
+		_show_exit_confirmation(CONFIRM_NEXT_DAY)
 	else:
 		next_day_requested.emit()
 
 
-func _on_next_day_confirmed() -> void:
-	next_day_scrim.visible = false
-	next_day_confirmation.visible = false
-	GameState.cancel_all_carts()
-	next_day_requested.emit()
+func _show_exit_confirmation(mode: StringName) -> void:
+	exit_confirmation_mode = mode
+	_refresh_exit_confirmation_texts()
+	exit_scrim.visible = true
+	exit_confirmation.visible = true
 
 
-func _on_next_day_cancelled() -> void:
-	next_day_scrim.visible = false
-	next_day_confirmation.visible = false
+func _on_exit_confirmed() -> void:
+	var confirmed_mode := exit_confirmation_mode
+	_hide_exit_confirmation()
+	if confirmed_mode == CONFIRM_LEAVE:
+		GameState.cancel_store_cart(store_id)
+		leave_requested.emit()
+	else:
+		GameState.cancel_all_carts()
+		next_day_requested.emit()
+
+
+func _on_exit_cancelled() -> void:
+	_hide_exit_confirmation()
+
+
+func _hide_exit_confirmation() -> void:
+	exit_scrim.visible = false
+	exit_confirmation.visible = false
 
 
 func _on_talk_pressed() -> void:
@@ -445,7 +471,17 @@ func _apply_locale_texts() -> void:
 	talk_button.text = TranslationServer.translate(&"shop.talk")
 	cancel_button.text = TranslationServer.translate(&"shop.cancel")
 	checkout_button.text = TranslationServer.translate(&"shop.checkout")
-	next_day_confirmation_title.text = TranslationServer.translate(&"shop.next_day.title")
-	next_day_confirmation_body.text = TranslationServer.translate(&"shop.next_day.confirm")
-	next_day_confirm_button.text = TranslationServer.translate(&"shop.next_day.ok")
-	next_day_cancel_button.text = TranslationServer.translate(&"shop.next_day.cancel")
+	_refresh_exit_confirmation_texts()
+
+
+func _refresh_exit_confirmation_texts() -> void:
+	if exit_confirmation_mode == CONFIRM_LEAVE:
+		exit_confirmation_title.text = TranslationServer.translate(&"shop.leave_pending.title")
+		exit_confirmation_body.text = TranslationServer.translate(&"shop.leave_pending.body")
+		exit_confirm_button.text = TranslationServer.translate(&"shop.leave_pending.leave")
+		exit_cancel_button.text = TranslationServer.translate(&"shop.leave_pending.back")
+	else:
+		exit_confirmation_title.text = TranslationServer.translate(&"shop.next_day.title")
+		exit_confirmation_body.text = TranslationServer.translate(&"shop.next_day.confirm")
+		exit_confirm_button.text = TranslationServer.translate(&"shop.next_day.ok")
+		exit_cancel_button.text = TranslationServer.translate(&"shop.next_day.cancel")

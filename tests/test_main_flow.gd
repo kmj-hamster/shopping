@@ -90,6 +90,8 @@ func test_daily_submission_unlocks_next_day_and_transition_consumes_daily_grid()
 	await get_tree().process_frame
 	assert_false(main.current_screen.next_day_button.disabled)
 	assert_false(main.current_screen.notice_panel.visible)
+	main.protagonist_interface._on_bag_pressed()
+	main.protagonist_interface.open_task(DemoCatalog.DAILY_TASK_ID)
 	main.current_screen._on_next_day_pressed()
 	await get_tree().process_frame
 	assert_eq(GameState.day, 2)
@@ -97,6 +99,8 @@ func test_daily_submission_unlocks_next_day_and_transition_consumes_daily_grid()
 	assert_true(GameState.pieces.is_empty())
 	assert_true(main.current_screen.transition_panel.visible)
 	assert_true(GameState.is_store_open(DemoCatalog.STORE_RECORD))
+	assert_false(main.protagonist_interface.protagonist_popup.visible)
+	assert_true(main.protagonist_interface.task_popups.is_empty())
 
 
 func test_next_day_from_shop_confirms_and_cancels_unpaid_cart() -> void:
@@ -109,16 +113,42 @@ func test_next_day_from_shop_confirms_and_cancels_unpaid_cart() -> void:
 	shop._on_talk_pressed()
 	var pending := shop.transaction.add_to_cart(&"toy_marble").piece as PuzzlePieceState
 	_place_piece(pending, &"teddy", Vector2i.ZERO)
+	main.protagonist_interface._on_bag_pressed()
+	main.protagonist_interface.open_task(&"teddy")
 	shop._on_next_day_pressed()
 	assert_eq(GameState.day, 1)
-	assert_true(shop.next_day_confirmation.visible)
-	shop._on_next_day_confirmed()
+	assert_true(shop.exit_confirmation.visible)
+	assert_eq(shop.exit_confirmation_mode, shop.CONFIRM_NEXT_DAY)
+	shop._on_exit_confirmed()
 	await get_tree().process_frame
 	assert_eq(main.current_view, &"map")
 	assert_eq(GameState.day, 2)
 	assert_eq(GameState.wallet.money, 200)
 	assert_true(GameState.pieces.is_empty())
 	assert_true(main.current_screen.transition_panel.visible)
+	assert_false(main.protagonist_interface.protagonist_popup.visible)
+	assert_true(main.protagonist_interface.task_popups.is_empty())
+
+
+func test_leaving_shop_confirms_unpaid_items_and_closes_bag_popups() -> void:
+	var main = await _spawn_main()
+	main._show_shop()
+	await get_tree().process_frame
+	var shop = main.current_screen
+	var pending := shop.transaction.add_to_cart(&"toy_marble").piece as PuzzlePieceState
+	_place_piece(pending, DemoCatalog.EMPTY_BAG_TASK_ID, Vector2i.ZERO)
+	main.protagonist_interface._on_bag_pressed()
+	main.protagonist_interface.open_task(DemoCatalog.EMPTY_BAG_TASK_ID)
+	shop._on_leave_pressed()
+	assert_eq(main.current_view, &"shop")
+	assert_true(shop.exit_confirmation.visible)
+	assert_false(main.protagonist_interface.task_popups.is_empty())
+	shop._on_exit_confirmed()
+	await get_tree().process_frame
+	assert_eq(main.current_view, &"map")
+	assert_false(GameState.pieces.has(pending))
+	assert_false(main.protagonist_interface.protagonist_popup.visible)
+	assert_true(main.protagonist_interface.task_popups.is_empty())
 
 
 func test_owner_talk_unlocks_teddy_and_adds_protagonist_card() -> void:

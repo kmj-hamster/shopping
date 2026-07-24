@@ -116,6 +116,41 @@ func test_next_day_is_blocked_until_daily_goal_is_submitted() -> void:
 	)
 
 
+func test_leaving_with_unpaid_items_requires_confirmation() -> void:
+	var shop := await _spawn_shop()
+	var marble := shop.transaction.add_to_cart(&"toy_marble").piece as PuzzlePieceState
+	_place_piece(marble, DemoCatalog.DAILY_TASK_ID, Vector2i.ZERO)
+	var leave_count := [0]
+	shop.leave_requested.connect(func() -> void: leave_count[0] += 1)
+	shop._on_leave_pressed()
+	assert_true(shop.exit_confirmation.visible)
+	assert_gt(shop.exit_confirmation_layer.layer, 20)
+	assert_eq(shop.exit_confirmation_mode, shop.CONFIRM_LEAVE)
+	assert_eq(leave_count[0], 0)
+	assert_true(GameState.pieces.has(marble))
+	assert_eq(
+		shop.exit_confirmation_title.text,
+		TranslationServer.translate(&"shop.leave_pending.title")
+	)
+	shop._on_exit_cancelled()
+	assert_false(shop.exit_confirmation.visible)
+	assert_true(GameState.pieces.has(marble))
+	shop._on_leave_pressed()
+	shop._on_exit_confirmed()
+	assert_eq(leave_count[0], 1)
+	assert_false(GameState.pieces.has(marble))
+	assert_eq(shop.transaction.available_stock(&"toy_marble"), 1)
+
+
+func test_leaving_without_unpaid_items_needs_no_confirmation() -> void:
+	var shop := await _spawn_shop()
+	var leave_count := [0]
+	shop.leave_requested.connect(func() -> void: leave_count[0] += 1)
+	shop._on_leave_pressed()
+	assert_eq(leave_count[0], 1)
+	assert_false(shop.exit_confirmation.visible)
+
+
 func _spawn_shop(store_id: StringName = DemoCatalog.STORE_TOY) -> Node:
 	var packed := load("res://scenes/shop_lab/shop_lab.tscn") as PackedScene
 	var shop := packed.instantiate()
