@@ -64,7 +64,7 @@ func _input(event: InputEvent) -> void:
 func set_view_context(context: StringName) -> void:
 	view_context = context
 	if bag_button != null:
-		bag_button.position = Vector2(-126, -190) if context == &"shop" else Vector2(-126, -126)
+		_position_bag_button()
 	var index := 0
 	for popup in task_popups.values():
 		var task_popup := popup as TaskPuzzlePopup
@@ -152,9 +152,8 @@ func _build_interface() -> void:
 	bag_button.texture_hover = load("res://pic/bag-light.png") as Texture2D
 	bag_button.ignore_texture_size = true
 	bag_button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
-	bag_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	bag_button.position = Vector2(-126, -126)
-	bag_button.size = Vector2(112, 112)
+	bag_button.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	_position_bag_button()
 	bag_button.tooltip_text = TranslationServer.translate(&"protagonist.open")
 	bag_button.pressed.connect(_on_bag_pressed)
 	root.add_child(bag_button)
@@ -205,6 +204,17 @@ func _on_bag_pressed() -> void:
 	if protagonist_popup.visible:
 		root.move_child(protagonist_popup, root.get_child_count() - 1)
 		root.move_child(bag_button, root.get_child_count() - 1)
+
+
+func _position_bag_button() -> void:
+	bag_button.offset_left = -126.0
+	bag_button.offset_right = -14.0
+	if view_context == &"shop":
+		bag_button.offset_top = -190.0
+		bag_button.offset_bottom = -78.0
+	else:
+		bag_button.offset_top = -126.0
+		bag_button.offset_bottom = -14.0
 
 
 func _on_task_close_requested(task_id: StringName) -> void:
