@@ -9,7 +9,7 @@ func test_main_opens_map_with_bag_entry_and_navigates_to_shop() -> void:
 	var main = await _spawn_main()
 	assert_eq(main.current_view, &"map")
 	assert_eq(main.current_screen.name, "MallMapScreen")
-	assert_eq(main.current_screen.store_hotspots.size(), 5)
+	assert_eq(main.current_screen.store_hotspots.size(), 6)
 	assert_not_null(main.protagonist_interface)
 	assert_not_null(main.protagonist_interface.bag_button.texture_normal)
 	assert_not_null(main.protagonist_interface.bag_button.texture_hover)
@@ -20,6 +20,16 @@ func test_main_opens_map_with_bag_entry_and_navigates_to_shop() -> void:
 	assert_eq(main.current_screen.name, "ToyShopScreen")
 	assert_eq(main.current_screen.store_id, DemoCatalog.STORE_TOY)
 	assert_eq(main.protagonist_interface.view_context, &"shop")
+
+
+func test_recycling_hotspot_opens_dedicated_nonretail_screen() -> void:
+	var main = await _spawn_main()
+	main._on_shop_requested(DemoCatalog.STORE_RECYCLING)
+	await get_tree().process_frame
+	assert_eq(main.current_view, &"shop")
+	assert_eq(main.current_screen.name, "RecyclingShopScreen")
+	assert_null(GameState.transaction_for_store(DemoCatalog.STORE_RECYCLING))
+	assert_eq(main.current_screen.transaction, GameState.recycle_transaction)
 
 
 func test_open_bookstore_uses_shared_shop_screen_and_its_own_stock() -> void:

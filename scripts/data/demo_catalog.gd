@@ -6,6 +6,7 @@ const STORE_TOY := &"toy"
 const STORE_FLOWER := &"flower"
 const STORE_RECORD := &"record"
 const STORE_FAST_FOOD := &"fast_food"
+const STORE_RECYCLING := &"recycling"
 const DAILY_TASK_ID := &"daily"
 const EMPTY_BAG_TASK_ID := &"empty_bag"
 
@@ -20,6 +21,15 @@ const DAILY_TEMPLATE_ROWS := [
 ]
 
 const STORE_IDS: Array[StringName] = [
+	STORE_BOOK,
+	STORE_TOY,
+	STORE_FLOWER,
+	STORE_RECORD,
+	STORE_FAST_FOOD,
+	STORE_RECYCLING,
+]
+
+const RETAIL_STORE_IDS: Array[StringName] = [
 	STORE_BOOK,
 	STORE_TOY,
 	STORE_FLOWER,

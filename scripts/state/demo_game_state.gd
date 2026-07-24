@@ -108,7 +108,7 @@ func cancel_store_cart(store_id: StringName) -> int:
 
 func cancel_all_carts() -> int:
 	var removed := 0
-	for store_id in DemoCatalog.STORE_IDS:
+	for store_id in DemoCatalog.RETAIL_STORE_IDS:
 		var transaction := transaction_for_store(store_id)
 		if transaction != null:
 			removed += transaction.cancel_cart()
@@ -283,7 +283,7 @@ func all_tasks_completed() -> bool:
 
 func _refresh_store_transactions() -> void:
 	store_transactions = {}
-	for store_id in DemoCatalog.STORE_IDS:
+	for store_id in DemoCatalog.RETAIL_STORE_IDS:
 		var transaction := ShopTransaction.new(
 			store_id,
 			wallet.money,
@@ -296,7 +296,7 @@ func _refresh_store_transactions() -> void:
 
 
 func _sync_special_stock() -> void:
-	for store_id in DemoCatalog.STORE_IDS:
+	for store_id in DemoCatalog.RETAIL_STORE_IDS:
 		var transaction := transaction_for_store(store_id)
 		if transaction == null:
 			continue

@@ -153,6 +153,7 @@ func _build_interface() -> void:
 		DemoCatalog.STORE_FLOWER: Rect2(340, 402, 210, 145),
 		DemoCatalog.STORE_RECORD: Rect2(650, 392, 240, 150),
 		DemoCatalog.STORE_FAST_FOOD: Rect2(1010, 315, 220, 155),
+		DemoCatalog.STORE_RECYCLING: Rect2(76, 512, 208, 96),
 	}
 	for store_id in DemoCatalog.STORE_IDS:
 		_create_store_hotspot(store_id, hotspot_layout[store_id])

@@ -30,12 +30,19 @@ func _show_map(notice_key: StringName = &"") -> void:
 
 func _show_shop(store_id: StringName = DemoCatalog.STORE_TOY) -> void:
 	_clear_screen()
-	var packed := load("res://scenes/shop_lab/shop_lab.tscn") as PackedScene
+	var scene_path := (
+		"res://scenes/recycle_shop/recycle_shop.tscn"
+		if store_id == DemoCatalog.STORE_RECYCLING
+		else "res://scenes/shop_lab/shop_lab.tscn"
+	)
+	var packed := load(scene_path) as PackedScene
 	var shop := packed.instantiate()
-	shop.store_id = store_id
+	if store_id != DemoCatalog.STORE_RECYCLING:
+		shop.store_id = store_id
 	shop.name = "%sShopScreen" % String(store_id).to_pascal_case()
 	shop.leave_requested.connect(_on_shop_leave_requested)
-	shop.event_completed.connect(_on_event_completed)
+	if shop.has_signal("event_completed"):
+		shop.event_completed.connect(_on_event_completed)
 	shop.next_day_requested.connect(_on_shop_next_day_requested)
 	add_child(shop)
 	current_screen = shop

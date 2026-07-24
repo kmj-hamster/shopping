@@ -297,6 +297,51 @@ msgstr "The tape begins to turn slowly."
 msgid "shop.feedback.not_ready"
 msgstr "Something is still missing."
 
+msgid "recycle.counter"
+msgstr "Recycling window"
+
+msgid "recycle.hint"
+msgstr "Drag an item here"
+
+msgid "recycle.summary"
+msgstr "%d held  ·  +¥%d"
+
+msgid "recycle.cancel"
+msgstr "Take back"
+
+msgid "recycle.checkout"
+msgstr "Recycle"
+
+msgid "recycle.window"
+msgstr "Lost property window"
+
+msgid "recycle.feedback.ready"
+msgstr "Only things you no longer need."
+
+msgid "recycle.feedback.staged"
+msgstr "It slips into the dark."
+
+msgid "recycle.feedback.paid"
+msgstr "Coins slide out beneath the window. +¥%d"
+
+msgid "recycle.feedback.returned"
+msgstr "Everything returns to where it was."
+
+msgid "recycle.feedback.special"
+msgstr "A story is still tied to it."
+
+msgid "recycle.feedback.not_owned"
+msgstr "Pay for it first."
+
+msgid "recycle.feedback.empty"
+msgstr "There is nothing in the window."
+
+msgid "recycle.feedback.invalid"
+msgstr "The window does not take it."
+
+msgid "recycle.feedback.pending"
+msgstr "Settle the recycling slip first."
+
 msgid "feedback.complete"
 msgstr "✓ Complete. Shape, special item, and attribute conditions all pass."
 
@@ -365,6 +410,9 @@ msgstr "Record Store"
 
 msgid "store.fast_food"
 msgstr "Fast Food"
+
+msgid "store.recycling"
+msgstr "Recycling Station"
 
 msgid "weekday.mon"
 msgstr "Monday"

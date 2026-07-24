@@ -88,6 +88,12 @@ func test_each_store_has_seven_normal_items_per_refresh() -> void:
 		assert_eq(total_units, 7)
 
 
+func test_recycling_station_has_no_merchandise() -> void:
+	assert_has(DemoCatalog.STORE_IDS, DemoCatalog.STORE_RECYCLING)
+	assert_false(DemoCatalog.RETAIL_STORE_IDS.has(DemoCatalog.STORE_RECYCLING))
+	assert_true(DemoCatalog.items_for_store(DemoCatalog.STORE_RECYCLING).is_empty())
+
+
 func _is_connected(cells: Array[Vector2i]) -> bool:
 	if cells.is_empty():
 		return false

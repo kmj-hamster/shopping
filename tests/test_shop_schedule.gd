@@ -1,14 +1,15 @@
 extends GutTest
 
 
-func test_three_stores_are_open_each_day_across_three_weeks() -> void:
+func test_three_retail_stores_and_recycling_are_open_each_day() -> void:
 	for day in range(1, 22):
 		var open_stores := ShopSchedule.open_store_ids(day)
-		assert_eq(open_stores.size(), 3, "day %d" % day)
+		assert_eq(open_stores.size(), 4, "day %d" % day)
+		assert_has(open_stores, DemoCatalog.STORE_RECYCLING)
 		var unique: Dictionary = {}
 		for store_id in open_stores:
 			unique[store_id] = true
-		assert_eq(unique.size(), 3, "day %d has duplicate stores" % day)
+		assert_eq(unique.size(), 4, "day %d has duplicate stores" % day)
 
 
 func test_no_store_rests_for_two_consecutive_days() -> void:

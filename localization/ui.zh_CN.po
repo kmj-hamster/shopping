@@ -297,6 +297,51 @@ msgstr "磁带开始缓慢转动。"
 msgid "shop.feedback.not_ready"
 msgstr "还缺一点。"
 
+msgid "recycle.counter"
+msgstr "回收窗口"
+
+msgid "recycle.hint"
+msgstr "把东西拖到这里"
+
+msgid "recycle.summary"
+msgstr "暂存 %d件  ·  +¥%d"
+
+msgid "recycle.cancel"
+msgstr "拿回"
+
+msgid "recycle.checkout"
+msgstr "回收"
+
+msgid "recycle.window"
+msgstr "失物处理窗口"
+
+msgid "recycle.feedback.ready"
+msgstr "只收不再需要的东西。"
+
+msgid "recycle.feedback.staged"
+msgstr "它滑进了黑暗里。"
+
+msgid "recycle.feedback.paid"
+msgstr "零钱从窗口下方送出来。+¥%d"
+
+msgid "recycle.feedback.returned"
+msgstr "东西回到了原处。"
+
+msgid "recycle.feedback.special"
+msgstr "它还牵着一条故事线。"
+
+msgid "recycle.feedback.not_owned"
+msgstr "请先结账。"
+
+msgid "recycle.feedback.empty"
+msgstr "窗口里什么也没有。"
+
+msgid "recycle.feedback.invalid"
+msgstr "窗口没有接住它。"
+
+msgid "recycle.feedback.pending"
+msgstr "先结清回收单。"
+
 msgid "feedback.complete"
 msgstr "✓ 格阵完成。空间、特殊物品和属性条件全部成立。"
 
@@ -365,6 +410,9 @@ msgstr "唱片店"
 
 msgid "store.fast_food"
 msgstr "快餐店"
+
+msgid "store.recycling"
+msgstr "回收站"
 
 msgid "weekday.mon"
 msgstr "周一"
