@@ -22,7 +22,6 @@ const SPECIAL_TASKS := {
 }
 const RESULT_DAILY_INCOMPLETE := &"daily_incomplete"
 const RESULT_DAILY_ALREADY_SUBMITTED := &"daily_already_submitted"
-const RESULT_ORGANIZER_NOT_EMPTY := &"organizer_not_empty"
 const RESULT_PENDING_PURCHASE := &"pending_purchase"
 const RESULT_WRONG_OWNER := &"wrong_owner"
 const RESULT_ALREADY_UNLOCKED := &"already_unlocked"
@@ -82,7 +81,7 @@ func checkout_store(store_id: StringName) -> Dictionary:
 			and piece.definition.is_special
 		):
 			var expected_task_id: StringName = SPECIAL_TASKS.get(piece.definition.id, &"")
-			if piece.task_id != expected_task_id:
+			if piece.task_id not in [expected_task_id, DemoCatalog.EMPTY_BAG_TASK_ID]:
 				return {"ok": false, "reason": RESULT_INVALID_SPECIAL_TASK}
 			pending_specials.append(piece.definition.id)
 	var result := transaction.checkout()
@@ -118,8 +117,6 @@ func cancel_all_carts() -> int:
 func advance_day() -> Dictionary:
 	if not daily_goal.submitted:
 		return {"ok": false, "reason": RESULT_DAILY_INCOMPLETE}
-	if has_organizer_pieces():
-		return {"ok": false, "reason": RESULT_ORGANIZER_NOT_EMPTY}
 	if has_pending_purchases():
 		return {"ok": false, "reason": RESULT_PENDING_PURCHASE}
 	var consumed_count := _consume_task_pieces(DemoCatalog.DAILY_TASK_ID)
@@ -146,8 +143,6 @@ func daily_task() -> TaskDefinition:
 func submit_daily_goal() -> Dictionary:
 	if daily_goal.submitted:
 		return {"ok": false, "reason": RESULT_DAILY_ALREADY_SUBMITTED}
-	if has_organizer_pieces(DemoCatalog.DAILY_TASK_ID):
-		return {"ok": false, "reason": RESULT_ORGANIZER_NOT_EMPTY}
 	var evaluation := PuzzleRules.evaluate(daily_task(), pieces)
 	if not evaluation.is_complete:
 		return {"ok": false, "reason": RESULT_DAILY_INCOMPLETE, "evaluation": evaluation}
@@ -179,26 +174,17 @@ func talk_to_owner(store_id: StringName) -> Dictionary:
 func task_definition(task_id: StringName) -> TaskDefinition:
 	if task_id == DemoCatalog.DAILY_TASK_ID:
 		return daily_task()
+	if task_id == DemoCatalog.EMPTY_BAG_TASK_ID:
+		return DemoCatalog.empty_bag_task()
 	return DemoCatalog.task_by_id(task_id)
 
 
 func protagonist_task_ids() -> Array[StringName]:
-	var result: Array[StringName] = [DemoCatalog.DAILY_TASK_ID]
+	var result: Array[StringName] = [DemoCatalog.DAILY_TASK_ID, DemoCatalog.EMPTY_BAG_TASK_ID]
 	for task_id in TASK_ORDER:
 		if is_task_unlocked(task_id) or is_task_completed(task_id):
 			result.append(task_id)
 	return result
-
-
-func has_organizer_pieces(task_id: StringName = &"") -> bool:
-	for piece in pieces:
-		if piece.location != PuzzlePieceState.Location.ORGANIZER:
-			continue
-		if task_id.is_empty() or piece.task_id == task_id:
-			return true
-	return false
-
-
 func has_pending_purchases(task_id: StringName = &"") -> bool:
 	return pieces.any(func(piece: PuzzlePieceState) -> bool:
 		return (

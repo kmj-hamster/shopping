@@ -148,15 +148,16 @@ func test_checkout_rejects_unplaced_piece_without_mutation() -> void:
 	assert_eq(piece.ownership, PuzzlePieceState.Ownership.PENDING_PURCHASE)
 
 
-func test_any_occupied_organizer_blocks_checkout() -> void:
+func test_pending_piece_in_empty_bag_can_checkout() -> void:
 	var transaction := _toy_transaction(100)
 	var piece := transaction.add_to_cart(&"toy_marble").piece as PuzzlePieceState
-	piece.location = PuzzlePieceState.Location.ORGANIZER
-	piece.task_id = DemoCatalog.DAILY_TASK_ID
+	piece.location = PuzzlePieceState.Location.BOARD
+	piece.task_id = DemoCatalog.EMPTY_BAG_TASK_ID
+	piece.grid_position = Vector2i.ZERO
 	var result := transaction.checkout()
-	assert_false(result.ok)
-	assert_eq(result.reason, ShopTransaction.RESULT_ORGANIZER_NOT_EMPTY)
-	assert_eq(transaction.money, 100)
+	assert_true(result.ok)
+	assert_eq(transaction.money, 90)
+	assert_eq(piece.ownership, PuzzlePieceState.Ownership.OWNED)
 
 
 func _toy_transaction(starting_money: int) -> ShopTransaction:

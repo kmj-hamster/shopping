@@ -74,8 +74,6 @@ func refresh() -> void:
 	var next_day_tooltip_key := &"map.next_day.ready"
 	if not GameState.daily_goal.submitted:
 		next_day_tooltip_key = &"map.next_day.locked"
-	elif GameState.has_organizer_pieces():
-		next_day_tooltip_key = &"map.notice.organizer_required"
 	next_day_button.tooltip_text = TranslationServer.translate(next_day_tooltip_key)
 	if GameState.daily_goal.submitted:
 		next_day_hint_label.visible = false
@@ -392,9 +390,6 @@ func _on_next_day_pressed() -> void:
 	if not GameState.daily_goal.submitted:
 		next_day_hint_label.text = TranslationServer.translate(&"map.next_day.locked")
 		next_day_hint_label.visible = true
-		return
-	if GameState.has_organizer_pieces():
-		show_notice(&"map.notice.organizer_required")
 		return
 	next_day_requested.emit()
 

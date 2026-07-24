@@ -7,6 +7,7 @@ const STORE_FLOWER := &"flower"
 const STORE_RECORD := &"record"
 const STORE_FAST_FOOD := &"fast_food"
 const DAILY_TASK_ID := &"daily"
+const EMPTY_BAG_TASK_ID := &"empty_bag"
 
 const DAILY_TEMPLATE_ROWS := [
 	[&"daily_mon", ["XXX", "XXX"]],
@@ -142,6 +143,20 @@ static func daily_task_for_day(day: int) -> TaskDefinition:
 		&"",
 		TaskDefinition.AttributeRule.NONE
 	)
+
+
+static func empty_bag_task() -> TaskDefinition:
+	var task := _task(
+		EMPTY_BAG_TASK_ID,
+		&"task.empty_bag.title",
+		&"task.empty_bag.description",
+		["XXXXXXXX", "XXXXXXXX", "XXXXXXXX", "XXXXXXXX", "XXXXXXXX", "XXXXXXXX", "XXXXXXXX", "XXXXXXXX"],
+		&"",
+		&"",
+		TaskDefinition.AttributeRule.NONE
+	)
+	task.accepts_any_item = true
+	return task
 
 
 static func daily_template_id_for_day(day: int) -> StringName:

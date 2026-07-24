@@ -105,6 +105,9 @@ func test_special_item_cannot_enter_daily_or_another_story_task() -> void:
 	assert_false(PuzzleRules.can_place(
 		DemoCatalog.task_by_id(&"goldfish"), teddy, [], Vector2i(1, 1), 0
 	))
+	assert_true(PuzzleRules.can_place(
+		DemoCatalog.empty_bag_task(), teddy, [], Vector2i.ZERO, 0
+	))
 
 
 func _filled_solution(

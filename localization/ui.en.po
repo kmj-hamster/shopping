@@ -42,9 +42,6 @@ msgstr "Tonight is ready"
 msgid "map.notice.daily_required"
 msgstr "Tonight's shape is still empty inside the bag."
 
-msgid "map.notice.organizer_required"
-msgstr "Something is still inside an inner fold."
-
 msgid "map.notice.store_closed"
 msgstr "%s is closed tonight. It reopens %s."
 
@@ -87,6 +84,18 @@ msgstr "Daily Errand"
 msgid "task.daily.description"
 msgstr "Fill the shape the night left behind."
 
+msgid "task.empty_bag.title"
+msgstr "Empty Bag"
+
+msgid "task.empty_bag.description"
+msgstr "Anything can rest here for a while."
+
+msgid "task.empty_bag.open"
+msgstr "Open the empty bag"
+
+msgid "task.empty_bag.close"
+msgstr "Close the empty bag"
+
 msgid "task.memory"
 msgstr "Memory"
 
@@ -95,18 +104,6 @@ msgstr "%d/%d · %s"
 
 msgid "task.popup.owner_submit"
 msgstr "When it is full, take it back to the owner."
-
-msgid "task.organizer.title"
-msgstr "Inner Fold"
-
-msgid "task.organizer.open"
-msgstr "Open the inner fold"
-
-msgid "task.organizer.close"
-msgstr "Close the inner fold"
-
-msgid "task.organizer.must_empty"
-msgstr "Something is still inside the fold."
 
 msgid "task.daily.submit"
 msgstr "Keep This Night"

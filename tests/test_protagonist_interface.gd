@@ -24,16 +24,28 @@ func test_bag_panel_opens_daily_card_and_multiple_draggable_task_popups() -> voi
 	assert_ne(daily.position, teddy.position)
 
 
-func test_each_task_has_collapsible_four_by_task_height_organizer() -> void:
-	var popup := TaskPuzzlePopup.new()
-	add_child_autoqfree(popup)
-	popup.setup(DemoCatalog.DAILY_TASK_ID, &"map")
+func test_empty_bag_is_a_shared_eight_by_eight_popup() -> void:
+	var interface := ProtagonistInterface.new()
+	add_child_autoqfree(interface)
 	await get_tree().process_frame
-	assert_false(popup.organizer_wrap.visible)
-	assert_eq(popup.organizer_board.task.bounds_size().x, 4)
-	assert_eq(popup.organizer_board.task.bounds_size().y, popup.task.bounds_size().y)
-	popup._on_organizer_toggled()
-	assert_true(popup.organizer_wrap.visible)
+	assert_has(interface.card_buttons, DemoCatalog.EMPTY_BAG_TASK_ID)
+	var popup := interface.open_task(DemoCatalog.EMPTY_BAG_TASK_ID)
+	assert_eq(popup.task.bounds_size(), Vector2i(8, 8))
+	assert_false(popup.empty_bag_toggle_button.visible)
+
+
+func test_task_popup_icon_opens_and_closes_shared_empty_bag() -> void:
+	var interface := ProtagonistInterface.new()
+	add_child_autoqfree(interface)
+	await get_tree().process_frame
+	var daily := interface.open_task(DemoCatalog.DAILY_TASK_ID)
+	assert_eq(daily.empty_bag_toggle_button.text, "▦")
+	interface._on_empty_bag_toggle_requested()
+	assert_has(interface.task_popups, DemoCatalog.EMPTY_BAG_TASK_ID)
+	assert_eq(daily.empty_bag_toggle_button.text, "▣")
+	interface._on_empty_bag_toggle_requested()
+	assert_false(interface.task_popups.has(DemoCatalog.EMPTY_BAG_TASK_ID))
+	assert_eq(daily.empty_bag_toggle_button.text, "▦")
 
 
 func test_owned_piece_moves_directly_between_open_task_boards_without_copying() -> void:
@@ -73,11 +85,9 @@ func test_shop_drag_candidate_creates_pending_piece_only_after_legal_drop() -> v
 	assert_eq(GameState.pieces[0].task_id, DemoCatalog.DAILY_TASK_ID)
 
 
-func test_nonempty_organizer_blocks_popup_close_and_checkout() -> void:
+func test_popup_can_close_while_empty_bag_contains_items() -> void:
 	var piece := PuzzlePieceState.new(1, DemoCatalog.item_by_id(&"toy_marble"))
-	piece.location = PuzzlePieceState.Location.ORGANIZER
-	piece.task_id = DemoCatalog.DAILY_TASK_ID
-	piece.grid_position = Vector2i.ZERO
+	_place_piece(piece, DemoCatalog.EMPTY_BAG_TASK_ID, Vector2i.ZERO)
 	GameState.pieces.append(piece)
 	var popup := TaskPuzzlePopup.new()
 	add_child_autoqfree(popup)
@@ -85,10 +95,7 @@ func test_nonempty_organizer_blocks_popup_close_and_checkout() -> void:
 	var close_count := [0]
 	popup.close_requested.connect(func(_task_id: StringName) -> void: close_count[0] += 1)
 	popup._on_close_pressed()
-	assert_eq(close_count[0], 0)
-	assert_true(popup.has_organizer_pieces())
-	var transaction := GameState.toy_transaction
-	assert_eq(transaction.checkout().reason, ShopTransaction.RESULT_ORGANIZER_NOT_EMPTY)
+	assert_eq(close_count[0], 1)
 
 
 func test_daily_submit_shows_checkout_notice_when_complete_grid_contains_unpaid_piece() -> void:

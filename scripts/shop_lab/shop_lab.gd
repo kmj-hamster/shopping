@@ -337,9 +337,6 @@ func _on_next_day_pressed() -> void:
 	if not GameState.daily_goal.submitted:
 		_show_feedback(TranslationServer.translate(&"shop.feedback.daily_required"))
 		return
-	if GameState.has_organizer_pieces():
-		_show_feedback(TranslationServer.translate(&"task.organizer.must_empty"))
-		return
 	if transaction.cart_count() > 0:
 		next_day_scrim.visible = true
 		next_day_confirmation.visible = true
@@ -404,8 +401,6 @@ func _failure_text(reason: StringName) -> String:
 			return TranslationServer.translate(&"shop.feedback.empty_cart")
 		ShopTransaction.RESULT_UNPLACED:
 			return TranslationServer.translate(&"shop.feedback.unplaced")
-		ShopTransaction.RESULT_ORGANIZER_NOT_EMPTY:
-			return TranslationServer.translate(&"task.organizer.must_empty")
 		GameState.RESULT_INVALID_SPECIAL_TASK:
 			return TranslationServer.translate(&"shop.feedback.special_task")
 		&"store_closed":

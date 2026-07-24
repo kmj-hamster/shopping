@@ -33,6 +33,18 @@ func test_buying_special_does_not_unlock_a_task_and_wrong_task_is_rejected() -> 
 	assert_eq(GameState.wallet.money, 100)
 
 
+func test_unlocked_special_can_be_bought_into_shared_empty_bag() -> void:
+	GameState.unlocked_tasks[&"teddy"] = true
+	GameState._sync_special_stock()
+	var teddy := GameState.toy_transaction.add_to_cart(&"special_teddy").piece as PuzzlePieceState
+	_place_piece(teddy, DemoCatalog.EMPTY_BAG_TASK_ID, Vector2i.ZERO)
+	var result := GameState.checkout_store(DemoCatalog.STORE_TOY)
+	assert_true(result.ok)
+	assert_eq(GameState.wallet.money, 78)
+	assert_eq(teddy.ownership, PuzzlePieceState.Ownership.OWNED)
+	assert_eq(teddy.task_id, DemoCatalog.EMPTY_BAG_TASK_ID)
+
+
 func test_five_store_transactions_share_wallet_and_unique_piece_ids() -> void:
 	var book := GameState.transaction_for_store(DemoCatalog.STORE_BOOK)
 	var toy := GameState.transaction_for_store(DemoCatalog.STORE_TOY)
@@ -92,20 +104,20 @@ func test_complete_daily_goal_with_unpaid_piece_must_checkout_before_submission(
 	assert_true(GameState.submit_daily_goal().ok)
 
 
-func test_organizer_and_pending_purchase_each_block_advance_day() -> void:
+func test_pending_purchase_blocks_advance_day() -> void:
 	_fill_daily_goal(&"book_period")
 	assert_true(GameState.submit_daily_goal().ok)
-	var organizer_piece := _new_piece(90, &"toy_marble")
-	organizer_piece.location = PuzzlePieceState.Location.ORGANIZER
-	organizer_piece.task_id = &"teddy"
-	GameState.pieces.append(organizer_piece)
-	assert_eq(GameState.advance_day().reason, GameState.RESULT_ORGANIZER_NOT_EMPTY)
-	GameState.pieces.erase(organizer_piece)
-
 	var pending := GameState.toy_transaction.add_to_cart(&"toy_marble").piece as PuzzlePieceState
 	_place_piece(pending, DemoCatalog.DAILY_TASK_ID, Vector2i.ZERO)
 	assert_eq(GameState.advance_day().reason, GameState.RESULT_PENDING_PURCHASE)
 	assert_eq(GameState.day, 1)
+
+
+func test_protagonist_tasks_include_shared_eight_by_eight_empty_bag() -> void:
+	assert_has(GameState.protagonist_task_ids(), DemoCatalog.EMPTY_BAG_TASK_ID)
+	var bag := GameState.task_definition(DemoCatalog.EMPTY_BAG_TASK_ID)
+	assert_eq(bag.bounds_size(), Vector2i(8, 8))
+	assert_true(bag.accepts_any_item)
 
 
 func test_advance_preserves_owned_story_layout() -> void:

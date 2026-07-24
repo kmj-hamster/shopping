@@ -25,7 +25,7 @@ func request_return(data: Variant) -> bool:
 func pending_piece_from_drag(data: Variant) -> PuzzlePieceState:
 	if typeof(data) != TYPE_DICTIONARY or data.get("kind") != &"puzzle_piece":
 		return null
-	if data.get("source") not in [&"board", &"organizer"]:
+	if data.get("source") != &"board":
 		return null
 	var piece := data.get("original") as PuzzlePieceState
 	if transaction == null or not transaction.can_remove_from_cart(piece):

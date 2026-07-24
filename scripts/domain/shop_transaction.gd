@@ -9,7 +9,6 @@ const RESULT_OUT_OF_STOCK := &"out_of_stock"
 const RESULT_INSUFFICIENT_FUNDS := &"insufficient_funds"
 const RESULT_WRONG_STORE := &"wrong_store"
 const RESULT_UNPLACED := &"unplaced"
-const RESULT_ORGANIZER_NOT_EMPTY := &"organizer_not_empty"
 
 var store_id: StringName
 var wallet: PlayerWallet
@@ -104,9 +103,6 @@ func cart_total() -> int:
 func checkout() -> Dictionary:
 	var counts: Dictionary = {}
 	var pending: Array[PuzzlePieceState] = []
-	for piece in pieces:
-		if piece.location == PuzzlePieceState.Location.ORGANIZER:
-			return _result(false, RESULT_ORGANIZER_NOT_EMPTY)
 	for piece in pieces:
 		if (
 			piece.ownership != PuzzlePieceState.Ownership.PENDING_PURCHASE

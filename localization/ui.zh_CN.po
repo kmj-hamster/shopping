@@ -42,9 +42,6 @@ msgstr "今晚已经准备好了"
 msgid "map.notice.daily_required"
 msgstr "购物袋里，今晚的形状还空着。"
 
-msgid "map.notice.organizer_required"
-msgstr "有东西还留在整理夹层里。"
-
 msgid "map.notice.store_closed"
 msgstr "%s今夜休息。%s再开。"
 
@@ -87,6 +84,18 @@ msgstr "每日目标"
 msgid "task.daily.description"
 msgstr "填满今晚留下的形状。"
 
+msgid "task.empty_bag.title"
+msgstr "空袋子"
+
+msgid "task.empty_bag.description"
+msgstr "什么都可以暂时放在这里。"
+
+msgid "task.empty_bag.open"
+msgstr "打开空袋子"
+
+msgid "task.empty_bag.close"
+msgstr "关闭空袋子"
+
 msgid "task.memory"
 msgstr "记忆"
 
@@ -95,18 +104,6 @@ msgstr "%d/%d · %s"
 
 msgid "task.popup.owner_submit"
 msgstr "填满后，带回店主那里。"
-
-msgid "task.organizer.title"
-msgstr "夹层"
-
-msgid "task.organizer.open"
-msgstr "展开整理夹层"
-
-msgid "task.organizer.close"
-msgstr "收起整理夹层"
-
-msgid "task.organizer.must_empty"
-msgstr "夹层里还留着东西。"
 
 msgid "task.daily.submit"
 msgstr "确认今晚"

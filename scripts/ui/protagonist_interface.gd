@@ -81,12 +81,14 @@ func refresh() -> void:
 	for popup in task_popups.values():
 		if is_instance_valid(popup):
 			(popup as TaskPuzzlePopup).refresh()
+	_refresh_empty_bag_toggles()
 
 
 func open_task(task_id: StringName) -> TaskPuzzlePopup:
 	if task_popups.has(task_id) and is_instance_valid(task_popups[task_id]):
 		var existing := task_popups[task_id] as TaskPuzzlePopup
 		_bring_to_front(existing)
+		_refresh_empty_bag_toggles()
 		return existing
 	var popup := TaskPuzzlePopup.new()
 	root.add_child(popup)
@@ -95,8 +97,10 @@ func open_task(task_id: StringName) -> TaskPuzzlePopup:
 	popup.close_requested.connect(_on_task_close_requested)
 	popup.focus_requested.connect(_bring_to_front)
 	popup.interaction_message.connect(_show_feedback)
+	popup.empty_bag_toggle_requested.connect(_on_empty_bag_toggle_requested)
 	task_popups[task_id] = popup
 	_bring_to_front(popup)
+	_refresh_empty_bag_toggles()
 	return popup
 
 
@@ -166,15 +170,17 @@ func _rebuild_cards() -> void:
 	card_buttons.clear()
 	card_origins.clear()
 	var positions := [
-		Vector2(28, 28), Vector2(232, 24), Vector2(54, 132), Vector2(248, 134),
+		Vector2(28, 8), Vector2(232, 6),
+		Vector2(48, 88), Vector2(244, 86),
+		Vector2(28, 168), Vector2(232, 166),
 	]
-	var rotations := [-0.035, 0.028, 0.022, -0.03]
+	var rotations := [-0.035, 0.028, 0.022, -0.03, 0.018, -0.024]
 	var index := 0
 	for task_id in GameState.protagonist_task_ids():
 		var card := Button.new()
 		card.name = "TaskCard_%s" % task_id
 		card.position = positions[index % positions.size()]
-		card.size = Vector2(165, 74)
+		card.size = Vector2(165, 62)
 		card.rotation = rotations[index % rotations.size()]
 		card.pivot_offset = card.size * 0.5
 		var task := GameState.task_definition(task_id)
@@ -224,6 +230,25 @@ func _on_task_close_requested(task_id: StringName) -> void:
 		return
 	task_popups.erase(task_id)
 	popup.queue_free()
+	_refresh_empty_bag_toggles()
+
+
+func _on_empty_bag_toggle_requested() -> void:
+	var empty_bag_id := DemoCatalog.EMPTY_BAG_TASK_ID
+	if task_popups.has(empty_bag_id) and is_instance_valid(task_popups[empty_bag_id]):
+		_on_task_close_requested(empty_bag_id)
+	else:
+		open_task(empty_bag_id)
+
+
+func _refresh_empty_bag_toggles() -> void:
+	var is_open := (
+		task_popups.has(DemoCatalog.EMPTY_BAG_TASK_ID)
+		and is_instance_valid(task_popups[DemoCatalog.EMPTY_BAG_TASK_ID])
+	)
+	for popup in task_popups.values():
+		if is_instance_valid(popup):
+			(popup as TaskPuzzlePopup).set_empty_bag_open(is_open)
 
 
 func _bring_to_front(popup: TaskPuzzlePopup) -> void:

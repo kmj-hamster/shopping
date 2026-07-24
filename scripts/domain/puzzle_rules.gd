@@ -9,15 +9,18 @@ static func can_place(
 	position: Vector2i,
 	rotation_steps: int,
 	ignored_piece: PuzzlePieceState = null,
-	target_location: PuzzlePieceState.Location = PuzzlePieceState.Location.BOARD
 ) -> bool:
 	if task == null or piece == null or piece.definition == null:
 		return false
-	if piece.definition.is_special and piece.definition.id != task.required_special_item_id:
+	if (
+		piece.definition.is_special
+		and not task.accepts_any_item
+		and piece.definition.id != task.required_special_item_id
+	):
 		return false
 	var occupied_by_others: Dictionary = {}
 	for other in pieces:
-		if other == piece or other == ignored_piece or other.location != target_location:
+		if other == piece or other == ignored_piece or other.location != PuzzlePieceState.Location.BOARD:
 			continue
 		if not other.task_id.is_empty() and other.task_id != task.id:
 			continue

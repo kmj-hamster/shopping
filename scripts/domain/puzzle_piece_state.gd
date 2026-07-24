@@ -3,7 +3,7 @@ extends RefCounted
 
 enum Location {
 	BOARD,
-	ORGANIZER,
+	RECYCLE_CART,
 }
 
 enum Ownership {

@@ -4,27 +4,24 @@ extends PanelContainer
 signal close_requested(task_id: StringName)
 signal focus_requested(popup: TaskPuzzlePopup)
 signal interaction_message(message: String)
+signal empty_bag_toggle_requested
 
 const CELL_SIZE := 42.0
 
 var task_id: StringName
 var task: TaskDefinition
 var view_context: StringName = &"map"
-var organizer_expanded := false
 var dragging_window := false
 var user_moved := false
 
 var title_label: Label
-var organizer_wrap: VBoxContainer
-var organizer_label: Label
-var organizer_toggle: Button
-var organizer_board: PuzzleBoard
 var puzzle_board: PuzzleBoard
 var status_label: Label
 var result_label: Label
 var checkout_notice: PanelContainer
 var checkout_notice_label: Label
 var submit_button: Button
+var empty_bag_toggle_button: Button
 var close_button: Button
 var header: HBoxContainer
 
@@ -50,36 +47,36 @@ func refresh() -> void:
 	if task == null:
 		return
 	title_label.text = task.localized_name()
-	organizer_label.text = TranslationServer.translate(&"task.organizer.title")
 	submit_button.text = TranslationServer.translate(&"task.daily.submit")
-	organizer_toggle.tooltip_text = TranslationServer.translate(
-		&"task.organizer.close" if organizer_expanded else &"task.organizer.open"
-	)
 	puzzle_board.set_context(task, GameState.pieces)
-	organizer_board.set_context(_organizer_task(), GameState.pieces)
 	var locked := _is_locked()
 	puzzle_board.interaction_locked = locked
-	organizer_board.interaction_locked = locked
-	organizer_toggle.disabled = locked
 	var evaluation := PuzzleRules.evaluate(task, GameState.pieces)
 	status_label.text = TranslationServer.translate(&"task.popup.progress") % [
 		evaluation.covered_count,
 		evaluation.total_count,
 		_dominant_attribute_name(evaluation.attribute_totals),
 	]
-	if task_id == DemoCatalog.DAILY_TASK_ID:
-		submit_button.visible = not GameState.daily_goal.submitted and evaluation.is_complete \
-			and not GameState.has_organizer_pieces(task_id)
+	if task_id == DemoCatalog.EMPTY_BAG_TASK_ID:
+		status_label.visible = false
+		result_label.visible = false
+		checkout_notice.visible = false
+		submit_button.visible = false
+	elif task_id == DemoCatalog.DAILY_TASK_ID:
+		status_label.visible = true
+		submit_button.visible = not GameState.daily_goal.submitted and evaluation.is_complete
 		result_label.visible = GameState.daily_goal.submitted
 		if GameState.daily_goal.submitted:
 			result_label.text = TranslationServer.translate(GameState.daily_goal.result_key)
 		else:
 			result_label.text = ""
 	elif GameState.is_task_completed(task_id):
+		status_label.visible = true
 		submit_button.visible = false
 		result_label.visible = true
 		result_label.text = TranslationServer.translate(GameState.event_notice_key(task_id))
 	else:
+		status_label.visible = true
 		submit_button.visible = false
 		result_label.visible = true
 		result_label.text = TranslationServer.translate(&"task.popup.owner_submit")
@@ -90,21 +87,15 @@ func refresh() -> void:
 
 func refresh_drag_state(data: Variant) -> void:
 	puzzle_board.refresh_drag_state(data)
-	if organizer_expanded:
-		organizer_board.refresh_drag_state(data)
 
 
-func has_organizer_pieces() -> bool:
-	return GameState.has_organizer_pieces(task_id)
-
-
-func show_blocked_feedback() -> void:
-	interaction_message.emit(TranslationServer.translate(&"task.organizer.must_empty"))
-	var original := position
-	var tween := create_tween()
-	tween.tween_property(self, "position:x", original.x - 7.0, 0.04)
-	tween.tween_property(self, "position:x", original.x + 7.0, 0.06)
-	tween.tween_property(self, "position:x", original.x, 0.04)
+func set_empty_bag_open(is_open: bool) -> void:
+	if empty_bag_toggle_button == null:
+		return
+	empty_bag_toggle_button.text = "▣" if is_open else "▦"
+	empty_bag_toggle_button.tooltip_text = TranslationServer.translate(
+		&"task.empty_bag.close" if is_open else &"task.empty_bag.open"
+	)
 
 
 func _build_interface() -> void:
@@ -134,40 +125,12 @@ func _build_interface() -> void:
 	close_button.pressed.connect(_on_close_pressed)
 	header.add_child(close_button)
 
-	var boards := HBoxContainer.new()
-	boards.add_theme_constant_override("separation", 5)
-	column.add_child(boards)
-	organizer_wrap = VBoxContainer.new()
-	organizer_wrap.visible = false
-	boards.add_child(organizer_wrap)
-	organizer_label = Label.new()
-	organizer_label.text = TranslationServer.translate(&"task.organizer.title")
-	organizer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	organizer_label.add_theme_font_size_override("font_size", 12)
-	organizer_label.add_theme_color_override("font_color", Color("758886"))
-	organizer_wrap.add_child(organizer_label)
-	organizer_board = PuzzleBoard.new()
-	organizer_board.cell_size = CELL_SIZE
-	organizer_board.target_location = PuzzlePieceState.Location.ORGANIZER
-	organizer_board.remove_on_failed_external_drop = false
-	organizer_board.state_changed.connect(_on_board_changed)
-	organizer_board.interaction_message.connect(interaction_message.emit)
-	organizer_wrap.add_child(organizer_board)
-
-	organizer_toggle = Button.new()
-	organizer_toggle.text = "‹"
-	organizer_toggle.tooltip_text = TranslationServer.translate(&"task.organizer.open")
-	organizer_toggle.custom_minimum_size = Vector2(28, 0)
-	organizer_toggle.pressed.connect(_on_organizer_toggled)
-	boards.add_child(organizer_toggle)
-
 	puzzle_board = PuzzleBoard.new()
 	puzzle_board.cell_size = CELL_SIZE
-	puzzle_board.target_location = PuzzlePieceState.Location.BOARD
 	puzzle_board.remove_on_failed_external_drop = false
 	puzzle_board.state_changed.connect(_on_board_changed)
 	puzzle_board.interaction_message.connect(interaction_message.emit)
-	boards.add_child(puzzle_board)
+	column.add_child(puzzle_board)
 
 	status_label = Label.new()
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -196,26 +159,24 @@ func _build_interface() -> void:
 	submit_button.text = TranslationServer.translate(&"task.daily.submit")
 	submit_button.pressed.connect(_on_submit_pressed)
 	column.add_child(submit_button)
-
-
-func _organizer_task() -> TaskDefinition:
-	var result := TaskDefinition.new()
-	result.id = task.id
-	result.display_name_key = task.display_name_key
-	result.required_special_item_id = task.required_special_item_id
-	result.attribute_rule = TaskDefinition.AttributeRule.NONE
-	var cells: Array[Vector2i] = []
-	for y in range(task.bounds_size().y):
-		for x in range(4):
-			cells.append(Vector2i(x, y))
-	result.mask_cells = cells
-	return result
+	var footer := HBoxContainer.new()
+	column.add_child(footer)
+	empty_bag_toggle_button = Button.new()
+	empty_bag_toggle_button.name = "EmptyBagToggle"
+	empty_bag_toggle_button.visible = task_id != DemoCatalog.EMPTY_BAG_TASK_ID
+	empty_bag_toggle_button.custom_minimum_size = Vector2(38, 32)
+	empty_bag_toggle_button.pressed.connect(empty_bag_toggle_requested.emit)
+	footer.add_child(empty_bag_toggle_button)
+	set_empty_bag_open(false)
 
 
 func _is_locked() -> bool:
 	return (
 		(task_id == DemoCatalog.DAILY_TASK_ID and GameState.daily_goal.submitted)
-		or (task_id != DemoCatalog.DAILY_TASK_ID and GameState.is_task_completed(task_id))
+		or (
+			task_id not in [DemoCatalog.DAILY_TASK_ID, DemoCatalog.EMPTY_BAG_TASK_ID]
+			and GameState.is_task_completed(task_id)
+		)
 	)
 
 
@@ -246,19 +207,7 @@ func _on_submit_pressed() -> void:
 	refresh()
 
 
-func _on_organizer_toggled() -> void:
-	organizer_expanded = not organizer_expanded
-	organizer_wrap.visible = organizer_expanded
-	organizer_toggle.text = "›" if organizer_expanded else "‹"
-	organizer_toggle.tooltip_text = TranslationServer.translate(
-		&"task.organizer.close" if organizer_expanded else &"task.organizer.open"
-	)
-
-
 func _on_close_pressed() -> void:
-	if has_organizer_pieces():
-		show_blocked_feedback()
-		return
 	close_requested.emit(task_id)
 
 
