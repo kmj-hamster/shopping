@@ -90,6 +90,7 @@ func test_sparse_shop_interface_is_translated() -> void:
 		&"shop.cart.summary",
 		&"shop.feedback.ready",
 		&"shop.feedback.paid",
+		&"shop.feedback.returned",
 		&"shop.feedback.no_money",
 		&"shop.feedback.unplaced",
 		&"shop.feedback.daily_required",

@@ -7,6 +7,7 @@ var drag_cell_size := PuzzleBoard.DEFAULT_CELL_SIZE
 var shape_preview: ShapePreview
 var title_label: Label
 var meta_label: Label
+var return_zone: ShopShelfDropZone
 
 
 func _ready() -> void:
@@ -15,10 +16,16 @@ func _ready() -> void:
 	_refresh()
 
 
-func setup(item: ItemDefinition, stock: int, target_cell_size: float) -> void:
+func setup(
+	item: ItemDefinition,
+	stock: int,
+	target_cell_size: float,
+	shop_return_zone: ShopShelfDropZone = null
+) -> void:
 	definition = item
 	available_count = stock
 	drag_cell_size = target_cell_size
+	return_zone = shop_return_zone
 	if is_node_ready():
 		_refresh()
 
@@ -92,3 +99,12 @@ func _get_drag_data(_at_position: Vector2) -> Variant:
 		"grab_offset": grab_offset,
 		"preview": drag_preview,
 	}
+
+
+func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
+	return return_zone != null and return_zone.can_return_drag(data)
+
+
+func _drop_data(_at_position: Vector2, data: Variant) -> void:
+	if return_zone != null:
+		return_zone.request_return(data)

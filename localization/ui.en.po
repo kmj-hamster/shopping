@@ -231,6 +231,9 @@ msgstr "The register answers with a soft chime."
 msgid "shop.feedback.cancelled"
 msgstr "The things on the counter were put back."
 
+msgid "shop.feedback.returned"
+msgstr "This one slips back onto the shelf."
+
 msgid "shop.feedback.no_money"
 msgstr "You are a little short."
 

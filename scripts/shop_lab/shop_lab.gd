@@ -13,6 +13,7 @@ var money_label: Label
 var language_button: Button
 var next_day_button: Button
 var leave_button: Button
+var shelf_drop_zone: ShopShelfDropZone
 var shelf_list: VBoxContainer
 var owner_title: Label
 var owner_portrait: TextureRect
@@ -113,26 +114,31 @@ func _build_interface() -> void:
 	content.add_theme_constant_override("separation", 18)
 	column.add_child(content)
 
-	var shelf_frame := PanelContainer.new()
-	shelf_frame.name = "CounterShelf"
-	shelf_frame.custom_minimum_size = Vector2(380, 0)
-	shelf_frame.add_theme_stylebox_override(
+	shelf_drop_zone = ShopShelfDropZone.new()
+	shelf_drop_zone.name = "CounterShelf"
+	shelf_drop_zone.setup(transaction)
+	shelf_drop_zone.pending_purchase_return_requested.connect(_on_pending_purchase_return_requested)
+	shelf_drop_zone.custom_minimum_size = Vector2(380, 0)
+	shelf_drop_zone.add_theme_stylebox_override(
 		"panel", UiPalette.panel_style(Color("081b21", 0.92), Color("41696c", 0.82))
 	)
-	content.add_child(shelf_frame)
+	content.add_child(shelf_drop_zone)
 	var shelf_column := VBoxContainer.new()
+	shelf_column.mouse_filter = Control.MOUSE_FILTER_PASS
 	shelf_column.add_theme_constant_override("separation", 8)
-	shelf_frame.add_child(shelf_column)
+	shelf_drop_zone.add_child(shelf_column)
 	var shelf_heading := Label.new()
 	shelf_heading.name = "ShelfHeading"
 	shelf_heading.add_theme_font_size_override("font_size", 17)
 	shelf_heading.add_theme_color_override("font_color", Color("b8ceca"))
 	shelf_column.add_child(shelf_heading)
 	var shelf_scroll := ScrollContainer.new()
+	shelf_scroll.mouse_filter = Control.MOUSE_FILTER_PASS
 	shelf_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	shelf_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	shelf_column.add_child(shelf_scroll)
 	shelf_list = VBoxContainer.new()
+	shelf_list.mouse_filter = Control.MOUSE_FILTER_PASS
 	shelf_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	shelf_list.add_theme_constant_override("separation", 8)
 	shelf_scroll.add_child(shelf_list)
@@ -248,6 +254,7 @@ func _build_next_day_confirmation() -> void:
 
 func _refresh_all() -> void:
 	transaction = GameState.transaction_for_store(store_id)
+	shelf_drop_zone.setup(transaction)
 	_refresh_shelf()
 	_refresh_status()
 	_refresh_owner_art()
@@ -260,8 +267,20 @@ func _refresh_shelf() -> void:
 		if not GameState.should_show_item(definition):
 			continue
 		var card := ShopProductCard.new()
-		card.setup(definition, transaction.available_stock(definition.id), TaskPuzzlePopup.CELL_SIZE)
+		card.setup(
+			definition,
+			transaction.available_stock(definition.id),
+			TaskPuzzlePopup.CELL_SIZE,
+			shelf_drop_zone
+		)
 		shelf_list.add_child(card)
+
+
+func _on_pending_purchase_return_requested(piece: PuzzlePieceState) -> void:
+	if not transaction.remove_from_cart(piece):
+		return
+	GameState.notify_piece_layout_changed()
+	_show_feedback(TranslationServer.translate(&"shop.feedback.returned"))
 
 
 func _refresh_status() -> void:

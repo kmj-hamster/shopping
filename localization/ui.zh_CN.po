@@ -231,6 +231,9 @@ msgstr "收银机轻响了一声。"
 msgid "shop.feedback.cancelled"
 msgstr "柜台上的东西放回去了。"
 
+msgid "shop.feedback.returned"
+msgstr "这件东西回到了货架上。"
+
 msgid "shop.feedback.no_money"
 msgstr "钱还差一点。"
 

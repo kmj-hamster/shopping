@@ -23,6 +23,10 @@ func test_drag_preview_keeps_grab_offset_below_native_cursor_anchor() -> void:
 	var grab_offset := Vector2i.ZERO
 	preview.configure_for_drag(candidate, grab_offset, PuzzleBoard.DEFAULT_CELL_SIZE)
 	assert_eq(preview.size, Vector2.ZERO)
+	assert_eq(preview.drag_layer.layer, PieceDragPreview.DRAG_CANVAS_LAYER)
+	assert_gt(preview.drag_layer.layer, 20)
+	assert_true(preview.is_set_as_top_level())
+	assert_eq(preview.z_index, 4096)
 	assert_eq(preview.shape_preview.size, Vector2(112, 56))
 	assert_eq(preview.shape_preview.position, Vector2(-28, -28))
 

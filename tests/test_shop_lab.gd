@@ -34,6 +34,46 @@ func test_unplaced_purchase_is_rejected_then_placed_purchase_is_atomic() -> void
 	assert_eq(marble.ownership, PuzzlePieceState.Ownership.OWNED)
 
 
+func test_pending_purchase_can_be_dragged_from_grid_back_to_goods() -> void:
+	var shop := await _spawn_shop()
+	var marble := shop.transaction.add_to_cart(&"toy_marble").piece as PuzzlePieceState
+	_place_piece(marble, DemoCatalog.DAILY_TASK_ID, Vector2i.ZERO)
+	var data := {
+		"kind": &"puzzle_piece",
+		"source": &"board",
+		"candidate": marble.copy_for_drag(),
+		"original": marble,
+	}
+	assert_true(shop.shelf_drop_zone.can_return_drag(data))
+	assert_true(shop.shelf_drop_zone.request_return(data))
+	await get_tree().process_frame
+	assert_false(GameState.pieces.has(marble))
+	assert_eq(shop.transaction.cart_count(), 0)
+	assert_eq(shop.transaction.available_stock(&"toy_marble"), 1)
+	assert_eq(
+		shop.feedback_label.text,
+		TranslationServer.translate(&"shop.feedback.returned")
+	)
+
+
+func test_goods_reject_owned_piece_and_new_product_template() -> void:
+	var shop := await _spawn_shop()
+	var owned := PuzzlePieceState.new(90, DemoCatalog.item_by_id(&"toy_marble"))
+	GameState.pieces.append(owned)
+	assert_false(shop.shelf_drop_zone.can_return_drag({
+		"kind": &"puzzle_piece",
+		"source": &"board",
+		"candidate": owned.copy_for_drag(),
+		"original": owned,
+	}))
+	assert_false(shop.shelf_drop_zone.can_return_drag({
+		"kind": &"puzzle_piece",
+		"source": &"shop_template",
+		"candidate": shop.transaction.make_drag_candidate(&"toy_marble"),
+		"original": null,
+	}))
+
+
 func test_talking_unlocks_event_and_reveals_special_product() -> void:
 	var shop := await _spawn_shop()
 	assert_false(GameState.is_task_unlocked(&"teddy"))

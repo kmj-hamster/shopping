@@ -152,13 +152,21 @@ func cancel_cart() -> int:
 
 
 func remove_from_cart(piece: PuzzlePieceState) -> bool:
-	if piece == null or piece.ownership != PuzzlePieceState.Ownership.PENDING_PURCHASE:
-		return false
-	if not pieces.has(piece):
+	if not can_remove_from_cart(piece):
 		return false
 	pieces.erase(piece)
 	state_changed.emit()
 	return true
+
+
+func can_remove_from_cart(piece: PuzzlePieceState) -> bool:
+	return (
+		piece != null
+		and piece.ownership == PuzzlePieceState.Ownership.PENDING_PURCHASE
+		and piece.definition != null
+		and piece.definition.store_id == store_id
+		and pieces.has(piece)
+	)
 
 
 func _allocate_piece_uid() -> int:
