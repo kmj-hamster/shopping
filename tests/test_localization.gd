@@ -90,6 +90,8 @@ func test_sparse_shop_interface_is_translated() -> void:
 		&"daily.result.flower",
 		&"daily.result.fog",
 		&"daily.result.mixed",
+		&"task.story.synthesize",
+		&"task.story.ready",
 		&"shop.product.meta",
 		&"shop.cart.summary",
 		&"shop.feedback.ready",
@@ -108,6 +110,8 @@ func test_sparse_shop_interface_is_translated() -> void:
 		&"recycle.counter",
 		&"recycle.hint",
 		&"recycle.summary",
+		&"recycle.item.meta",
+		&"recycle.item.tooltip",
 		&"recycle.cancel",
 		&"recycle.checkout",
 		&"recycle.window",
@@ -126,8 +130,8 @@ func test_sparse_shop_interface_is_translated() -> void:
 		&"shop.next_day.cancel",
 		&"shop.leave_pending.title",
 		&"shop.leave_pending.body",
-		&"shop.leave_pending.back",
-		&"shop.leave_pending.leave",
+		&"shop.leave_pending.direct",
+		&"shop.leave_pending.checkout",
 	]
 	for locale in ["zh_CN", "en"]:
 		TranslationServer.set_locale(locale)
