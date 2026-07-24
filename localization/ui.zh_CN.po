@@ -114,6 +114,9 @@ msgstr "确认今晚"
 msgid "task.daily.not_ready"
 msgstr "还没有整理好。"
 
+msgid "task.checkout_first"
+msgstr "请先结账。"
+
 msgid "daily.result.lamp"
 msgstr "街角的灯一直醒着。"
 

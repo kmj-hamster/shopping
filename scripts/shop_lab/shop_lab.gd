@@ -113,16 +113,22 @@ func _build_interface() -> void:
 	content.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content.add_theme_constant_override("separation", 18)
 	column.add_child(content)
+	var goods_column := VBoxContainer.new()
+	goods_column.name = "GoodsColumn"
+	goods_column.custom_minimum_size = Vector2(380, 0)
+	goods_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	goods_column.add_theme_constant_override("separation", 8)
+	content.add_child(goods_column)
 
 	shelf_drop_zone = ShopShelfDropZone.new()
 	shelf_drop_zone.name = "CounterShelf"
 	shelf_drop_zone.setup(transaction)
 	shelf_drop_zone.pending_purchase_return_requested.connect(_on_pending_purchase_return_requested)
-	shelf_drop_zone.custom_minimum_size = Vector2(380, 0)
+	shelf_drop_zone.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	shelf_drop_zone.add_theme_stylebox_override(
 		"panel", UiPalette.panel_style(Color("081b21", 0.92), Color("41696c", 0.82))
 	)
-	content.add_child(shelf_drop_zone)
+	goods_column.add_child(shelf_drop_zone)
 	var shelf_column := VBoxContainer.new()
 	shelf_column.mouse_filter = Control.MOUSE_FILTER_PASS
 	shelf_column.add_theme_constant_override("separation", 8)
@@ -142,6 +148,28 @@ func _build_interface() -> void:
 	shelf_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	shelf_list.add_theme_constant_override("separation", 8)
 	shelf_scroll.add_child(shelf_list)
+
+	var cart_frame := PanelContainer.new()
+	cart_frame.name = "CheckoutDock"
+	cart_frame.add_theme_stylebox_override(
+		"panel", UiPalette.panel_style(Color("0b2227", 0.94), Color("557d76", 0.88))
+	)
+	goods_column.add_child(cart_frame)
+	var cart_row := HBoxContainer.new()
+	cart_row.add_theme_constant_override("separation", 8)
+	cart_frame.add_child(cart_row)
+	cart_label = Label.new()
+	cart_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cart_label.add_theme_font_size_override("font_size", 15)
+	cart_row.add_child(cart_label)
+	cancel_button = Button.new()
+	cancel_button.custom_minimum_size = Vector2(68, 38)
+	cancel_button.pressed.connect(_on_cancel_pressed)
+	cart_row.add_child(cancel_button)
+	checkout_button = Button.new()
+	checkout_button.custom_minimum_size = Vector2(92, 38)
+	checkout_button.pressed.connect(_on_checkout_pressed)
+	cart_row.add_child(checkout_button)
 
 	var owner_frame := PanelContainer.new()
 	owner_frame.name = "OwnerSide"
@@ -180,31 +208,11 @@ func _build_interface() -> void:
 	feedback_label.custom_minimum_size = Vector2(0, 42)
 	feedback_label.add_theme_color_override("font_color", Color("91aaa9"))
 	owner_column.add_child(feedback_label)
-
-	var cart_frame := PanelContainer.new()
-	cart_frame.add_theme_stylebox_override(
-		"panel", UiPalette.panel_style(Color("0b2227", 0.94), Color("557d76", 0.88))
-	)
-	column.add_child(cart_frame)
-	var cart_row := HBoxContainer.new()
-	cart_row.add_theme_constant_override("separation", 10)
-	cart_frame.add_child(cart_row)
-	cart_label = Label.new()
-	cart_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	cart_label.add_theme_font_size_override("font_size", 18)
-	cart_row.add_child(cart_label)
 	talk_button = Button.new()
-	talk_button.custom_minimum_size = Vector2(84, 38)
+	talk_button.custom_minimum_size = Vector2(120, 38)
+	talk_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	talk_button.pressed.connect(_on_talk_pressed)
-	cart_row.add_child(talk_button)
-	cancel_button = Button.new()
-	cancel_button.custom_minimum_size = Vector2(84, 38)
-	cancel_button.pressed.connect(_on_cancel_pressed)
-	cart_row.add_child(cancel_button)
-	checkout_button = Button.new()
-	checkout_button.custom_minimum_size = Vector2(108, 38)
-	checkout_button.pressed.connect(_on_checkout_pressed)
-	cart_row.add_child(checkout_button)
+	owner_column.add_child(talk_button)
 
 	_build_next_day_confirmation()
 
@@ -378,7 +386,11 @@ func _on_talk_pressed() -> void:
 		)
 		event_completed.emit(task_id)
 	else:
-		_show_feedback(TranslationServer.translate(&"shop.feedback.not_ready"))
+		_show_feedback(TranslationServer.translate(
+			&"task.checkout_first"
+			if result.reason == GameState.RESULT_PENDING_PURCHASE
+			else &"shop.feedback.not_ready"
+		))
 	_queue_refresh()
 
 

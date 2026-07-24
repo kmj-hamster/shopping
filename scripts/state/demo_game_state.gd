@@ -151,6 +151,8 @@ func submit_daily_goal() -> Dictionary:
 	var evaluation := PuzzleRules.evaluate(daily_task(), pieces)
 	if not evaluation.is_complete:
 		return {"ok": false, "reason": RESULT_DAILY_INCOMPLETE, "evaluation": evaluation}
+	if has_pending_purchases(DemoCatalog.DAILY_TASK_ID):
+		return {"ok": false, "reason": RESULT_PENDING_PURCHASE, "evaluation": evaluation}
 	var result_key := PuzzleRules.dominant_attribute_result_key(evaluation.attribute_totals)
 	daily_goal.mark_submitted(result_key, evaluation.attribute_totals)
 	state_changed.emit()
@@ -197,9 +199,12 @@ func has_organizer_pieces(task_id: StringName = &"") -> bool:
 	return false
 
 
-func has_pending_purchases() -> bool:
+func has_pending_purchases(task_id: StringName = &"") -> bool:
 	return pieces.any(func(piece: PuzzlePieceState) -> bool:
-		return piece.ownership == PuzzlePieceState.Ownership.PENDING_PURCHASE
+		return (
+			piece.ownership == PuzzlePieceState.Ownership.PENDING_PURCHASE
+			and (task_id.is_empty() or piece.task_id == task_id)
+		)
 	)
 
 
@@ -236,6 +241,8 @@ func submit_task(task_id: StringName) -> Dictionary:
 	var evaluation := PuzzleRules.evaluate(task, pieces)
 	if not evaluation.is_complete:
 		return {"ok": false, "reason": &"incomplete", "evaluation": evaluation}
+	if has_pending_purchases(task_id):
+		return {"ok": false, "reason": RESULT_PENDING_PURCHASE, "evaluation": evaluation}
 
 	var consumed: Array[PuzzlePieceState] = []
 	for piece in pieces:

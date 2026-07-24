@@ -81,6 +81,7 @@ func test_sparse_shop_interface_is_translated() -> void:
 		&"task.organizer.title",
 		&"task.organizer.must_empty",
 		&"task.daily.submit",
+		&"task.checkout_first",
 		&"daily.result.lamp",
 		&"daily.result.mirror",
 		&"daily.result.flower",

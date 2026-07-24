@@ -114,6 +114,9 @@ msgstr "Keep This Night"
 msgid "task.daily.not_ready"
 msgstr "It is not settled yet."
 
+msgid "task.checkout_first"
+msgstr "Checkout first."
+
 msgid "daily.result.lamp"
 msgstr "The street-corner light stays awake."
 

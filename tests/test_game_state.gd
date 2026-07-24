@@ -80,6 +80,18 @@ func test_daily_goal_must_be_submitted_before_advance_and_is_consumed_afterward(
 	assert_eq(GameState.daily_goal.template_id, &"daily_tue")
 
 
+func test_complete_daily_goal_with_unpaid_piece_must_checkout_before_submission() -> void:
+	_fill_daily_goal(&"book_period")
+	var unpaid := GameState.pieces[0] as PuzzlePieceState
+	unpaid.ownership = PuzzlePieceState.Ownership.PENDING_PURCHASE
+	var blocked := GameState.submit_daily_goal()
+	assert_false(blocked.ok)
+	assert_eq(blocked.reason, GameState.RESULT_PENDING_PURCHASE)
+	assert_false(GameState.daily_goal.submitted)
+	unpaid.ownership = PuzzlePieceState.Ownership.OWNED
+	assert_true(GameState.submit_daily_goal().ok)
+
+
 func test_organizer_and_pending_purchase_each_block_advance_day() -> void:
 	_fill_daily_goal(&"book_period")
 	assert_true(GameState.submit_daily_goal().ok)
@@ -159,6 +171,18 @@ func test_incomplete_event_does_not_consume_or_advance_world() -> void:
 	assert_eq(result.reason, &"incomplete")
 	assert_eq(GameState.pieces, [special])
 	assert_eq(GameState.world_stage, 0)
+
+
+func test_complete_story_task_with_unpaid_piece_is_not_consumed() -> void:
+	GameState.unlocked_tasks[&"teddy"] = true
+	_fill_teddy_with_shop_solution()
+	var unpaid := GameState.pieces[0] as PuzzlePieceState
+	unpaid.ownership = PuzzlePieceState.Ownership.PENDING_PURCHASE
+	var result := GameState.submit_task(&"teddy")
+	assert_false(result.ok)
+	assert_eq(result.reason, GameState.RESULT_PENDING_PURCHASE)
+	assert_false(GameState.is_task_completed(&"teddy"))
+	assert_false(GameState.pieces.is_empty())
 
 
 func test_completed_event_consumes_only_its_own_board() -> void:

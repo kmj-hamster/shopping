@@ -22,6 +22,8 @@ var organizer_board: PuzzleBoard
 var puzzle_board: PuzzleBoard
 var status_label: Label
 var result_label: Label
+var checkout_notice: PanelContainer
+var checkout_notice_label: Label
 var submit_button: Button
 var close_button: Button
 var header: HBoxContainer
@@ -81,6 +83,8 @@ func refresh() -> void:
 		submit_button.visible = false
 		result_label.visible = true
 		result_label.text = TranslationServer.translate(&"task.popup.owner_submit")
+	if not GameState.has_pending_purchases(task_id):
+		checkout_notice.visible = false
 	queue_redraw()
 
 
@@ -176,6 +180,17 @@ func _build_interface() -> void:
 	result_label.custom_minimum_size = Vector2(0, 38)
 	result_label.add_theme_color_override("font_color", Color("d8bd7b"))
 	column.add_child(result_label)
+	checkout_notice = PanelContainer.new()
+	checkout_notice.name = "CheckoutNotice"
+	checkout_notice.visible = false
+	checkout_notice.add_theme_stylebox_override(
+		"panel", UiPalette.panel_style(Color("24170f", 0.98), Color("d7a15d", 0.94))
+	)
+	column.add_child(checkout_notice)
+	checkout_notice_label = Label.new()
+	checkout_notice_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	checkout_notice_label.add_theme_color_override("font_color", Color("f0c982"))
+	checkout_notice.add_child(checkout_notice_label)
 	submit_button = Button.new()
 	submit_button.custom_minimum_size = Vector2(120, 36)
 	submit_button.text = TranslationServer.translate(&"task.daily.submit")
@@ -219,7 +234,15 @@ func _on_board_changed() -> void:
 func _on_submit_pressed() -> void:
 	var result := GameState.submit_daily_goal()
 	if not result.ok:
-		interaction_message.emit(TranslationServer.translate(&"task.daily.not_ready"))
+		var message := TranslationServer.translate(
+			&"task.checkout_first"
+			if result.reason == GameState.RESULT_PENDING_PURCHASE
+			else &"task.daily.not_ready"
+		)
+		if result.reason == GameState.RESULT_PENDING_PURCHASE:
+			checkout_notice_label.text = message
+			checkout_notice.visible = true
+		interaction_message.emit(message)
 	refresh()
 
 

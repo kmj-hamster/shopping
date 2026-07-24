@@ -91,6 +91,28 @@ func test_nonempty_organizer_blocks_popup_close_and_checkout() -> void:
 	assert_eq(transaction.checkout().reason, ShopTransaction.RESULT_ORGANIZER_NOT_EMPTY)
 
 
+func test_daily_submit_shows_checkout_notice_when_complete_grid_contains_unpaid_piece() -> void:
+	var task := GameState.daily_task()
+	var definition := DemoCatalog.item_by_id(&"toy_marble")
+	for index in range(task.mask_cells.size()):
+		var piece := PuzzlePieceState.new(index + 1, definition)
+		piece.ownership = PuzzlePieceState.Ownership.PENDING_PURCHASE
+		_place_piece(piece, DemoCatalog.DAILY_TASK_ID, task.mask_cells[index])
+		GameState.pieces.append(piece)
+	var popup := TaskPuzzlePopup.new()
+	add_child_autoqfree(popup)
+	popup.setup(DemoCatalog.DAILY_TASK_ID, &"shop")
+	await get_tree().process_frame
+	assert_true(popup.submit_button.visible)
+	popup._on_submit_pressed()
+	assert_false(GameState.daily_goal.submitted)
+	assert_true(popup.checkout_notice.visible)
+	assert_eq(
+		popup.checkout_notice_label.text,
+		TranslationServer.translate(&"task.checkout_first")
+	)
+
+
 func _drop_piece(
 	board: PuzzleBoard,
 	candidate: PuzzlePieceState,

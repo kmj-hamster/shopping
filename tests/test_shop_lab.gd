@@ -14,6 +14,12 @@ func test_shop_keeps_goods_left_owner_right_without_inventory_or_task_tabs() -> 
 	assert_null(shop.find_child("ShelfTabs", true, false))
 	assert_null(shop.find_child("TaskTabs", true, false))
 	assert_eq(shop.feedback_label.text, TranslationServer.translate(&"shop.feedback.ready"))
+	var checkout_dock := shop.find_child("CheckoutDock", true, false) as Control
+	var owner_side := shop.find_child("OwnerSide", true, false) as Control
+	assert_not_null(checkout_dock)
+	assert_true(checkout_dock.is_ancestor_of(shop.checkout_button))
+	assert_true(owner_side.is_ancestor_of(shop.talk_button))
+	assert_lt(shop.checkout_button.global_position.x, owner_side.global_position.x)
 
 
 func test_unplaced_purchase_is_rejected_then_placed_purchase_is_atomic() -> void:
