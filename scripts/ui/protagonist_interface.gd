@@ -78,16 +78,11 @@ func set_view_context(context: StringName) -> void:
 	view_context = context
 	if bag_button != null:
 		_position_bag_button()
-	var index := 0
 	for popup in task_popups.values():
 		var task_popup := popup as TaskPuzzlePopup
 		task_popup.view_context = context
 		if not task_popup.user_moved:
-			if task_popup.task_id == DemoCatalog.EMPTY_BAG_TASK_ID:
-				task_popup.position = task_popup.default_position()
-			else:
-				task_popup.position = task_popup.default_position() + Vector2(index * 26, index * 22)
-				index += 1
+			task_popup.position = task_popup.default_position()
 
 
 func refresh() -> void:
@@ -106,11 +101,15 @@ func open_task(task_id: StringName) -> TaskPuzzlePopup:
 		_bring_to_front(existing)
 		_refresh_empty_bag_toggles()
 		return existing
+	var replaced_popup_state := {}
+	if task_id != DemoCatalog.EMPTY_BAG_TASK_ID:
+		replaced_popup_state = _close_open_composition_popups()
 	var popup := TaskPuzzlePopup.new()
 	root.add_child(popup)
 	popup.setup(task_id, view_context)
-	if task_id != DemoCatalog.EMPTY_BAG_TASK_ID:
-		popup.position += Vector2(task_popups.size() * 26, task_popups.size() * 22)
+	if not replaced_popup_state.is_empty():
+		popup.position = replaced_popup_state.position
+		popup.user_moved = replaced_popup_state.user_moved
 	popup.close_requested.connect(_on_task_close_requested)
 	popup.focus_requested.connect(_bring_to_front)
 	popup.interaction_message.connect(_show_feedback)
@@ -119,6 +118,24 @@ func open_task(task_id: StringName) -> TaskPuzzlePopup:
 	_bring_to_front(popup)
 	_refresh_empty_bag_toggles()
 	return popup
+
+
+func _close_open_composition_popups() -> Dictionary:
+	var replaced_popup_state := {}
+	for open_task_id in task_popups.keys():
+		if open_task_id == DemoCatalog.EMPTY_BAG_TASK_ID:
+			continue
+		var open_popup := task_popups.get(open_task_id) as TaskPuzzlePopup
+		task_popups.erase(open_task_id)
+		if open_popup == null or not is_instance_valid(open_popup):
+			continue
+		if replaced_popup_state.is_empty():
+			replaced_popup_state = {
+				"position": open_popup.position,
+				"user_moved": open_popup.user_moved,
+			}
+		open_popup.queue_free()
+	return replaced_popup_state
 
 
 func _build_interface() -> void:

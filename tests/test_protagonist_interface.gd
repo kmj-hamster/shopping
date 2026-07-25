@@ -5,7 +5,7 @@ func before_each() -> void:
 	GameState.reset_demo()
 
 
-func test_bag_panel_opens_daily_card_and_multiple_draggable_task_popups() -> void:
+func test_bag_panel_keeps_only_one_draggable_composition_popup() -> void:
 	GameState.unlocked_tasks[&"teddy"] = true
 	var interface := ProtagonistInterface.new()
 	add_child_autoqfree(interface)
@@ -16,16 +16,19 @@ func test_bag_panel_opens_daily_card_and_multiple_draggable_task_popups() -> voi
 	assert_has(interface.card_buttons, DemoCatalog.DAILY_TASK_ID)
 	assert_has(interface.card_buttons, &"teddy")
 	var daily := interface.open_task(DemoCatalog.DAILY_TASK_ID)
+	daily.position = Vector2(612, 94)
+	daily.user_moved = true
 	var teddy := interface.open_task(&"teddy")
 	await get_tree().process_frame
-	assert_eq(interface.task_popups.size(), 2)
-	assert_eq(daily.task_id, DemoCatalog.DAILY_TASK_ID)
+	assert_eq(interface.task_popups.size(), 1)
+	assert_false(interface.task_popups.has(DemoCatalog.DAILY_TASK_ID))
 	assert_eq(teddy.task_id, &"teddy")
-	assert_ne(daily.position, teddy.position)
+	assert_eq(teddy.position, Vector2(612, 94))
+	assert_true(teddy.user_moved)
 	assert_eq(interface.bag_button.size, Vector2(168, 168))
 	assert_eq(interface.bag_button.get_global_rect().end.y, get_viewport().get_visible_rect().end.y)
 	assert_lt(interface.bag_button.z_index, interface.protagonist_popup.z_index)
-	assert_lt(interface.bag_button.z_index, daily.z_index)
+	assert_lt(interface.bag_button.z_index, teddy.z_index)
 
 
 func test_empty_bag_is_a_shared_eight_by_eight_popup() -> void:
@@ -38,7 +41,7 @@ func test_empty_bag_is_a_shared_eight_by_eight_popup() -> void:
 	assert_false(popup.empty_bag_toggle_button.visible)
 
 
-func test_task_card_toggles_its_grid_popup_without_closing_other_grids() -> void:
+func test_task_card_toggles_current_grid_and_replaces_other_composition_grid() -> void:
 	GameState.unlocked_tasks[&"teddy"] = true
 	var interface := ProtagonistInterface.new()
 	add_child_autoqfree(interface)
@@ -47,16 +50,33 @@ func test_task_card_toggles_its_grid_popup_without_closing_other_grids() -> void
 	var teddy_card := interface.card_buttons[&"teddy"] as Button
 	daily_card.pressed.emit()
 	teddy_card.pressed.emit()
-	assert_has(interface.task_popups, DemoCatalog.DAILY_TASK_ID)
+	assert_false(interface.task_popups.has(DemoCatalog.DAILY_TASK_ID))
 	assert_has(interface.task_popups, &"teddy")
+	assert_eq(interface.task_popups.size(), 1)
+
+	daily_card.pressed.emit()
+	assert_has(interface.task_popups, DemoCatalog.DAILY_TASK_ID)
+	assert_false(interface.task_popups.has(&"teddy"))
+	assert_eq(interface.task_popups.size(), 1)
 
 	daily_card.pressed.emit()
 	assert_false(interface.task_popups.has(DemoCatalog.DAILY_TASK_ID))
-	assert_has(interface.task_popups, &"teddy")
+	assert_true(interface.task_popups.is_empty())
 
-	daily_card.pressed.emit()
-	assert_has(interface.task_popups, DemoCatalog.DAILY_TASK_ID)
-	assert_has(interface.task_popups, &"teddy")
+
+func test_empty_bag_stays_open_when_composition_popup_is_replaced() -> void:
+	GameState.unlocked_tasks[&"teddy"] = true
+	var interface := ProtagonistInterface.new()
+	add_child_autoqfree(interface)
+	await get_tree().process_frame
+	interface.open_task(DemoCatalog.DAILY_TASK_ID)
+	var empty_bag := interface.open_task(DemoCatalog.EMPTY_BAG_TASK_ID)
+	var teddy := interface.open_task(&"teddy")
+	await get_tree().process_frame
+	assert_eq(interface.task_popups.size(), 2)
+	assert_false(interface.task_popups.has(DemoCatalog.DAILY_TASK_ID))
+	assert_eq(interface.task_popups[DemoCatalog.EMPTY_BAG_TASK_ID], empty_bag)
+	assert_eq(interface.task_popups[&"teddy"], teddy)
 
 
 func test_task_popup_icon_opens_and_closes_shared_empty_bag() -> void:
@@ -96,10 +116,13 @@ func test_automatic_cleanup_restores_open_popups_and_exact_positions_from_bag() 
 	interface._on_bag_pressed()
 	interface.protagonist_popup.position = Vector2(702, 244)
 	var daily := interface.open_task(DemoCatalog.DAILY_TASK_ID)
-	var teddy := interface.open_task(&"teddy")
+	var empty_bag := interface.open_task(DemoCatalog.EMPTY_BAG_TASK_ID)
+	empty_bag.position = Vector2(260, 96)
+	empty_bag.user_moved = true
 	daily.position = Vector2(618, 96)
-	teddy.position = Vector2(770, 172)
 	daily.user_moved = true
+	var teddy := interface.open_task(&"teddy")
+	teddy.position = Vector2(770, 172)
 	teddy.user_moved = true
 	interface.close_all_popups(true)
 	await get_tree().process_frame
@@ -114,9 +137,11 @@ func test_automatic_cleanup_restores_open_popups_and_exact_positions_from_bag() 
 	assert_false(interface.restore_pending)
 	assert_true(interface.protagonist_popup.visible)
 	assert_eq(interface.protagonist_popup.position, Vector2(702, 244))
+	assert_eq(interface.task_popups.size(), 2)
+	assert_false(interface.task_popups.has(DemoCatalog.DAILY_TASK_ID))
 	assert_eq(
-		(interface.task_popups[DemoCatalog.DAILY_TASK_ID] as TaskPuzzlePopup).position,
-		Vector2(618, 96)
+		(interface.task_popups[DemoCatalog.EMPTY_BAG_TASK_ID] as TaskPuzzlePopup).position,
+		Vector2(260, 96)
 	)
 	assert_eq(
 		(interface.task_popups[&"teddy"] as TaskPuzzlePopup).position,
@@ -131,9 +156,14 @@ func test_bag_button_hides_and_restores_the_entire_popup_group() -> void:
 	await get_tree().process_frame
 	interface._on_bag_pressed()
 	var daily := interface.open_task(DemoCatalog.DAILY_TASK_ID)
-	var teddy := interface.open_task(&"teddy")
+	var empty_bag := interface.open_task(DemoCatalog.EMPTY_BAG_TASK_ID)
+	empty_bag.position = Vector2(238, 82)
+	empty_bag.user_moved = true
 	daily.position = Vector2(580, 82)
+	daily.user_moved = true
+	var teddy := interface.open_task(&"teddy")
 	teddy.position = Vector2(748, 164)
+	teddy.user_moved = true
 
 	interface._on_bag_pressed()
 	await get_tree().process_frame
@@ -145,9 +175,10 @@ func test_bag_button_hides_and_restores_the_entire_popup_group() -> void:
 	assert_false(interface.restore_pending)
 	assert_true(interface.protagonist_popup.visible)
 	assert_eq(interface.task_popups.size(), 2)
+	assert_false(interface.task_popups.has(DemoCatalog.DAILY_TASK_ID))
 	assert_eq(
-		(interface.task_popups[DemoCatalog.DAILY_TASK_ID] as TaskPuzzlePopup).position,
-		Vector2(580, 82)
+		(interface.task_popups[DemoCatalog.EMPTY_BAG_TASK_ID] as TaskPuzzlePopup).position,
+		Vector2(238, 82)
 	)
 	assert_eq(
 		(interface.task_popups[&"teddy"] as TaskPuzzlePopup).position,
