@@ -2,3 +2,10 @@
 .godot/
 /android/
 /test-reports/
+/builds/
+
+# macOS Finder metadata
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
