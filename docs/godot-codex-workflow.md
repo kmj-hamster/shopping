@@ -17,6 +17,10 @@
 - `tools/check-mcp.ps1`：不依赖 Codex 工具发现的 MCP 协议级健康检查。
 - `tests/`：GUT 单元、场景和环境测试。
 - `test-reports/`：运行产物，不提交 Git。
+- `tools/check.sh`：macOS 上的版本、导入和 GUT 检查入口。
+- `tools/export-macos.sh`：只在 Mac 上执行的通用架构 ZIP 导出与校验。
+- `ARTIST_AI.md`：给美术侧 AI 助手的范围和安全约束。
+- `docs/cross-platform-art-collaboration.md`：Windows 程序与 Mac 美术的协作流程。
 
 ## 迁移到另一个项目
 

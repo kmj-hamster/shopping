@@ -7,6 +7,7 @@
 - Keep the game strictly 2D unless a task explicitly calls for 3D.
 - Every player-facing screen must support live Chinese (`zh_CN`) and English (`en`) switching. Use translation keys and `TranslationServer`; do not hardcode display text in gameplay or UI scripts.
 - Preserve user changes and inspect `git status` before editing. Do not discard unrelated work.
+- For art collaboration or work performed on macOS, read `ARTIST_AI.md` and `docs/cross-platform-art-collaboration.md` before editing assets or scenes.
 
 ## Authoring policy
 
@@ -34,6 +35,7 @@
 5. For runtime changes, launch the relevant scene, inspect the runtime tree, capture a game screenshot, and read editor/game logs before declaring success.
 6. Stop the test game after automated runtime checks.
 7. Review `git diff --check`, `git diff`, and `git status` before handoff.
+8. On macOS, use `tools/check.sh`; use `tools/export-macos.sh` only on a clean, tested commit when a playable build is requested.
 
 ## Efficiency guardrails
 
