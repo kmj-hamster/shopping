@@ -545,3 +545,211 @@ msgstr "吃剩的鱼骨"
 
 msgid "item.special_tape"
 msgstr "反复倒带的磁带"
+
+# Slot-card prototype content
+msgid "slot.item.book_bedtime_clipping.name"
+msgstr "睡前故事剪报"
+
+msgid "slot.item.book_aquarium_issue.name"
+msgstr "水族馆停刊号"
+
+msgid "slot.item.record_lullaby_cassette.name"
+msgstr "二手摇篮曲磁带"
+
+msgid "slot.item.record_fluorescent_single.name"
+msgstr "荧光灯下的舞曲"
+
+msgid "slot.item.flower_sunflower.name"
+msgstr "午夜向日葵"
+
+msgid "slot.item.flower_lavender_sachet.name"
+msgstr "薰衣草枕袋"
+
+msgid "slot.item.flower_night_jasmine.name"
+msgstr "夜来香"
+
+msgid "slot.item.toy_cloth_scraps.name"
+msgstr "旧绒布边角"
+
+msgid "slot.item.toy_glass_marble.name"
+msgstr "玻璃弹珠"
+
+msgid "slot.item.toy_windup_moth.name"
+msgstr "发条飞蛾"
+
+msgid "slot.item.fast_warm_milk.name"
+msgstr "纸杯热牛奶"
+
+msgid "slot.item.fast_hash_brown.name"
+msgstr "自动售货机薯饼"
+
+msgid "slot.item.craft_childhood_teddy.name"
+msgstr "童年的泰迪熊"
+
+msgid "slot.item.craft_comfort_bear.name"
+msgstr "婴儿安抚熊"
+
+msgid "slot.item.craft_clear_receiver.name"
+msgstr "清夜收音机"
+
+msgid "slot.item.craft_tide_receiver.name"
+msgstr "潮汐收音机"
+
+msgid "slot.wish.hungry.name"
+msgstr "饿了"
+
+msgid "slot.wish.bedside.name"
+msgstr "床头留一点东西"
+
+msgid "slot.wish.stay_awake.name"
+msgstr "今晚还不想睡"
+
+msgid "slot.wish.remember.name"
+msgstr "想起一点旧事"
+
+msgid "slot.wish.settle_down.name"
+msgstr "需要安静下来"
+
+msgid "slot.wish.rain_close.name"
+msgstr "雨声太近"
+
+msgid "slot.recipe.teddy.name"
+msgstr "泰迪熊"
+
+msgid "slot.recipe.teddy.slot.soft_filling"
+msgstr "柔软的填充物"
+
+msgid "slot.recipe.teddy.slot.toy_shape"
+msgstr "像玩具的东西"
+
+msgid "slot.recipe.teddy.slot.calm"
+msgstr "让它安静下来"
+
+msgid "slot.recipe.teddy.preview.childhood"
+msgstr "它认识你忘掉的那间卧室。"
+
+msgid "slot.recipe.teddy.preview.comfort"
+msgstr "它不会问你为什么还醒着。"
+
+msgid "slot.recipe.night_radio.name"
+msgstr "随身夜话收音机"
+
+msgid "slot.recipe.night_radio.slot.sound"
+msgstr "一段声音"
+
+msgid "slot.recipe.night_radio.slot.shell"
+msgstr "一个外壳"
+
+msgid "slot.recipe.night_radio.slot.tuning"
+msgstr "一种调谐方式"
+
+msgid "slot.recipe.night_radio.preview.clear"
+msgstr "频率稳定，像一条不肯睡的街。"
+
+msgid "slot.recipe.night_radio.preview.tide"
+msgstr "旋钮越过空白处时，有潮声回答。"
+
+msgid "slot.wish.hungry.result.fast_warm_milk"
+msgstr "牛奶的薄膜在杯沿冷却。你决定这也算一顿夜宵。"
+
+msgid "slot.wish.hungry.result.fast_hash_brown"
+msgstr "咬下去的声音，比广播里的整点报时更清楚。"
+
+msgid "slot.wish.bedside.result.flower_sunflower"
+msgstr "花盘对着天花板的灯，像认错了太阳。"
+
+msgid "slot.wish.bedside.result.flower_lavender_sachet"
+msgstr "枕边多了一小块紫色的、可以呼吸的安静。"
+
+msgid "slot.wish.bedside.result.flower_night_jasmine"
+msgstr "熄灯后，香气才慢慢显出它的轮廓。"
+
+msgid "slot.wish.stay_awake.result.book_bedtime_clipping"
+msgstr "白纸上的旧日期，让你比咖啡更清醒。"
+
+msgid "slot.wish.stay_awake.result.book_aquarium_issue"
+msgstr "失真的蓝色照片贴在墙上，鱼群继续向前游。"
+
+msgid "slot.wish.stay_awake.result.record_fluorescent_single"
+msgstr "节拍把最后一班电车留在了身体里。"
+
+msgid "slot.wish.stay_awake.result.flower_sunflower"
+msgstr "它坚持朝着灯。你暂时也决定这样做。"
+
+msgid "slot.wish.stay_awake.result.flower_night_jasmine"
+msgstr "香气让房间显得比实际更深，睡意找不到门。"
+
+msgid "slot.wish.stay_awake.result.toy_glass_marble"
+msgstr "弹珠滚过桌面，房间里短暂地有了第二个月亮。"
+
+msgid "slot.wish.stay_awake.result.toy_windup_moth"
+msgstr "它绕台灯走了一圈又一圈，没有问现在几点。"
+
+msgid "slot.wish.stay_awake.result.craft_childhood_teddy"
+msgstr "它记得你曾经怎样假装不困。"
+
+msgid "slot.wish.stay_awake.result.craft_clear_receiver"
+msgstr "每一个频段都醒着，因此你也醒着。"
+
+msgid "slot.wish.stay_awake.result.craft_tide_receiver"
+msgstr "空白频段里有潮声。你等着它退去。"
+
+msgid "slot.wish.remember.result.book_bedtime_clipping"
+msgstr "故事没有结尾，背面的购物日期倒是还在。"
+
+msgid "slot.wish.remember.result.record_lullaby_cassette"
+msgstr "磁带里有人轻轻咳了一声。那不像录音的一部分。"
+
+msgid "slot.wish.remember.result.record_fluorescent_single"
+msgstr "你想起一间已经改名的舞厅，以及并未去过的晚上。"
+
+msgid "slot.wish.remember.result.toy_glass_marble"
+msgstr "光被困在玻璃里，像一段没有出口的课间。"
+
+msgid "slot.wish.remember.result.toy_windup_moth"
+msgstr "齿轮的声音像小时候拆坏过、又偷偷装回去的玩具。"
+
+msgid "slot.wish.remember.result.craft_childhood_teddy"
+msgstr "它的磨损与你记忆中的位置完全相同。"
+
+msgid "slot.wish.remember.result.craft_comfort_bear"
+msgstr "你不记得拥有过它，但身体先认出了抱法。"
+
+msgid "slot.wish.remember.result.craft_clear_receiver"
+msgstr "一个旧台呼出了这座城市已经废止的区号。"
+
+msgid "slot.wish.remember.result.craft_tide_receiver"
+msgstr "海浪替你记住了某件你从未告诉任何人的事。"
+
+msgid "slot.wish.settle_down.result.record_lullaby_cassette"
+msgstr "转速稍慢，歌声也因此愿意多停留一会儿。"
+
+msgid "slot.wish.settle_down.result.flower_lavender_sachet"
+msgstr "你把今天折小，塞进紫色香气的缝隙里。"
+
+msgid "slot.wish.settle_down.result.flower_night_jasmine"
+msgstr "香气从窗台垂下来，替房间拉上另一层窗帘。"
+
+msgid "slot.wish.settle_down.result.fast_warm_milk"
+msgstr "杯子暖着手心，城市的噪声退到很远的地方。"
+
+msgid "slot.wish.settle_down.result.craft_comfort_bear"
+msgstr "它没有心跳，但你的呼吸慢慢跟上了它。"
+
+msgid "slot.wish.settle_down.result.craft_tide_receiver"
+msgstr "每一次杂音都像浪花碎掉，之后只剩下夜。"
+
+msgid "slot.wish.rain_close.result.flower_lavender_sachet"
+msgstr "雨还在下，但已经被隔在柔软的紫色之外。"
+
+msgid "slot.wish.rain_close.result.toy_cloth_scraps"
+msgstr "你把手埋进去，像在一件尚未完成的玩具里避雨。"
+
+msgid "slot.wish.rain_close.result.fast_warm_milk"
+msgstr "窗玻璃很冷，杯子很暖；今晚这已经足够。"
+
+msgid "slot.wish.rain_close.result.craft_childhood_teddy"
+msgstr "它坐在窗前替你看雨，姿势熟练得令人难过。"
+
+msgid "slot.wish.rain_close.result.craft_comfort_bear"
+msgstr "雨声被它蓬松的身体吸走，只剩很远的回响。"

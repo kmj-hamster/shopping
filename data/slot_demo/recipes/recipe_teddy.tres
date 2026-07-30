@@ -1,0 +1,64 @@
+[gd_resource type="Resource" script_class="SynthesisRecipeDefinition" load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://scripts/slot_domain/synthesis_recipe_definition.gd" id="1_recipe"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_slot_rule.gd" id="2_rule"]
+[ext_resource type="Script" path="res://scripts/slot_domain/slot_value_requirement.gd" id="3_value"]
+
+[sub_resource type="Resource" id="SoftValue"]
+script = ExtResource("3_value")
+mode = 0
+tags = Array[StringName]([&"soft"])
+minimum = 2
+
+[sub_resource type="Resource" id="SoftRule"]
+script = ExtResource("2_rule")
+id = &"soft_filling"
+display_name_key = &"slot.recipe.teddy.slot.soft_filling"
+required_all = Array[StringName]([&"soft"])
+allowed_any = Array[StringName]([&"mirror", &"pillow"])
+forbidden_any = Array[StringName]([&"lamp", &"candle"])
+value_requirements = Array[Resource]([SubResource("SoftValue")])
+
+[sub_resource type="Resource" id="ToyValue"]
+script = ExtResource("3_value")
+mode = 0
+tags = Array[StringName]([&"toy"])
+minimum = 1
+
+[sub_resource type="Resource" id="ToyRule"]
+script = ExtResource("2_rule")
+id = &"toy_shape"
+display_name_key = &"slot.recipe.teddy.slot.toy_shape"
+required_all = Array[StringName]([&"toy"])
+allowed_any = Array[StringName]([&"mirror", &"pillow"])
+forbidden_any = Array[StringName]([&"lamp", &"candle"])
+value_requirements = Array[Resource]([SubResource("ToyValue")])
+
+[sub_resource type="Resource" id="CalmValue"]
+script = ExtResource("3_value")
+mode = 0
+tags = Array[StringName]([&"relaxing"])
+minimum = 2
+
+[sub_resource type="Resource" id="CalmRule"]
+script = ExtResource("2_rule")
+id = &"calm"
+display_name_key = &"slot.recipe.teddy.slot.calm"
+required_all = Array[StringName]([&"relaxing"])
+allowed_any = Array[StringName]([&"mirror", &"pillow"])
+forbidden_any = Array[StringName]([&"lamp", &"candle"])
+value_requirements = Array[Resource]([SubResource("CalmValue")])
+
+[resource]
+script = ExtResource("1_recipe")
+id = &"recipe_teddy"
+display_name_key = &"slot.recipe.teddy.name"
+unlock_owner_id = &"balloon"
+unlock_level = 2
+duration_seconds = 2.5
+slot_rules = Array[Resource]([SubResource("SoftRule"), SubResource("ToyRule"), SubResource("CalmRule")])
+compared_aspects = Array[StringName]([&"mirror", &"pillow"])
+tie_winner = &"pillow"
+output_by_aspect = {&"mirror": &"craft_childhood_teddy", &"pillow": &"craft_comfort_bear"}
+preview_text_by_output = {&"craft_childhood_teddy": &"slot.recipe.teddy.preview.childhood", &"craft_comfort_bear": &"slot.recipe.teddy.preview.comfort"}
+first_reward_aspect_by_output = {&"craft_childhood_teddy": &"mirror", &"craft_comfort_bear": &"pillow"}

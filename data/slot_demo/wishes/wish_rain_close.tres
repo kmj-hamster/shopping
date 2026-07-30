@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="DailyWishDefinition" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/slot_domain/daily_wish_definition.gd" id="1_wish"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_slot_rule.gd" id="2_rule"]
+[ext_resource type="Script" path="res://scripts/slot_domain/slot_value_requirement.gd" id="3_value"]
+
+[sub_resource type="Resource" id="Value"]
+script = ExtResource("3_value")
+mode = 1
+tags = Array[StringName]([&"soft", &"warm", &"sweet"])
+minimum = 3
+
+[sub_resource type="Resource" id="Rule"]
+script = ExtResource("2_rule")
+id = &"rain_close"
+allowed_any = Array[StringName]([&"soft", &"warm", &"sweet"])
+forbidden_any = Array[StringName]([&"fragile"])
+value_requirements = Array[Resource]([SubResource("Value")])
+
+[resource]
+script = ExtResource("1_wish")
+id = &"wish_rain_close"
+display_name_key = &"slot.wish.rain_close.name"
+slot_rule = SubResource("Rule")
+result_text_keys = {&"craft_childhood_teddy": &"slot.wish.rain_close.result.craft_childhood_teddy", &"craft_comfort_bear": &"slot.wish.rain_close.result.craft_comfort_bear", &"fast_warm_milk": &"slot.wish.rain_close.result.fast_warm_milk", &"flower_lavender_sachet": &"slot.wish.rain_close.result.flower_lavender_sachet", &"toy_cloth_scraps": &"slot.wish.rain_close.result.toy_cloth_scraps"}

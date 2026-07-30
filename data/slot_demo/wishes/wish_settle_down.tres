@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="DailyWishDefinition" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/slot_domain/daily_wish_definition.gd" id="1_wish"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_slot_rule.gd" id="2_rule"]
+[ext_resource type="Script" path="res://scripts/slot_domain/slot_value_requirement.gd" id="3_value"]
+
+[sub_resource type="Resource" id="Value"]
+script = ExtResource("3_value")
+mode = 1
+tags = Array[StringName]([&"relaxing", &"sleep_aid"])
+minimum = 3
+
+[sub_resource type="Resource" id="Rule"]
+script = ExtResource("2_rule")
+id = &"settle_down"
+allowed_any = Array[StringName]([&"relaxing", &"sleep_aid"])
+forbidden_any = Array[StringName]([&"stimulating"])
+value_requirements = Array[Resource]([SubResource("Value")])
+
+[resource]
+script = ExtResource("1_wish")
+id = &"wish_settle_down"
+display_name_key = &"slot.wish.settle_down.name"
+slot_rule = SubResource("Rule")
+result_text_keys = {&"craft_comfort_bear": &"slot.wish.settle_down.result.craft_comfort_bear", &"craft_tide_receiver": &"slot.wish.settle_down.result.craft_tide_receiver", &"fast_warm_milk": &"slot.wish.settle_down.result.fast_warm_milk", &"flower_lavender_sachet": &"slot.wish.settle_down.result.flower_lavender_sachet", &"flower_night_jasmine": &"slot.wish.settle_down.result.flower_night_jasmine", &"record_lullaby_cassette": &"slot.wish.settle_down.result.record_lullaby_cassette"}

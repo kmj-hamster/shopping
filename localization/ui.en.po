@@ -545,3 +545,211 @@ msgstr "Leftover Fishbone"
 
 msgid "item.special_tape"
 msgstr "Endlessly Rewinding Tape"
+
+# Slot-card prototype content
+msgid "slot.item.book_bedtime_clipping.name"
+msgstr "Bedtime Story Clipping"
+
+msgid "slot.item.book_aquarium_issue.name"
+msgstr "Final Aquarium Issue"
+
+msgid "slot.item.record_lullaby_cassette.name"
+msgstr "Second-hand Lullaby Tape"
+
+msgid "slot.item.record_fluorescent_single.name"
+msgstr "Dance Single under Fluorescent Light"
+
+msgid "slot.item.flower_sunflower.name"
+msgstr "Midnight Sunflower"
+
+msgid "slot.item.flower_lavender_sachet.name"
+msgstr "Lavender Pillow Sachet"
+
+msgid "slot.item.flower_night_jasmine.name"
+msgstr "Night-blooming Jasmine"
+
+msgid "slot.item.toy_cloth_scraps.name"
+msgstr "Old Plush Offcuts"
+
+msgid "slot.item.toy_glass_marble.name"
+msgstr "Glass Marble"
+
+msgid "slot.item.toy_windup_moth.name"
+msgstr "Clockwork Moth"
+
+msgid "slot.item.fast_warm_milk.name"
+msgstr "Warm Milk in a Paper Cup"
+
+msgid "slot.item.fast_hash_brown.name"
+msgstr "Vending-machine Hash Brown"
+
+msgid "slot.item.craft_childhood_teddy.name"
+msgstr "Childhood Teddy Bear"
+
+msgid "slot.item.craft_comfort_bear.name"
+msgstr "Infant Comfort Bear"
+
+msgid "slot.item.craft_clear_receiver.name"
+msgstr "Clear-night Radio"
+
+msgid "slot.item.craft_tide_receiver.name"
+msgstr "Tidal Radio"
+
+msgid "slot.wish.hungry.name"
+msgstr "Something to Eat"
+
+msgid "slot.wish.bedside.name"
+msgstr "Something by the Bed"
+
+msgid "slot.wish.stay_awake.name"
+msgstr "Not Ready to Sleep"
+
+msgid "slot.wish.remember.name"
+msgstr "Remember Something"
+
+msgid "slot.wish.settle_down.name"
+msgstr "Settle Down"
+
+msgid "slot.wish.rain_close.name"
+msgstr "The Rain Is Too Close"
+
+msgid "slot.recipe.teddy.name"
+msgstr "Teddy Bear"
+
+msgid "slot.recipe.teddy.slot.soft_filling"
+msgstr "Something Soft Inside"
+
+msgid "slot.recipe.teddy.slot.toy_shape"
+msgstr "Something Toy-like"
+
+msgid "slot.recipe.teddy.slot.calm"
+msgstr "Something to Quiet It"
+
+msgid "slot.recipe.teddy.preview.childhood"
+msgstr "It knows the bedroom you forgot."
+
+msgid "slot.recipe.teddy.preview.comfort"
+msgstr "It will not ask why you are still awake."
+
+msgid "slot.recipe.night_radio.name"
+msgstr "Pocket Night-talk Radio"
+
+msgid "slot.recipe.night_radio.slot.sound"
+msgstr "A Piece of Sound"
+
+msgid "slot.recipe.night_radio.slot.shell"
+msgstr "A Casing"
+
+msgid "slot.recipe.night_radio.slot.tuning"
+msgstr "A Way to Tune It"
+
+msgid "slot.recipe.night_radio.preview.clear"
+msgstr "A steady frequency, like a street that refuses to sleep."
+
+msgid "slot.recipe.night_radio.preview.tide"
+msgstr "As the dial crosses the blank, the tide answers."
+
+msgid "slot.wish.hungry.result.fast_warm_milk"
+msgstr "A skin cools around the rim of the milk. You decide this counts as a midnight snack."
+
+msgid "slot.wish.hungry.result.fast_hash_brown"
+msgstr "The crunch is clearer than the radio announcing the hour."
+
+msgid "slot.wish.bedside.result.flower_sunflower"
+msgstr "The flower turns to the ceiling lamp, mistaking it for the sun."
+
+msgid "slot.wish.bedside.result.flower_lavender_sachet"
+msgstr "A small purple patch of breathing quiet settles beside the pillow."
+
+msgid "slot.wish.bedside.result.flower_night_jasmine"
+msgstr "Only after lights-out does the fragrance slowly find its shape."
+
+msgid "slot.wish.stay_awake.result.book_bedtime_clipping"
+msgstr "The old date on white paper wakes you more thoroughly than coffee."
+
+msgid "slot.wish.stay_awake.result.book_aquarium_issue"
+msgstr "Distorted blue photographs cover the wall. The fish keep swimming forward."
+
+msgid "slot.wish.stay_awake.result.record_fluorescent_single"
+msgstr "The beat leaves the last train running inside your body."
+
+msgid "slot.wish.stay_awake.result.flower_sunflower"
+msgstr "It keeps facing the light. For now, you decide to do the same."
+
+msgid "slot.wish.stay_awake.result.flower_night_jasmine"
+msgstr "Its fragrance makes the room deeper than it is. Sleep cannot find the door."
+
+msgid "slot.wish.stay_awake.result.toy_glass_marble"
+msgstr "The marble crosses the desk, and the room briefly gains a second moon."
+
+msgid "slot.wish.stay_awake.result.toy_windup_moth"
+msgstr "It circles the desk lamp again and again, never asking the time."
+
+msgid "slot.wish.stay_awake.result.craft_childhood_teddy"
+msgstr "It remembers how you used to pretend you were not tired."
+
+msgid "slot.wish.stay_awake.result.craft_clear_receiver"
+msgstr "Every frequency is awake, so you remain awake too."
+
+msgid "slot.wish.stay_awake.result.craft_tide_receiver"
+msgstr "There is surf in the empty band. You wait for it to recede."
+
+msgid "slot.wish.remember.result.book_bedtime_clipping"
+msgstr "The story has no ending. The shopping date on the back is still there."
+
+msgid "slot.wish.remember.result.record_lullaby_cassette"
+msgstr "Someone coughs softly on the tape. It does not sound like part of the recording."
+
+msgid "slot.wish.remember.result.record_fluorescent_single"
+msgstr "You remember a dance hall with a new name, and a night you never attended."
+
+msgid "slot.wish.remember.result.toy_glass_marble"
+msgstr "Light is trapped in the glass like a school recess with no way out."
+
+msgid "slot.wish.remember.result.toy_windup_moth"
+msgstr "Its gears sound like a childhood toy you broke, then secretly put back together."
+
+msgid "slot.wish.remember.result.craft_childhood_teddy"
+msgstr "Its worn patches are exactly where your memory left them."
+
+msgid "slot.wish.remember.result.craft_comfort_bear"
+msgstr "You do not remember owning it, but your body remembers how to hold it."
+
+msgid "slot.wish.remember.result.craft_clear_receiver"
+msgstr "An old station speaks this city's long-retired area code."
+
+msgid "slot.wish.remember.result.craft_tide_receiver"
+msgstr "The sea remembers something you never told anyone."
+
+msgid "slot.wish.settle_down.result.record_lullaby_cassette"
+msgstr "The tape runs a little slow, and the singer agrees to linger."
+
+msgid "slot.wish.settle_down.result.flower_lavender_sachet"
+msgstr "You fold the day small and tuck it into a seam of purple fragrance."
+
+msgid "slot.wish.settle_down.result.flower_night_jasmine"
+msgstr "Fragrance hangs from the sill, drawing another curtain across the room."
+
+msgid "slot.wish.settle_down.result.fast_warm_milk"
+msgstr "The cup warms your palms. The city's noise retreats a long way."
+
+msgid "slot.wish.settle_down.result.craft_comfort_bear"
+msgstr "It has no heartbeat, but your breathing slowly falls into step with it."
+
+msgid "slot.wish.settle_down.result.craft_tide_receiver"
+msgstr "Each burst of static breaks like foam. Afterward, only night remains."
+
+msgid "slot.wish.rain_close.result.flower_lavender_sachet"
+msgstr "The rain continues, but it is sealed beyond something soft and purple."
+
+msgid "slot.wish.rain_close.result.toy_cloth_scraps"
+msgstr "You bury your hands in them, sheltering inside a toy not yet finished."
+
+msgid "slot.wish.rain_close.result.fast_warm_milk"
+msgstr "The window is cold and the cup is warm. Tonight, that is enough."
+
+msgid "slot.wish.rain_close.result.craft_childhood_teddy"
+msgstr "It watches the rain for you, with a practiced posture that hurts to see."
+
+msgid "slot.wish.rain_close.result.craft_comfort_bear"
+msgstr "Its plush body absorbs the rain until only a distant echo remains."

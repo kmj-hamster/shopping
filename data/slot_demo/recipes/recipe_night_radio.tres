@@ -1,0 +1,60 @@
+[gd_resource type="Resource" script_class="SynthesisRecipeDefinition" load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://scripts/slot_domain/synthesis_recipe_definition.gd" id="1_recipe"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_slot_rule.gd" id="2_rule"]
+[ext_resource type="Script" path="res://scripts/slot_domain/slot_value_requirement.gd" id="3_value"]
+
+[sub_resource type="Resource" id="SoundValue"]
+script = ExtResource("3_value")
+mode = 0
+tags = Array[StringName]([&"music"])
+minimum = 3
+
+[sub_resource type="Resource" id="SoundRule"]
+script = ExtResource("2_rule")
+id = &"sound"
+display_name_key = &"slot.recipe.night_radio.slot.sound"
+required_all = Array[StringName]([&"music"])
+forbidden_any = Array[StringName]([&"food"])
+value_requirements = Array[Resource]([SubResource("SoundValue")])
+
+[sub_resource type="Resource" id="ShellValue"]
+script = ExtResource("3_value")
+mode = 1
+tags = Array[StringName]([&"toy", &"electric"])
+minimum = 2
+
+[sub_resource type="Resource" id="ShellRule"]
+script = ExtResource("2_rule")
+id = &"shell"
+display_name_key = &"slot.recipe.night_radio.slot.shell"
+allowed_any = Array[StringName]([&"toy", &"electric"])
+forbidden_any = Array[StringName]([&"food", &"plant"])
+value_requirements = Array[Resource]([SubResource("ShellValue")])
+
+[sub_resource type="Resource" id="TuningValue"]
+script = ExtResource("3_value")
+mode = 1
+tags = Array[StringName]([&"lamp", &"candle"])
+minimum = 2
+
+[sub_resource type="Resource" id="TuningRule"]
+script = ExtResource("2_rule")
+id = &"tuning"
+display_name_key = &"slot.recipe.night_radio.slot.tuning"
+allowed_any = Array[StringName]([&"lamp", &"candle"])
+forbidden_any = Array[StringName]([&"sleep_aid"])
+value_requirements = Array[Resource]([SubResource("TuningValue")])
+
+[resource]
+script = ExtResource("1_recipe")
+id = &"recipe_night_radio"
+display_name_key = &"slot.recipe.night_radio.name"
+known_at_start = true
+duration_seconds = 2.5
+slot_rules = Array[Resource]([SubResource("SoundRule"), SubResource("ShellRule"), SubResource("TuningRule")])
+compared_aspects = Array[StringName]([&"lamp", &"candle"])
+tie_winner = &"lamp"
+output_by_aspect = {&"candle": &"craft_tide_receiver", &"lamp": &"craft_clear_receiver"}
+preview_text_by_output = {&"craft_clear_receiver": &"slot.recipe.night_radio.preview.clear", &"craft_tide_receiver": &"slot.recipe.night_radio.preview.tide"}
+first_reward_aspect_by_output = {&"craft_clear_receiver": &"lamp", &"craft_tide_receiver": &"candle"}

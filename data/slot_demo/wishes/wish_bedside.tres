@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="DailyWishDefinition" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/slot_domain/daily_wish_definition.gd" id="1_wish"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_slot_rule.gd" id="2_rule"]
+[ext_resource type="Script" path="res://scripts/slot_domain/slot_value_requirement.gd" id="3_value"]
+
+[sub_resource type="Resource" id="Value"]
+script = ExtResource("3_value")
+mode = 1
+tags = Array[StringName]([&"lamp", &"candle", &"pillow"])
+minimum = 3
+
+[sub_resource type="Resource" id="Rule"]
+script = ExtResource("2_rule")
+id = &"bedside"
+required_all = Array[StringName]([&"plant"])
+allowed_any = Array[StringName]([&"lamp", &"candle", &"pillow"])
+value_requirements = Array[Resource]([SubResource("Value")])
+
+[resource]
+script = ExtResource("1_wish")
+id = &"wish_bedside"
+display_name_key = &"slot.wish.bedside.name"
+slot_rule = SubResource("Rule")
+result_text_keys = {&"flower_lavender_sachet": &"slot.wish.bedside.result.flower_lavender_sachet", &"flower_night_jasmine": &"slot.wish.bedside.result.flower_night_jasmine", &"flower_sunflower": &"slot.wish.bedside.result.flower_sunflower"}
