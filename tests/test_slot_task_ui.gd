@@ -34,6 +34,45 @@ func test_assigned_card_leaves_hand_and_appears_in_daily_slot() -> void:
 	assert_eq(slot.card_holder.get_child_count(), 1)
 
 
+func test_card_drag_uses_a_full_card_visual_and_removes_the_source_from_view() -> void:
+	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
+	var card := _buy_hash_brown(commerce)
+	var interface := await _spawn_interface(commerce)
+	var source := interface.hand_bar.card_views[card.instance_id] as CardHandCard
+	var grab_position := Vector2(31, 24)
+	var preview := source._build_drag_preview(grab_position)
+	add_child_autoqfree(preview)
+	await get_tree().process_frame
+
+	assert_eq(preview.card, card)
+	assert_eq(preview.definition, source.definition)
+	assert_false(preview.drag_enabled)
+	assert_eq(preview.custom_minimum_size, source.custom_minimum_size)
+	assert_eq(preview.title_label.text, source.title_label.text)
+	assert_eq(preview.aspect_label.text, source.aspect_label.text)
+	assert_eq(preview.position, -grab_position)
+
+	source._begin_drag_visual()
+	assert_false(source.visible)
+	source._end_drag_visual(false)
+	assert_true(source.visible)
+
+
+func test_successful_move_keeps_old_card_visual_hidden_until_state_refresh() -> void:
+	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
+	var card := _buy_hash_brown(commerce)
+	var interface := await _spawn_interface(commerce)
+	var source := interface.hand_bar.card_views[card.instance_id] as CardHandCard
+
+	source._begin_drag_visual()
+	assert_true(commerce.activity_state.assign_card(&"wish_hungry", &"hungry", card).ok)
+	source._end_drag_visual(true)
+
+	assert_false(source.visible)
+	await get_tree().process_frame
+	assert_does_not_have(interface.hand_bar.card_views, card.instance_id)
+
+
 func test_switching_tabs_preserves_assignments_without_creating_more_windows() -> void:
 	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
 	var card := _buy_hash_brown(commerce)

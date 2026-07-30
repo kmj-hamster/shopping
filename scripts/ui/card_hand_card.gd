@@ -6,6 +6,10 @@ var definition: CardItemDefinition
 var title_label: Label
 var aspect_label: Label
 var drag_enabled := true
+var drag_in_progress := false
+var drag_origin_location: CardItemState.Location = CardItemState.Location.HAND
+var drag_origin_activity_id: StringName
+var drag_origin_slot_id: StringName
 
 
 func setup(
@@ -89,7 +93,7 @@ func apply_rule_highlight(rule: CardSlotRule) -> void:
 		modulate = Color(0.32, 0.38, 0.4, 0.62)
 
 
-func _get_drag_data(_at_position: Vector2) -> Variant:
+func _get_drag_data(at_position: Vector2) -> Variant:
 	if card == null or definition == null or not drag_enabled:
 		return null
 	if card.location not in [
@@ -98,21 +102,53 @@ func _get_drag_data(_at_position: Vector2) -> Variant:
 		CardItemState.Location.RECYCLE,
 	]:
 		return null
-	var preview := PanelContainer.new()
-	preview.custom_minimum_size = Vector2(150, 72)
-	preview.add_theme_stylebox_override(
-		"panel", UiPalette.panel_style(Color("10191d", 0.98), _border_color())
-	)
-	var label := Label.new()
-	label.text = definition.localized_name()
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	preview.add_child(label)
+	var preview := _build_drag_preview(at_position)
 	set_drag_preview(preview)
+	_begin_drag_visual()
 	return {
 		"kind": &"card_item",
 		"card": card,
 		"source": _drag_source(),
 	}
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_DRAG_END and drag_in_progress:
+		_end_drag_visual(is_drag_successful())
+
+
+func _build_drag_preview(grab_position: Vector2) -> CardHandCard:
+	var preview := CardHandCard.new()
+	preview.setup(card, definition, false)
+	preview.custom_minimum_size = custom_minimum_size
+	preview.size = size
+	preview.position = -grab_position
+	preview.modulate = modulate
+	preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return preview
+
+
+func _begin_drag_visual() -> void:
+	drag_in_progress = true
+	drag_origin_location = card.location
+	drag_origin_activity_id = card.activity_id
+	drag_origin_slot_id = card.slot_id
+	visible = false
+
+
+func _end_drag_visual(drag_succeeded: bool) -> void:
+	drag_in_progress = false
+	if not drag_succeeded or _card_remained_at_drag_origin():
+		visible = true
+
+
+func _card_remained_at_drag_origin() -> bool:
+	return (
+		card != null
+		and card.location == drag_origin_location
+		and card.activity_id == drag_origin_activity_id
+		and card.slot_id == drag_origin_slot_id
+	)
 
 
 func _drag_source() -> StringName:
