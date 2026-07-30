@@ -3,6 +3,8 @@ extends Control
 
 signal leave_requested
 
+@export var show_embedded_hand_bar := true
+
 var commerce: SlotCommerceState
 var money_label: Label
 var staged_row: HBoxContainer
@@ -131,14 +133,15 @@ func _build_interface() -> void:
 	checkout_button.pressed.connect(_on_checkout_pressed)
 	cart_row.add_child(checkout_button)
 
-	hand_bar = CardHandBar.new()
-	hand_bar.name = "CardHandBar"
-	hand_bar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	hand_bar.offset_left = 18
-	hand_bar.offset_top = -146
-	hand_bar.offset_right = -18
-	hand_bar.offset_bottom = -10
-	add_child(hand_bar)
+	if show_embedded_hand_bar:
+		hand_bar = CardHandBar.new()
+		hand_bar.name = "CardHandBar"
+		hand_bar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+		hand_bar.offset_left = 18
+		hand_bar.offset_top = -146
+		hand_bar.offset_right = -18
+		hand_bar.offset_bottom = -10
+		add_child(hand_bar)
 
 
 func refresh() -> void:
@@ -170,7 +173,12 @@ func refresh() -> void:
 	var leave := find_child("LeaveButton", true, false) as Button
 	if leave != null:
 		leave.text = TranslationServer.translate(&"shop.leave")
-	hand_bar.setup(commerce)
+	if hand_bar != null:
+		hand_bar.setup(commerce)
+
+
+func set_highlight_rule(_rule: CardSlotRule) -> void:
+	pass
 
 
 func _on_card_dropped(card: CardItemState) -> void:

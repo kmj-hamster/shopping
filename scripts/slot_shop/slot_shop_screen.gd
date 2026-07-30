@@ -4,6 +4,7 @@ extends Control
 signal leave_requested
 
 @export var store_id: StringName = SlotDemoCatalog.STORE_TOY
+@export var show_embedded_hand_bar := true
 
 var commerce: SlotCommerceState
 var transaction: CardShopTransaction
@@ -17,6 +18,7 @@ var checkout_button: Button
 var language_button: Button
 var hand_bar: CardHandBar
 var shelf_buttons: Dictionary = {}
+var highlight_rule: CardSlotRule
 
 
 func setup(commerce_state: SlotCommerceState, selected_store_id: StringName) -> void:
@@ -155,14 +157,15 @@ func _build_interface() -> void:
 	checkout_button.pressed.connect(_on_checkout_pressed)
 	cart_row.add_child(checkout_button)
 
-	hand_bar = CardHandBar.new()
-	hand_bar.name = "CardHandBar"
-	hand_bar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	hand_bar.offset_left = 18
-	hand_bar.offset_top = -146
-	hand_bar.offset_right = -18
-	hand_bar.offset_bottom = -10
-	add_child(hand_bar)
+	if show_embedded_hand_bar:
+		hand_bar = CardHandBar.new()
+		hand_bar.name = "CardHandBar"
+		hand_bar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+		hand_bar.offset_left = 18
+		hand_bar.offset_top = -146
+		hand_bar.offset_right = -18
+		hand_bar.offset_bottom = -10
+		add_child(hand_bar)
 
 
 func refresh() -> void:
@@ -198,6 +201,7 @@ func refresh() -> void:
 					Color("d3b66e") if selected else Color("4b7474"),
 				),
 			)
+			_apply_product_highlight(button, definition)
 		shelf_grid.add_child(button)
 		shelf_buttons[slot.slot_id] = button
 	money_label.text = "¥%d" % commerce.wallet.money
@@ -215,7 +219,26 @@ func refresh() -> void:
 	checkout_button.text = TranslationServer.translate(&"slot.shop.checkout")
 	if feedback_label.text.is_empty():
 		feedback_label.text = TranslationServer.translate(&"slot.shop.feedback.ready")
-	hand_bar.setup(commerce)
+	if hand_bar != null:
+		hand_bar.setup(commerce)
+
+
+func set_highlight_rule(rule: CardSlotRule) -> void:
+	highlight_rule = rule
+	refresh()
+
+
+func _apply_product_highlight(button: Button, definition: CardItemDefinition) -> void:
+	if highlight_rule == null:
+		button.modulate = Color.WHITE
+		return
+	var evaluation := CardRuleEvaluator.evaluate(highlight_rule, definition)
+	if evaluation.can_execute:
+		button.modulate = Color.WHITE
+	elif evaluation.can_place:
+		button.modulate = Color(0.72, 0.78, 0.78, 0.9)
+	else:
+		button.modulate = Color(0.3, 0.36, 0.38, 0.58)
 
 
 func _on_shelf_pressed(slot_id: StringName) -> void:

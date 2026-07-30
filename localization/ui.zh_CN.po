@@ -828,3 +828,114 @@ msgstr "窗口合上，硬币从下面滚了出来。"
 
 msgid "slot.recycle.feedback.invalid"
 msgstr "窗口没有接收它。"
+
+msgid "slot.property.reading"
+msgstr "阅读"
+
+msgid "slot.property.memory"
+msgstr "追忆"
+
+msgid "slot.property.relaxing"
+msgstr "放松"
+
+msgid "slot.property.dreamlike"
+msgstr "幻想"
+
+msgid "slot.property.music"
+msgstr "音乐"
+
+msgid "slot.property.sleep_aid"
+msgstr "助眠"
+
+msgid "slot.property.stimulating"
+msgstr "提神"
+
+msgid "slot.property.electric"
+msgstr "电气"
+
+msgid "slot.property.plant"
+msgstr "植物"
+
+msgid "slot.property.warm"
+msgstr "温暖"
+
+msgid "slot.property.soft"
+msgstr "柔软"
+
+msgid "slot.property.toy"
+msgstr "玩具"
+
+msgid "slot.property.fragile"
+msgstr "易碎"
+
+msgid "slot.property.food"
+msgstr "食物"
+
+msgid "slot.property.drink"
+msgstr "饮料"
+
+msgid "slot.property.sweet"
+msgstr "甜"
+
+msgid "slot.property.crispy"
+msgstr "酥脆"
+
+msgid "slot.property.teddy"
+msgstr "泰迪熊"
+
+msgid "slot.property.alcohol"
+msgstr "酒"
+
+msgid "slot.rule.required"
+msgstr "需  %s"
+
+msgid "slot.rule.allowed"
+msgstr "可  %s"
+
+msgid "slot.rule.forbidden"
+msgstr "忌  %s"
+
+msgid "slot.rule.minimum"
+msgstr "%s ≥ %d"
+
+msgid "slot.task.window.title"
+msgstr "购物袋里"
+
+msgid "slot.task.tab.daily"
+msgstr "今日清单"
+
+msgid "slot.task.tab.recipes"
+msgstr "合成配方"
+
+msgid "slot.task.tab.requests"
+msgstr "请求"
+
+msgid "slot.task.single_slot"
+msgstr "一件东西"
+
+msgid "slot.task.none"
+msgstr "这里还没有东西"
+
+msgid "slot.task.slot.empty"
+msgstr "空"
+
+msgid "slot.task.slot.ready"
+msgstr "合适"
+
+msgid "slot.task.slot.blocked"
+msgstr "不合适"
+
+msgid "slot.task.slot.insufficient"
+msgstr "还差 %d"
+
+msgid "slot.task.ready"
+msgstr "已经准备好了"
+
+msgid "slot.task.waiting"
+msgstr "还缺一点"
+
+msgid "slot.task.drop.rejected"
+msgstr "它不适合放在这里。"
+
+msgid "slot.task.open"
+msgstr "打开购物袋"

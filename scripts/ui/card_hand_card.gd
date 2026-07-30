@@ -70,10 +70,27 @@ func _border_color() -> Color:
 	return Color("bd8fa5")
 
 
+func apply_rule_highlight(rule: CardSlotRule) -> void:
+	if rule == null or definition == null:
+		modulate = Color.WHITE
+		return
+	var evaluation := CardRuleEvaluator.evaluate(rule, definition)
+	if evaluation.can_execute:
+		modulate = Color.WHITE
+	elif evaluation.can_place:
+		modulate = Color(0.72, 0.78, 0.78, 0.9)
+	else:
+		modulate = Color(0.32, 0.38, 0.4, 0.62)
+
+
 func _get_drag_data(_at_position: Vector2) -> Variant:
 	if card == null or definition == null:
 		return null
-	if card.location not in [CardItemState.Location.HAND, CardItemState.Location.RECYCLE]:
+	if card.location not in [
+		CardItemState.Location.HAND,
+		CardItemState.Location.ACTIVITY_SLOT,
+		CardItemState.Location.RECYCLE,
+	]:
 		return null
 	var preview := PanelContainer.new()
 	preview.custom_minimum_size = Vector2(150, 72)
@@ -88,5 +105,14 @@ func _get_drag_data(_at_position: Vector2) -> Variant:
 	return {
 		"kind": &"card_item",
 		"card": card,
-		"source": &"recycle" if card.location == CardItemState.Location.RECYCLE else &"hand",
+		"source": _drag_source(),
 	}
+
+
+func _drag_source() -> StringName:
+	match card.location:
+		CardItemState.Location.ACTIVITY_SLOT:
+			return &"activity_slot"
+		CardItemState.Location.RECYCLE:
+			return &"recycle"
+	return &"hand"

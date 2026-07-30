@@ -828,3 +828,114 @@ msgstr "The window closes. Coins roll out underneath."
 
 msgid "slot.recycle.feedback.invalid"
 msgstr "The window does not accept it."
+
+msgid "slot.property.reading"
+msgstr "Reading"
+
+msgid "slot.property.memory"
+msgstr "Memory"
+
+msgid "slot.property.relaxing"
+msgstr "Relaxing"
+
+msgid "slot.property.dreamlike"
+msgstr "Dreamlike"
+
+msgid "slot.property.music"
+msgstr "Music"
+
+msgid "slot.property.sleep_aid"
+msgstr "Sleep Aid"
+
+msgid "slot.property.stimulating"
+msgstr "Stimulating"
+
+msgid "slot.property.electric"
+msgstr "Electric"
+
+msgid "slot.property.plant"
+msgstr "Plant"
+
+msgid "slot.property.warm"
+msgstr "Warm"
+
+msgid "slot.property.soft"
+msgstr "Soft"
+
+msgid "slot.property.toy"
+msgstr "Toy"
+
+msgid "slot.property.fragile"
+msgstr "Fragile"
+
+msgid "slot.property.food"
+msgstr "Food"
+
+msgid "slot.property.drink"
+msgstr "Drink"
+
+msgid "slot.property.sweet"
+msgstr "Sweet"
+
+msgid "slot.property.crispy"
+msgstr "Crispy"
+
+msgid "slot.property.teddy"
+msgstr "Teddy"
+
+msgid "slot.property.alcohol"
+msgstr "Alcohol"
+
+msgid "slot.rule.required"
+msgstr "Needs  %s"
+
+msgid "slot.rule.allowed"
+msgstr "Accepts  %s"
+
+msgid "slot.rule.forbidden"
+msgstr "Rejects  %s"
+
+msgid "slot.rule.minimum"
+msgstr "%s ≥ %d"
+
+msgid "slot.task.window.title"
+msgstr "Inside the Shopping Bag"
+
+msgid "slot.task.tab.daily"
+msgstr "Tonight's List"
+
+msgid "slot.task.tab.recipes"
+msgstr "Recipes"
+
+msgid "slot.task.tab.requests"
+msgstr "Requests"
+
+msgid "slot.task.single_slot"
+msgstr "One Thing"
+
+msgid "slot.task.none"
+msgstr "There is nothing here yet"
+
+msgid "slot.task.slot.empty"
+msgstr "Empty"
+
+msgid "slot.task.slot.ready"
+msgstr "Suitable"
+
+msgid "slot.task.slot.blocked"
+msgstr "Not suitable"
+
+msgid "slot.task.slot.insufficient"
+msgstr "%d short"
+
+msgid "slot.task.ready"
+msgstr "Everything is ready"
+
+msgid "slot.task.waiting"
+msgstr "Something is still missing"
+
+msgid "slot.task.drop.rejected"
+msgstr "It does not belong in this slot."
+
+msgid "slot.task.open"
+msgstr "Open the shopping bag"

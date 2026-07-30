@@ -14,6 +14,7 @@ var store_transactions: Dictionary = {}
 var store_shelf_capacities: Dictionary = {}
 var owner_levels: Dictionary = {}
 var recycle_transaction: CardRecycleTransaction
+var activity_state: SlotActivityState
 var random := RandomNumberGenerator.new()
 
 
@@ -37,6 +38,8 @@ func reset(shared_wallet: PlayerWallet = null, random_seed: int = 1999) -> void:
 		store_transactions[store_id] = transaction
 	recycle_transaction = CardRecycleTransaction.new(inventory, wallet)
 	recycle_transaction.state_changed.connect(_on_child_state_changed)
+	activity_state = SlotActivityState.new(inventory)
+	activity_state.state_changed.connect(_on_child_state_changed)
 	state_changed.emit()
 
 

@@ -2,19 +2,30 @@ class_name CardHandBar
 extends PanelContainer
 
 var commerce: SlotCommerceState
+var activity_state: SlotActivityState
+var highlight_rule: CardSlotRule
 var scroll: ScrollContainer
 var card_row: HBoxContainer
 var title_label: Label
 var empty_label: Label
 var card_views: Dictionary = {}
+var refresh_queued := false
 
 
-func setup(commerce_state: SlotCommerceState) -> void:
-	if commerce != null and commerce.state_changed.is_connected(refresh):
-		commerce.state_changed.disconnect(refresh)
+func setup(
+	commerce_state: SlotCommerceState,
+	selected_activity_state: SlotActivityState = null,
+) -> void:
+	if commerce != null and commerce.state_changed.is_connected(_queue_refresh):
+		commerce.state_changed.disconnect(_queue_refresh)
 	commerce = commerce_state
-	if commerce != null and not commerce.state_changed.is_connected(refresh):
-		commerce.state_changed.connect(refresh)
+	activity_state = (
+		selected_activity_state
+		if selected_activity_state != null
+		else commerce.activity_state if commerce != null else null
+	)
+	if commerce != null and not commerce.state_changed.is_connected(_queue_refresh):
+		commerce.state_changed.connect(_queue_refresh)
 	if is_node_ready():
 		refresh()
 
@@ -67,6 +78,7 @@ func refresh() -> void:
 		var view := CardHandCard.new()
 		view.setup(card, definition)
 		card_row.add_child(view)
+		view.apply_rule_highlight(highlight_rule)
 		card_views[card.instance_id] = view
 	if card_views.is_empty():
 		empty_label = Label.new()
@@ -82,14 +94,42 @@ func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 	if commerce == null or typeof(data) != TYPE_DICTIONARY:
 		return false
 	var card := data.get("card") as CardItemState
-	return data.get("kind") == &"card_item" and card != null \
-		and card.location == CardItemState.Location.RECYCLE
+	return (
+		data.get("kind") == &"card_item"
+		and card != null
+		and card.location in [
+			CardItemState.Location.ACTIVITY_SLOT,
+			CardItemState.Location.RECYCLE,
+		]
+	)
 
 
 func _drop_data(_at_position: Vector2, data: Variant) -> void:
 	var card := data.get("card") as CardItemState
-	if card != null:
+	if card == null:
+		return
+	if card.location == CardItemState.Location.ACTIVITY_SLOT and activity_state != null:
+		activity_state.return_card_to_hand(card)
+	elif card.location == CardItemState.Location.RECYCLE:
 		commerce.unstage_recycle_card(card)
+
+
+func set_highlight_rule(rule: CardSlotRule) -> void:
+	highlight_rule = rule
+	for view in card_views.values():
+		(view as CardHandCard).apply_rule_highlight(rule)
+
+
+func _queue_refresh() -> void:
+	if refresh_queued:
+		return
+	refresh_queued = true
+	call_deferred("_flush_refresh")
+
+
+func _flush_refresh() -> void:
+	refresh_queued = false
+	refresh()
 
 
 func _on_locale_changed(_locale: String) -> void:
