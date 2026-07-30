@@ -22,9 +22,12 @@ var language_button: Button
 var hand_bar: CardHandBar
 var shelf_buttons: Dictionary = {}
 var highlight_rule: CardSlotRule
+var refresh_queued := false
 
 
 func setup(commerce_state: SlotCommerceState, selected_store_id: StringName) -> void:
+	if commerce != null and commerce.state_changed.is_connected(_queue_refresh):
+		commerce.state_changed.disconnect(_queue_refresh)
 	commerce = commerce_state
 	store_id = selected_store_id
 	if is_node_ready():
@@ -43,8 +46,8 @@ func _ready() -> void:
 
 func _bind_state() -> void:
 	transaction = commerce.transaction_for_store(store_id) if commerce != null else null
-	if commerce != null and not commerce.state_changed.is_connected(refresh):
-		commerce.state_changed.connect(refresh)
+	if commerce != null and not commerce.state_changed.is_connected(_queue_refresh):
+		commerce.state_changed.connect(_queue_refresh)
 	if hand_bar != null:
 		hand_bar.setup(commerce)
 
@@ -242,6 +245,19 @@ func refresh() -> void:
 		hand_bar.setup(commerce)
 
 
+func _queue_refresh() -> void:
+	if refresh_queued:
+		return
+	refresh_queued = true
+	call_deferred("_flush_refresh")
+
+
+func _flush_refresh() -> void:
+	refresh_queued = false
+	if is_inside_tree():
+		refresh()
+
+
 func set_highlight_rule(rule: CardSlotRule) -> void:
 	highlight_rule = rule
 	refresh()
@@ -299,8 +315,8 @@ func _on_talk_pressed() -> void:
 
 func _refresh_owner_panel() -> void:
 	var owner_id := SlotDemoCatalog.owner_id_for_store(store_id)
-	var relationship := commerce.relationship_state_for_owner(owner_id)
-	var definition := SlotDemoCatalog.owner_by_id(owner_id)
+	var relationship: OwnerRelationshipState = commerce.relationship_state_for_owner(owner_id)
+	var definition: OwnerRelationshipDefinition = SlotDemoCatalog.owner_by_id(owner_id)
 	owner_name_label.text = TranslationServer.translate(
 		SlotDemoCatalog.owner_name_key(owner_id)
 	)
@@ -312,7 +328,7 @@ func _refresh_owner_panel() -> void:
 		]
 	else:
 		relation_label.text = ""
-	var talked := relationship != null and relationship.has_talked_today(commerce.day)
+	var talked: bool = relationship != null and relationship.has_talked_today(commerce.day)
 	talk_button.disabled = talked
 	talk_button.text = TranslationServer.translate(
 		&"slot.owner.talk.done" if talked else &"slot.owner.talk"

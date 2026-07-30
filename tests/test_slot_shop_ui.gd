@@ -30,6 +30,24 @@ func test_clicking_shelf_then_checkout_creates_card_in_bottom_hand() -> void:
 	assert_eq(commerce.wallet.money, 108)
 
 
+func test_real_shelf_button_signal_defers_rebuild_until_button_is_unlocked() -> void:
+	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
+	var shop := await _spawn_shop(commerce, SlotDemoCatalog.STORE_TOY)
+	var toy := commerce.transaction_for_store(SlotDemoCatalog.STORE_TOY)
+	var first_slot_id := toy.shelf_slots[0].slot_id
+	var pressed_button := shop.shelf_buttons[first_slot_id] as Button
+
+	pressed_button.pressed.emit()
+	assert_eq(toy.cart_count(), 1)
+	assert_true(is_instance_valid(pressed_button))
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	assert_true(shop.shelf_buttons.has(first_slot_id))
+	assert_ne(shop.shelf_buttons[first_slot_id], pressed_button)
+	assert_true(toy.is_selected(first_slot_id))
+
+
 func test_balloon_talk_and_purchase_update_relation_and_unlock_seventh_shelf() -> void:
 	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
 	var shop := await _spawn_shop(commerce, SlotDemoCatalog.STORE_TOY)

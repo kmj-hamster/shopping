@@ -15,9 +15,12 @@ var checkout_button: Button
 var cancel_button: Button
 var hand_bar: CardHandBar
 var staged_views: Dictionary = {}
+var refresh_queued := false
 
 
 func setup(commerce_state: SlotCommerceState) -> void:
+	if commerce != null and commerce.state_changed.is_connected(_queue_refresh):
+		commerce.state_changed.disconnect(_queue_refresh)
 	commerce = commerce_state
 	if is_node_ready():
 		_bind_state()
@@ -34,8 +37,8 @@ func _ready() -> void:
 
 
 func _bind_state() -> void:
-	if commerce != null and not commerce.state_changed.is_connected(refresh):
-		commerce.state_changed.connect(refresh)
+	if commerce != null and not commerce.state_changed.is_connected(_queue_refresh):
+		commerce.state_changed.connect(_queue_refresh)
 	if hand_bar != null:
 		hand_bar.setup(commerce)
 
@@ -175,6 +178,19 @@ func refresh() -> void:
 		leave.text = TranslationServer.translate(&"shop.leave")
 	if hand_bar != null:
 		hand_bar.setup(commerce)
+
+
+func _queue_refresh() -> void:
+	if refresh_queued:
+		return
+	refresh_queued = true
+	call_deferred("_flush_refresh")
+
+
+func _flush_refresh() -> void:
+	refresh_queued = false
+	if is_inside_tree():
+		refresh()
 
 
 func set_highlight_rule(_rule: CardSlotRule) -> void:

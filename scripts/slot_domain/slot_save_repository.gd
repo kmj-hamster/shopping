@@ -156,7 +156,7 @@ func _restore(commerce: SlotCommerceState, payload: Dictionary) -> bool:
 			int(card_data.get("location", CardItemState.Location.HAND)),
 			CardItemState.Location.HAND,
 			CardItemState.Location.RECYCLE,
-		)
+		) as CardItemState.Location
 		card.activity_id = StringName(card_data.get("activity_id", ""))
 		card.slot_id = StringName(card_data.get("slot_id", ""))
 		card.use_count = maxi(0, int(card_data.get("use_count", 0)))
