@@ -19,13 +19,45 @@ func test_main_opens_map_with_global_hand_and_single_task_window() -> void:
 	assert_eq(_task_window_count(main.protagonist_interface), 1)
 
 
+func test_main_keeps_existing_commerce_state_instead_of_resetting_it() -> void:
+	GameState.slot_commerce.wallet.money = 77
+
+	var main = await _spawn_main()
+
+	assert_eq(GameState.slot_commerce.wallet.money, 77)
+	assert_eq(main.current_screen.commerce, GameState.slot_commerce)
+
+
+func test_main_resumes_a_saved_night_transition_from_its_next_result() -> void:
+	var commerce := GameState.slot_commerce
+	_complete_first_night(commerce)
+	assert_true(commerce.begin_night_transition().ok)
+	assert_true(commerce.apply_night_transition_consumption().ok)
+	assert_true(commerce.mark_night_transition_result_shown())
+	var packed := load("res://scenes/main/main.tscn") as PackedScene
+	var main := packed.instantiate()
+	add_child_autoqfree(main)
+	var map := main.current_screen as MallMapScreen
+	map.transition_fade_seconds = 0.0
+	map.transition_result_seconds = 0.0
+	map.transition_dawn_seconds = 0.0
+	map.transition_return_seconds = 0.0
+	for index in range(20):
+		await get_tree().process_frame
+
+	assert_null(commerce.pending_transition)
+	assert_eq(commerce.day, 2)
+	assert_eq(commerce.protagonist_aspect_counts[&"lamp"], 2)
+	assert_false(main.transition_in_progress)
+
+
 func test_bag_opens_same_task_window_across_map_and_shop() -> void:
 	var main = await _spawn_main()
 	var task_window: SlotTaskWindow = main.protagonist_interface.task_window
 	main.protagonist_interface.toggle_task_window()
 	assert_true(task_window.visible)
 
-	main._on_shop_requested(DemoCatalog.STORE_TOY)
+	main._on_shop_requested(SlotDemoCatalog.STORE_TOY)
 	await get_tree().process_frame
 
 	assert_eq(main.current_view, &"shop")
@@ -37,7 +69,7 @@ func test_bag_opens_same_task_window_across_map_and_shop() -> void:
 
 func test_formal_shop_uses_independent_shelves_and_global_hand_only() -> void:
 	var main = await _spawn_main()
-	main._on_shop_requested(DemoCatalog.STORE_TOY)
+	main._on_shop_requested(SlotDemoCatalog.STORE_TOY)
 	await get_tree().process_frame
 	var shop := main.current_screen as SlotShopScreen
 	var transaction := GameState.slot_commerce.transaction_for_store(SlotDemoCatalog.STORE_TOY)
@@ -59,7 +91,7 @@ func test_formal_shop_uses_independent_shelves_and_global_hand_only() -> void:
 
 func test_slot_focus_highlights_current_shop_and_global_hand() -> void:
 	var main = await _spawn_main()
-	main._on_shop_requested(DemoCatalog.STORE_FAST_FOOD)
+	main._on_shop_requested(SlotDemoCatalog.STORE_FAST_FOOD)
 	await get_tree().process_frame
 	var shop := main.current_screen as SlotShopScreen
 	var rule := SlotDemoCatalog.wish_by_id(&"wish_hungry").slot_rule
@@ -72,7 +104,7 @@ func test_slot_focus_highlights_current_shop_and_global_hand() -> void:
 
 func test_recycling_hotspot_opens_new_card_recycle_screen() -> void:
 	var main = await _spawn_main()
-	main._on_shop_requested(DemoCatalog.STORE_RECYCLING)
+	main._on_shop_requested(SlotDemoCatalog.STORE_RECYCLING)
 	await get_tree().process_frame
 	var recycle := main.current_screen as SlotRecycleScreen
 
@@ -85,7 +117,7 @@ func test_recycling_hotspot_opens_new_card_recycle_screen() -> void:
 
 func test_closed_store_stays_on_map_and_shows_next_open_day() -> void:
 	var main = await _spawn_main()
-	main._on_shop_requested(DemoCatalog.STORE_RECORD)
+	main._on_shop_requested(SlotDemoCatalog.STORE_RECORD)
 	await get_tree().process_frame
 
 	assert_eq(main.current_view, &"map")

@@ -142,14 +142,14 @@ func _build_interface() -> void:
 	top.add_child(language_button)
 
 	var hotspot_layout := {
-		DemoCatalog.STORE_BOOK: Rect2(770, 150, 230, 130),
-		DemoCatalog.STORE_TOY: Rect2(105, 322, 230, 140),
-		DemoCatalog.STORE_FLOWER: Rect2(370, 402, 190, 135),
-		DemoCatalog.STORE_RECORD: Rect2(650, 392, 220, 145),
-		DemoCatalog.STORE_FAST_FOOD: Rect2(1010, 315, 220, 150),
-		DemoCatalog.STORE_RECYCLING: Rect2(64, 148, 210, 104),
+		SlotDemoCatalog.STORE_BOOK: Rect2(770, 150, 230, 130),
+		SlotDemoCatalog.STORE_TOY: Rect2(105, 322, 230, 140),
+		SlotDemoCatalog.STORE_FLOWER: Rect2(370, 402, 190, 135),
+		SlotDemoCatalog.STORE_RECORD: Rect2(650, 392, 220, 145),
+		SlotDemoCatalog.STORE_FAST_FOOD: Rect2(1010, 315, 220, 150),
+		SlotDemoCatalog.STORE_RECYCLING: Rect2(64, 148, 210, 104),
 	}
-	for store_id in DemoCatalog.STORE_IDS:
+	for store_id in SlotDemoCatalog.MAP_STORE_IDS:
 		_create_store_hotspot(store_id, hotspot_layout[store_id])
 
 	schedule_panel = PanelContainer.new()
@@ -302,7 +302,7 @@ func _refresh_notice() -> void:
 	elif not notice_store_id.is_empty():
 		var next_day := ShopSchedule.next_open_day(notice_store_id, commerce.day)
 		notice_label.text = TranslationServer.translate(notice_key) % [
-			TranslationServer.translate(DemoCatalog.store_name_key(notice_store_id)),
+			TranslationServer.translate(SlotDemoCatalog.store_name_key(notice_store_id)),
 			TranslationServer.translate(ShopSchedule.weekday_key(next_day)),
 		]
 	else:
@@ -331,7 +331,7 @@ func _refresh_store_hotspots() -> void:
 			status_text = TranslationServer.translate(&"map.closed_until") % \
 				TranslationServer.translate(ShopSchedule.weekday_key(next_day))
 		hotspot.text = "%s\n%s" % [
-			TranslationServer.translate(DemoCatalog.store_name_key(store_id)),
+			TranslationServer.translate(SlotDemoCatalog.store_name_key(store_id)),
 			status_text,
 		]
 		hotspot.add_theme_stylebox_override(
@@ -360,7 +360,7 @@ func _refresh_schedule() -> void:
 		var row := Label.new()
 		var store_names: PackedStringArray = []
 		for store_id in ShopSchedule.OPEN_STORES[index]:
-			store_names.append(TranslationServer.translate(DemoCatalog.store_name_key(store_id)))
+			store_names.append(TranslationServer.translate(SlotDemoCatalog.store_name_key(store_id)))
 		row.text = "%s   %s" % [
 			TranslationServer.translate(ShopSchedule.WEEKDAY_KEYS[index]),
 			" · ".join(store_names),
@@ -387,10 +387,9 @@ func fade_to_night() -> void:
 	await tween.finished
 
 
-func show_night_results(entries: Array[Dictionary]) -> void:
-	for entry in entries:
-		night_result_label.text = TranslationServer.translate(StringName(entry.result_key))
-		await get_tree().create_timer(transition_result_seconds).timeout
+func show_night_result(entry: Dictionary) -> void:
+	night_result_label.text = TranslationServer.translate(StringName(entry.result_key))
+	await get_tree().create_timer(transition_result_seconds).timeout
 
 
 func fade_from_night(result: Dictionary) -> void:

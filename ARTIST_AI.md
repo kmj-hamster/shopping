@@ -57,7 +57,8 @@ macOS. Read `AGENTS.md`, `godot-codex.json`, and
   the gameplay developer.
 - Keep all player-facing text behind translation keys. Check both `zh_CN` and
   `en`; English must not overflow a layout tuned for Chinese.
-- `PuzzleLab` is developer-only. Do not copy its toolbox presentation into the
+- The retired `PuzzleLab`/Polyomino prototype exists only at tag
+  `polyomino-demo-v1`. Do not reintroduce its toolbox presentation into the
   player-facing game.
 
 ## Validation and handoff

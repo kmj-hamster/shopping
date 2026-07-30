@@ -7,13 +7,14 @@ var transition_in_progress := false
 
 
 func _ready() -> void:
-	GameState.reset_demo()
 	_show_map()
 	protagonist_interface = SlotPlayerInterface.new()
 	protagonist_interface.commerce = GameState.slot_commerce
 	protagonist_interface.slot_rule_focused.connect(_on_slot_rule_focused)
 	add_child(protagonist_interface)
 	protagonist_interface.set_view_context(current_view)
+	if GameState.slot_commerce.pending_transition != null:
+		call_deferred("_resume_pending_night_transition")
 
 
 func _show_map(notice_key: StringName = &"") -> void:
@@ -33,11 +34,11 @@ func _show_map(notice_key: StringName = &"") -> void:
 		map.call_deferred("show_notice", notice_key)
 
 
-func _show_shop(store_id: StringName = DemoCatalog.STORE_TOY) -> void:
+func _show_shop(store_id: StringName = SlotDemoCatalog.STORE_TOY) -> void:
 	_clear_screen()
 	var scene_path := (
 		"res://scenes/slot_shop/slot_recycle.tscn"
-		if store_id == DemoCatalog.STORE_RECYCLING
+		if store_id == SlotDemoCatalog.STORE_RECYCLING
 		else "res://scenes/slot_shop/slot_shop.tscn"
 	)
 	var packed := load(scene_path) as PackedScene
@@ -98,7 +99,15 @@ func _run_night_transition(transition: SlotNightTransition) -> void:
 		protagonist_interface.visible = true
 		transition_in_progress = false
 		return
-	await map.show_night_results(transition.entries)
+	while transition.next_result_index < transition.entries.size():
+		await map.show_night_result(
+			transition.entries[transition.next_result_index]
+		)
+		if not GameState.slot_commerce.mark_night_transition_result_shown():
+			push_error("Night transition result checkpoint failed.")
+			protagonist_interface.visible = true
+			transition_in_progress = false
+			return
 	var finish := GameState.slot_commerce.finish_night_transition()
 	if not finish.ok:
 		push_error("Night transition finish failed: %s" % finish.reason)
@@ -112,6 +121,12 @@ func _run_night_transition(transition: SlotNightTransition) -> void:
 		map.show_demo_complete()
 	else:
 		protagonist_interface.visible = true
+
+
+func _resume_pending_night_transition() -> void:
+	if transition_in_progress or GameState.slot_commerce.pending_transition == null:
+		return
+	_run_night_transition(GameState.slot_commerce.pending_transition)
 
 
 func _on_demo_continue_requested() -> void:

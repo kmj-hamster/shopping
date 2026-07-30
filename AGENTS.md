@@ -20,7 +20,7 @@
 
 ## Player-facing UI
 
-- Treat `PuzzleLab` as a developer-only validation scene. Do not carry its toolbox/debug-panel presentation into the game flow.
+- The archived `PuzzleLab`/Polyomino prototype exists only at tag `polyomino-demo-v1`; do not reintroduce its toolbox presentation or runtime classes into the slot-card branch.
 - Player-facing screens should evoke a quiet, dreamlike shopping mall at night: deep blue-green shadows, isolated warm or fluorescent light, translucent layers, and restrained accent colors.
 - Prefer spatial composition, object shapes, price tags, icons, and short status lines over instructional paragraphs. Keep persistent instructions to one short line at most; move secondary detail into tooltips or contextual feedback.
 - Avoid developer-facing terms such as “实验室”, “工具箱”, “验证” and raw rule explanations in the formal game UI.

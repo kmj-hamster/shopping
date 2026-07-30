@@ -4,6 +4,7 @@ extends RefCounted
 var from_day: int
 var entries: Array[Dictionary] = []
 var consumption_applied := false
+var next_result_index := 0
 
 
 func _init(selected_day: int = 1, selected_entries: Array[Dictionary] = []) -> void:

@@ -12,13 +12,13 @@ const WEEKDAY_KEYS: Array[StringName] = [
 ]
 
 const OPEN_STORES: Array = [
-	[DemoCatalog.STORE_TOY, DemoCatalog.STORE_FLOWER, DemoCatalog.STORE_FAST_FOOD, DemoCatalog.STORE_RECYCLING],
-	[DemoCatalog.STORE_TOY, DemoCatalog.STORE_RECORD, DemoCatalog.STORE_BOOK, DemoCatalog.STORE_RECYCLING],
-	[DemoCatalog.STORE_TOY, DemoCatalog.STORE_FLOWER, DemoCatalog.STORE_FAST_FOOD, DemoCatalog.STORE_RECYCLING],
-	[DemoCatalog.STORE_BOOK, DemoCatalog.STORE_RECORD, DemoCatalog.STORE_FAST_FOOD, DemoCatalog.STORE_RECYCLING],
-	[DemoCatalog.STORE_TOY, DemoCatalog.STORE_FLOWER, DemoCatalog.STORE_RECORD, DemoCatalog.STORE_RECYCLING],
-	[DemoCatalog.STORE_TOY, DemoCatalog.STORE_BOOK, DemoCatalog.STORE_FAST_FOOD, DemoCatalog.STORE_RECYCLING],
-	[DemoCatalog.STORE_BOOK, DemoCatalog.STORE_RECORD, DemoCatalog.STORE_FLOWER, DemoCatalog.STORE_RECYCLING],
+	[SlotDemoCatalog.STORE_TOY, SlotDemoCatalog.STORE_FLOWER, SlotDemoCatalog.STORE_FAST_FOOD, SlotDemoCatalog.STORE_RECYCLING],
+	[SlotDemoCatalog.STORE_TOY, SlotDemoCatalog.STORE_RECORD, SlotDemoCatalog.STORE_BOOK, SlotDemoCatalog.STORE_RECYCLING],
+	[SlotDemoCatalog.STORE_TOY, SlotDemoCatalog.STORE_FLOWER, SlotDemoCatalog.STORE_FAST_FOOD, SlotDemoCatalog.STORE_RECYCLING],
+	[SlotDemoCatalog.STORE_BOOK, SlotDemoCatalog.STORE_RECORD, SlotDemoCatalog.STORE_FAST_FOOD, SlotDemoCatalog.STORE_RECYCLING],
+	[SlotDemoCatalog.STORE_TOY, SlotDemoCatalog.STORE_FLOWER, SlotDemoCatalog.STORE_RECORD, SlotDemoCatalog.STORE_RECYCLING],
+	[SlotDemoCatalog.STORE_TOY, SlotDemoCatalog.STORE_BOOK, SlotDemoCatalog.STORE_FAST_FOOD, SlotDemoCatalog.STORE_RECYCLING],
+	[SlotDemoCatalog.STORE_BOOK, SlotDemoCatalog.STORE_RECORD, SlotDemoCatalog.STORE_FLOWER, SlotDemoCatalog.STORE_RECYCLING],
 ]
 
 

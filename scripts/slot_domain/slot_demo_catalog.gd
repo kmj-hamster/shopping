@@ -6,6 +6,7 @@ const STORE_TOY := &"toy"
 const STORE_FLOWER := &"flower"
 const STORE_RECORD := &"record"
 const STORE_FAST_FOOD := &"fast_food"
+const STORE_RECYCLING := &"recycling"
 
 const OWNER_BALLOON := &"balloon"
 const OWNER_SUNFLOWER := &"sunflower"
@@ -19,6 +20,15 @@ const STORE_IDS: Array[StringName] = [
 	STORE_FLOWER,
 	STORE_RECORD,
 	STORE_FAST_FOOD,
+]
+
+const MAP_STORE_IDS: Array[StringName] = [
+	STORE_BOOK,
+	STORE_TOY,
+	STORE_FLOWER,
+	STORE_RECORD,
+	STORE_FAST_FOOD,
+	STORE_RECYCLING,
 ]
 
 const STORE_OWNER_IDS := {

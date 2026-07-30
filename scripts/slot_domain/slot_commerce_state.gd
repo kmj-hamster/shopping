@@ -482,6 +482,17 @@ func apply_night_transition_consumption() -> Dictionary:
 	}
 
 
+func mark_night_transition_result_shown() -> bool:
+	if (
+		pending_transition == null
+		or pending_transition.next_result_index >= pending_transition.entries.size()
+	):
+		return false
+	pending_transition.next_result_index += 1
+	state_changed.emit()
+	return true
+
+
 func finish_night_transition() -> Dictionary:
 	if pending_transition == null:
 		return {"ok": false, "reason": RESULT_NO_TRANSITION}
