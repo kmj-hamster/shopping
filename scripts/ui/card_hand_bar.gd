@@ -98,20 +98,39 @@ func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 		data.get("kind") == &"card_item"
 		and card != null
 		and card.location in [
+			CardItemState.Location.HAND,
 			CardItemState.Location.ACTIVITY_SLOT,
 			CardItemState.Location.RECYCLE,
 		]
 	)
 
 
-func _drop_data(_at_position: Vector2, data: Variant) -> void:
+func _drop_data(at_position: Vector2, data: Variant) -> void:
 	var card := data.get("card") as CardItemState
 	if card == null:
 		return
+	var target_index := _hand_insertion_index(at_position, card)
 	if card.location == CardItemState.Location.ACTIVITY_SLOT and activity_state != null:
-		activity_state.return_card_to_hand(card)
+		if activity_state.return_card_to_hand(card):
+			commerce.reorder_hand_card(card, target_index)
 	elif card.location == CardItemState.Location.RECYCLE:
-		commerce.unstage_recycle_card(card)
+		if commerce.unstage_recycle_card(card):
+			commerce.reorder_hand_card(card, target_index)
+	elif card.location == CardItemState.Location.HAND:
+		commerce.reorder_hand_card(card, target_index)
+
+
+func _hand_insertion_index(at_position: Vector2, dragged_card: CardItemState) -> int:
+	var pointer_x := get_global_rect().position.x + at_position.x
+	var insertion_index := 0
+	for child in card_row.get_children():
+		var view := child as CardHandCard
+		if view == null or view.card == dragged_card:
+			continue
+		if pointer_x < view.get_global_rect().get_center().x:
+			return insertion_index
+		insertion_index += 1
+	return insertion_index
 
 
 func set_highlight_rule(rule: CardSlotRule) -> void:

@@ -88,6 +88,22 @@ func test_recycling_can_be_cancelled_or_paid_at_eighty_percent() -> void:
 	assert_true(commerce.inventory.is_empty())
 
 
+func test_reordering_hand_cards_preserves_non_hand_inventory_positions() -> void:
+	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
+	var first := CardItemState.new(101, &"fast_hash_brown")
+	var assigned := CardItemState.new(102, &"flower_sunflower")
+	assigned.location = CardItemState.Location.ACTIVITY_SLOT
+	var second := CardItemState.new(103, &"toy_glass_marble")
+	var third := CardItemState.new(104, &"record_fluorescent_single")
+	commerce.inventory.append_array([first, assigned, second, third])
+
+	assert_true(commerce.reorder_hand_card(third, 0))
+	assert_eq(commerce.inventory[0], third)
+	assert_eq(commerce.inventory[1], assigned)
+	assert_eq(commerce.inventory[2], first)
+	assert_eq(commerce.inventory[3], second)
+
+
 func _unique_slot_ids(transaction: CardShopTransaction) -> Dictionary:
 	var ids := {}
 	for slot in transaction.shelf_slots:

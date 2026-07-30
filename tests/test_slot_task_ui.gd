@@ -37,8 +37,11 @@ func test_assigned_card_leaves_hand_and_appears_in_daily_slot() -> void:
 func test_card_drag_uses_a_full_card_visual_and_removes_the_source_from_view() -> void:
 	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
 	var card := _buy_hash_brown(commerce)
+	var following_card := _add_card(commerce, &"toy_glass_marble", 100)
 	var interface := await _spawn_interface(commerce)
 	var source := interface.hand_bar.card_views[card.instance_id] as CardHandCard
+	var following := interface.hand_bar.card_views[following_card.instance_id] as CardHandCard
+	var following_position := following.position
 	var grab_position := Vector2(31, 24)
 	var preview := source._build_drag_preview(grab_position)
 	add_child_autoqfree(preview)
@@ -53,9 +56,12 @@ func test_card_drag_uses_a_full_card_visual_and_removes_the_source_from_view() -
 	assert_eq(preview.position, -grab_position)
 
 	source._begin_drag_visual()
-	assert_false(source.visible)
-	source._end_drag_visual(false)
+	await get_tree().process_frame
 	assert_true(source.visible)
+	assert_eq(source.self_modulate.a, 0.0)
+	assert_eq(following.position, following_position)
+	source._end_drag_visual(false)
+	assert_eq(source.self_modulate.a, 1.0)
 
 
 func test_successful_move_keeps_old_card_visual_hidden_until_state_refresh() -> void:
@@ -68,9 +74,34 @@ func test_successful_move_keeps_old_card_visual_hidden_until_state_refresh() -> 
 	assert_true(commerce.activity_state.assign_card(&"wish_hungry", &"hungry", card).ok)
 	source._end_drag_visual(true)
 
-	assert_false(source.visible)
+	assert_eq(source.self_modulate.a, 0.0)
 	await get_tree().process_frame
 	assert_does_not_have(interface.hand_bar.card_views, card.instance_id)
+
+
+func test_dropping_a_hand_card_reorders_it_only_after_release() -> void:
+	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
+	var first := _add_card(commerce, &"fast_hash_brown", 101)
+	var second := _add_card(commerce, &"toy_glass_marble", 102)
+	var third := _add_card(commerce, &"record_fluorescent_single", 103)
+	var interface := await _spawn_interface(commerce)
+	var second_view := interface.hand_bar.card_views[second.instance_id] as CardHandCard
+	var third_view := interface.hand_bar.card_views[third.instance_id] as CardHandCard
+	var third_position := third_view.position
+	var drag_data := {"kind": &"card_item", "card": second, "source": &"hand"}
+
+	second_view._begin_drag_visual()
+	await get_tree().process_frame
+	assert_eq(third_view.position, third_position)
+	assert_eq(commerce.inventory[0], first)
+	assert_true(interface.hand_bar._can_drop_data(Vector2.ZERO, drag_data))
+	interface.hand_bar._drop_data(Vector2.ZERO, drag_data)
+	second_view._end_drag_visual(true)
+	await get_tree().process_frame
+
+	assert_eq(commerce.inventory[0], second)
+	assert_eq(commerce.inventory[1], first)
+	assert_eq(commerce.inventory[2], third)
 
 
 func test_switching_tabs_preserves_assignments_without_creating_more_windows() -> void:

@@ -155,6 +155,31 @@ func card_by_instance_id(instance_id: int) -> CardItemState:
 	return null
 
 
+func reorder_hand_card(card: CardItemState, target_index: int) -> bool:
+	if card == null or card.location != CardItemState.Location.HAND:
+		return false
+	var hand_cards: Array[CardItemState] = []
+	for inventory_card in inventory:
+		if inventory_card.location == CardItemState.Location.HAND:
+			hand_cards.append(inventory_card)
+	var current_index := hand_cards.find(card)
+	if current_index < 0:
+		return false
+	hand_cards.remove_at(current_index)
+	hand_cards.insert(clampi(target_index, 0, hand_cards.size()), card)
+	var changed := hand_cards.find(card) != current_index
+	if not changed:
+		return true
+	var hand_index := 0
+	for inventory_index in range(inventory.size()):
+		if inventory[inventory_index].location != CardItemState.Location.HAND:
+			continue
+		inventory[inventory_index] = hand_cards[hand_index]
+		hand_index += 1
+	state_changed.emit()
+	return true
+
+
 func relationship_state_for_owner(owner_id: StringName) -> OwnerRelationshipState:
 	return owner_relationships.get(owner_id) as OwnerRelationshipState
 

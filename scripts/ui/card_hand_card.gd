@@ -10,6 +10,8 @@ var drag_in_progress := false
 var drag_origin_location: CardItemState.Location = CardItemState.Location.HAND
 var drag_origin_activity_id: StringName
 var drag_origin_slot_id: StringName
+var drag_origin_self_modulate := Color.WHITE
+var drag_origin_mouse_filter := Control.MOUSE_FILTER_PASS
 
 
 func setup(
@@ -26,8 +28,10 @@ func setup(
 
 func _ready() -> void:
 	custom_minimum_size = Vector2(150, 92)
+	mouse_filter = Control.MOUSE_FILTER_PASS
 	mouse_default_cursor_shape = Control.CURSOR_DRAG
 	var margin := MarginContainer.new()
+	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	margin.add_theme_constant_override("margin_left", 10)
 	margin.add_theme_constant_override("margin_right", 10)
 	margin.add_theme_constant_override("margin_top", 8)
@@ -133,13 +137,19 @@ func _begin_drag_visual() -> void:
 	drag_origin_location = card.location
 	drag_origin_activity_id = card.activity_id
 	drag_origin_slot_id = card.slot_id
-	visible = false
+	drag_origin_self_modulate = self_modulate
+	drag_origin_mouse_filter = mouse_filter
+	var transparent := self_modulate
+	transparent.a = 0.0
+	self_modulate = transparent
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
 func _end_drag_visual(drag_succeeded: bool) -> void:
 	drag_in_progress = false
 	if not drag_succeeded or _card_remained_at_drag_origin():
-		visible = true
+		self_modulate = drag_origin_self_modulate
+		mouse_filter = drag_origin_mouse_filter
 
 
 func _card_remained_at_drag_origin() -> bool:
