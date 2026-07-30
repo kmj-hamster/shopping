@@ -5,11 +5,17 @@ var card: CardItemState
 var definition: CardItemDefinition
 var title_label: Label
 var aspect_label: Label
+var drag_enabled := true
 
 
-func setup(item_state: CardItemState, item_definition: CardItemDefinition) -> void:
+func setup(
+	item_state: CardItemState,
+	item_definition: CardItemDefinition,
+	can_drag: bool = true,
+) -> void:
 	card = item_state
 	definition = item_definition
+	drag_enabled = can_drag
 	if is_node_ready():
 		_refresh()
 
@@ -84,7 +90,7 @@ func apply_rule_highlight(rule: CardSlotRule) -> void:
 
 
 func _get_drag_data(_at_position: Vector2) -> Variant:
-	if card == null or definition == null:
+	if card == null or definition == null or not drag_enabled:
 		return null
 	if card.location not in [
 		CardItemState.Location.HAND,

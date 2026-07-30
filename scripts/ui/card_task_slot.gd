@@ -29,7 +29,7 @@ func setup(
 
 
 func _ready() -> void:
-	custom_minimum_size = Vector2(172, 236)
+	custom_minimum_size = Vector2(172, 210)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	gui_input.connect(_on_gui_input)
@@ -86,7 +86,11 @@ func refresh() -> void:
 		status_label.add_theme_color_override("font_color", Color("718884"))
 	else:
 		var view := CardHandCard.new()
-		view.setup(card, SlotDemoCatalog.item_by_id(card.definition_id))
+		view.setup(
+			card,
+			SlotDemoCatalog.item_by_id(card.definition_id),
+			activity_state.can_edit_activity(activity_id),
+		)
 		card_holder.add_child(view)
 		if evaluation.can_execute:
 			border = Color("d2b86f")
@@ -106,6 +110,8 @@ func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 		return false
 	var card := data.get("card") as CardItemState
 	if card == null or activity_state == null:
+		return false
+	if not activity_state.can_edit_activity(activity_id):
 		return false
 	var occupied := activity_state.card_for_slot(activity_id, rule.id)
 	if occupied != null and occupied != card:

@@ -76,6 +76,15 @@ func test_every_slot_demo_content_key_exists_in_both_locales() -> void:
 		&"slot.task.waiting",
 		&"slot.task.drop.rejected",
 		&"slot.task.open",
+		&"slot.task.confirm",
+		&"slot.task.cancel_confirm",
+		&"slot.task.confirmed",
+		&"slot.map.next_day.incomplete",
+		&"slot.transition.night",
+		&"slot.transition.new_day",
+		&"slot.transition.income",
+		&"slot.shop.feedback.daily_risk",
+		&"slot.recycle.feedback.daily_risk",
 	])
 	for item in SlotDemoCatalog.all_items():
 		keys.append(item.display_name_key)

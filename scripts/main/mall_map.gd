@@ -3,7 +3,9 @@ extends Control
 
 signal shop_requested(store_id: StringName)
 signal next_day_requested
+signal demo_continue_requested
 
+var commerce: SlotCommerceState
 var title_label: Label
 var day_money_label: Label
 var language_button: Button
@@ -17,21 +19,26 @@ var next_day_button: Button
 var schedule_panel: PanelContainer
 var schedule_list: VBoxContainer
 var schedule_title_label: Label
-var transition_panel: PanelContainer
-var transition_title_label: Label
-var transition_body_label: Label
-var transition_day := 0
+var night_overlay: ColorRect
+var night_result_label: Label
+var night_day_label: Label
 var demo_complete_scrim: ColorRect
 var demo_complete_panel: PanelContainer
 var demo_complete_title: Label
 var demo_complete_body: Label
 var demo_continue_button: Button
+var transition_fade_seconds := 0.35
+var transition_result_seconds := 1.15
+var transition_dawn_seconds := 0.7
+var transition_return_seconds := 0.4
 
 
 func _ready() -> void:
+	if commerce == null:
+		commerce = GameState.slot_commerce
 	_build_interface()
 	LocaleManager.locale_changed.connect(_on_locale_changed)
-	GameState.state_changed.connect(refresh)
+	commerce.state_changed.connect(refresh)
 	_apply_locale_texts()
 	refresh()
 
@@ -48,16 +55,8 @@ func show_closed_notice(store_id: StringName) -> void:
 	_refresh_notice()
 
 
-func show_day_transition(result: Dictionary) -> void:
-	transition_day = result.day
-	schedule_panel.visible = false
-	transition_panel.visible = true
-	_refresh_transition()
-
-
 func show_demo_complete() -> void:
 	schedule_panel.visible = false
-	transition_panel.visible = false
 	demo_complete_scrim.visible = true
 	demo_complete_panel.visible = true
 
@@ -66,16 +65,19 @@ func refresh() -> void:
 	if not is_node_ready():
 		return
 	day_money_label.text = TranslationServer.translate(&"map.day_week_money") % [
-		GameState.day,
-		TranslationServer.translate(ShopSchedule.weekday_key(GameState.day)),
-		GameState.wallet.money,
+		commerce.day,
+		TranslationServer.translate(ShopSchedule.weekday_key(commerce.day)),
+		commerce.wallet.money,
 	]
 	next_day_button.disabled = false
 	var next_day_tooltip_key := &"map.next_day.ready"
-	if not GameState.daily_goal.submitted:
-		next_day_tooltip_key = &"map.next_day.locked"
+	if not commerce.activity_state.all_daily_wishes_confirmed():
+		next_day_tooltip_key = &"slot.map.next_day.incomplete"
 	next_day_button.tooltip_text = TranslationServer.translate(next_day_tooltip_key)
-	if GameState.daily_goal.submitted and notice_key == &"map.next_day.locked":
+	if (
+		commerce.activity_state.all_daily_wishes_confirmed()
+		and notice_key == &"slot.map.next_day.incomplete"
+	):
 		notice_key = &""
 		notice_store_id = &""
 		_refresh_notice()
@@ -175,41 +177,13 @@ func _build_interface() -> void:
 	schedule_list.add_theme_constant_override("separation", 4)
 	schedule_column.add_child(schedule_list)
 
-	transition_panel = PanelContainer.new()
-	transition_panel.name = "DayTransition"
-	transition_panel.position = Vector2(420, 235)
-	transition_panel.size = Vector2(440, 220)
-	transition_panel.visible = false
-	transition_panel.add_theme_stylebox_override(
-		"panel", UiPalette.panel_style(Color("071a20", 0.98), Color("d4b66f", 0.92))
-	)
-	add_child(transition_panel)
-	var transition_column := VBoxContainer.new()
-	transition_column.alignment = BoxContainer.ALIGNMENT_CENTER
-	transition_column.add_theme_constant_override("separation", 12)
-	transition_panel.add_child(transition_column)
-	transition_title_label = Label.new()
-	transition_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	transition_title_label.add_theme_font_size_override("font_size", 25)
-	transition_title_label.add_theme_color_override("font_color", Color("efd18a"))
-	transition_column.add_child(transition_title_label)
-	transition_body_label = Label.new()
-	transition_body_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	transition_body_label.add_theme_font_size_override("font_size", 17)
-	transition_column.add_child(transition_body_label)
-	var transition_close := Button.new()
-	transition_close.custom_minimum_size = Vector2(100, 36)
-	transition_close.text = "OK"
-	transition_close.pressed.connect(func() -> void: transition_panel.visible = false)
-	transition_column.add_child(transition_close)
-
 	notice_panel = PanelContainer.new()
 	notice_panel.name = "NightNotice"
 	notice_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	notice_panel.offset_left = 300.0
-	notice_panel.offset_top = -82.0
+	notice_panel.offset_top = -216.0
 	notice_panel.offset_right = -300.0
-	notice_panel.offset_bottom = -24.0
+	notice_panel.offset_bottom = -158.0
 	notice_panel.add_theme_stylebox_override(
 		"panel", UiPalette.panel_style(Color("06171d", 0.88), Color("587a78", 0.84))
 	)
@@ -223,6 +197,36 @@ func _build_interface() -> void:
 	notice_panel.add_child(notice_label)
 	notice_panel.visible = false
 	notice_label.visibility_changed.connect(func() -> void: notice_panel.visible = notice_label.visible)
+
+	night_overlay = ColorRect.new()
+	night_overlay.name = "NightTransition"
+	night_overlay.color = Color("010204")
+	night_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	night_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	night_overlay.visible = false
+	night_overlay.modulate.a = 0.0
+	add_child(night_overlay)
+	var transition_center := CenterContainer.new()
+	transition_center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	night_overlay.add_child(transition_center)
+	var transition_column := VBoxContainer.new()
+	transition_column.custom_minimum_size = Vector2(720, 0)
+	transition_column.alignment = BoxContainer.ALIGNMENT_CENTER
+	transition_column.add_theme_constant_override("separation", 20)
+	transition_center.add_child(transition_column)
+	night_day_label = Label.new()
+	night_day_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	night_day_label.add_theme_font_size_override("font_size", 17)
+	night_day_label.add_theme_color_override("font_color", Color("778a89"))
+	transition_column.add_child(night_day_label)
+	night_result_label = Label.new()
+	night_result_label.custom_minimum_size = Vector2(700, 110)
+	night_result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	night_result_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	night_result_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	night_result_label.add_theme_font_size_override("font_size", 22)
+	night_result_label.add_theme_color_override("font_color", Color("d8d3bd"))
+	transition_column.add_child(night_result_label)
 
 	demo_complete_scrim = ColorRect.new()
 	demo_complete_scrim.color = Color(0.005, 0.02, 0.028, 0.78)
@@ -274,7 +278,6 @@ func _apply_locale_texts() -> void:
 	demo_complete_title.text = TranslationServer.translate(&"demo.complete.title")
 	demo_complete_body.text = TranslationServer.translate(&"demo.complete.body")
 	demo_continue_button.text = TranslationServer.translate(&"demo.complete.continue")
-	_refresh_transition()
 	_refresh_notice()
 
 
@@ -284,7 +287,7 @@ func _refresh_notice() -> void:
 	if notice_key.is_empty():
 		notice_label.text = ""
 	elif not notice_store_id.is_empty():
-		var next_day := ShopSchedule.next_open_day(notice_store_id, GameState.day)
+		var next_day := ShopSchedule.next_open_day(notice_store_id, commerce.day)
 		notice_label.text = TranslationServer.translate(notice_key) % [
 			TranslationServer.translate(DemoCatalog.store_name_key(notice_store_id)),
 			TranslationServer.translate(ShopSchedule.weekday_key(next_day)),
@@ -308,10 +311,10 @@ func _create_store_hotspot(store_id: StringName, rect: Rect2) -> void:
 func _refresh_store_hotspots() -> void:
 	for store_id in store_hotspots:
 		var hotspot := store_hotspots[store_id] as Button
-		var open := GameState.is_store_open(store_id)
+		var open := ShopSchedule.is_store_open(store_id, commerce.day)
 		var status_text := TranslationServer.translate(&"map.open")
 		if not open:
-			var next_day := ShopSchedule.next_open_day(store_id, GameState.day)
+			var next_day := ShopSchedule.next_open_day(store_id, commerce.day)
 			status_text = TranslationServer.translate(&"map.closed_until") % \
 				TranslationServer.translate(ShopSchedule.weekday_key(next_day))
 		hotspot.text = "%s\n%s" % [
@@ -352,23 +355,39 @@ func _refresh_schedule() -> void:
 		row.add_theme_font_size_override("font_size", 16)
 		row.add_theme_color_override(
 			"font_color",
-			Color("efd18a") if index == ShopSchedule.weekday_index(GameState.day) else Color("b8ceca")
+			Color("efd18a") if index == ShopSchedule.weekday_index(commerce.day) else Color("b8ceca")
 		)
 		schedule_list.add_child(row)
 
 
-func _refresh_transition() -> void:
-	if transition_title_label == null or transition_day <= 0:
-		return
-	transition_title_label.text = TranslationServer.translate(&"map.day.title") % [
-		transition_day,
-		TranslationServer.translate(ShopSchedule.weekday_key(transition_day)),
-	]
-	var store_names: PackedStringArray = []
-	for store_id in ShopSchedule.open_store_ids(transition_day):
-		store_names.append(TranslationServer.translate(DemoCatalog.store_name_key(store_id)))
-	transition_body_label.text = TranslationServer.translate(&"map.day.summary") % \
-		" · ".join(store_names)
+func fade_to_night() -> void:
+	schedule_panel.visible = false
+	notice_key = &""
+	_refresh_notice()
+	night_day_label.text = TranslationServer.translate(&"slot.transition.night") % commerce.day
+	night_result_label.text = ""
+	night_overlay.visible = true
+	move_child(night_overlay, get_child_count() - 1)
+	night_overlay.modulate.a = 0.0
+	var tween := create_tween()
+	tween.tween_property(night_overlay, "modulate:a", 1.0, transition_fade_seconds)
+	await tween.finished
+
+
+func show_night_results(entries: Array[Dictionary]) -> void:
+	for entry in entries:
+		night_result_label.text = TranslationServer.translate(StringName(entry.result_key))
+		await get_tree().create_timer(transition_result_seconds).timeout
+
+
+func fade_from_night(result: Dictionary) -> void:
+	night_day_label.text = TranslationServer.translate(&"slot.transition.new_day") % result.day
+	night_result_label.text = TranslationServer.translate(&"slot.transition.income") % result.income
+	await get_tree().create_timer(transition_dawn_seconds).timeout
+	var tween := create_tween()
+	tween.tween_property(night_overlay, "modulate:a", 0.0, transition_return_seconds)
+	await tween.finished
+	night_overlay.visible = false
 
 
 func _on_store_pressed(store_id: StringName) -> void:
@@ -380,8 +399,8 @@ func _on_schedule_pressed() -> void:
 
 
 func _on_next_day_pressed() -> void:
-	if not GameState.daily_goal.submitted:
-		show_notice(&"map.next_day.locked")
+	if not commerce.activity_state.all_daily_wishes_confirmed():
+		show_notice(&"slot.map.next_day.incomplete")
 		return
 	next_day_requested.emit()
 
@@ -389,3 +408,4 @@ func _on_next_day_pressed() -> void:
 func _on_demo_continue_pressed() -> void:
 	demo_complete_scrim.visible = false
 	demo_complete_panel.visible = false
+	demo_continue_requested.emit()

@@ -100,6 +100,45 @@ func test_closed_store_stays_on_map_and_shows_next_open_day() -> void:
 	)
 
 
+func test_next_night_without_two_confirmations_uses_map_notice() -> void:
+	var main = await _spawn_main()
+
+	main.current_screen._on_next_day_pressed()
+
+	assert_eq(GameState.slot_commerce.day, 1)
+	assert_true(main.current_screen.notice_panel.visible)
+	assert_eq(
+		main.current_screen.notice_label.text,
+		TranslationServer.translate(&"slot.map.next_day.incomplete"),
+	)
+
+
+func test_confirmed_wishes_run_black_transition_and_start_day_two() -> void:
+	var main = await _spawn_main()
+	var commerce := GameState.slot_commerce
+	_complete_first_night(commerce)
+	var map := main.current_screen as MallMapScreen
+	map.transition_fade_seconds = 0.0
+	map.transition_result_seconds = 0.0
+	map.transition_dawn_seconds = 0.0
+	map.transition_return_seconds = 0.0
+
+	map._on_next_day_pressed()
+	for index in range(20):
+		await get_tree().process_frame
+
+	assert_eq(commerce.day, 2)
+	assert_eq(commerce.wallet.money, 188)
+	assert_true(commerce.inventory.is_empty())
+	assert_eq(
+		commerce.activity_state.active_daily_wish_ids,
+		[&"wish_stay_awake", &"wish_remember"],
+	)
+	assert_false(map.night_overlay.visible)
+	assert_true(main.protagonist_interface.visible)
+	assert_false(main.transition_in_progress)
+
+
 func test_six_map_hotspots_do_not_overlap() -> void:
 	var main = await _spawn_main()
 	var hotspots: Array = main.current_screen.store_hotspots.values()
@@ -127,3 +166,22 @@ func _task_window_count(interface: SlotPlayerInterface) -> int:
 	return interface.root.get_children().filter(
 		func(child: Node) -> bool: return child is SlotTaskWindow
 	).size()
+
+
+func _complete_first_night(commerce: SlotCommerceState) -> void:
+	var fast_food := commerce.transaction_for_store(SlotDemoCatalog.STORE_FAST_FOOD)
+	assert_true(fast_food.select_shelf_slot(fast_food.shelf_slots[0].slot_id).ok)
+	var hash_brown := commerce.checkout_store(SlotDemoCatalog.STORE_FAST_FOOD).purchased[0] \
+		as CardItemState
+	var flower := commerce.transaction_for_store(SlotDemoCatalog.STORE_FLOWER)
+	assert_true(flower.select_shelf_slot(flower.shelf_slots[0].slot_id).ok)
+	var sunflower := commerce.checkout_store(SlotDemoCatalog.STORE_FLOWER).purchased[0] \
+		as CardItemState
+	assert_true(commerce.activity_state.assign_card(
+		&"wish_hungry", &"hungry", hash_brown
+	).ok)
+	assert_true(commerce.activity_state.assign_card(
+		&"wish_bedside", &"bedside", sunflower
+	).ok)
+	assert_true(commerce.activity_state.confirm_daily_wish(&"wish_hungry").ok)
+	assert_true(commerce.activity_state.confirm_daily_wish(&"wish_bedside").ok)

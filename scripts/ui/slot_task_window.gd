@@ -17,6 +17,7 @@ var activity_tabs: HBoxContainer
 var activity_title: Label
 var slots_row: HBoxContainer
 var result_label: Label
+var action_button: Button
 var slot_views: Dictionary = {}
 var dragging := false
 var user_moved := false
@@ -98,6 +99,10 @@ func _build_interface() -> void:
 	result_label.add_theme_font_size_override("font_size", 13)
 	result_label.add_theme_color_override("font_color", Color("8ea49f"))
 	column.add_child(result_label)
+	action_button = Button.new()
+	action_button.custom_minimum_size = Vector2(0, 38)
+	action_button.pressed.connect(_on_action_pressed)
+	column.add_child(action_button)
 
 
 func refresh() -> void:
@@ -115,11 +120,20 @@ func refresh() -> void:
 		for activity_id in activities:
 			var button := Button.new()
 			button.toggle_mode = true
-			button.text = _activity_name(activity_id)
+			button.text = "%s%s" % [
+				"✓  " if activity_state.is_daily_confirmed(activity_id) else "",
+				_activity_name(activity_id),
+			]
 			button.button_pressed = activity_id == current_activity_id
 			button.pressed.connect(_select_activity.bind(activity_id))
 			activity_tabs.add_child(button)
 	_rebuild_slots()
+	fit_to_contents()
+	call_deferred("fit_to_contents")
+
+
+func fit_to_contents() -> void:
+	size = get_combined_minimum_size()
 
 
 func _rebuild_slots() -> void:
@@ -129,6 +143,7 @@ func _rebuild_slots() -> void:
 	if current_activity_id.is_empty():
 		activity_title.text = TranslationServer.translate(&"slot.task.none")
 		result_label.text = ""
+		action_button.visible = false
 		return
 	activity_title.text = _activity_name(current_activity_id)
 	for rule in activity_state.rules_for_activity(current_activity_id):
@@ -139,8 +154,16 @@ func _rebuild_slots() -> void:
 		slots_row.add_child(slot)
 		slot_views[rule.id] = slot
 	var evaluation := activity_state.evaluation_for(current_activity_id)
+	var confirmed := activity_state.is_daily_confirmed(current_activity_id)
 	result_label.text = TranslationServer.translate(
-		&"slot.task.ready" if evaluation.is_ready else &"slot.task.waiting"
+		&"slot.task.confirmed"
+		if confirmed
+		else &"slot.task.ready" if evaluation.is_ready else &"slot.task.waiting"
+	)
+	action_button.visible = current_tab == TAB_DAILY
+	action_button.disabled = not confirmed and not evaluation.is_ready
+	action_button.text = TranslationServer.translate(
+		&"slot.task.cancel_confirm" if confirmed else &"slot.task.confirm"
 	)
 	if evaluation.is_ready and evaluation.has("synthesis"):
 		var preview_key: StringName = evaluation.synthesis.preview_key
@@ -199,6 +222,15 @@ func _on_slot_focused(rule: CardSlotRule) -> void:
 func _on_drop_resolved(result: Dictionary) -> void:
 	if not result.ok:
 		result_label.text = TranslationServer.translate(&"slot.task.drop.rejected")
+
+
+func _on_action_pressed() -> void:
+	if current_tab != TAB_DAILY or current_activity_id.is_empty():
+		return
+	if activity_state.is_daily_confirmed(current_activity_id):
+		activity_state.cancel_daily_confirmation(current_activity_id)
+	else:
+		activity_state.confirm_daily_wish(current_activity_id)
 
 
 func _on_locale_changed(_locale: String) -> void:

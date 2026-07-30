@@ -195,9 +195,14 @@ func _on_cancel_pressed() -> void:
 
 func _on_checkout_pressed() -> void:
 	var result := commerce.checkout_recycling()
-	feedback_label.text = TranslationServer.translate(
-		&"slot.recycle.feedback.paid" if result.ok else &"slot.recycle.feedback.invalid"
-	)
+	var feedback_key := &"slot.recycle.feedback.paid"
+	if not result.ok:
+		feedback_key = (
+			&"slot.recycle.feedback.daily_risk"
+			if result.reason == SlotCommerceState.RESULT_DAILY_RISK
+			else &"slot.recycle.feedback.invalid"
+		)
+	feedback_label.text = TranslationServer.translate(feedback_key)
 
 
 func _on_locale_changed(_locale: String) -> void:

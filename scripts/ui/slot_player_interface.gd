@@ -72,10 +72,11 @@ func set_view_context(context: StringName) -> void:
 func toggle_task_window() -> void:
 	task_window.visible = not task_window.visible
 	if task_window.visible:
+		task_window.refresh()
+		task_window.fit_to_contents()
 		if not task_window.user_moved:
 			task_window.position = _default_window_position()
 		root.move_child(task_window, root.get_child_count() - 1)
-		task_window.refresh()
 	else:
 		hand_bar.set_highlight_rule(null)
 		slot_rule_focused.emit(null)
@@ -93,7 +94,7 @@ func _on_slot_rule_focused(rule: CardSlotRule) -> void:
 
 
 func _default_window_position() -> Vector2:
-	return Vector2(635, 72) if view_context == &"shop" else Vector2(330, 88)
+	return Vector2(635, 24) if view_context == &"shop" else Vector2(330, 44)
 
 
 func _on_locale_changed(_locale: String) -> void:

@@ -95,6 +95,8 @@ func test_talking_unlocks_event_and_reveals_special_product() -> void:
 
 
 func test_same_shop_scene_can_checkout_bookstore_piece_on_daily_grid() -> void:
+	# Bookstore moved to the second night in the slot-card Demo schedule.
+	GameState.day = 2
 	var shop := await _spawn_shop(DemoCatalog.STORE_BOOK)
 	var period := shop.transaction.add_to_cart(&"book_period").piece as PuzzlePieceState
 	_place_piece(period, DemoCatalog.DAILY_TASK_ID, Vector2i.ZERO)

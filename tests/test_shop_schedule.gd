@@ -12,6 +12,27 @@ func test_three_retail_stores_and_recycling_are_open_each_day() -> void:
 		assert_eq(unique.size(), 4, "day %d has duplicate stores" % day)
 
 
+func test_first_three_nights_match_slot_card_demo_routes() -> void:
+	assert_eq(ShopSchedule.open_store_ids(1), [
+		DemoCatalog.STORE_TOY,
+		DemoCatalog.STORE_FLOWER,
+		DemoCatalog.STORE_FAST_FOOD,
+		DemoCatalog.STORE_RECYCLING,
+	])
+	assert_eq(ShopSchedule.open_store_ids(2), [
+		DemoCatalog.STORE_TOY,
+		DemoCatalog.STORE_RECORD,
+		DemoCatalog.STORE_BOOK,
+		DemoCatalog.STORE_RECYCLING,
+	])
+	assert_eq(ShopSchedule.open_store_ids(3), [
+		DemoCatalog.STORE_TOY,
+		DemoCatalog.STORE_FLOWER,
+		DemoCatalog.STORE_FAST_FOOD,
+		DemoCatalog.STORE_RECYCLING,
+	])
+
+
 func test_no_store_rests_for_two_consecutive_days() -> void:
 	for store_id in DemoCatalog.STORE_IDS:
 		for day in range(1, 22):

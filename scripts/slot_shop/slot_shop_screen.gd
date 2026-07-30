@@ -267,6 +267,8 @@ func _on_leave_pressed() -> void:
 func _failure_key(reason: StringName) -> StringName:
 	if reason == CardShopTransaction.RESULT_INSUFFICIENT_FUNDS:
 		return &"slot.shop.feedback.no_money"
+	if reason == SlotCommerceState.RESULT_DAILY_RISK:
+		return &"slot.shop.feedback.daily_risk"
 	return &"slot.shop.feedback.empty"
 
 

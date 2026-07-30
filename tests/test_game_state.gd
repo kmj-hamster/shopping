@@ -46,6 +46,8 @@ func test_unlocked_special_can_be_bought_into_shared_empty_bag() -> void:
 
 
 func test_five_store_transactions_share_wallet_and_unique_piece_ids() -> void:
+	# The archived transaction test uses night 2, when both book and toy stores are open.
+	GameState.day = 2
 	var book := GameState.transaction_for_store(DemoCatalog.STORE_BOOK)
 	var toy := GameState.transaction_for_store(DemoCatalog.STORE_TOY)
 	var book_piece := book.add_to_cart(&"book_period").piece as PuzzlePieceState

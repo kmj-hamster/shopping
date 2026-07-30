@@ -8,7 +8,10 @@ func test_bag_toggles_one_persistent_task_window() -> void:
 	assert_false(interface.task_window.visible)
 	assert_eq(interface.root.find_children("TaskWindow", "SlotTaskWindow", true, false).size(), 1)
 	interface.toggle_task_window()
+	await get_tree().process_frame
+	await get_tree().process_frame
 	assert_true(interface.task_window.visible)
+	assert_lt(interface.task_window.size.y, 520.0)
 	interface.toggle_task_window()
 	assert_false(interface.task_window.visible)
 	assert_eq(interface.root.find_children("TaskWindow", "SlotTaskWindow", true, false).size(), 1)
@@ -59,6 +62,35 @@ func test_hand_drop_returns_activity_card_to_global_hand() -> void:
 	assert_eq(card.location, CardItemState.Location.HAND)
 	assert_has(interface.hand_bar.card_views, card.instance_id)
 	assert_null(commerce.activity_state.card_for_slot(&"wish_hungry", &"hungry"))
+
+
+func test_daily_action_confirms_locks_and_then_cancels_selection() -> void:
+	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
+	var card := _buy_hash_brown(commerce)
+	var interface := await _spawn_interface(commerce)
+	assert_true(commerce.activity_state.assign_card(&"wish_hungry", &"hungry", card).ok)
+	await get_tree().process_frame
+
+	assert_false(interface.task_window.action_button.disabled)
+	interface.task_window._on_action_pressed()
+	await get_tree().process_frame
+
+	assert_true(commerce.activity_state.is_daily_confirmed(&"wish_hungry"))
+	assert_eq(
+		interface.task_window.action_button.text,
+		TranslationServer.translate(&"slot.task.cancel_confirm"),
+	)
+	var slot := interface.task_window.slot_views[&"hungry"] as CardTaskSlot
+	var card_view := slot.card_holder.get_child(0) as CardHandCard
+	assert_false(card_view.drag_enabled)
+
+	interface.task_window._on_action_pressed()
+	await get_tree().process_frame
+	assert_false(commerce.activity_state.is_daily_confirmed(&"wish_hungry"))
+	assert_eq(
+		interface.task_window.action_button.text,
+		TranslationServer.translate(&"slot.task.confirm"),
+	)
 
 
 func _spawn_interface(commerce: SlotCommerceState) -> SlotPlayerInterface:

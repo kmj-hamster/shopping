@@ -62,7 +62,9 @@ func reset_demo() -> void:
 	purchased_special_items = {}
 	daily_goal = DailyGoalState.new(day, DemoCatalog.daily_template_id_for_day(day))
 	recycle_transaction = RecycleTransaction.new(pieces, wallet)
-	slot_commerce = SlotCommerceState.new(wallet)
+	# The archived Polyomino state keeps its original wallet until final cleanup.
+	# The formal slot-card flow owns the new Demo economy independently.
+	slot_commerce = SlotCommerceState.new(PlayerWallet.new(120))
 	_refresh_store_transactions()
 	state_changed.emit()
 

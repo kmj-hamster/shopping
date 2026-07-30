@@ -939,3 +939,30 @@ msgstr "它不适合放在这里。"
 
 msgid "slot.task.open"
 msgstr "打开购物袋"
+
+msgid "slot.task.confirm"
+msgstr "确认今晚的选择"
+
+msgid "slot.task.cancel_confirm"
+msgstr "再想一想"
+
+msgid "slot.task.confirmed"
+msgstr "今晚就这样吧"
+
+msgid "slot.map.next_day.incomplete"
+msgstr "今日清单还有没有确认的选择。"
+
+msgid "slot.transition.night"
+msgstr "第 %d 夜"
+
+msgid "slot.transition.new_day"
+msgstr "第 %d 天"
+
+msgid "slot.transition.income"
+msgstr "白天过去了。工资 +%d"
+
+msgid "slot.shop.feedback.daily_risk"
+msgstr "今晚还需要留一点给自己。"
+
+msgid "slot.recycle.feedback.daily_risk"
+msgstr "这件东西今晚还用得上。"

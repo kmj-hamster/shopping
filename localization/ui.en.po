@@ -939,3 +939,30 @@ msgstr "It does not belong in this slot."
 
 msgid "slot.task.open"
 msgstr "Open the shopping bag"
+
+msgid "slot.task.confirm"
+msgstr "Keep This for Tonight"
+
+msgid "slot.task.cancel_confirm"
+msgstr "Think Again"
+
+msgid "slot.task.confirmed"
+msgstr "This will do for tonight"
+
+msgid "slot.map.next_day.incomplete"
+msgstr "Tonight's list still has an unconfirmed choice."
+
+msgid "slot.transition.night"
+msgstr "Night %d"
+
+msgid "slot.transition.new_day"
+msgstr "Day %d"
+
+msgid "slot.transition.income"
+msgstr "The workday passes. Pay +%d"
+
+msgid "slot.shop.feedback.daily_risk"
+msgstr "You still need to keep something for yourself tonight."
+
+msgid "slot.recycle.feedback.daily_risk"
+msgstr "You may still need this tonight."
