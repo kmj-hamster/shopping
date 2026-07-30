@@ -40,6 +40,7 @@ var purchased_special_items: Dictionary = {}
 var store_transactions: Dictionary = {}
 var recycle_transaction: RecycleTransaction
 var daily_goal := DailyGoalState.new()
+var slot_commerce: SlotCommerceState
 
 var toy_transaction: ShopTransaction:
 	get:
@@ -61,6 +62,7 @@ func reset_demo() -> void:
 	purchased_special_items = {}
 	daily_goal = DailyGoalState.new(day, DemoCatalog.daily_template_id_for_day(day))
 	recycle_transaction = RecycleTransaction.new(pieces, wallet)
+	slot_commerce = SlotCommerceState.new(wallet)
 	_refresh_store_transactions()
 	state_changed.emit()
 
@@ -151,6 +153,7 @@ func advance_day() -> Dictionary:
 	var consumed_count := _consume_task_pieces(DemoCatalog.DAILY_TASK_ID)
 	day += 1
 	wallet.money += 100
+	slot_commerce.begin_new_day(day)
 	daily_goal = DailyGoalState.new(day, DemoCatalog.daily_template_id_for_day(day))
 	_refresh_store_transactions()
 	state_changed.emit()

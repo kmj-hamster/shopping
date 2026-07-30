@@ -753,3 +753,78 @@ msgstr "It watches the rain for you, with a practiced posture that hurts to see.
 
 msgid "slot.wish.rain_close.result.craft_comfort_bear"
 msgstr "Its plush body absorbs the rain until only a distant echo remains."
+
+msgid "slot.aspect.lamp"
+msgstr "Lamp"
+
+msgid "slot.aspect.mirror"
+msgstr "Mirror"
+
+msgid "slot.aspect.candle"
+msgstr "Candle"
+
+msgid "slot.aspect.pillow"
+msgstr "Pillow"
+
+msgid "slot.hand.title"
+msgstr "Things in Hand"
+
+msgid "slot.hand.empty"
+msgstr "Nothing in hand"
+
+msgid "slot.shop.empty_shelf"
+msgstr "Empty shelf"
+
+msgid "slot.shop.cart"
+msgstr "%d selected  ·  ¥%d"
+
+msgid "slot.shop.cancel"
+msgstr "Put Back"
+
+msgid "slot.shop.checkout"
+msgstr "Checkout"
+
+msgid "slot.shop.feedback.ready"
+msgstr "The goods wait quietly behind the glass."
+
+msgid "slot.shop.feedback.selected"
+msgstr "The clerk makes a small mark beside the price tag."
+
+msgid "slot.shop.feedback.paid"
+msgstr "The paper bag is lighter. There is one more thing in your hands."
+
+msgid "slot.shop.feedback.cancelled"
+msgstr "The price tags return to their places."
+
+msgid "slot.shop.feedback.no_money"
+msgstr "You are a little short."
+
+msgid "slot.shop.feedback.empty"
+msgstr "There is nothing to check out."
+
+msgid "slot.recycle.title"
+msgstr "Recycling Window"
+
+msgid "slot.recycle.hint"
+msgstr "Drag a card from your hand here."
+
+msgid "slot.recycle.cart"
+msgstr "%d to recycle  ·  +¥%d"
+
+msgid "slot.recycle.cancel"
+msgstr "Take Back"
+
+msgid "slot.recycle.checkout"
+msgstr "Recycle"
+
+msgid "slot.recycle.feedback.staged"
+msgstr "Someone behind the window catches it."
+
+msgid "slot.recycle.feedback.returned"
+msgstr "The item returns to your hand."
+
+msgid "slot.recycle.feedback.paid"
+msgstr "The window closes. Coins roll out underneath."
+
+msgid "slot.recycle.feedback.invalid"
+msgstr "The window does not accept it."

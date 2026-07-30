@@ -753,3 +753,78 @@ msgstr "它坐在窗前替你看雨，姿势熟练得令人难过。"
 
 msgid "slot.wish.rain_close.result.craft_comfort_bear"
 msgstr "雨声被它蓬松的身体吸走，只剩很远的回响。"
+
+msgid "slot.aspect.lamp"
+msgstr "灯"
+
+msgid "slot.aspect.mirror"
+msgstr "镜"
+
+msgid "slot.aspect.candle"
+msgstr "烛"
+
+msgid "slot.aspect.pillow"
+msgstr "枕"
+
+msgid "slot.hand.title"
+msgstr "手中的东西"
+
+msgid "slot.hand.empty"
+msgstr "手中空空"
+
+msgid "slot.shop.empty_shelf"
+msgstr "空货位"
+
+msgid "slot.shop.cart"
+msgstr "已选 %d 件  ·  ¥%d"
+
+msgid "slot.shop.cancel"
+msgstr "放回"
+
+msgid "slot.shop.checkout"
+msgstr "结账"
+
+msgid "slot.shop.feedback.ready"
+msgstr "玻璃后面的商品安静地等着。"
+
+msgid "slot.shop.feedback.selected"
+msgstr "店员在价签旁做了一个小记号。"
+
+msgid "slot.shop.feedback.paid"
+msgstr "纸袋轻了一点，手中多了一样东西。"
+
+msgid "slot.shop.feedback.cancelled"
+msgstr "价签回到了原处。"
+
+msgid "slot.shop.feedback.no_money"
+msgstr "还差一点钱。"
+
+msgid "slot.shop.feedback.empty"
+msgstr "没有可以结账的东西。"
+
+msgid "slot.recycle.title"
+msgstr "回收窗口"
+
+msgid "slot.recycle.hint"
+msgstr "把手中的卡牌拖到这里。"
+
+msgid "slot.recycle.cart"
+msgstr "待回收 %d 件  ·  +¥%d"
+
+msgid "slot.recycle.cancel"
+msgstr "取回"
+
+msgid "slot.recycle.checkout"
+msgstr "回收"
+
+msgid "slot.recycle.feedback.staged"
+msgstr "窗口后面有人接住了它。"
+
+msgid "slot.recycle.feedback.returned"
+msgstr "东西重新回到了手中。"
+
+msgid "slot.recycle.feedback.paid"
+msgstr "窗口合上，硬币从下面滚了出来。"
+
+msgid "slot.recycle.feedback.invalid"
+msgstr "窗口没有接收它。"

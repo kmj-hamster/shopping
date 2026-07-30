@@ -10,6 +10,7 @@ extends Resource
 @export_range(0, 20, 1) var unlock_level := 0
 @export var is_crafted := false
 @export_range(0, 999, 1) var fixed_resale_value := 0
+@export var can_recycle := true
 @export var property_set: CardPropertySet
 
 
@@ -23,6 +24,14 @@ func has_property(tag: StringName) -> bool:
 
 func localized_name() -> String:
 	return TranslationServer.translate(display_name_key)
+
+
+func resale_value() -> int:
+	if not can_recycle:
+		return 0
+	if is_crafted:
+		return fixed_resale_value
+	return int(floori(base_price * 0.8))
 
 
 func validation_errors() -> PackedStringArray:

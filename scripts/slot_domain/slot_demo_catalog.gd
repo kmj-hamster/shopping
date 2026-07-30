@@ -7,6 +7,14 @@ const STORE_FLOWER := &"flower"
 const STORE_RECORD := &"record"
 const STORE_FAST_FOOD := &"fast_food"
 
+const STORE_IDS: Array[StringName] = [
+	STORE_BOOK,
+	STORE_TOY,
+	STORE_FLOWER,
+	STORE_RECORD,
+	STORE_FAST_FOOD,
+]
+
 const RETAIL_ITEM_PATHS := [
 	"res://data/slot_demo/items/book_bedtime_clipping.tres",
 	"res://data/slot_demo/items/book_aquarium_issue.tres",
@@ -43,6 +51,34 @@ const RECIPE_PATHS := [
 	"res://data/slot_demo/recipes/recipe_night_radio.tres",
 ]
 
+const INITIAL_SHELF_ITEMS := {
+	STORE_BOOK: [
+		&"book_bedtime_clipping", &"book_bedtime_clipping",
+		&"book_bedtime_clipping", &"book_bedtime_clipping",
+		&"book_aquarium_issue", &"book_aquarium_issue",
+	],
+	STORE_RECORD: [
+		&"record_fluorescent_single", &"record_fluorescent_single",
+		&"record_fluorescent_single", &"record_fluorescent_single",
+		&"record_lullaby_cassette", &"record_lullaby_cassette",
+	],
+	STORE_FLOWER: [
+		&"flower_sunflower", &"flower_sunflower", &"flower_sunflower",
+		&"flower_night_jasmine", &"flower_night_jasmine",
+		&"flower_lavender_sachet",
+	],
+	STORE_TOY: [
+		&"toy_cloth_scraps", &"toy_cloth_scraps",
+		&"toy_cloth_scraps", &"toy_cloth_scraps",
+		&"toy_glass_marble", &"toy_glass_marble",
+	],
+	STORE_FAST_FOOD: [
+		&"fast_hash_brown", &"fast_hash_brown",
+		&"fast_hash_brown", &"fast_hash_brown",
+		&"fast_warm_milk", &"fast_warm_milk",
+	],
+}
+
 
 static func retail_items() -> Array[CardItemDefinition]:
 	var result: Array[CardItemDefinition] = []
@@ -73,6 +109,25 @@ static func item_by_id(item_id: StringName) -> CardItemDefinition:
 		if item.id == item_id:
 			return item
 	return null
+
+
+static func retail_items_for_store(store_id: StringName) -> Array[CardItemDefinition]:
+	var result: Array[CardItemDefinition] = []
+	for item in retail_items():
+		if item.store_id == store_id:
+			result.append(item)
+	return result
+
+
+static func initial_shelf_item_ids(store_id: StringName) -> Array[StringName]:
+	var result: Array[StringName] = []
+	for item_id in INITIAL_SHELF_ITEMS.get(store_id, []):
+		result.append(StringName(item_id))
+	return result
+
+
+static func store_name_key(store_id: StringName) -> StringName:
+	return StringName("store.%s" % store_id)
 
 
 static func wishes() -> Array[DailyWishDefinition]:
