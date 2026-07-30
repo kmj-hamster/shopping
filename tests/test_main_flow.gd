@@ -105,6 +105,20 @@ func test_slot_focus_highlights_current_shop_and_global_hand() -> void:
 
 	assert_eq(shop.highlight_rule, rule)
 	assert_eq(main.protagonist_interface.hand_bar.highlight_rule, rule)
+	for slot in GameState.slot_commerce.transaction_for_store(
+		SlotDemoCatalog.STORE_FAST_FOOD
+	).shelf_slots:
+		var button := shop.shelf_buttons[slot.slot_id] as Button
+		assert_true(button.get_meta(&"rule_match_highlighted", false))
+		assert_eq(button.modulate, Color.WHITE)
+
+	main._on_shop_requested(SlotDemoCatalog.STORE_TOY)
+	await get_tree().process_frame
+	shop = main.current_screen as SlotShopScreen
+	main.protagonist_interface._on_slot_rule_focused(rule)
+	for button in shop.shelf_buttons.values():
+		assert_false((button as Button).get_meta(&"rule_match_highlighted", false))
+		assert_eq((button as Button).modulate, Color.WHITE)
 
 
 func test_recycling_hotspot_opens_new_card_recycle_screen() -> void:

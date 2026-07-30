@@ -107,8 +107,62 @@ func test_card_drag_uses_a_full_card_visual_and_removes_the_source_from_view() -
 	assert_true(source.visible)
 	assert_eq(source.self_modulate.a, 0.0)
 	assert_eq(following.position, following_position)
+	source.return_animation_seconds = 0.05
 	source._end_drag_visual(false)
+	assert_true(source.return_animation_active)
+	assert_eq(source.self_modulate.a, 0.0)
+	await get_tree().create_timer(0.08).timeout
+	assert_false(source.return_animation_active)
 	assert_eq(source.self_modulate.a, 1.0)
+	assert_eq(source.mouse_filter, Control.MOUSE_FILTER_PASS)
+
+
+func test_focused_slot_only_pulses_compatible_unassigned_hand_cards() -> void:
+	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
+	var slotted_food := _add_card(commerce, &"fast_hash_brown", 100)
+	var hand_food := _add_card(commerce, &"fast_warm_milk", 101)
+	var hand_toy := _add_card(commerce, &"toy_glass_marble", 102)
+	assert_true(commerce.activity_state.assign_card(
+		&"wish_hungry", &"hungry", slotted_food
+	).ok)
+	var interface := await _spawn_interface(commerce)
+	var rule := SlotDemoCatalog.wish_by_id(&"wish_hungry").slot_rule
+
+	interface._on_slot_rule_focused(rule)
+
+	var matching := interface.hand_bar.card_views[hand_food.instance_id] as CardHandCard
+	var unrelated := interface.hand_bar.card_views[hand_toy.instance_id] as CardHandCard
+	var slot := interface.task_window.slot_views[&"hungry"] as CardTaskSlot
+	var assigned := slot.card_holder.get_child(0) as CardHandCard
+	assert_true(matching.rule_match_highlighted)
+	assert_false(unrelated.rule_match_highlighted)
+	assert_eq(unrelated.modulate, Color.WHITE)
+	assert_false(assigned.rule_match_highlighted)
+
+
+func test_drag_marks_compatible_recipe_slot_and_crosses_out_the_others() -> void:
+	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
+	var card := _add_card(commerce, &"fast_hash_brown", 100)
+	var interface := await _spawn_interface(commerce)
+	interface.task_window._select_tab(SlotTaskWindow.TAB_RECIPES)
+	await get_tree().process_frame
+
+	interface.task_window.show_drag_compatibility(card)
+
+	var sound := interface.task_window.slot_views[&"sound"] as CardTaskSlot
+	var shell := interface.task_window.slot_views[&"shell"] as CardTaskSlot
+	var tuning := interface.task_window.slot_views[&"tuning"] as CardTaskSlot
+	assert_false(sound.drag_can_accept)
+	assert_true(sound.drop_marker.visible)
+	assert_false(shell.drag_can_accept)
+	assert_true(shell.drop_marker.visible)
+	assert_true(tuning.drag_can_accept)
+	assert_false(tuning.drop_marker.visible)
+
+	interface.task_window.clear_drag_compatibility()
+	assert_false(sound.drop_marker.visible)
+	assert_false(shell.drop_marker.visible)
+	assert_false(tuning.drop_marker.visible)
 
 
 func test_successful_move_keeps_old_card_visual_hidden_until_state_refresh() -> void:

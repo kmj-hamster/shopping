@@ -165,6 +165,8 @@ func _rebuild_slots() -> void:
 		slot.focused.connect(_on_slot_focused)
 		slot.drop_resolved.connect(_on_drop_resolved)
 		slot.item_inspected.connect(item_inspected.emit)
+		slot.card_drag_started.connect(show_drag_compatibility)
+		slot.card_drag_finished.connect(_on_card_drag_finished)
 		slots_row.add_child(slot)
 		slot_views[rule.id] = slot
 	var evaluation := activity_state.evaluation_for(current_activity_id)
@@ -311,6 +313,20 @@ func _on_slot_focused(rule: CardSlotRule) -> void:
 func _on_drop_resolved(result: Dictionary) -> void:
 	if not result.ok:
 		result_label.text = TranslationServer.translate(&"slot.task.drop.rejected")
+
+
+func show_drag_compatibility(card: CardItemState) -> void:
+	for slot in slot_views.values():
+		(slot as CardTaskSlot).show_drag_feedback(card)
+
+
+func clear_drag_compatibility() -> void:
+	for slot in slot_views.values():
+		(slot as CardTaskSlot).clear_drag_feedback()
+
+
+func _on_card_drag_finished(_card: CardItemState, _succeeded: bool) -> void:
+	clear_drag_compatibility()
 
 
 func _on_action_pressed() -> void:

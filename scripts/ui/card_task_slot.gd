@@ -4,6 +4,8 @@ extends PanelContainer
 signal focused(rule: CardSlotRule)
 signal drop_resolved(result: Dictionary)
 signal item_inspected(definition: CardItemDefinition)
+signal card_drag_started(card: CardItemState)
+signal card_drag_finished(card: CardItemState, succeeded: bool)
 
 var commerce: SlotCommerceState
 var activity_state: SlotActivityState
@@ -12,7 +14,11 @@ var rule: CardSlotRule
 var title_label: Label
 var rule_label: Label
 var card_holder: CenterContainer
+var drop_marker: Label
 var status_label: Label
+var base_border_color := Color("536d6c")
+var drag_feedback_active := false
+var drag_can_accept := false
 
 
 func setup(
@@ -54,10 +60,25 @@ func _ready() -> void:
 	rule_label.add_theme_font_size_override("font_size", 11)
 	rule_label.add_theme_color_override("font_color", Color("8fa49f"))
 	column.add_child(rule_label)
+	var slot_area := Control.new()
+	slot_area.custom_minimum_size = Vector2(150, 100)
+	slot_area.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	slot_area.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(slot_area)
 	card_holder = CenterContainer.new()
-	card_holder.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	card_holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	card_holder.mouse_filter = Control.MOUSE_FILTER_PASS
-	column.add_child(card_holder)
+	slot_area.add_child(card_holder)
+	drop_marker = Label.new()
+	drop_marker.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	drop_marker.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	drop_marker.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	drop_marker.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	drop_marker.add_theme_font_size_override("font_size", 52)
+	drop_marker.add_theme_color_override("font_color", Color("e66d6d"))
+	drop_marker.text = "×"
+	drop_marker.visible = false
+	slot_area.add_child(drop_marker)
 	status_label = Label.new()
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	status_label.add_theme_font_size_override("font_size", 11)
@@ -81,7 +102,7 @@ func refresh() -> void:
 		rule,
 		SlotDemoCatalog.item_by_id(card.definition_id) if card != null else null,
 	)
-	var border := Color("536d6c")
+	base_border_color = Color("536d6c")
 	if card == null:
 		status_label.text = TranslationServer.translate(&"slot.task.slot.empty")
 		status_label.add_theme_color_override("font_color", Color("718884"))
@@ -93,24 +114,28 @@ func refresh() -> void:
 			activity_state.can_edit_activity(activity_id),
 		)
 		view.inspect_requested.connect(item_inspected.emit)
+		view.drag_started.connect(card_drag_started.emit)
+		view.drag_finished.connect(card_drag_finished.emit)
 		card_holder.add_child(view)
 		if evaluation.can_execute:
-			border = Color("d2b86f")
+			base_border_color = Color("d2b86f")
 			status_label.text = TranslationServer.translate(&"slot.task.slot.ready")
 			status_label.add_theme_color_override("font_color", Color("d7c17e"))
 		else:
-			border = Color("7d7470")
+			base_border_color = Color("7d7470")
 			status_label.text = _insufficient_text(evaluation)
 			status_label.add_theme_color_override("font_color", Color("bd9b83"))
-	add_theme_stylebox_override(
-		"panel", UiPalette.panel_style(Color("091418", 0.98), border)
-	)
+	_apply_slot_style()
 
 
 func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 	if typeof(data) != TYPE_DICTIONARY or data.get("kind") != &"card_item":
 		return false
 	var card := data.get("card") as CardItemState
+	return _can_accept_card(card)
+
+
+func _can_accept_card(card: CardItemState) -> bool:
 	if card == null or activity_state == null:
 		return false
 	if not activity_state.can_edit_activity(activity_id):
@@ -120,6 +145,34 @@ func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 		return false
 	var definition := SlotDemoCatalog.item_by_id(card.definition_id)
 	return CardRuleEvaluator.evaluate(rule, definition).can_place
+
+
+func show_drag_feedback(card: CardItemState) -> void:
+	drag_feedback_active = true
+	drag_can_accept = _can_accept_card(card)
+	drop_marker.visible = not drag_can_accept
+	_apply_slot_style()
+
+
+func clear_drag_feedback() -> void:
+	drag_feedback_active = false
+	drag_can_accept = false
+	drop_marker.visible = false
+	_apply_slot_style()
+
+
+func _apply_slot_style() -> void:
+	var border := base_border_color
+	var style := UiPalette.panel_style(Color("091418", 0.98), border)
+	if drag_feedback_active and drag_can_accept:
+		style.border_color = Color("edf9f5")
+		style.set_border_width_all(3)
+		style.shadow_color = Color(0.9, 1.0, 0.97, 0.38)
+		style.shadow_size = 7
+	elif drag_feedback_active:
+		style.border_color = Color("b94d55")
+		style.set_border_width_all(2)
+	add_theme_stylebox_override("panel", style)
 
 
 func _drop_data(_at_position: Vector2, data: Variant) -> void:

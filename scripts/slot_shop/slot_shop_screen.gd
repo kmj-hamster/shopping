@@ -261,16 +261,27 @@ func set_highlight_rule(rule: CardSlotRule) -> void:
 
 
 func _apply_product_highlight(button: Button, definition: CardItemDefinition) -> void:
-	if highlight_rule == null:
-		button.modulate = Color.WHITE
+	button.modulate = Color.WHITE
+	var matches: bool = (
+		highlight_rule != null
+		and CardRuleEvaluator.evaluate(highlight_rule, definition).can_place
+	)
+	button.set_meta(&"rule_match_highlighted", matches)
+	if not matches:
 		return
-	var evaluation := CardRuleEvaluator.evaluate(highlight_rule, definition)
-	if evaluation.can_execute:
-		button.modulate = Color.WHITE
-	elif evaluation.can_place:
-		button.modulate = Color(0.72, 0.78, 0.78, 0.9)
-	else:
-		button.modulate = Color(0.3, 0.36, 0.38, 0.58)
+	var normal_style := button.get_theme_stylebox("normal").duplicate() as StyleBoxFlat
+	normal_style.border_color = Color("edf9f5")
+	normal_style.set_border_width_all(2)
+	normal_style.shadow_color = Color(0.9, 1.0, 0.97, 0.3)
+	normal_style.shadow_size = 6
+	button.add_theme_stylebox_override("normal", normal_style)
+	var pulse := button.create_tween().set_loops()
+	pulse.tween_property(
+		button, "modulate", Color(1.24, 1.24, 1.24, 1.0), 0.58
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	pulse.tween_property(
+		button, "modulate", Color.WHITE, 0.58
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 
 func _on_shelf_pressed(slot_id: StringName) -> void:

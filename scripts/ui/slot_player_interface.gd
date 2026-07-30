@@ -55,6 +55,8 @@ func _build_interface() -> void:
 	task_window.close_requested.connect(close_task_window)
 	task_window.slot_rule_focused.connect(_on_slot_rule_focused)
 	task_window.item_inspected.connect(show_item_details)
+	hand_bar.card_drag_started.connect(task_window.show_drag_compatibility)
+	hand_bar.card_drag_finished.connect(task_window._on_card_drag_finished)
 	root.add_child(task_window)
 	bag_button = TextureButton.new()
 	bag_button.name = "ProtagonistBagButton"
