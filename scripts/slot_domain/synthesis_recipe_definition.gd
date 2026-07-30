@@ -27,6 +27,12 @@ func preview_key_for_output(output_id: StringName) -> StringName:
 	return StringName(preview_text_by_output.get(String(output_id), ""))
 
 
+func first_reward_aspect_for_output(output_id: StringName) -> StringName:
+	if first_reward_aspect_by_output.has(output_id):
+		return StringName(first_reward_aspect_by_output[output_id])
+	return StringName(first_reward_aspect_by_output.get(String(output_id), ""))
+
+
 func validation_errors() -> PackedStringArray:
 	var errors := PackedStringArray()
 	if id.is_empty():

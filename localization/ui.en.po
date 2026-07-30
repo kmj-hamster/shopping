@@ -952,6 +952,27 @@ msgstr "This will do for tonight"
 msgid "slot.map.next_day.incomplete"
 msgstr "Tonight's list still has an unconfirmed choice."
 
+msgid "slot.map.next_day.synthesis_active"
+msgstr "Something is still taking shape inside the shopping bag."
+
+msgid "slot.synthesis.start"
+msgstr "Synthesize"
+
+msgid "slot.synthesis.in_progress"
+msgstr "Synthesizing · %d%%"
+
+msgid "slot.synthesis.complete"
+msgstr "%s falls into the shopping bag."
+
+msgid "slot.synthesis.other_active"
+msgstr "Something else is taking shape inside the shopping bag."
+
+msgid "slot.synthesis.daily_risk"
+msgstr "You still need these things for yourself tonight."
+
+msgid "slot.synthesis.unavailable"
+msgstr "This cannot be synthesized yet."
+
 msgid "slot.transition.night"
 msgstr "Night %d"
 

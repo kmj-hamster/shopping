@@ -29,6 +29,11 @@ func _ready() -> void:
 	_refresh_locale()
 
 
+func _process(delta: float) -> void:
+	if commerce != null and commerce.active_synthesis != null:
+		commerce.advance_synthesis(delta)
+
+
 func _build_interface() -> void:
 	root = Control.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

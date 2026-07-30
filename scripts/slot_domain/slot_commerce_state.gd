@@ -2,6 +2,8 @@ class_name SlotCommerceState
 extends RefCounted
 
 signal state_changed
+signal synthesis_progressed(active_synthesis: ActiveSynthesisState)
+signal synthesis_completed(result: Dictionary)
 
 const DEFAULT_SHELF_CAPACITY := 6
 const DAILY_INCOME := 100
@@ -14,6 +16,10 @@ const RESULT_DAILY_RISK := &"daily_risk"
 const RESULT_TRANSITION_ACTIVE := &"transition_active"
 const RESULT_NO_TRANSITION := &"no_transition"
 const RESULT_CONSUMPTION_PENDING := &"consumption_pending"
+const RESULT_SYNTHESIS_ACTIVE := &"synthesis_active"
+const RESULT_UNKNOWN_RECIPE := &"unknown_recipe"
+const RESULT_RECIPE_NOT_READY := &"recipe_not_ready"
+const RESULT_INPUTS_CHANGED := &"inputs_changed"
 
 const PREFERRED_DAILY_WISHES := {
 	1: [&"wish_hungry", &"wish_bedside"],
@@ -31,6 +37,9 @@ var recycle_transaction: CardRecycleTransaction
 var activity_state: SlotActivityState
 var protagonist_aspect_counts: Dictionary = {}
 var pending_transition: SlotNightTransition
+var active_synthesis: ActiveSynthesisState
+var first_crafted_output_ids: Dictionary = {}
+var last_synthesis_result: Dictionary = {}
 var random := RandomNumberGenerator.new()
 
 
@@ -60,6 +69,9 @@ func reset(shared_wallet: PlayerWallet = null, random_seed: int = 1999) -> void:
 	for aspect in CardPropertySet.ASPECTS:
 		protagonist_aspect_counts[aspect] = 0
 	pending_transition = null
+	active_synthesis = null
+	first_crafted_output_ids = {}
+	last_synthesis_result = {}
 	select_daily_wishes_for_day(day)
 	state_changed.emit()
 
@@ -184,12 +196,140 @@ func select_daily_wishes_for_day(selected_day: int) -> Dictionary:
 func begin_night_transition() -> Dictionary:
 	if pending_transition != null:
 		return {"ok": false, "reason": RESULT_TRANSITION_ACTIVE}
+	if active_synthesis != null:
+		return {"ok": false, "reason": RESULT_SYNTHESIS_ACTIVE}
 	var snapshot := activity_state.build_daily_transition_entries()
 	if not snapshot.ok:
 		return {"ok": false, "reason": RESULT_DAILY_INCOMPLETE}
 	pending_transition = SlotNightTransition.new(day, snapshot.entries)
 	state_changed.emit()
 	return {"ok": true, "reason": RESULT_OK, "transition": pending_transition}
+
+
+func begin_synthesis(recipe_id: StringName, duration_override: float = -1.0) -> Dictionary:
+	if active_synthesis != null:
+		return {"ok": false, "reason": RESULT_SYNTHESIS_ACTIVE}
+	if pending_transition != null:
+		return {"ok": false, "reason": RESULT_TRANSITION_ACTIVE}
+	if recipe_id not in activity_state.known_recipe_ids:
+		return {"ok": false, "reason": RESULT_UNKNOWN_RECIPE}
+	var recipe := SlotDemoCatalog.recipe_by_id(recipe_id)
+	var evaluation := activity_state.evaluation_for(recipe_id)
+	if (
+		recipe == null
+		or not evaluation.is_ready
+		or not evaluation.has("synthesis")
+		or not evaluation.synthesis.is_complete
+		or StringName(evaluation.synthesis.output_id).is_empty()
+	):
+		return {"ok": false, "reason": RESULT_RECIPE_NOT_READY}
+	var output_id := StringName(evaluation.synthesis.output_id)
+	if not activity_state.all_daily_wishes_confirmed():
+		var viability := tonight_is_satisfiable(wallet.money, [output_id])
+		if not viability.feasible:
+			return {"ok": false, "reason": RESULT_DAILY_RISK}
+	var input_ids: Array[int] = []
+	for card in activity_state.cards_for_activity(recipe_id):
+		input_ids.append(card.instance_id)
+	if input_ids.size() != recipe.slot_rules.size():
+		return {"ok": false, "reason": RESULT_RECIPE_NOT_READY}
+	if not activity_state.lock_activity(recipe_id):
+		return {"ok": false, "reason": RESULT_SYNTHESIS_ACTIVE}
+	var duration := recipe.duration_seconds if duration_override < 0.0 else duration_override
+	active_synthesis = ActiveSynthesisState.new(
+		recipe_id,
+		input_ids,
+		output_id,
+		StringName(evaluation.synthesis.preview_key),
+		duration,
+	)
+	last_synthesis_result = {}
+	state_changed.emit()
+	return {"ok": true, "reason": RESULT_OK, "synthesis": active_synthesis}
+
+
+func advance_synthesis(delta: float) -> Dictionary:
+	if active_synthesis == null:
+		return {"ok": false, "reason": RESULT_NO_TRANSITION}
+	var finished := active_synthesis.advance(delta)
+	synthesis_progressed.emit(active_synthesis)
+	if not finished:
+		return {
+			"ok": true,
+			"reason": RESULT_OK,
+			"completed": false,
+			"progress": active_synthesis.progress_ratio(),
+		}
+	return _complete_synthesis()
+
+
+func _complete_synthesis() -> Dictionary:
+	var synthesis := active_synthesis
+	if synthesis == null:
+		return {"ok": false, "reason": RESULT_NO_TRANSITION}
+	var recipe := SlotDemoCatalog.recipe_by_id(synthesis.recipe_id)
+	var expected_cards := activity_state.cards_for_activity(synthesis.recipe_id)
+	if recipe == null or expected_cards.size() != synthesis.input_instance_ids.size():
+		return _fail_synthesis(RESULT_INPUTS_CHANGED)
+	for instance_id in synthesis.input_instance_ids:
+		var card := card_by_instance_id(instance_id)
+		if (
+			card == null
+			or card not in expected_cards
+			or card.location != CardItemState.Location.ACTIVITY_SLOT
+			or card.activity_id != synthesis.recipe_id
+		):
+			return _fail_synthesis(RESULT_INPUTS_CHANGED)
+	var output_definition := SlotDemoCatalog.item_by_id(synthesis.output_id)
+	if output_definition == null or not output_definition.is_crafted:
+		return _fail_synthesis(RESULT_UNKNOWN_RECIPE)
+	var consumed := activity_state.consume_activity_cards(synthesis.recipe_id)
+	var output_card := CardItemState.new(
+		_next_inventory_instance_id(),
+		output_definition.id,
+		day,
+		synthesis.recipe_id,
+	)
+	inventory.append(output_card)
+	var first_reward_applied := false
+	if not first_crafted_output_ids.has(output_definition.id):
+		first_crafted_output_ids[output_definition.id] = true
+		var reward_aspect := recipe.first_reward_aspect_for_output(output_definition.id)
+		if not reward_aspect.is_empty():
+			protagonist_aspect_counts[reward_aspect] = int(
+				protagonist_aspect_counts.get(reward_aspect, 0)
+			) + 1
+			first_reward_applied = true
+	active_synthesis = null
+	last_synthesis_result = {
+		"ok": true,
+		"reason": RESULT_OK,
+		"completed": true,
+		"recipe_id": synthesis.recipe_id,
+		"output_id": output_definition.id,
+		"output_card": output_card,
+		"consumed_count": consumed.size(),
+		"first_reward_applied": first_reward_applied,
+	}
+	state_changed.emit()
+	synthesis_completed.emit(last_synthesis_result)
+	return last_synthesis_result
+
+
+func _fail_synthesis(reason: StringName) -> Dictionary:
+	var recipe_id := active_synthesis.recipe_id if active_synthesis != null else &""
+	active_synthesis = null
+	activity_state.unlock_activity(recipe_id)
+	last_synthesis_result = {"ok": false, "reason": reason, "completed": false}
+	state_changed.emit()
+	return last_synthesis_result
+
+
+func _next_inventory_instance_id() -> int:
+	var result := 1
+	for card in inventory:
+		result = maxi(result, card.instance_id + 1)
+	return result
 
 
 func apply_night_transition_consumption() -> Dictionary:

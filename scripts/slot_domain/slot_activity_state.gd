@@ -9,9 +9,9 @@ const RESULT_UNKNOWN_SLOT := &"unknown_slot"
 const RESULT_NOT_OWNED := &"not_owned"
 const RESULT_REJECTED := &"rejected"
 const RESULT_OCCUPIED := &"occupied"
-const RESULT_CONFIRMED := &"confirmed"
 const RESULT_NOT_DAILY := &"not_daily"
 const RESULT_NOT_READY := &"not_ready"
+const RESULT_LOCKED := &"locked"
 
 var inventory: Array[CardItemState] = []
 var active_daily_wish_ids: Array[StringName] = [
@@ -22,6 +22,7 @@ var known_recipe_ids: Array[StringName] = [&"recipe_night_radio"]
 var active_request_ids: Array[StringName] = []
 var assignments: Dictionary = {}
 var confirmed_daily_wish_ids: Dictionary = {}
+var locked_activity_ids: Dictionary = {}
 
 
 func _init(shared_inventory: Array[CardItemState] = []) -> void:
@@ -60,8 +61,8 @@ func assign_card(
 		return _result(false, RESULT_UNKNOWN_SLOT)
 	if card == null or not inventory.has(card):
 		return _result(false, RESULT_NOT_OWNED)
-	if is_daily_confirmed(activity_id) or _card_is_in_confirmed_wish(card):
-		return _result(false, RESULT_CONFIRMED)
+	if not can_edit_activity(activity_id) or _card_is_in_locked_activity(card):
+		return _result(false, RESULT_LOCKED)
 	if card.location not in [CardItemState.Location.HAND, CardItemState.Location.ACTIVITY_SLOT]:
 		return _result(false, RESULT_NOT_OWNED)
 	var definition := SlotDemoCatalog.item_by_id(card.definition_id)
@@ -86,7 +87,7 @@ func return_card_to_hand(card: CardItemState) -> bool:
 		return false
 	if card.location != CardItemState.Location.ACTIVITY_SLOT:
 		return false
-	if _card_is_in_confirmed_wish(card):
+	if _card_is_in_locked_activity(card):
 		return false
 	_remove_assignment_for_card(card)
 	card.return_to_hand()
@@ -183,7 +184,42 @@ func all_daily_wishes_confirmed() -> bool:
 
 
 func can_edit_activity(activity_id: StringName) -> bool:
-	return not is_daily_confirmed(activity_id)
+	return not is_daily_confirmed(activity_id) and not locked_activity_ids.has(activity_id)
+
+
+func lock_activity(activity_id: StringName) -> bool:
+	if locked_activity_ids.has(activity_id) or rules_for_activity(activity_id).is_empty():
+		return false
+	locked_activity_ids[activity_id] = true
+	state_changed.emit()
+	return true
+
+
+func unlock_activity(activity_id: StringName) -> bool:
+	if not locked_activity_ids.has(activity_id):
+		return false
+	locked_activity_ids.erase(activity_id)
+	state_changed.emit()
+	return true
+
+
+func cards_for_activity(activity_id: StringName) -> Array[CardItemState]:
+	var result: Array[CardItemState] = []
+	for rule in rules_for_activity(activity_id):
+		var card := card_for_slot(activity_id, rule.id)
+		if card != null:
+			result.append(card)
+	return result
+
+
+func consume_activity_cards(activity_id: StringName) -> Array[CardItemState]:
+	var consumed := cards_for_activity(activity_id)
+	for card in consumed:
+		_remove_assignment_for_card(card)
+		inventory.erase(card)
+	locked_activity_ids.erase(activity_id)
+	state_changed.emit()
+	return consumed
 
 
 func build_daily_transition_entries() -> Dictionary:
@@ -237,11 +273,11 @@ func _remove_assignment_for_card(card: CardItemState) -> void:
 		assignments[activity_id] = activity_assignments
 
 
-func _card_is_in_confirmed_wish(card: CardItemState) -> bool:
+func _card_is_in_locked_activity(card: CardItemState) -> bool:
 	return (
 		card != null
 		and card.location == CardItemState.Location.ACTIVITY_SLOT
-		and is_daily_confirmed(card.activity_id)
+		and not can_edit_activity(card.activity_id)
 	)
 
 

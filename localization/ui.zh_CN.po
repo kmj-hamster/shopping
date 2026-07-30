@@ -952,6 +952,27 @@ msgstr "今晚就这样吧"
 msgid "slot.map.next_day.incomplete"
 msgstr "今日清单还有没有确认的选择。"
 
+msgid "slot.map.next_day.synthesis_active"
+msgstr "购物袋里还有一件东西正在成形。"
+
+msgid "slot.synthesis.start"
+msgstr "开始合成"
+
+msgid "slot.synthesis.in_progress"
+msgstr "合成中 · %d%%"
+
+msgid "slot.synthesis.complete"
+msgstr "%s 落进了购物袋。"
+
+msgid "slot.synthesis.other_active"
+msgstr "另一件东西正在购物袋里成形。"
+
+msgid "slot.synthesis.daily_risk"
+msgstr "这些东西今晚还需要留给自己。"
+
+msgid "slot.synthesis.unavailable"
+msgstr "现在还不能合成。"
+
 msgid "slot.transition.night"
 msgstr "第 %d 夜"
 

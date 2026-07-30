@@ -139,6 +139,37 @@ func test_confirmed_wishes_run_black_transition_and_start_day_two() -> void:
 	assert_false(main.transition_in_progress)
 
 
+func test_active_synthesis_stays_on_map_and_uses_specific_notice() -> void:
+	var main = await _spawn_main()
+	var commerce := GameState.slot_commerce
+	_complete_first_night(commerce)
+	var recipe_cards: Array[CardItemState] = [
+		CardItemState.new(500, &"record_fluorescent_single"),
+		CardItemState.new(501, &"toy_glass_marble"),
+		CardItemState.new(502, &"fast_hash_brown"),
+	]
+	commerce.inventory.append_array(recipe_cards)
+	assert_true(commerce.activity_state.assign_card(
+		&"recipe_night_radio", &"sound", recipe_cards[0]
+	).ok)
+	assert_true(commerce.activity_state.assign_card(
+		&"recipe_night_radio", &"shell", recipe_cards[1]
+	).ok)
+	assert_true(commerce.activity_state.assign_card(
+		&"recipe_night_radio", &"tuning", recipe_cards[2]
+	).ok)
+	assert_true(commerce.begin_synthesis(&"recipe_night_radio", 100.0).ok)
+
+	main.current_screen._on_next_day_pressed()
+
+	assert_eq(commerce.day, 1)
+	assert_false(main.transition_in_progress)
+	assert_eq(
+		main.current_screen.notice_label.text,
+		TranslationServer.translate(&"slot.map.next_day.synthesis_active"),
+	)
+
+
 func test_six_map_hotspots_do_not_overlap() -> void:
 	var main = await _spawn_main()
 	var hotspots: Array = main.current_screen.store_hotspots.values()

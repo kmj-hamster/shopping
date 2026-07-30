@@ -77,7 +77,11 @@ func _on_next_day_requested() -> void:
 	var result := GameState.slot_commerce.begin_night_transition()
 	if not result.ok:
 		if current_screen is MallMapScreen:
-			current_screen.show_notice(&"slot.map.next_day.incomplete")
+			current_screen.show_notice(
+				&"slot.map.next_day.synthesis_active"
+				if result.reason == SlotCommerceState.RESULT_SYNTHESIS_ACTIVE
+				else &"slot.map.next_day.incomplete"
+			)
 		return
 	_run_night_transition(result.transition)
 

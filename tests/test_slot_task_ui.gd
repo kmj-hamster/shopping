@@ -93,6 +93,56 @@ func test_daily_action_confirms_locks_and_then_cancels_selection() -> void:
 	)
 
 
+func test_recipe_keeps_running_while_window_is_closed_and_returns_output_to_hand() -> void:
+	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
+	var sound := _add_card(commerce, &"record_fluorescent_single", 100)
+	var shell := _add_card(commerce, &"toy_glass_marble", 101)
+	var tuning := _add_card(commerce, &"fast_hash_brown", 102)
+	assert_true(commerce.activity_state.assign_card(
+		&"recipe_night_radio", &"sound", sound
+	).ok)
+	assert_true(commerce.activity_state.assign_card(
+		&"recipe_night_radio", &"shell", shell
+	).ok)
+	assert_true(commerce.activity_state.assign_card(
+		&"recipe_night_radio", &"tuning", tuning
+	).ok)
+	var interface := await _spawn_interface(commerce)
+	interface.toggle_task_window()
+	interface.task_window._select_tab(SlotTaskWindow.TAB_RECIPES)
+	await get_tree().process_frame
+
+	assert_false(interface.task_window.action_button.disabled)
+	interface.task_window._on_action_pressed()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	assert_not_null(commerce.active_synthesis)
+	assert_true(interface.task_window.synthesis_progress.visible)
+	var sound_slot := interface.task_window.slot_views[&"sound"] as CardTaskSlot
+	var sound_view := sound_slot.card_holder.get_child(0) as CardHandCard
+	assert_false(sound_view.drag_enabled)
+
+	interface.toggle_task_window()
+	assert_false(interface.task_window.visible)
+	interface._process(2.5)
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	assert_null(commerce.active_synthesis)
+	assert_eq(commerce.inventory.size(), 1)
+	assert_eq(commerce.inventory[0].definition_id, &"craft_clear_receiver")
+	assert_has(interface.hand_bar.card_views, commerce.inventory[0].instance_id)
+	interface.toggle_task_window()
+	await get_tree().process_frame
+	assert_true(interface.task_window.visible)
+	assert_string_contains(
+		interface.task_window.result_label.text,
+		str(TranslationServer.translate(
+			SlotDemoCatalog.item_by_id(&"craft_clear_receiver").display_name_key
+		)),
+	)
+
+
 func _spawn_interface(commerce: SlotCommerceState) -> SlotPlayerInterface:
 	var interface := SlotPlayerInterface.new()
 	interface.commerce = commerce
@@ -107,3 +157,13 @@ func _buy_hash_brown(commerce: SlotCommerceState) -> CardItemState:
 	var result := commerce.checkout_store(SlotDemoCatalog.STORE_FAST_FOOD)
 	assert_true(result.ok)
 	return result.purchased[0] as CardItemState
+
+
+func _add_card(
+	commerce: SlotCommerceState,
+	definition_id: StringName,
+	instance_id: int,
+) -> CardItemState:
+	var card := CardItemState.new(instance_id, definition_id)
+	commerce.inventory.append(card)
+	return card

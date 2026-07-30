@@ -17,6 +17,7 @@ var activity_tabs: HBoxContainer
 var activity_title: Label
 var slots_row: HBoxContainer
 var result_label: Label
+var synthesis_progress: ProgressBar
 var action_button: Button
 var slot_views: Dictionary = {}
 var dragging := false
@@ -47,6 +48,10 @@ func _ready() -> void:
 func _bind_state() -> void:
 	if activity_state != null and not activity_state.state_changed.is_connected(_queue_refresh):
 		activity_state.state_changed.connect(_queue_refresh)
+	if commerce != null and not commerce.state_changed.is_connected(_queue_refresh):
+		commerce.state_changed.connect(_queue_refresh)
+	if commerce != null and not commerce.synthesis_progressed.is_connected(_on_synthesis_progressed):
+		commerce.synthesis_progressed.connect(_on_synthesis_progressed)
 
 
 func _build_interface() -> void:
@@ -99,6 +104,12 @@ func _build_interface() -> void:
 	result_label.add_theme_font_size_override("font_size", 13)
 	result_label.add_theme_color_override("font_color", Color("8ea49f"))
 	column.add_child(result_label)
+	synthesis_progress = ProgressBar.new()
+	synthesis_progress.custom_minimum_size = Vector2(0, 7)
+	synthesis_progress.max_value = 100.0
+	synthesis_progress.show_percentage = false
+	synthesis_progress.visible = false
+	column.add_child(synthesis_progress)
 	action_button = Button.new()
 	action_button.custom_minimum_size = Vector2(0, 38)
 	action_button.pressed.connect(_on_action_pressed)
@@ -143,6 +154,7 @@ func _rebuild_slots() -> void:
 	if current_activity_id.is_empty():
 		activity_title.text = TranslationServer.translate(&"slot.task.none")
 		result_label.text = ""
+		synthesis_progress.visible = false
 		action_button.visible = false
 		return
 	activity_title.text = _activity_name(current_activity_id)
@@ -155,6 +167,10 @@ func _rebuild_slots() -> void:
 		slot_views[rule.id] = slot
 	var evaluation := activity_state.evaluation_for(current_activity_id)
 	var confirmed := activity_state.is_daily_confirmed(current_activity_id)
+	synthesis_progress.visible = false
+	if current_tab == TAB_RECIPES:
+		_refresh_recipe_action(evaluation)
+		return
 	result_label.text = TranslationServer.translate(
 		&"slot.task.confirmed"
 		if confirmed
@@ -165,10 +181,43 @@ func _rebuild_slots() -> void:
 	action_button.text = TranslationServer.translate(
 		&"slot.task.cancel_confirm" if confirmed else &"slot.task.confirm"
 	)
-	if evaluation.is_ready and evaluation.has("synthesis"):
+
+
+func _refresh_recipe_action(evaluation: Dictionary) -> void:
+	action_button.visible = true
+	var active := commerce.active_synthesis
+	if active != null:
+		var percent := roundi(active.progress_ratio() * 100.0)
+		synthesis_progress.visible = active.recipe_id == current_activity_id
+		synthesis_progress.value = percent
+		action_button.disabled = true
+		action_button.text = TranslationServer.translate(&"slot.synthesis.in_progress") % percent
+		if active.recipe_id == current_activity_id:
+			result_label.text = TranslationServer.translate(active.preview_key)
+		else:
+			result_label.text = TranslationServer.translate(&"slot.synthesis.other_active")
+		return
+	var last_result := commerce.last_synthesis_result
+	if (
+		last_result.get("ok", false)
+		and StringName(last_result.get("recipe_id", &"")) == current_activity_id
+	):
+		var output := SlotDemoCatalog.item_by_id(StringName(last_result.output_id))
+		var output_name := String(last_result.output_id)
+		if output != null:
+			output_name = str(TranslationServer.translate(output.display_name_key))
+		result_label.text = TranslationServer.translate(&"slot.synthesis.complete") % output_name
+	elif evaluation.is_ready and evaluation.has("synthesis"):
 		var preview_key: StringName = evaluation.synthesis.preview_key
-		if not preview_key.is_empty():
-			result_label.text = TranslationServer.translate(preview_key)
+		result_label.text = (
+			TranslationServer.translate(preview_key)
+			if not preview_key.is_empty()
+			else TranslationServer.translate(&"slot.task.ready")
+		)
+	else:
+		result_label.text = TranslationServer.translate(&"slot.task.waiting")
+	action_button.disabled = not evaluation.is_ready
+	action_button.text = TranslationServer.translate(&"slot.synthesis.start")
 
 
 func _select_tab(tab_id: StringName) -> void:
@@ -225,12 +274,21 @@ func _on_drop_resolved(result: Dictionary) -> void:
 
 
 func _on_action_pressed() -> void:
-	if current_tab != TAB_DAILY or current_activity_id.is_empty():
+	if current_activity_id.is_empty():
 		return
-	if activity_state.is_daily_confirmed(current_activity_id):
-		activity_state.cancel_daily_confirmation(current_activity_id)
-	else:
-		activity_state.confirm_daily_wish(current_activity_id)
+	if current_tab == TAB_DAILY:
+		if activity_state.is_daily_confirmed(current_activity_id):
+			activity_state.cancel_daily_confirmation(current_activity_id)
+		else:
+			activity_state.confirm_daily_wish(current_activity_id)
+	elif current_tab == TAB_RECIPES:
+		var result := commerce.begin_synthesis(current_activity_id)
+		if not result.ok:
+			result_label.text = TranslationServer.translate(
+				&"slot.synthesis.daily_risk"
+				if result.reason == SlotCommerceState.RESULT_DAILY_RISK
+				else &"slot.synthesis.unavailable"
+			)
 
 
 func _on_locale_changed(_locale: String) -> void:
@@ -247,6 +305,19 @@ func _queue_refresh() -> void:
 func _flush_refresh() -> void:
 	refresh_queued = false
 	refresh()
+
+
+func _on_synthesis_progressed(active: ActiveSynthesisState) -> void:
+	if (
+		active == null
+		or current_tab != TAB_RECIPES
+		or active.recipe_id != current_activity_id
+	):
+		return
+	var percent := roundi(active.progress_ratio() * 100.0)
+	synthesis_progress.visible = true
+	synthesis_progress.value = percent
+	action_button.text = TranslationServer.translate(&"slot.synthesis.in_progress") % percent
 
 
 func _on_header_input(event: InputEvent) -> void:
