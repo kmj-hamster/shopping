@@ -16,7 +16,6 @@ var relation_label: Label
 var talk_button: Button
 var cart_label: Label
 var feedback_label: Label
-var cancel_button: Button
 var checkout_button: Button
 var language_button: Button
 var hand_bar: CardHandBar
@@ -105,6 +104,7 @@ func _build_interface() -> void:
 	body.add_theme_constant_override("separation", 16)
 	column.add_child(body)
 	var shelf_panel := PanelContainer.new()
+	shelf_panel.name = "ShelfPanel"
 	shelf_panel.custom_minimum_size = Vector2(720, 0)
 	shelf_panel.add_theme_stylebox_override(
 		"panel", UiPalette.panel_style(Color("07181e", 0.95), Color("4e7474", 0.86))
@@ -114,11 +114,29 @@ func _build_interface() -> void:
 	for side in ["left", "right", "top", "bottom"]:
 		shelf_margin.add_theme_constant_override("margin_%s" % side, 12)
 	shelf_panel.add_child(shelf_margin)
+	var shelf_column := VBoxContainer.new()
+	shelf_column.add_theme_constant_override("separation", 10)
+	shelf_margin.add_child(shelf_column)
+	var checkout_row := HBoxContainer.new()
+	checkout_row.name = "ShelfCheckoutRow"
+	checkout_row.custom_minimum_size = Vector2(0, 40)
+	checkout_row.add_theme_constant_override("separation", 8)
+	shelf_column.add_child(checkout_row)
+	cart_label = Label.new()
+	cart_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cart_label.add_theme_font_size_override("font_size", 15)
+	checkout_row.add_child(cart_label)
+	checkout_button = Button.new()
+	checkout_button.name = "ShelfCheckoutButton"
+	checkout_button.custom_minimum_size = Vector2(112, 38)
+	checkout_button.pressed.connect(_on_checkout_pressed)
+	checkout_row.add_child(checkout_button)
 	shelf_grid = GridContainer.new()
 	shelf_grid.columns = 2
+	shelf_grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	shelf_grid.add_theme_constant_override("h_separation", 10)
 	shelf_grid.add_theme_constant_override("v_separation", 10)
-	shelf_margin.add_child(shelf_grid)
+	shelf_column.add_child(shelf_grid)
 
 	var owner_panel := PanelContainer.new()
 	owner_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -156,27 +174,6 @@ func _build_interface() -> void:
 	feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	feedback_label.add_theme_color_override("font_color", Color("9bb3ad"))
 	owner_column.add_child(feedback_label)
-
-	var checkout_dock := PanelContainer.new()
-	checkout_dock.add_theme_stylebox_override(
-		"panel", UiPalette.panel_style(Color("0a2022", 0.96), Color("657d70", 0.9))
-	)
-	column.add_child(checkout_dock)
-	var cart_row := HBoxContainer.new()
-	cart_row.add_theme_constant_override("separation", 8)
-	checkout_dock.add_child(cart_row)
-	cart_label = Label.new()
-	cart_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	cart_label.add_theme_font_size_override("font_size", 15)
-	cart_row.add_child(cart_label)
-	cancel_button = Button.new()
-	cancel_button.custom_minimum_size = Vector2(82, 38)
-	cancel_button.pressed.connect(_on_cancel_pressed)
-	cart_row.add_child(cancel_button)
-	checkout_button = Button.new()
-	checkout_button.custom_minimum_size = Vector2(100, 38)
-	checkout_button.pressed.connect(_on_checkout_pressed)
-	cart_row.add_child(checkout_button)
 
 	if show_embedded_hand_bar:
 		hand_bar = CardHandBar.new()
@@ -229,7 +226,6 @@ func refresh() -> void:
 	cart_label.text = TranslationServer.translate(&"slot.shop.cart") % [
 		transaction.cart_count(), transaction.cart_total()
 	]
-	cancel_button.disabled = transaction.cart_count() == 0
 	checkout_button.disabled = transaction.cart_count() == 0
 	store_name_label.text = TranslationServer.translate(SlotDemoCatalog.store_name_key(store_id))
 	_refresh_owner_panel()
@@ -237,7 +233,6 @@ func refresh() -> void:
 	var leave := find_child("LeaveButton", true, false) as Button
 	if leave != null:
 		leave.text = TranslationServer.translate(&"shop.leave")
-	cancel_button.text = TranslationServer.translate(&"slot.shop.cancel")
 	checkout_button.text = TranslationServer.translate(&"slot.shop.checkout")
 	if feedback_label.text.is_empty():
 		feedback_label.text = TranslationServer.translate(&"slot.shop.feedback.ready")
@@ -290,11 +285,6 @@ func _on_checkout_pressed() -> void:
 	else:
 		feedback_label.text = TranslationServer.translate(_failure_key(result.reason))
 	refresh()
-
-
-func _on_cancel_pressed() -> void:
-	transaction.cancel_cart()
-	feedback_label.text = TranslationServer.translate(&"slot.shop.feedback.cancelled")
 
 
 func _on_leave_pressed() -> void:

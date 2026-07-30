@@ -14,6 +14,21 @@ func test_shop_scene_shows_six_independent_non_draggable_shelf_buttons() -> void
 	)
 
 
+func test_checkout_button_lives_in_the_shelf_header_without_a_return_button() -> void:
+	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
+	var shop := await _spawn_shop(commerce, SlotDemoCatalog.STORE_TOY)
+	var shelf_panel := shop.find_child("ShelfPanel", true, false)
+	var checkout_row := shop.find_child("ShelfCheckoutRow", true, false)
+
+	assert_not_null(shelf_panel)
+	assert_not_null(checkout_row)
+	assert_eq(shop.checkout_button.get_parent(), checkout_row)
+	assert_true(shelf_panel.is_ancestor_of(shop.checkout_button))
+	for node in shop.find_children("*", "Button", true, false):
+		var button := node as Button
+		assert_ne(button.text, TranslationServer.translate(&"slot.shop.cancel"))
+
+
 func test_clicking_shelf_then_checkout_creates_card_in_bottom_hand() -> void:
 	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
 	var shop := await _spawn_shop(commerce, SlotDemoCatalog.STORE_TOY)
