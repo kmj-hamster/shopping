@@ -5,6 +5,11 @@ func test_shop_scene_shows_six_independent_non_draggable_shelf_buttons() -> void
 	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
 	var shop := await _spawn_shop(commerce, SlotDemoCatalog.STORE_TOY)
 	assert_eq(shop.shelf_buttons.size(), 6)
+	assert_eq(shop.page_buttons.size(), 3)
+	assert_true((shop.page_buttons[1] as Button).button_pressed)
+	assert_false((shop.page_buttons[1] as Button).disabled)
+	assert_true((shop.page_buttons[2] as Button).disabled)
+	assert_true((shop.page_buttons[3] as Button).disabled)
 	var toy := commerce.transaction_for_store(SlotDemoCatalog.STORE_TOY)
 	assert_has(shop.shelf_buttons, toy.shelf_slots[0].slot_id)
 	assert_has(shop.shelf_buttons, toy.shelf_slots[1].slot_id)
@@ -65,7 +70,7 @@ func test_real_shelf_button_signal_defers_rebuild_until_button_is_unlocked() -> 
 	assert_true(toy.is_selected(first_slot_id))
 
 
-func test_balloon_talk_and_purchase_update_relation_and_unlock_seventh_shelf() -> void:
+func test_balloon_talk_and_purchase_unlock_second_shelf_page_without_growing_grid() -> void:
 	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
 	var shop := await _spawn_shop(commerce, SlotDemoCatalog.STORE_TOY)
 
@@ -85,11 +90,48 @@ func test_balloon_talk_and_purchase_update_relation_and_unlock_seventh_shelf() -
 	shop._on_checkout_pressed()
 	await get_tree().process_frame
 	assert_eq(commerce.relationship_state_for_owner(&"balloon").level, 1)
-	assert_eq(shop.shelf_buttons.size(), 7)
+	assert_eq(shop.shelf_buttons.size(), 6)
+	assert_false((shop.page_buttons[2] as Button).disabled)
+	assert_true((shop.page_buttons[3] as Button).disabled)
 	assert_string_contains(
 		shop.feedback_label.text,
 		str(TranslationServer.translate(&"slot.owner.balloon.level_up.1")),
 	)
+
+	shop._on_page_pressed(2)
+	assert_eq(shop.current_page, 2)
+	assert_eq(shop.shelf_buttons.size(), 1)
+	var second_page_slot := toy.shelf_slots_for_page(2)[0]
+	assert_has(shop.shelf_buttons, second_page_slot.slot_id)
+	assert_string_contains(
+		(shop.shelf_buttons[second_page_slot.slot_id] as Button).text,
+		SlotDemoCatalog.item_by_id(&"toy_windup_moth").localized_name(),
+	)
+	for page_index in range(1, CardShopTransaction.MAX_PAGE_COUNT + 1):
+		assert_lte(toy.shelf_slots_for_page(page_index).size(), 6)
+
+
+func test_cart_selection_survives_switching_between_unlocked_pages() -> void:
+	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
+	commerce.set_owner_level(&"balloon", 1)
+	var shop := await _spawn_shop(commerce, SlotDemoCatalog.STORE_TOY)
+	var toy := commerce.transaction_for_store(SlotDemoCatalog.STORE_TOY)
+	var first_page_slot := toy.shelf_slots_for_page(1)[0]
+	var second_page_slot := toy.shelf_slots_for_page(2)[0]
+
+	shop._on_shelf_pressed(first_page_slot.slot_id)
+	shop._on_page_pressed(2)
+	shop._on_shelf_pressed(second_page_slot.slot_id)
+
+	assert_eq(toy.cart_count(), 2)
+	assert_eq(shop.current_page, 2)
+	assert_true(toy.is_selected(first_page_slot.slot_id))
+	assert_true(toy.is_selected(second_page_slot.slot_id))
+	shop._on_checkout_pressed()
+	await get_tree().process_frame
+	assert_eq(commerce.inventory.size(), 2)
+	assert_true(first_page_slot.is_empty())
+	assert_true(second_page_slot.is_empty())
 
 
 func test_friend_discount_is_visible_on_each_shelf_price() -> void:

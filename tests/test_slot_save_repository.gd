@@ -52,7 +52,10 @@ func test_round_trip_preserves_inventory_slots_shelves_relationships_and_carts()
 		restored.transaction_for_store(SlotDemoCatalog.STORE_FLOWER).selected_shelf_slot_ids,
 		flower.selected_shelf_slot_ids,
 	)
-	assert_eq(restored.store_shelf_capacities[SlotDemoCatalog.STORE_TOY], 7)
+	var restored_toy := restored.transaction_for_store(SlotDemoCatalog.STORE_TOY)
+	assert_eq(restored_toy.unlocked_page_count, 2)
+	assert_eq(restored_toy.shelf_slots_for_page(1).size(), 6)
+	assert_eq(restored_toy.shelf_slots_for_page(2).size(), 1)
 	assert_eq(restored.relationship_state_for_owner(&"balloon").level, 2)
 	assert_eq(restored.relationship_state_for_owner(&"balloon").last_talk_day, 1)
 	assert_has(restored.activity_state.known_recipe_ids, &"recipe_teddy")
@@ -60,6 +63,28 @@ func test_round_trip_preserves_inventory_slots_shelves_relationships_and_carts()
 	assert_eq(restored.story_flags[&"balloon_hug"], &"comfort")
 	assert_eq(restored.protagonist_aspect_counts[&"lamp"], 4)
 	assert_true(restored.first_crafted_output_ids.has(&"craft_clear_receiver"))
+
+
+func test_legacy_linear_shelves_migrate_into_pages() -> void:
+	var source := SlotCommerceState.new(PlayerWallet.new(120), 7)
+	source.set_owner_level(&"balloon", 1)
+	var payload := repository.to_dictionary(source)
+	var toy_store := payload.stores["toy"] as Dictionary
+	toy_store.erase("unlocked_page_count")
+	toy_store["capacity"] = 7
+	for shelf in toy_store.shelves:
+		(shelf as Dictionary).erase("page_index")
+	var file := FileAccess.open(TEST_SAVE_PATH, FileAccess.WRITE)
+	file.store_string(JSON.stringify(payload))
+	file.close()
+
+	var restored := SlotCommerceState.new(PlayerWallet.new(1), 99)
+	assert_true(repository.load_into(restored).ok)
+	var toy := restored.transaction_for_store(SlotDemoCatalog.STORE_TOY)
+	assert_eq(toy.unlocked_page_count, 2)
+	assert_eq(toy.shelf_slots_for_page(1).size(), 6)
+	assert_eq(toy.shelf_slots_for_page(2).size(), 1)
+	assert_eq(toy.shelf_slots_for_page(2)[0].item_id, &"toy_windup_moth")
 
 
 func test_active_synthesis_resumes_remaining_time_and_cannot_duplicate_output() -> void:

@@ -2,7 +2,7 @@ class_name SlotSaveRepository
 extends RefCounted
 
 const SAVE_VERSION := 2
-const CONTENT_VERSION := "slot-demo-0.8"
+const CONTENT_VERSION := "slot-demo-0.9"
 const DEFAULT_PATH := "user://save_slot_demo_v2.json"
 
 var save_path: String
@@ -76,9 +76,10 @@ func to_dictionary(commerce: SlotCommerceState) -> Dictionary:
 			shelves.append({
 				"slot_id": String(slot.slot_id),
 				"item_id": String(slot.item_id),
+				"page_index": slot.page_index,
 			})
 		stores[String(store_id)] = {
-			"capacity": int(commerce.store_shelf_capacities.get(store_id, 6)),
+			"unlocked_page_count": transaction.unlocked_page_count,
 			"discount_rate": transaction.discount_rate,
 			"selected_shelf_slot_ids": _string_array(transaction.selected_shelf_slot_ids),
 			"shelves": shelves,
@@ -200,21 +201,33 @@ func _restore_stores(commerce: SlotCommerceState, raw_stores: Dictionary) -> voi
 			continue
 		var store_data := raw_stores[store_key] as Dictionary
 		transaction.shelf_slots.clear()
+		var shelf_index := 0
 		for raw_shelf in store_data.get("shelves", []):
 			var shelf_data := raw_shelf as Dictionary
+			var fallback_page := floori(
+				float(shelf_index) / CardShopTransaction.PAGE_SIZE
+			) + 1
 			transaction.shelf_slots.append(ShelfSlotState.new(
 				store_id,
 				StringName(shelf_data.get("slot_id", "")),
 				StringName(shelf_data.get("item_id", "")),
+				int(shelf_data.get("page_index", fallback_page)),
 			))
+			shelf_index += 1
 		transaction.selected_shelf_slot_ids = _name_array(
 			store_data.get("selected_shelf_slot_ids", [])
 		)
 		transaction.discount_rate = clampf(
 			float(store_data.get("discount_rate", 0.0)), 0.0, 0.9
 		)
-		commerce.store_shelf_capacities[store_id] = maxi(
-			transaction.shelf_slots.size(), int(store_data.get("capacity", 6))
+		var legacy_capacity := int(store_data.get("capacity", 0))
+		var legacy_page_count := ceili(float(maxi(
+			transaction.shelf_slots.size(), legacy_capacity
+		)) / CardShopTransaction.PAGE_SIZE)
+		transaction.unlocked_page_count = clampi(
+			int(store_data.get("unlocked_page_count", maxi(1, legacy_page_count))),
+			1,
+			CardShopTransaction.MAX_PAGE_COUNT,
 		)
 
 

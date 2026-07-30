@@ -21,6 +21,8 @@ var checkout_button: Button
 var language_button: Button
 var hand_bar: CardHandBar
 var shelf_buttons: Dictionary = {}
+var page_buttons: Dictionary = {}
+var current_page := 1
 var highlight_rule: CardSlotRule
 var refresh_queued := false
 
@@ -123,6 +125,19 @@ func _build_interface() -> void:
 	checkout_row.custom_minimum_size = Vector2(0, 40)
 	checkout_row.add_theme_constant_override("separation", 8)
 	shelf_column.add_child(checkout_row)
+	var page_row := HBoxContainer.new()
+	page_row.name = "ShelfPageRow"
+	page_row.add_theme_constant_override("separation", 4)
+	checkout_row.add_child(page_row)
+	for page_index in range(1, CardShopTransaction.MAX_PAGE_COUNT + 1):
+		var page_button := Button.new()
+		page_button.name = "ShelfPageButton%d" % page_index
+		page_button.custom_minimum_size = Vector2(36, 34)
+		page_button.toggle_mode = true
+		page_button.text = str(page_index)
+		page_button.pressed.connect(_on_page_pressed.bind(page_index))
+		page_row.add_child(page_button)
+		page_buttons[page_index] = page_button
 	cart_label = Label.new()
 	cart_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cart_label.add_theme_font_size_override("font_size", 15)
@@ -197,7 +212,10 @@ func refresh() -> void:
 	shelf_buttons.clear()
 	if transaction == null:
 		return
-	for slot in transaction.shelf_slots:
+	if not transaction.is_page_unlocked(current_page):
+		current_page = 1
+	_refresh_page_buttons()
+	for slot in transaction.shelf_slots_for_page(current_page):
 		var button := Button.new()
 		button.custom_minimum_size = Vector2(330, 112)
 		button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -242,6 +260,18 @@ func refresh() -> void:
 		hand_bar.setup(commerce)
 
 
+func _refresh_page_buttons() -> void:
+	for page_index in page_buttons:
+		var button := page_buttons[page_index] as Button
+		var unlocked := transaction.is_page_unlocked(int(page_index))
+		button.disabled = not unlocked
+		button.button_pressed = unlocked and int(page_index) == current_page
+		if unlocked:
+			button.tooltip_text = ""
+		else:
+			button.tooltip_text = TranslationServer.translate(&"slot.shop.page.locked")
+
+
 func _queue_refresh() -> void:
 	if refresh_queued:
 		return
@@ -253,6 +283,13 @@ func _flush_refresh() -> void:
 	refresh_queued = false
 	if is_inside_tree():
 		refresh()
+
+
+func _on_page_pressed(page_index: int) -> void:
+	if transaction == null or not transaction.is_page_unlocked(page_index):
+		return
+	current_page = page_index
+	refresh()
 
 
 func set_highlight_rule(rule: CardSlotRule) -> void:

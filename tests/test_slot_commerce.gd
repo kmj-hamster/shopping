@@ -7,6 +7,8 @@ func test_initial_shelves_use_six_independent_units_with_duplicates() -> void:
 		var transaction := commerce.transaction_for_store(store_id)
 		assert_not_null(transaction)
 		assert_eq(transaction.shelf_slots.size(), 6, String(store_id))
+		assert_eq(transaction.shelf_slots_for_page(1).size(), 6, String(store_id))
+		assert_eq(transaction.unlocked_page_count, 1, String(store_id))
 		assert_eq(_unique_slot_ids(transaction).size(), 6, String(store_id))
 	var toy := commerce.transaction_for_store(SlotDemoCatalog.STORE_TOY)
 	assert_eq(toy.shelf_slots[0].item_id, &"toy_cloth_scraps")
@@ -59,13 +61,21 @@ func test_new_day_only_refills_empty_slots_and_preserves_unsold_units() -> void:
 	assert_eq(fast_food.shelf_slots.size(), 6)
 
 
-func test_balloon_level_one_expands_toy_shelf_with_clockwork_moth() -> void:
+func test_balloon_level_one_unlocks_second_page_with_clockwork_moth() -> void:
 	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
 	commerce.set_owner_level(&"balloon", 1)
 	var toy := commerce.transaction_for_store(SlotDemoCatalog.STORE_TOY)
 	assert_eq(toy.shelf_slots.size(), 7)
-	assert_eq(toy.shelf_slots[6].item_id, &"toy_windup_moth")
-	assert_eq(commerce.store_shelf_capacities[SlotDemoCatalog.STORE_TOY], 7)
+	assert_eq(toy.shelf_slots_for_page(1).size(), 6)
+	assert_eq(toy.shelf_slots_for_page(2).size(), 1)
+	assert_eq(toy.shelf_slots_for_page(2)[0].item_id, &"toy_windup_moth")
+	assert_eq(toy.unlocked_page_count, 2)
+	assert_false(toy.is_page_unlocked(3))
+
+	toy.shelf_slots_for_page(2)[0].clear()
+	commerce.begin_new_day(2)
+	assert_eq(toy.shelf_slots_for_page(2)[0].item_id, &"toy_windup_moth")
+	assert_eq(toy.shelf_slots_for_page(1).size(), 6)
 
 
 func test_recycling_can_be_cancelled_or_paid_at_eighty_percent() -> void:

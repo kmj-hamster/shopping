@@ -16,4 +16,5 @@ base_price = 22
 restock_weight = 1
 unlock_owner_id = &"balloon"
 unlock_level = 1
+shelf_page = 2
 property_set = SubResource("Props")

@@ -388,6 +388,9 @@ msgstr "Put Back"
 msgid "slot.shop.checkout"
 msgstr "Checkout"
 
+msgid "slot.shop.page.locked"
+msgstr "Not yet unlocked"
+
 msgid "slot.shop.feedback.ready"
 msgstr "The goods wait quietly behind the glass."
 

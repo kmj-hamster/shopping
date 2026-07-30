@@ -16,8 +16,10 @@ func test_talk_and_cumulative_spend_unlock_levels_without_split_purchase_exploit
 	assert_true(first_purchase.ok)
 	assert_eq(first_purchase.owner_experience_gained, 1)
 	assert_eq(relationship.level, 1)
-	assert_eq(toy.shelf_slots.size(), 7)
-	assert_eq(toy.shelf_slots[6].item_id, &"toy_windup_moth")
+	assert_eq(toy.unlocked_page_count, 2)
+	assert_eq(toy.shelf_slots_for_page(1).size(), 6)
+	assert_eq(toy.shelf_slots_for_page(2).size(), 1)
+	assert_eq(toy.shelf_slots_for_page(2)[0].item_id, &"toy_windup_moth")
 
 	commerce.begin_new_day(2)
 	assert_eq(commerce.talk_to_store_owner(SlotDemoCatalog.STORE_TOY).experience_gained, 2)

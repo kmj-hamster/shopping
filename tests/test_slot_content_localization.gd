@@ -52,6 +52,7 @@ func test_every_slot_demo_content_key_exists_in_both_locales() -> void:
 		&"slot.shop.cart",
 		&"slot.shop.cancel",
 		&"slot.shop.checkout",
+		&"slot.shop.page.locked",
 		&"slot.shop.feedback.ready",
 		&"slot.shop.feedback.selected",
 		&"slot.shop.feedback.paid",

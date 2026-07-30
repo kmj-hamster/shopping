@@ -46,6 +46,7 @@ func test_retail_prices_weights_and_unlock_are_data_driven() -> void:
 	var moth := SlotDemoCatalog.item_by_id(&"toy_windup_moth")
 	assert_eq(moth.unlock_owner_id, &"balloon")
 	assert_eq(moth.unlock_level, 1)
+	assert_eq(moth.shelf_page, 2)
 
 
 func test_item_instances_and_shelf_slots_are_independent() -> void:

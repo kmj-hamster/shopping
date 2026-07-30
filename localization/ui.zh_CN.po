@@ -388,6 +388,9 @@ msgstr "放回"
 msgid "slot.shop.checkout"
 msgstr "结账"
 
+msgid "slot.shop.page.locked"
+msgstr "尚未解锁"
+
 msgid "slot.shop.feedback.ready"
 msgstr "玻璃后面的商品安静地等着。"
 

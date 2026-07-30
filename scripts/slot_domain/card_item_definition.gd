@@ -10,6 +10,7 @@ extends Resource
 @export_range(0, 100, 1) var restock_weight := 0
 @export var unlock_owner_id: StringName
 @export_range(0, 20, 1) var unlock_level := 0
+@export_range(1, 3, 1) var shelf_page := 1
 @export var is_crafted := false
 @export_range(0, 999, 1) var fixed_resale_value := 0
 @export var can_recycle := true
@@ -56,6 +57,8 @@ func validation_errors() -> PackedStringArray:
 		errors.append("Retail item %s needs a store id." % id)
 	if is_crafted and restock_weight != 0:
 		errors.append("Crafted item %s cannot have restock weight." % id)
+	if not is_crafted and shelf_page > 1 and unlock_owner_id.is_empty():
+		errors.append("Later-page item %s needs an owner unlock." % id)
 	if property_set == null:
 		errors.append("Item %s needs properties." % id)
 	else:

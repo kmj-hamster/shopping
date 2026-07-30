@@ -10,6 +10,8 @@ const RESULT_SLOT_EMPTY := &"slot_empty"
 const RESULT_ALREADY_SELECTED := &"already_selected"
 const RESULT_INSUFFICIENT_FUNDS := &"insufficient_funds"
 const RESULT_INVALID_ITEM := &"invalid_item"
+const PAGE_SIZE := 6
+const MAX_PAGE_COUNT := 3
 
 var store_id: StringName
 var wallet: PlayerWallet
@@ -17,6 +19,7 @@ var inventory: Array[CardItemState] = []
 var shelf_slots: Array[ShelfSlotState] = []
 var selected_shelf_slot_ids: Array[StringName] = []
 var discount_rate := 0.0
+var unlocked_page_count := 1
 
 
 func _init(
@@ -36,6 +39,41 @@ func shelf_slot(slot_id: StringName) -> ShelfSlotState:
 		if slot.slot_id == slot_id:
 			return slot
 	return null
+
+
+func shelf_slots_for_page(page_index: int) -> Array[ShelfSlotState]:
+	var result: Array[ShelfSlotState] = []
+	for slot in shelf_slots:
+		if slot.page_index == page_index:
+			result.append(slot)
+	return result
+
+
+func is_page_unlocked(page_index: int) -> bool:
+	return page_index >= 1 and page_index <= unlocked_page_count
+
+
+func unlock_page(page_index: int) -> bool:
+	var next_count := clampi(page_index, 1, MAX_PAGE_COUNT)
+	if next_count <= unlocked_page_count:
+		return false
+	unlocked_page_count = next_count
+	state_changed.emit()
+	return true
+
+
+func add_shelf_slot(item_id: StringName, page_index: int) -> ShelfSlotState:
+	var normalized_page := clampi(page_index, 1, MAX_PAGE_COUNT)
+	if shelf_slots_for_page(normalized_page).size() >= PAGE_SIZE:
+		return null
+	var slot := ShelfSlotState.new(
+		store_id,
+		StringName("%s_shelf_%d" % [store_id, shelf_slots.size() + 1]),
+		item_id,
+		normalized_page,
+	)
+	shelf_slots.append(slot)
+	return slot
 
 
 func select_shelf_slot(slot_id: StringName) -> Dictionary:

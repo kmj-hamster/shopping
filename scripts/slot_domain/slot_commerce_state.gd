@@ -5,11 +5,9 @@ signal state_changed
 signal synthesis_progressed(active_synthesis: ActiveSynthesisState)
 signal synthesis_completed(result: Dictionary)
 
-const DEFAULT_SHELF_CAPACITY := 6
 const DAILY_INCOME := 100
 const DEMO_NIGHT_COUNT := 3
 const BALLOON_OWNER := &"balloon"
-const WINDUP_MOTH := &"toy_windup_moth"
 const TEDDY_RECIPE := &"recipe_teddy"
 const BALLOON_HUG_REQUEST := &"request_balloon_hug"
 const RESULT_OK := &"ok"
@@ -36,7 +34,6 @@ var day := 1
 var wallet: PlayerWallet
 var inventory: Array[CardItemState] = []
 var store_transactions: Dictionary = {}
-var store_shelf_capacities: Dictionary = {}
 var owner_levels: Dictionary = {}
 var owner_relationships: Dictionary = {}
 var recycle_transaction: CardRecycleTransaction
@@ -60,7 +57,6 @@ func reset(shared_wallet: PlayerWallet = null, random_seed: int = 1999) -> void:
 	wallet = shared_wallet if shared_wallet != null else PlayerWallet.new(120)
 	inventory = []
 	store_transactions = {}
-	store_shelf_capacities = {}
 	owner_levels = {}
 	owner_relationships = {}
 	for owner_id in SlotDemoCatalog.STORE_OWNER_IDS.values():
@@ -70,7 +66,6 @@ func reset(shared_wallet: PlayerWallet = null, random_seed: int = 1999) -> void:
 		)
 	random.seed = random_seed
 	for store_id in SlotDemoCatalog.INITIAL_SHELF_ITEMS:
-		store_shelf_capacities[store_id] = DEFAULT_SHELF_CAPACITY
 		var shelves := _make_initial_shelves(store_id)
 		var transaction := CardShopTransaction.new(store_id, wallet, inventory, shelves)
 		transaction.state_changed.connect(_on_child_state_changed)
@@ -592,13 +587,15 @@ func _apply_owner_level_unlocks(
 	previous_level: int,
 	level: int,
 ) -> void:
+	for definition in SlotDemoCatalog.retail_items():
+		if (
+			definition.unlock_owner_id == owner_id
+			and previous_level < definition.unlock_level
+			and level >= definition.unlock_level
+		):
+			_unlock_store_item(definition)
 	if owner_id != BALLOON_OWNER:
 		return
-	if previous_level < 1 and level >= 1:
-		store_shelf_capacities[SlotDemoCatalog.STORE_TOY] = 7
-		var transaction := transaction_for_store(SlotDemoCatalog.STORE_TOY)
-		_ensure_shelf_capacity(transaction, 7)
-		transaction.shelf_slots[6].stock(WINDUP_MOTH)
 	if previous_level < 2 and level >= 2:
 		if TEDDY_RECIPE not in activity_state.known_recipe_ids:
 			activity_state.known_recipe_ids.append(TEDDY_RECIPE)
@@ -628,41 +625,44 @@ func _make_initial_shelves(store_id: StringName) -> Array[ShelfSlotState]:
 			store_id,
 			StringName("%s_shelf_%d" % [store_id, index + 1]),
 			item_ids[index],
+			1,
 		))
 	return shelves
+
+
+func _unlock_store_item(definition: CardItemDefinition) -> void:
+	var transaction := transaction_for_store(definition.store_id)
+	if transaction == null:
+		return
+	if transaction.add_shelf_slot(definition.id, definition.shelf_page) == null:
+		return
+	transaction.unlock_page(definition.shelf_page)
 
 
 func _refill_empty_slots(store_id: StringName) -> void:
 	var transaction := transaction_for_store(store_id)
 	if transaction == null:
 		return
-	var capacity := int(store_shelf_capacities.get(store_id, DEFAULT_SHELF_CAPACITY))
-	_ensure_shelf_capacity(transaction, capacity)
-	var available := _available_restock_items(store_id)
 	for slot in transaction.shelf_slots:
 		if slot.is_empty():
+			var available := _available_restock_items(store_id, slot.page_index)
 			var definition := _weighted_choice(available)
 			if definition != null:
 				slot.stock(definition.id)
 
 
-func _ensure_shelf_capacity(transaction: CardShopTransaction, capacity: int) -> void:
-	if transaction == null:
-		return
-	while transaction.shelf_slots.size() < capacity:
-		var index := transaction.shelf_slots.size() + 1
-		transaction.shelf_slots.append(ShelfSlotState.new(
-			transaction.store_id,
-			StringName("%s_shelf_%d" % [transaction.store_id, index]),
-		))
-
-
-func _available_restock_items(store_id: StringName) -> Array[CardItemDefinition]:
+func _available_restock_items(
+	store_id: StringName,
+	page_index: int,
+) -> Array[CardItemDefinition]:
 	var result: Array[CardItemDefinition] = []
 	for definition in SlotDemoCatalog.retail_items_for_store(store_id):
-		if definition.unlock_owner_id.is_empty():
-			result.append(definition)
-		elif int(owner_levels.get(definition.unlock_owner_id, 0)) >= definition.unlock_level:
+		if definition.shelf_page != page_index:
+			continue
+		if (
+			definition.unlock_owner_id.is_empty()
+			or int(owner_levels.get(definition.unlock_owner_id, 0)) >= definition.unlock_level
+		):
 			result.append(definition)
 	return result
 
