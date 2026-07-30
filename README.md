@@ -14,6 +14,7 @@ generated cache.
 
 ## Collaboration documents
 
+- Current slot-card prototype design: [`docs/slot-card-three-day-demo-design.md`](docs/slot-card-three-day-demo-design.md)
 - Human workflow: [`docs/cross-platform-art-collaboration.md`](docs/cross-platform-art-collaboration.md)
 - Instructions for an artist's AI assistant: [`ARTIST_AI.md`](ARTIST_AI.md)
 - Codex/Godot automation workflow: [`docs/godot-codex-workflow.md`](docs/godot-codex-workflow.md)
