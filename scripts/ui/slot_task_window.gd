@@ -3,6 +3,7 @@ extends PanelContainer
 
 signal close_requested
 signal slot_rule_focused(rule: CardSlotRule)
+signal item_inspected(definition: CardItemDefinition)
 
 const TAB_DAILY := &"daily"
 const TAB_RECIPES := &"recipes"
@@ -163,6 +164,7 @@ func _rebuild_slots() -> void:
 		slot.setup(commerce, activity_state, current_activity_id, rule)
 		slot.focused.connect(_on_slot_focused)
 		slot.drop_resolved.connect(_on_drop_resolved)
+		slot.item_inspected.connect(item_inspected.emit)
 		slots_row.add_child(slot)
 		slot_views[rule.id] = slot
 	var evaluation := activity_state.evaluation_for(current_activity_id)

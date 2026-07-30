@@ -47,6 +47,9 @@ func _show_shop(store_id: StringName = SlotDemoCatalog.STORE_TOY) -> void:
 	shop.show_embedded_hand_bar = false
 	if shop is SlotShopScreen:
 		shop.store_id = store_id
+		shop.item_inspected.connect(protagonist_interface.show_item_details)
+	elif shop is SlotRecycleScreen:
+		shop.item_inspected.connect(protagonist_interface.show_item_details)
 	shop.name = "%sShopScreen" % String(store_id).to_pascal_case()
 	shop.leave_requested.connect(_on_shop_leave_requested)
 	add_child(shop)

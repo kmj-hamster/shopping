@@ -1,6 +1,8 @@
 class_name CardHandCard
 extends PanelContainer
 
+signal inspect_requested(definition: CardItemDefinition)
+
 var card: CardItemState
 var definition: CardItemDefinition
 var title_label: Label
@@ -12,6 +14,7 @@ var drag_origin_activity_id: StringName
 var drag_origin_slot_id: StringName
 var drag_origin_self_modulate := Color.WHITE
 var drag_origin_mouse_filter := Control.MOUSE_FILTER_PASS
+var click_candidate := false
 
 
 func setup(
@@ -106,6 +109,7 @@ func _get_drag_data(at_position: Vector2) -> Variant:
 		CardItemState.Location.RECYCLE,
 	]:
 		return null
+	click_candidate = false
 	var preview := _build_drag_preview(at_position)
 	set_drag_preview(preview)
 	_begin_drag_visual()
@@ -114,6 +118,18 @@ func _get_drag_data(at_position: Vector2) -> Variant:
 		"card": card,
 		"source": _drag_source(),
 	}
+
+
+func _gui_input(event: InputEvent) -> void:
+	var mouse_button := event as InputEventMouseButton
+	if mouse_button == null or mouse_button.button_index != MOUSE_BUTTON_LEFT:
+		return
+	if mouse_button.pressed:
+		click_candidate = true
+	elif click_candidate:
+		click_candidate = false
+		if definition != null:
+			inspect_requested.emit(definition)
 
 
 func _notification(what: int) -> void:

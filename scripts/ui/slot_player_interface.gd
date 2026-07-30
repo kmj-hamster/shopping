@@ -9,6 +9,7 @@ var root: Control
 var hand_bar: CardHandBar
 var bag_button: TextureButton
 var task_window: SlotTaskWindow
+var item_detail_popup: ItemDetailPopup
 
 
 func setup(commerce_state: SlotCommerceState) -> void:
@@ -46,12 +47,14 @@ func _build_interface() -> void:
 	hand_bar.offset_top = -146
 	hand_bar.offset_right = -182
 	hand_bar.offset_bottom = -10
+	hand_bar.item_inspected.connect(show_item_details)
 	root.add_child(hand_bar)
 	task_window = SlotTaskWindow.new()
 	task_window.name = "TaskWindow"
 	task_window.visible = false
 	task_window.close_requested.connect(close_task_window)
 	task_window.slot_rule_focused.connect(_on_slot_rule_focused)
+	task_window.item_inspected.connect(show_item_details)
 	root.add_child(task_window)
 	bag_button = TextureButton.new()
 	bag_button.name = "ProtagonistBagButton"
@@ -66,6 +69,13 @@ func _build_interface() -> void:
 	bag_button.offset_bottom = 0
 	bag_button.pressed.connect(toggle_task_window)
 	root.add_child(bag_button)
+	item_detail_popup = ItemDetailPopup.new()
+	item_detail_popup.name = "ItemDetailPopup"
+	root.add_child(item_detail_popup)
+
+
+func show_item_details(definition: CardItemDefinition) -> void:
+	item_detail_popup.show_item(definition)
 
 
 func set_view_context(context: StringName) -> void:

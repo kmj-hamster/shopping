@@ -91,50 +91,98 @@ msgstr "Sunday"
 msgid "slot.item.book_bedtime_clipping.name"
 msgstr "Bedtime Story Clipping"
 
+msgid "slot.item.book_bedtime_clipping.description"
+msgstr "A story cut from an old newspaper supplement. Its folds still hold the warmth of someone else's sleepless night."
+
 msgid "slot.item.book_aquarium_issue.name"
 msgstr "Final Aquarium Issue"
+
+msgid "slot.item.book_aquarium_issue.description"
+msgstr "An aquarium magazine that has ceased publication. The blue on its cover is deeper than the glass at the end of the mall."
 
 msgid "slot.item.record_lullaby_cassette.name"
 msgstr "Second-hand Lullaby Tape"
 
+msgid "slot.item.record_lullaby_cassette.description"
+msgstr "Someone counts stars softly on side A. Side B holds only the hush of turning tape."
+
 msgid "slot.item.record_fluorescent_single.name"
 msgstr "Dance Single under Fluorescent Light"
+
+msgid "slot.item.record_fluorescent_single.description"
+msgstr "The beat resembles a fluorescent tube left on after work, pushing sleepiness out into the street."
 
 msgid "slot.item.flower_sunflower.name"
 msgstr "Midnight Sunflower"
 
+msgid "slot.item.flower_sunflower.description"
+msgstr "Its petals still face an unseen light at night. Tiny drops gather inside the plastic wrapping."
+
 msgid "slot.item.flower_lavender_sachet.name"
 msgstr "Lavender Pillow Sachet"
+
+msgid "slot.item.flower_lavender_sachet.description"
+msgstr "A slightly crooked pillow sachet. Squeeze it and dried flowers breathe through old cotton."
 
 msgid "slot.item.flower_night_jasmine.name"
 msgstr "Night-blooming Jasmine"
 
+msgid "slot.item.flower_night_jasmine.description"
+msgstr "Closed by day, it speaks only after dark. Its scent travels far along the empty corridor."
+
 msgid "slot.item.toy_cloth_scraps.name"
 msgstr "Old Plush Offcuts"
+
+msgid "slot.item.toy_cloth_scraps.description"
+msgstr "Plush left behind by many old toys. The colors have faded, but the fabric still remembers being held."
 
 msgid "slot.item.toy_glass_marble.name"
 msgstr "Glass Marble"
 
+msgid "slot.item.toy_glass_marble.description"
+msgstr "A small piece of blue is sealed inside the glass. Hold it to your eye and the mall sinks underwater."
+
 msgid "slot.item.toy_windup_moth.name"
 msgstr "Clockwork Moth"
+
+msgid "slot.item.toy_windup_moth.description"
+msgstr "Once wound, it stubbornly circles the nearest light until it becomes still."
 
 msgid "slot.item.fast_warm_milk.name"
 msgstr "Warm Milk in a Paper Cup"
 
+msgid "slot.item.fast_warm_milk.description"
+msgstr "The cup is warm, with a pinhole for steam in its paper lid. Best finished before the last train."
+
 msgid "slot.item.fast_hash_brown.name"
 msgstr "Vending-machine Hash Brown"
+
+msgid "slot.item.fast_hash_brown.description"
+msgstr "It drops from the vending machine with its edges still crisp. A little salt clings to the wrapper."
 
 msgid "slot.item.craft_childhood_teddy.name"
 msgstr "Childhood Teddy Bear"
 
+msgid "slot.item.craft_childhood_teddy.description"
+msgstr "It remembers how you held it as a child, and the room that you no longer remember."
+
 msgid "slot.item.craft_comfort_bear.name"
 msgstr "Infant Comfort Bear"
+
+msgid "slot.item.craft_comfort_bear.description"
+msgstr "A newly sewn bear. Its chest rises gently, as though keeping a whole night's sleep for someone."
 
 msgid "slot.item.craft_clear_receiver.name"
 msgstr "Clear-night Radio"
 
+msgid "slot.item.craft_clear_receiver.description"
+msgstr "It receives a signal only when the city is quiet enough. A wakeful yellow light glows behind the dial."
+
 msgid "slot.item.craft_tide_receiver.name"
 msgstr "Tidal Radio"
+
+msgid "slot.item.craft_tide_receiver.description"
+msgstr "There is no programme in the speaker, only an unseen tide rising and falling very far away."
 
 msgid "slot.wish.hungry.name"
 msgstr "Something to Eat"
@@ -298,14 +346,29 @@ msgstr "Its plush body absorbs the rain until only a distant echo remains."
 msgid "slot.aspect.lamp"
 msgstr "Lamp"
 
+msgid "slot.aspect.lamp.description"
+msgstr "The aspect of wakefulness, illumination, and walking at night. It reveals things and makes sleep more difficult."
+
 msgid "slot.aspect.mirror"
 msgstr "Mirror"
+
+msgid "slot.aspect.mirror.description"
+msgstr "The aspect of memory, reflection, and déjà vu. It preserves things that have already gone."
 
 msgid "slot.aspect.candle"
 msgstr "Candle"
 
+msgid "slot.aspect.candle.description"
+msgstr "The aspect of visions, fancy, and unstable dreams. Its flame can turn a wall into the sea."
+
 msgid "slot.aspect.pillow"
 msgstr "Pillow"
+
+msgid "slot.aspect.pillow.description"
+msgstr "The aspect of sleep, comfort, and soft shelter. It lets weariness stop for a while."
+
+msgid "slot.item_detail.close"
+msgstr "Close item details"
 
 msgid "slot.hand.title"
 msgstr "Things in Hand"
@@ -373,59 +436,116 @@ msgstr "The window does not accept it."
 msgid "slot.property.reading"
 msgstr "Reading"
 
+msgid "slot.property.reading.description"
+msgstr "It can be read, consulted, or searched for clues between the lines."
+
 msgid "slot.property.memory"
 msgstr "Memory"
+
+msgid "slot.property.memory.description"
+msgstr "It can recall a person, place, or feeling from the past."
 
 msgid "slot.property.relaxing"
 msgstr "Relaxing"
 
+msgid "slot.property.relaxing.description"
+msgstr "It slows a tight breath and an overworked mind."
+
 msgid "slot.property.dreamlike"
 msgstr "Dreamlike"
+
+msgid "slot.property.dreamlike.description"
+msgstr "The edges of reality loosen around it."
 
 msgid "slot.property.music"
 msgstr "Music"
 
+msgid "slot.property.music.description"
+msgstr "It contains melody, rhythm, or a sound that has been recorded."
+
 msgid "slot.property.sleep_aid"
 msgstr "Sleep Aid"
+
+msgid "slot.property.sleep_aid.description"
+msgstr "It helps sleep arrive, or makes the night gentler."
 
 msgid "slot.property.stimulating"
 msgstr "Stimulating"
 
+msgid "slot.property.stimulating.description"
+msgstr "It brightens awareness and drives away drowsiness."
+
 msgid "slot.property.electric"
 msgstr "Electric"
+
+msgid "slot.property.electric.description"
+msgstr "Current, fluorescent tubes, or running machinery give it life."
 
 msgid "slot.property.plant"
 msgstr "Plant"
 
+msgid "slot.property.plant.description"
+msgstr "It is still growing, or still carries the breath of a plant."
+
 msgid "slot.property.warm"
 msgstr "Warm"
+
+msgid "slot.property.warm.description"
+msgstr "It has a temperature that can be confirmed in the palm."
 
 msgid "slot.property.soft"
 msgstr "Soft"
 
+msgid "slot.property.soft.description"
+msgstr "It can be pressed, folded, or held without caution."
+
 msgid "slot.property.toy"
 msgstr "Toy"
+
+msgid "slot.property.toy.description"
+msgstr "It exists for play, companionship, or pretending."
 
 msgid "slot.property.fragile"
 msgstr "Fragile"
 
+msgid "slot.property.fragile.description"
+msgstr "It breaks easily and asks for gentler movements."
+
 msgid "slot.property.food"
 msgstr "Food"
+
+msgid "slot.property.food.description"
+msgstr "It can fill the stomach, or only fill a small interval of emptiness."
 
 msgid "slot.property.drink"
 msgstr "Drink"
 
+msgid "slot.property.drink.description"
+msgstr "It can be swallowed, letting a feeling spread from inside the body."
+
 msgid "slot.property.sweet"
 msgstr "Sweet"
+
+msgid "slot.property.sweet.description"
+msgstr "It carries sugar and a brief kind of relief."
 
 msgid "slot.property.crispy"
 msgstr "Crispy"
 
+msgid "slot.property.crispy.description"
+msgstr "It makes a clear, cheerful sound when bitten."
+
 msgid "slot.property.teddy"
 msgstr "Teddy"
 
+msgid "slot.property.teddy.description"
+msgstr "A bear-shaped companion, skilled at keeping childhood secrets."
+
 msgid "slot.property.alcohol"
 msgstr "Alcohol"
+
+msgid "slot.property.alcohol.description"
+msgstr "It blunts boundaries and makes certain words easier to say."
 
 msgid "slot.rule.required"
 msgstr "Needs  %s"

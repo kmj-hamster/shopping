@@ -45,6 +45,7 @@ func test_every_slot_demo_content_key_exists_in_both_locales() -> void:
 		&"slot.aspect.mirror",
 		&"slot.aspect.candle",
 		&"slot.aspect.pillow",
+		&"slot.item_detail.close",
 		&"slot.hand.title",
 		&"slot.hand.empty",
 		&"slot.shop.empty_shelf",
@@ -151,6 +152,12 @@ func test_every_slot_demo_content_key_exists_in_both_locales() -> void:
 	])
 	for item in SlotDemoCatalog.all_items():
 		keys.append(item.display_name_key)
+		keys.append(item.resolved_description_key())
+		for raw_tag in item.property_set.values:
+			var tag := StringName(raw_tag)
+			var prefix := "slot.aspect" if tag in CardPropertySet.ASPECTS else "slot.property"
+			keys.append(StringName("%s.%s" % [prefix, tag]))
+			keys.append(StringName("%s.%s.description" % [prefix, tag]))
 	for wish in SlotDemoCatalog.wishes():
 		keys.append(wish.display_name_key)
 		for result_key in wish.result_text_keys.values():

@@ -91,50 +91,98 @@ msgstr "周日"
 msgid "slot.item.book_bedtime_clipping.name"
 msgstr "睡前故事剪报"
 
+msgid "slot.item.book_bedtime_clipping.description"
+msgstr "从旧报纸副刊上剪下来的故事。折痕里还留着某个失眠夜晚的体温。"
+
 msgid "slot.item.book_aquarium_issue.name"
 msgstr "水族馆停刊号"
+
+msgid "slot.item.book_aquarium_issue.description"
+msgstr "一本已经停刊的水族馆杂志。封面上的蓝，比商场尽头的玻璃更深。"
 
 msgid "slot.item.record_lullaby_cassette.name"
 msgstr "二手摇篮曲磁带"
 
+msgid "slot.item.record_lullaby_cassette.description"
+msgstr "A面有人轻声数星星，B面只剩磁带转动的沙沙声。"
+
 msgid "slot.item.record_fluorescent_single.name"
 msgstr "荧光灯下的舞曲"
+
+msgid "slot.item.record_fluorescent_single.description"
+msgstr "鼓点像下班后仍亮着的灯管，一下一下，把困意赶到街外。"
 
 msgid "slot.item.flower_sunflower.name"
 msgstr "午夜向日葵"
 
+msgid "slot.item.flower_sunflower.description"
+msgstr "花瓣在夜里仍朝向看不见的光。塑料包装上凝着细小水珠。"
+
 msgid "slot.item.flower_lavender_sachet.name"
 msgstr "薰衣草枕袋"
+
+msgid "slot.item.flower_lavender_sachet.description"
+msgstr "缝得有点歪的枕袋。捏一下，干花和旧棉布一起发出安静的气味。"
 
 msgid "slot.item.flower_night_jasmine.name"
 msgstr "夜来香"
 
+msgid "slot.item.flower_night_jasmine.description"
+msgstr "白天合拢，入夜才肯说话。香气沿着空走廊走得很远。"
+
 msgid "slot.item.toy_cloth_scraps.name"
 msgstr "旧绒布边角"
+
+msgid "slot.item.toy_cloth_scraps.description"
+msgstr "从许多旧玩偶身上留下的绒布。颜色褪了，触感还记得拥抱。"
 
 msgid "slot.item.toy_glass_marble.name"
 msgstr "玻璃弹珠"
 
+msgid "slot.item.toy_glass_marble.description"
+msgstr "玻璃深处封着一小块蓝。贴近眼睛时，商场像沉进水底。"
+
 msgid "slot.item.toy_windup_moth.name"
 msgstr "发条飞蛾"
+
+msgid "slot.item.toy_windup_moth.description"
+msgstr "上紧发条后，它会执拗地扑向最近的一盏灯，直到安静下来。"
 
 msgid "slot.item.fast_warm_milk.name"
 msgstr "纸杯热牛奶"
 
+msgid "slot.item.fast_warm_milk.description"
+msgstr "杯壁温热，纸盖上有一个小小的蒸汽孔。适合在末班车前喝完。"
+
 msgid "slot.item.fast_hash_brown.name"
 msgstr "自动售货机薯饼"
+
+msgid "slot.item.fast_hash_brown.description"
+msgstr "从自动售货机里掉出来，边缘仍然酥脆。包装纸沾着一点盐。"
 
 msgid "slot.item.craft_childhood_teddy.name"
 msgstr "童年的泰迪熊"
 
+msgid "slot.item.craft_childhood_teddy.description"
+msgstr "它认得你小时候抱住它的方式，也认得你已经忘掉的房间。"
+
 msgid "slot.item.craft_comfort_bear.name"
 msgstr "婴儿安抚熊"
+
+msgid "slot.item.craft_comfort_bear.description"
+msgstr "新缝好的熊，胸口有规律地起伏，像替谁保管着一场安睡。"
 
 msgid "slot.item.craft_clear_receiver.name"
 msgstr "清夜收音机"
 
+msgid "slot.item.craft_clear_receiver.description"
+msgstr "只在城市足够安静时收到信号。旋钮后面亮着一粒清醒的黄灯。"
+
 msgid "slot.item.craft_tide_receiver.name"
 msgstr "潮汐收音机"
+
+msgid "slot.item.craft_tide_receiver.description"
+msgstr "扬声器里没有节目，只有看不见的潮水在很远处涨落。"
 
 msgid "slot.wish.hungry.name"
 msgstr "饿了"
@@ -298,14 +346,29 @@ msgstr "雨声被它蓬松的身体吸走，只剩很远的回响。"
 msgid "slot.aspect.lamp"
 msgstr "灯"
 
+msgid "slot.aspect.lamp.description"
+msgstr "清醒、照明与夜行的性相。它让事物显形，也让人难以入睡。"
+
 msgid "slot.aspect.mirror"
 msgstr "镜"
+
+msgid "slot.aspect.mirror.description"
+msgstr "追忆、自省与既视感的性相。它保存已经离开的事物。"
 
 msgid "slot.aspect.candle"
 msgstr "烛"
 
+msgid "slot.aspect.candle.description"
+msgstr "幻觉、随想与不稳定梦境的性相。火光会把墙变成海。"
+
 msgid "slot.aspect.pillow"
 msgstr "枕"
+
+msgid "slot.aspect.pillow.description"
+msgstr "安睡、慰藉与柔软庇护的性相。它允许疲惫暂时停下。"
+
+msgid "slot.item_detail.close"
+msgstr "关闭物品说明"
 
 msgid "slot.hand.title"
 msgstr "手中的东西"
@@ -373,59 +436,116 @@ msgstr "窗口没有接收它。"
 msgid "slot.property.reading"
 msgstr "阅读"
 
+msgid "slot.property.reading.description"
+msgstr "可以被阅读、查阅，或从字缝里发现线索。"
+
 msgid "slot.property.memory"
 msgstr "追忆"
+
+msgid "slot.property.memory.description"
+msgstr "能唤回过去的人、地点或感觉。"
 
 msgid "slot.property.relaxing"
 msgstr "放松"
 
+msgid "slot.property.relaxing.description"
+msgstr "使紧绷的呼吸与思绪慢下来。"
+
 msgid "slot.property.dreamlike"
 msgstr "幻想"
+
+msgid "slot.property.dreamlike.description"
+msgstr "现实的边缘在它周围变得松动。"
 
 msgid "slot.property.music"
 msgstr "音乐"
 
+msgid "slot.property.music.description"
+msgstr "包含旋律、节拍或被录下的声音。"
+
 msgid "slot.property.sleep_aid"
 msgstr "助眠"
+
+msgid "slot.property.sleep_aid.description"
+msgstr "帮助入睡，或让夜晚变得更柔和。"
 
 msgid "slot.property.stimulating"
 msgstr "提神"
 
+msgid "slot.property.stimulating.description"
+msgstr "让意识明亮，驱散困倦。"
+
 msgid "slot.property.electric"
 msgstr "电气"
+
+msgid "slot.property.electric.description"
+msgstr "由电流、灯管或机器运转赋予活力。"
 
 msgid "slot.property.plant"
 msgstr "植物"
 
+msgid "slot.property.plant.description"
+msgstr "仍在生长，或保留着植物的气息。"
+
 msgid "slot.property.warm"
 msgstr "温暖"
+
+msgid "slot.property.warm.description"
+msgstr "带有可以被手掌确认的温度。"
 
 msgid "slot.property.soft"
 msgstr "柔软"
 
+msgid "slot.property.soft.description"
+msgstr "可以被压下、折叠或安心抱住。"
+
 msgid "slot.property.toy"
 msgstr "玩具"
+
+msgid "slot.property.toy.description"
+msgstr "为玩耍、陪伴或假装而存在。"
 
 msgid "slot.property.fragile"
 msgstr "易碎"
 
+msgid "slot.property.fragile.description"
+msgstr "容易破碎，因此要求更轻的动作。"
+
 msgid "slot.property.food"
 msgstr "食物"
+
+msgid "slot.property.food.description"
+msgstr "可以填饱肚子，也可能只填补一小段空白。"
 
 msgid "slot.property.drink"
 msgstr "饮料"
 
+msgid "slot.property.drink.description"
+msgstr "可以喝下，让某种感觉从身体内部扩散。"
+
 msgid "slot.property.sweet"
 msgstr "甜"
+
+msgid "slot.property.sweet.description"
+msgstr "带着糖分和短暂的宽慰。"
 
 msgid "slot.property.crispy"
 msgstr "酥脆"
 
+msgid "slot.property.crispy.description"
+msgstr "咬下时会发出清楚而轻快的响声。"
+
 msgid "slot.property.teddy"
 msgstr "泰迪熊"
 
+msgid "slot.property.teddy.description"
+msgstr "熊形的陪伴物，擅长替人保守幼年的秘密。"
+
 msgid "slot.property.alcohol"
 msgstr "酒"
+
+msgid "slot.property.alcohol.description"
+msgstr "使边界变钝，也使某些话更容易说出口。"
 
 msgid "slot.rule.required"
 msgstr "需  %s"

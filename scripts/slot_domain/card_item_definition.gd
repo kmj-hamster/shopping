@@ -3,6 +3,8 @@ extends Resource
 
 @export var id: StringName
 @export var display_name_key: StringName
+@export var description_key: StringName
+@export var image: Texture2D
 @export var store_id: StringName
 @export_range(0, 999, 1) var base_price := 0
 @export_range(0, 100, 1) var restock_weight := 0
@@ -24,6 +26,16 @@ func has_property(tag: StringName) -> bool:
 
 func localized_name() -> String:
 	return TranslationServer.translate(display_name_key)
+
+
+func resolved_description_key() -> StringName:
+	if not description_key.is_empty():
+		return description_key
+	return StringName("slot.item.%s.description" % id)
+
+
+func localized_description() -> String:
+	return TranslationServer.translate(resolved_description_key())
 
 
 func resale_value() -> int:

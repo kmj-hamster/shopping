@@ -17,6 +17,53 @@ func test_bag_toggles_one_persistent_task_window() -> void:
 	assert_eq(interface.root.find_children("TaskWindow", "SlotTaskWindow", true, false).size(), 1)
 
 
+func test_item_clicks_share_one_manual_close_detail_popup_across_hand_and_slot() -> void:
+	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
+	var sunflower := _add_card(commerce, &"flower_sunflower", 100)
+	var hash_brown := _add_card(commerce, &"fast_hash_brown", 101)
+	var interface := await _spawn_interface(commerce)
+	var popup := interface.item_detail_popup
+	var hand_view := interface.hand_bar.card_views[sunflower.instance_id] as CardHandCard
+
+	_click_card(hand_view)
+	assert_true(popup.visible)
+	assert_eq(popup.current_definition.id, &"flower_sunflower")
+	assert_eq(interface.root.find_children("ItemDetailPopup", "ItemDetailPopup", true, false).size(), 1)
+
+	assert_true(commerce.activity_state.assign_card(&"wish_hungry", &"hungry", hash_brown).ok)
+	await get_tree().process_frame
+	var slot := interface.task_window.slot_views[&"hungry"] as CardTaskSlot
+	var slotted_view := slot.card_holder.get_child(0) as CardHandCard
+	_click_card(slotted_view)
+	assert_true(popup.visible)
+	assert_eq(popup.current_definition.id, &"fast_hash_brown")
+	assert_eq(interface.root.find_children("ItemDetailPopup", "ItemDetailPopup", true, false).size(), 1)
+
+	popup.close_button.pressed.emit()
+	assert_false(popup.visible)
+
+
+func test_property_icon_hover_opens_and_hides_its_explanation_panel() -> void:
+	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
+	var interface := await _spawn_interface(commerce)
+	var popup := interface.item_detail_popup
+	popup.show_item(SlotDemoCatalog.item_by_id(&"flower_sunflower"))
+	var lamp_badge := popup.property_badges[CardPropertySet.ASPECT_LAMP] as Button
+
+	lamp_badge.mouse_entered.emit()
+	assert_true(popup.property_popup.visible)
+	assert_eq(
+		popup.property_popup_name.text,
+		TranslationServer.translate(&"slot.aspect.lamp"),
+	)
+	assert_eq(
+		popup.property_popup_description.text,
+		TranslationServer.translate(&"slot.aspect.lamp.description"),
+	)
+	lamp_badge.mouse_exited.emit()
+	assert_false(popup.property_popup.visible)
+
+
 func test_assigned_card_leaves_hand_and_appears_in_daily_slot() -> void:
 	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
 	var card := _buy_hash_brown(commerce)
@@ -276,3 +323,14 @@ func _add_card(
 	var card := CardItemState.new(instance_id, definition_id)
 	commerce.inventory.append(card)
 	return card
+
+
+func _click_card(view: CardHandCard) -> void:
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	view._gui_input(press)
+	var release := InputEventMouseButton.new()
+	release.button_index = MOUSE_BUTTON_LEFT
+	release.pressed = false
+	view._gui_input(release)

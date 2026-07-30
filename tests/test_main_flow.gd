@@ -80,6 +80,11 @@ func test_formal_shop_uses_independent_shelves_and_global_hand_only() -> void:
 	assert_null(shop.hand_bar)
 	assert_eq(shop.shelf_buttons.size(), 6)
 	shop._on_shelf_pressed(first_slot_id)
+	assert_true(main.protagonist_interface.item_detail_popup.visible)
+	assert_eq(
+		main.protagonist_interface.item_detail_popup.current_definition.id,
+		transaction.shelf_slot(first_slot_id).item_id,
+	)
 	assert_true(GameState.slot_commerce.inventory.is_empty())
 	shop._on_checkout_pressed()
 	await get_tree().process_frame

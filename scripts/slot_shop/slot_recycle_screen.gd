@@ -2,6 +2,7 @@ class_name SlotRecycleScreen
 extends Control
 
 signal leave_requested
+signal item_inspected(definition: CardItemDefinition)
 
 @export var show_embedded_hand_bar := true
 
@@ -144,6 +145,7 @@ func _build_interface() -> void:
 		hand_bar.offset_top = -146
 		hand_bar.offset_right = -18
 		hand_bar.offset_bottom = -10
+		hand_bar.item_inspected.connect(item_inspected.emit)
 		add_child(hand_bar)
 
 
@@ -157,6 +159,7 @@ func refresh() -> void:
 		var definition := SlotDemoCatalog.item_by_id(card.definition_id)
 		var view := CardHandCard.new()
 		view.setup(card, definition)
+		view.inspect_requested.connect(item_inspected.emit)
 		staged_row.add_child(view)
 		staged_views[card.instance_id] = view
 	var count := commerce.recycle_transaction.cart_count()

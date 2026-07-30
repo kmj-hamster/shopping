@@ -1,6 +1,8 @@
 class_name CardHandBar
 extends PanelContainer
 
+signal item_inspected(definition: CardItemDefinition)
+
 var commerce: SlotCommerceState
 var activity_state: SlotActivityState
 var highlight_rule: CardSlotRule
@@ -77,6 +79,7 @@ func refresh() -> void:
 			continue
 		var view := CardHandCard.new()
 		view.setup(card, definition)
+		view.inspect_requested.connect(item_inspected.emit)
 		card_row.add_child(view)
 		view.apply_rule_highlight(highlight_rule)
 		card_views[card.instance_id] = view

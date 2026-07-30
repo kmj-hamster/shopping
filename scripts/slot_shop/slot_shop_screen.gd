@@ -2,6 +2,7 @@ class_name SlotShopScreen
 extends Control
 
 signal leave_requested
+signal item_inspected(definition: CardItemDefinition)
 
 @export var store_id: StringName = SlotDemoCatalog.STORE_TOY
 @export var show_embedded_hand_bar := true
@@ -183,6 +184,7 @@ func _build_interface() -> void:
 		hand_bar.offset_top = -146
 		hand_bar.offset_right = -18
 		hand_bar.offset_bottom = -10
+		hand_bar.item_inspected.connect(item_inspected.emit)
 		add_child(hand_bar)
 
 
@@ -272,6 +274,11 @@ func _apply_product_highlight(button: Button, definition: CardItemDefinition) ->
 
 
 func _on_shelf_pressed(slot_id: StringName) -> void:
+	var slot := transaction.shelf_slot(slot_id)
+	if slot != null and not slot.is_empty():
+		var definition := SlotDemoCatalog.item_by_id(slot.item_id)
+		if definition != null:
+			item_inspected.emit(definition)
 	transaction.toggle_shelf_slot(slot_id)
 	feedback_label.text = TranslationServer.translate(&"slot.shop.feedback.selected")
 

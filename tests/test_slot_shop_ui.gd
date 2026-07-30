@@ -32,9 +32,11 @@ func test_checkout_button_lives_in_the_shelf_header_without_a_return_button() ->
 func test_clicking_shelf_then_checkout_creates_card_in_bottom_hand() -> void:
 	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
 	var shop := await _spawn_shop(commerce, SlotDemoCatalog.STORE_TOY)
+	watch_signals(shop)
 	var toy := commerce.transaction_for_store(SlotDemoCatalog.STORE_TOY)
 	var first_slot_id := toy.shelf_slots[0].slot_id
 	shop._on_shelf_pressed(first_slot_id)
+	assert_signal_emitted(shop, "item_inspected")
 	assert_eq(toy.cart_count(), 1)
 	assert_eq(commerce.inventory.size(), 0)
 	shop._on_checkout_pressed()

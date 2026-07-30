@@ -3,6 +3,7 @@ extends PanelContainer
 
 signal focused(rule: CardSlotRule)
 signal drop_resolved(result: Dictionary)
+signal item_inspected(definition: CardItemDefinition)
 
 var commerce: SlotCommerceState
 var activity_state: SlotActivityState
@@ -91,6 +92,7 @@ func refresh() -> void:
 			SlotDemoCatalog.item_by_id(card.definition_id),
 			activity_state.can_edit_activity(activity_id),
 		)
+		view.inspect_requested.connect(item_inspected.emit)
 		card_holder.add_child(view)
 		if evaluation.can_execute:
 			border = Color("d2b86f")
