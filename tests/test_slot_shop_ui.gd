@@ -30,6 +30,47 @@ func test_clicking_shelf_then_checkout_creates_card_in_bottom_hand() -> void:
 	assert_eq(commerce.wallet.money, 108)
 
 
+func test_balloon_talk_and_purchase_update_relation_and_unlock_seventh_shelf() -> void:
+	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
+	var shop := await _spawn_shop(commerce, SlotDemoCatalog.STORE_TOY)
+
+	assert_eq(shop.owner_name_label.text, TranslationServer.translate(&"slot.owner.balloon.name"))
+	assert_false(shop.talk_button.disabled)
+	shop._on_talk_pressed()
+	await get_tree().process_frame
+	assert_eq(commerce.relationship_state_for_owner(&"balloon").experience, 2)
+	assert_true(shop.talk_button.disabled)
+	assert_string_contains(
+		shop.feedback_label.text,
+		str(TranslationServer.translate(&"slot.owner.balloon.talk.day1")),
+	)
+
+	var toy := commerce.transaction_for_store(SlotDemoCatalog.STORE_TOY)
+	shop._on_shelf_pressed(toy.shelf_slots[0].slot_id)
+	shop._on_checkout_pressed()
+	await get_tree().process_frame
+	assert_eq(commerce.relationship_state_for_owner(&"balloon").level, 1)
+	assert_eq(shop.shelf_buttons.size(), 7)
+	assert_string_contains(
+		shop.feedback_label.text,
+		str(TranslationServer.translate(&"slot.owner.balloon.level_up.1")),
+	)
+
+
+func test_friend_discount_is_visible_on_each_shelf_price() -> void:
+	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
+	commerce.set_owner_level(&"balloon", 3)
+	var shop := await _spawn_shop(commerce, SlotDemoCatalog.STORE_TOY)
+	var toy := commerce.transaction_for_store(SlotDemoCatalog.STORE_TOY)
+	var marble_button := shop.shelf_buttons[toy.shelf_slots[4].slot_id] as Button
+
+	assert_string_contains(marble_button.text, "¥13")
+	assert_string_contains(
+		shop.relation_label.text,
+		str(TranslationServer.translate(&"slot.owner.level.friend")),
+	)
+
+
 func test_recycle_scene_shows_staged_card_and_hand_accepts_it_back() -> void:
 	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
 	var toy := commerce.transaction_for_store(SlotDemoCatalog.STORE_TOY)

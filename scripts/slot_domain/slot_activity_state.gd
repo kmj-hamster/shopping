@@ -41,6 +41,10 @@ func rules_for_activity(activity_id: StringName) -> Array[CardSlotRule]:
 			var rule := raw_rule as CardSlotRule
 			if rule != null:
 				result.append(rule)
+		return result
+	var request := SlotDemoCatalog.request_by_id(activity_id)
+	if request != null and request.slot_rule != null:
+		result.append(request.slot_rule)
 	return result
 
 

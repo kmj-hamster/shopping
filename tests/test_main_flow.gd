@@ -185,6 +185,20 @@ func test_six_map_hotspots_do_not_overlap() -> void:
 			)
 
 
+func test_demo_complete_page_uses_balloon_request_branch_echo() -> void:
+	var main = await _spawn_main()
+	var map := main.current_screen as MallMapScreen
+	GameState.slot_commerce.story_flags[&"balloon_hug"] = &"comfort"
+
+	map.show_demo_complete()
+
+	assert_true(map.demo_complete_panel.visible)
+	assert_eq(
+		map.demo_complete_body.text,
+		TranslationServer.translate(&"demo.complete.body.balloon_comfort"),
+	)
+
+
 func _spawn_main():
 	var packed := load("res://scenes/main/main.tscn") as PackedScene
 	var main := packed.instantiate()

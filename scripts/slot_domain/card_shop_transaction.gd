@@ -16,6 +16,7 @@ var wallet: PlayerWallet
 var inventory: Array[CardItemState] = []
 var shelf_slots: Array[ShelfSlotState] = []
 var selected_shelf_slot_ids: Array[StringName] = []
+var discount_rate := 0.0
 
 
 func _init(
@@ -79,8 +80,22 @@ func cart_total() -> int:
 		var slot := shelf_slot(slot_id)
 		var definition := SlotDemoCatalog.item_by_id(slot.item_id) if slot != null else null
 		if definition != null:
-			total += definition.base_price
+			total += price_for(definition)
 	return total
+
+
+func price_for(definition: CardItemDefinition) -> int:
+	if definition == null:
+		return 0
+	return maxi(1, ceili(definition.base_price * (1.0 - discount_rate)))
+
+
+func set_discount_rate(value: float) -> void:
+	var next_rate := clampf(value, 0.0, 0.9)
+	if is_equal_approx(discount_rate, next_rate):
+		return
+	discount_rate = next_rate
+	state_changed.emit()
 
 
 func checkout(day: int) -> Dictionary:

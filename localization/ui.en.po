@@ -987,3 +987,102 @@ msgstr "You still need to keep something for yourself tonight."
 
 msgid "slot.recycle.feedback.daily_risk"
 msgstr "You may still need this tonight."
+
+msgid "slot.owner.balloon.name"
+msgstr "Mr. Balloon"
+
+msgid "slot.owner.sunflower.name"
+msgstr "Mr. Sunflower"
+
+msgid "slot.owner.gramophone.name"
+msgstr "Ms. Gramophone"
+
+msgid "slot.owner.magical_girl.name"
+msgstr "The Magical Girl"
+
+msgid "slot.owner.mouse.name"
+msgstr "Mr. Mouse"
+
+msgid "slot.owner.level.stranger"
+msgstr "Stranger"
+
+msgid "slot.owner.level.familiar"
+msgstr "Familiar"
+
+msgid "slot.owner.level.wish"
+msgstr "A Wish Appears"
+
+msgid "slot.owner.level.friend"
+msgstr "Friend"
+
+msgid "slot.owner.relation"
+msgstr "%s · %d/%d"
+
+msgid "slot.owner.talk"
+msgstr "Talk for a While"
+
+msgid "slot.owner.talk.done"
+msgstr "Talked Tonight"
+
+msgid "slot.owner.talk.unavailable"
+msgstr "No one answers just now."
+
+msgid "slot.owner.placeholder.talk"
+msgstr "The owner nods to you. The night is quiet, and there is little else to say for now."
+
+msgid "slot.owner.placeholder.repeat"
+msgstr "You have already discussed tonight's weather."
+
+msgid "slot.owner.balloon.talk.day1"
+msgstr "Mr. Balloon presses a gloved hand to his smile. When he lets go, it stays in the same curve. ‘No leaks today.’"
+
+msgid "slot.owner.balloon.talk.day2"
+msgstr "‘Balloons are made to be seen, not held. Is there such a thing as a hug that never leaks?’"
+
+msgid "slot.owner.balloon.talk.day3"
+msgstr "He wipes the counter very slowly, as if waiting for a farewell he has not decided how to say."
+
+msgid "slot.owner.balloon.talk.repeat"
+msgstr "Mr. Balloon waves to you through the glass."
+
+msgid "slot.owner.balloon.level_up.1"
+msgstr "A clockwork moth appears beneath the counter, walking with great concentration."
+
+msgid "slot.owner.balloon.level_up.2"
+msgstr "He wishes for a hug that never leaks. A teddy-bear recipe surfaces inside the shopping bag."
+
+msgid "slot.owner.balloon.level_up.3"
+msgstr "‘A little cheaper from now on. Friends shouldn't have to read every price tag.’"
+
+msgid "slot.request.balloon_hug.name"
+msgstr "A Hug That Never Leaks"
+
+msgid "slot.request.balloon_hug.slot.hug"
+msgstr "Something Made to Hold"
+
+msgid "slot.request.deliver"
+msgstr "Give to the Owner"
+
+msgid "slot.request.delivered"
+msgstr "Delivered"
+
+msgid "slot.request.completed"
+msgstr "This wish has found its answer."
+
+msgid "slot.request.daily_risk"
+msgstr "You still need this for yourself tonight."
+
+msgid "slot.request.unavailable"
+msgstr "This cannot be delivered yet."
+
+msgid "slot.request.balloon_hug.result.memory"
+msgstr "He lifts the bear level with his face. Its old wear makes his smile look less lonely for the first time."
+
+msgid "slot.request.balloon_hug.result.comfort"
+msgstr "The bear sinks into the soft balloon suit without a single hiss. He does not put it down for a long time."
+
+msgid "demo.complete.body.balloon_memory"
+msgstr "The three-night prototype ends here. Behind the window, the old bear and Mr. Balloon watch the lights that remain."
+
+msgid "demo.complete.body.balloon_comfort"
+msgstr "The three-night prototype ends here. As the mall grows quiet, Mr. Balloon is still holding the soft bear."

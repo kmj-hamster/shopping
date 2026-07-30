@@ -7,6 +7,12 @@ const STORE_FLOWER := &"flower"
 const STORE_RECORD := &"record"
 const STORE_FAST_FOOD := &"fast_food"
 
+const OWNER_BALLOON := &"balloon"
+const OWNER_SUNFLOWER := &"sunflower"
+const OWNER_GRAMOPHONE := &"gramophone"
+const OWNER_MAGICAL_GIRL := &"magical_girl"
+const OWNER_MOUSE := &"mouse"
+
 const STORE_IDS: Array[StringName] = [
 	STORE_BOOK,
 	STORE_TOY,
@@ -14,6 +20,14 @@ const STORE_IDS: Array[StringName] = [
 	STORE_RECORD,
 	STORE_FAST_FOOD,
 ]
+
+const STORE_OWNER_IDS := {
+	STORE_BOOK: OWNER_MAGICAL_GIRL,
+	STORE_TOY: OWNER_BALLOON,
+	STORE_FLOWER: OWNER_SUNFLOWER,
+	STORE_RECORD: OWNER_GRAMOPHONE,
+	STORE_FAST_FOOD: OWNER_MOUSE,
+}
 
 const RETAIL_ITEM_PATHS := [
 	"res://data/slot_demo/items/book_bedtime_clipping.tres",
@@ -49,6 +63,14 @@ const WISH_PATHS := [
 const RECIPE_PATHS := [
 	"res://data/slot_demo/recipes/recipe_teddy.tres",
 	"res://data/slot_demo/recipes/recipe_night_radio.tres",
+]
+
+const OWNER_PATHS := [
+	"res://data/slot_demo/owners/owner_balloon.tres",
+]
+
+const REQUEST_PATHS := [
+	"res://data/slot_demo/requests/request_balloon_hug.tres",
 ]
 
 const INITIAL_SHELF_ITEMS := {
@@ -159,4 +181,49 @@ static func recipe_by_id(recipe_id: StringName) -> SynthesisRecipeDefinition:
 	for recipe in recipes():
 		if recipe.id == recipe_id:
 			return recipe
+	return null
+
+
+static func owners() -> Array[OwnerRelationshipDefinition]:
+	var result: Array[OwnerRelationshipDefinition] = []
+	for path in OWNER_PATHS:
+		var resource := load(path) as OwnerRelationshipDefinition
+		assert(resource != null, "Missing owner relationship resource: %s" % path)
+		result.append(resource)
+	return result
+
+
+static func owner_by_id(owner_id: StringName) -> OwnerRelationshipDefinition:
+	for owner in owners():
+		if owner.id == owner_id:
+			return owner
+	return null
+
+
+static func owner_id_for_store(store_id: StringName) -> StringName:
+	return StringName(STORE_OWNER_IDS.get(store_id, &""))
+
+
+static func owner_name_key(owner_id: StringName) -> StringName:
+	var definition := owner_by_id(owner_id)
+	return (
+		definition.display_name_key
+		if definition != null
+		else StringName("slot.owner.%s.name" % owner_id)
+	)
+
+
+static func requests() -> Array[OwnerRequestDefinition]:
+	var result: Array[OwnerRequestDefinition] = []
+	for path in REQUEST_PATHS:
+		var resource := load(path) as OwnerRequestDefinition
+		assert(resource != null, "Missing owner request resource: %s" % path)
+		result.append(resource)
+	return result
+
+
+static func request_by_id(request_id: StringName) -> OwnerRequestDefinition:
+	for request in requests():
+		if request.id == request_id:
+			return request
 	return null

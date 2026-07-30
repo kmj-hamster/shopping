@@ -92,6 +92,35 @@ func test_every_slot_demo_content_key_exists_in_both_locales() -> void:
 		&"slot.transition.income",
 		&"slot.shop.feedback.daily_risk",
 		&"slot.recycle.feedback.daily_risk",
+		&"slot.owner.balloon.name",
+		&"slot.owner.sunflower.name",
+		&"slot.owner.gramophone.name",
+		&"slot.owner.magical_girl.name",
+		&"slot.owner.mouse.name",
+		&"slot.owner.level.stranger",
+		&"slot.owner.level.familiar",
+		&"slot.owner.level.wish",
+		&"slot.owner.level.friend",
+		&"slot.owner.relation",
+		&"slot.owner.talk",
+		&"slot.owner.talk.done",
+		&"slot.owner.talk.unavailable",
+		&"slot.owner.placeholder.talk",
+		&"slot.owner.placeholder.repeat",
+		&"slot.owner.balloon.talk.day1",
+		&"slot.owner.balloon.talk.day2",
+		&"slot.owner.balloon.talk.day3",
+		&"slot.owner.balloon.talk.repeat",
+		&"slot.owner.balloon.level_up.1",
+		&"slot.owner.balloon.level_up.2",
+		&"slot.owner.balloon.level_up.3",
+		&"slot.request.deliver",
+		&"slot.request.delivered",
+		&"slot.request.completed",
+		&"slot.request.daily_risk",
+		&"slot.request.unavailable",
+		&"demo.complete.body.balloon_memory",
+		&"demo.complete.body.balloon_comfort",
 	])
 	for item in SlotDemoCatalog.all_items():
 		keys.append(item.display_name_key)
@@ -106,6 +135,18 @@ func test_every_slot_demo_content_key_exists_in_both_locales() -> void:
 			keys.append(rule.display_name_key)
 		for preview_key in recipe.preview_text_by_output.values():
 			keys.append(StringName(preview_key))
+	for owner in SlotDemoCatalog.owners():
+		keys.append(owner.display_name_key)
+		keys.append_array(owner.level_name_keys)
+		keys.append_array(owner.daily_dialogue_keys)
+		keys.append(owner.repeat_dialogue_key)
+		for level_up_key in owner.level_up_text_keys.values():
+			keys.append(StringName(level_up_key))
+	for request in SlotDemoCatalog.requests():
+		keys.append(request.display_name_key)
+		keys.append(request.slot_rule.display_name_key)
+		for result_key in request.result_text_by_item.values():
+			keys.append(StringName(result_key))
 
 	for locale in ["zh_CN", "en"]:
 		TranslationServer.set_locale(locale)

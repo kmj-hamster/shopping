@@ -11,6 +11,9 @@ var transaction: CardShopTransaction
 var store_name_label: Label
 var money_label: Label
 var shelf_grid: GridContainer
+var owner_name_label: Label
+var relation_label: Label
+var talk_button: Button
 var cart_label: Label
 var feedback_label: Label
 var cancel_button: Button
@@ -122,15 +125,30 @@ func _build_interface() -> void:
 	body.add_child(owner_panel)
 	var owner_column := VBoxContainer.new()
 	owner_column.alignment = BoxContainer.ALIGNMENT_CENTER
-	owner_column.add_theme_constant_override("separation", 12)
+	owner_column.add_theme_constant_override("separation", 9)
 	owner_panel.add_child(owner_column)
+	owner_name_label = Label.new()
+	owner_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	owner_name_label.add_theme_font_size_override("font_size", 20)
+	owner_name_label.add_theme_color_override("font_color", Color("d6bd77"))
+	owner_column.add_child(owner_name_label)
 	var portrait := TextureRect.new()
-	portrait.custom_minimum_size = Vector2(320, 330)
+	portrait.custom_minimum_size = Vector2(300, 255)
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	portrait.texture = _owner_texture()
 	owner_column.add_child(portrait)
+	relation_label = Label.new()
+	relation_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	relation_label.add_theme_font_size_override("font_size", 13)
+	relation_label.add_theme_color_override("font_color", Color("738d89"))
+	owner_column.add_child(relation_label)
+	talk_button = Button.new()
+	talk_button.custom_minimum_size = Vector2(160, 36)
+	talk_button.pressed.connect(_on_talk_pressed)
+	owner_column.add_child(talk_button)
 	feedback_label = Label.new()
+	feedback_label.custom_minimum_size = Vector2(0, 62)
 	feedback_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	feedback_label.add_theme_color_override("font_color", Color("9bb3ad"))
@@ -192,7 +210,7 @@ func refresh() -> void:
 			button.text = "%s%s\n¥%d" % [
 				"✓  " if selected else "",
 				definition.localized_name(),
-				definition.base_price,
+				transaction.price_for(definition),
 			]
 			button.add_theme_stylebox_override(
 				"normal",
@@ -211,6 +229,7 @@ func refresh() -> void:
 	cancel_button.disabled = transaction.cart_count() == 0
 	checkout_button.disabled = transaction.cart_count() == 0
 	store_name_label.text = TranslationServer.translate(SlotDemoCatalog.store_name_key(store_id))
+	_refresh_owner_panel()
 	language_button.text = LocaleManager.switch_button_text()
 	var leave := find_child("LeaveButton", true, false) as Button
 	if leave != null:
@@ -248,9 +267,12 @@ func _on_shelf_pressed(slot_id: StringName) -> void:
 
 func _on_checkout_pressed() -> void:
 	var result := commerce.checkout_store(store_id)
-	feedback_label.text = TranslationServer.translate(
-		&"slot.shop.feedback.paid" if result.ok else _failure_key(result.reason)
-	)
+	if result.ok:
+		feedback_label.text = _feedback_with_unlocks(
+			&"slot.shop.feedback.paid", result.get("owner_level_up_keys", [])
+		)
+	else:
+		feedback_label.text = TranslationServer.translate(_failure_key(result.reason))
 	refresh()
 
 
@@ -262,6 +284,48 @@ func _on_cancel_pressed() -> void:
 func _on_leave_pressed() -> void:
 	transaction.cancel_cart()
 	leave_requested.emit()
+
+
+func _on_talk_pressed() -> void:
+	var result := commerce.talk_to_store_owner(store_id)
+	if not result.ok:
+		feedback_label.text = TranslationServer.translate(&"slot.owner.talk.unavailable")
+		return
+	feedback_label.text = _feedback_with_unlocks(
+		StringName(result.dialogue_key), result.level_up_keys
+	)
+	refresh()
+
+
+func _refresh_owner_panel() -> void:
+	var owner_id := SlotDemoCatalog.owner_id_for_store(store_id)
+	var relationship := commerce.relationship_state_for_owner(owner_id)
+	var definition := SlotDemoCatalog.owner_by_id(owner_id)
+	owner_name_label.text = TranslationServer.translate(
+		SlotDemoCatalog.owner_name_key(owner_id)
+	)
+	if relationship != null and definition != null:
+		relation_label.text = TranslationServer.translate(&"slot.owner.relation") % [
+			TranslationServer.translate(definition.level_name_key(relationship.level)),
+			relationship.experience,
+			definition.next_threshold_for_level(relationship.level),
+		]
+	else:
+		relation_label.text = ""
+	var talked := relationship != null and relationship.has_talked_today(commerce.day)
+	talk_button.disabled = talked
+	talk_button.text = TranslationServer.translate(
+		&"slot.owner.talk.done" if talked else &"slot.owner.talk"
+	)
+
+
+func _feedback_with_unlocks(base_key: StringName, unlock_keys: Array) -> String:
+	var lines := PackedStringArray([TranslationServer.translate(base_key)])
+	for raw_key in unlock_keys:
+		var key := StringName(raw_key)
+		if not key.is_empty():
+			lines.append(TranslationServer.translate(key))
+	return "\n".join(lines)
 
 
 func _failure_key(reason: StringName) -> StringName:

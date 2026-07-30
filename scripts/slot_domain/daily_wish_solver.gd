@@ -61,7 +61,7 @@ static func evaluate(
 				wishes_by_id,
 				definition,
 				"shelf:%s" % _shelf_key(slot),
-				definition.base_price if definition != null else 0,
+				transaction.price_for(definition),
 			)
 
 	var best := {"cost": 1_000_000, "choices": []}

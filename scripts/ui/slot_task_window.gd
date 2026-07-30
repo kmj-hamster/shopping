@@ -132,7 +132,7 @@ func refresh() -> void:
 			var button := Button.new()
 			button.toggle_mode = true
 			button.text = "%s%s" % [
-				"✓  " if activity_state.is_daily_confirmed(activity_id) else "",
+				"✓  " if _is_activity_complete(activity_id) else "",
 				_activity_name(activity_id),
 			]
 			button.button_pressed = activity_id == current_activity_id
@@ -170,6 +170,9 @@ func _rebuild_slots() -> void:
 	synthesis_progress.visible = false
 	if current_tab == TAB_RECIPES:
 		_refresh_recipe_action(evaluation)
+		return
+	if current_tab == TAB_REQUESTS:
+		_refresh_request_action(evaluation)
 		return
 	result_label.text = TranslationServer.translate(
 		&"slot.task.confirmed"
@@ -220,6 +223,31 @@ func _refresh_recipe_action(evaluation: Dictionary) -> void:
 	action_button.text = TranslationServer.translate(&"slot.synthesis.start")
 
 
+func _refresh_request_action(evaluation: Dictionary) -> void:
+	action_button.visible = true
+	var completed := commerce.is_request_completed(current_activity_id)
+	var last_result := commerce.last_owner_request_result
+	if (
+		completed
+		and StringName(last_result.get("request_id", &"")) == current_activity_id
+	):
+		result_label.text = TranslationServer.translate(
+			StringName(last_result.result_text_key)
+		)
+	elif completed:
+		result_label.text = TranslationServer.translate(&"slot.request.completed")
+	else:
+		result_label.text = TranslationServer.translate(
+			&"slot.task.ready" if evaluation.is_ready else &"slot.task.waiting"
+		)
+	action_button.disabled = (
+		completed or not evaluation.is_ready or commerce.active_synthesis != null
+	)
+	action_button.text = TranslationServer.translate(
+		&"slot.request.delivered" if completed else &"slot.request.deliver"
+	)
+
+
 func _select_tab(tab_id: StringName) -> void:
 	current_tab = tab_id
 	var activities := _activities_for_current_tab()
@@ -250,7 +278,17 @@ func _activity_name(activity_id: StringName) -> String:
 	var recipe := SlotDemoCatalog.recipe_by_id(activity_id)
 	if recipe != null:
 		return TranslationServer.translate(recipe.display_name_key)
+	var request := SlotDemoCatalog.request_by_id(activity_id)
+	if request != null:
+		return TranslationServer.translate(request.display_name_key)
 	return String(activity_id)
+
+
+func _is_activity_complete(activity_id: StringName) -> bool:
+	return (
+		activity_state.is_daily_confirmed(activity_id)
+		or commerce.is_request_completed(activity_id)
+	)
 
 
 func _refresh_tab_texts() -> void:
@@ -288,6 +326,14 @@ func _on_action_pressed() -> void:
 				&"slot.synthesis.daily_risk"
 				if result.reason == SlotCommerceState.RESULT_DAILY_RISK
 				else &"slot.synthesis.unavailable"
+			)
+	elif current_tab == TAB_REQUESTS:
+		var result := commerce.submit_owner_request(current_activity_id)
+		if not result.ok:
+			result_label.text = TranslationServer.translate(
+				&"slot.request.daily_risk"
+				if result.reason == SlotCommerceState.RESULT_DAILY_RISK
+				else &"slot.request.unavailable"
 			)
 
 

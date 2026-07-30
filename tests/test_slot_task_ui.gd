@@ -143,6 +143,45 @@ func test_recipe_keeps_running_while_window_is_closed_and_returns_output_to_hand
 	)
 
 
+func test_unlocked_owner_request_consumes_bear_and_keeps_completed_result_visible() -> void:
+	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
+	commerce.set_owner_level(&"balloon", 2)
+	var bear := _add_card(commerce, &"craft_comfort_bear", 100)
+	assert_true(commerce.activity_state.assign_card(
+		&"request_balloon_hug", &"hug", bear
+	).ok)
+	var interface := await _spawn_interface(commerce)
+	interface.toggle_task_window()
+	interface.task_window._select_tab(SlotTaskWindow.TAB_REQUESTS)
+	await get_tree().process_frame
+
+	assert_eq(interface.task_window.current_activity_id, &"request_balloon_hug")
+	assert_false(interface.task_window.action_button.disabled)
+	interface.task_window._on_action_pressed()
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	assert_true(commerce.is_request_completed(&"request_balloon_hug"))
+	assert_true(commerce.inventory.is_empty())
+	assert_eq(commerce.story_flags[&"balloon_hug"], &"comfort")
+	assert_true(interface.task_window.action_button.disabled)
+	assert_eq(
+		interface.task_window.action_button.text,
+		TranslationServer.translate(&"slot.request.delivered"),
+	)
+	assert_eq(
+		interface.task_window.result_label.text,
+		TranslationServer.translate(&"slot.request.balloon_hug.result.comfort"),
+	)
+	assert_true(
+		(interface.task_window.activity_tabs.get_child(0) as Button).text.begins_with("✓")
+	)
+	assert_eq(
+		interface.root.find_children("TaskWindow", "SlotTaskWindow", true, false).size(),
+		1,
+	)
+
+
 func _spawn_interface(commerce: SlotCommerceState) -> SlotPlayerInterface:
 	var interface := SlotPlayerInterface.new()
 	interface.commerce = commerce

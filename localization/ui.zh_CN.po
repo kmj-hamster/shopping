@@ -987,3 +987,102 @@ msgstr "今晚还需要留一点给自己。"
 
 msgid "slot.recycle.feedback.daily_risk"
 msgstr "这件东西今晚还用得上。"
+
+msgid "slot.owner.balloon.name"
+msgstr "气球先生"
+
+msgid "slot.owner.sunflower.name"
+msgstr "向日葵先生"
+
+msgid "slot.owner.gramophone.name"
+msgstr "留声机女士"
+
+msgid "slot.owner.magical_girl.name"
+msgstr "魔法少女店主"
+
+msgid "slot.owner.mouse.name"
+msgstr "老鼠先生"
+
+msgid "slot.owner.level.stranger"
+msgstr "陌生"
+
+msgid "slot.owner.level.familiar"
+msgstr "眼熟"
+
+msgid "slot.owner.level.wish"
+msgstr "愿望浮现"
+
+msgid "slot.owner.level.friend"
+msgstr "朋友"
+
+msgid "slot.owner.relation"
+msgstr "%s · %d/%d"
+
+msgid "slot.owner.talk"
+msgstr "聊一会儿"
+
+msgid "slot.owner.talk.done"
+msgstr "今晚聊过了"
+
+msgid "slot.owner.talk.unavailable"
+msgstr "现在没人回应。"
+
+msgid "slot.owner.placeholder.talk"
+msgstr "店主向你点点头。夜里很安静，暂时没有更多话。"
+
+msgid "slot.owner.placeholder.repeat"
+msgstr "你们已经聊过今晚的天气了。"
+
+msgid "slot.owner.balloon.talk.day1"
+msgstr "气球先生用手套按住自己的笑脸。松开以后，它仍停在原来的弧度。‘今天没有漏气。’"
+
+msgid "slot.owner.balloon.talk.day2"
+msgstr "‘气球适合被看见，不太适合拥抱。有没有一种不会漏气的拥抱？’"
+
+msgid "slot.owner.balloon.talk.day3"
+msgstr "他把柜台擦得很慢，像是在等一句还没有决定好的告别。"
+
+msgid "slot.owner.balloon.talk.repeat"
+msgstr "气球先生隔着玻璃向你挥了挥手。"
+
+msgid "slot.owner.balloon.level_up.1"
+msgstr "柜台下多出一只认真走路的发条飞蛾。"
+
+msgid "slot.owner.balloon.level_up.2"
+msgstr "他想要一种不会漏气的拥抱。泰迪熊配方浮现在购物袋里。"
+
+msgid "slot.owner.balloon.level_up.3"
+msgstr "‘以后便宜一点吧。朋友不应该每次都看价签。’"
+
+msgid "slot.request.balloon_hug.name"
+msgstr "不会漏气的拥抱"
+
+msgid "slot.request.balloon_hug.slot.hug"
+msgstr "一个可以拥抱的东西"
+
+msgid "slot.request.deliver"
+msgstr "交给店主"
+
+msgid "slot.request.delivered"
+msgstr "已经交付"
+
+msgid "slot.request.completed"
+msgstr "这件心愿已经有了回答。"
+
+msgid "slot.request.daily_risk"
+msgstr "这件东西今晚还需要留给自己。"
+
+msgid "slot.request.unavailable"
+msgstr "现在还不能交付。"
+
+msgid "slot.request.balloon_hug.result.memory"
+msgstr "他把熊举到和自己一样高。熊脸上的旧磨损让他的笑容第一次显得不那么孤单。"
+
+msgid "slot.request.balloon_hug.result.comfort"
+msgstr "熊陷进气球服柔软的腹部，没有发出任何漏气声。他很久没有把它拿开。"
+
+msgid "demo.complete.body.balloon_memory"
+msgstr "三夜的玩法验证到此结束。橱窗后，那只旧熊与气球先生一起看着尚未熄灭的灯。"
+
+msgid "demo.complete.body.balloon_comfort"
+msgstr "三夜的玩法验证到此结束。商场安静下来时，气球先生仍抱着那只柔软的熊。"

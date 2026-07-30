@@ -10,6 +10,8 @@ const DAILY_INCOME := 100
 const DEMO_NIGHT_COUNT := 3
 const BALLOON_OWNER := &"balloon"
 const WINDUP_MOTH := &"toy_windup_moth"
+const TEDDY_RECIPE := &"recipe_teddy"
+const BALLOON_HUG_REQUEST := &"request_balloon_hug"
 const RESULT_OK := &"ok"
 const RESULT_DAILY_INCOMPLETE := &"daily_incomplete"
 const RESULT_DAILY_RISK := &"daily_risk"
@@ -20,6 +22,9 @@ const RESULT_SYNTHESIS_ACTIVE := &"synthesis_active"
 const RESULT_UNKNOWN_RECIPE := &"unknown_recipe"
 const RESULT_RECIPE_NOT_READY := &"recipe_not_ready"
 const RESULT_INPUTS_CHANGED := &"inputs_changed"
+const RESULT_UNKNOWN_OWNER := &"unknown_owner"
+const RESULT_UNKNOWN_REQUEST := &"unknown_request"
+const RESULT_REQUEST_COMPLETED := &"request_completed"
 
 const PREFERRED_DAILY_WISHES := {
 	1: [&"wish_hungry", &"wish_bedside"],
@@ -33,6 +38,7 @@ var inventory: Array[CardItemState] = []
 var store_transactions: Dictionary = {}
 var store_shelf_capacities: Dictionary = {}
 var owner_levels: Dictionary = {}
+var owner_relationships: Dictionary = {}
 var recycle_transaction: CardRecycleTransaction
 var activity_state: SlotActivityState
 var protagonist_aspect_counts: Dictionary = {}
@@ -40,6 +46,8 @@ var pending_transition: SlotNightTransition
 var active_synthesis: ActiveSynthesisState
 var first_crafted_output_ids: Dictionary = {}
 var last_synthesis_result: Dictionary = {}
+var last_owner_request_result: Dictionary = {}
+var story_flags: Dictionary = {}
 var random := RandomNumberGenerator.new()
 
 
@@ -54,6 +62,12 @@ func reset(shared_wallet: PlayerWallet = null, random_seed: int = 1999) -> void:
 	store_transactions = {}
 	store_shelf_capacities = {}
 	owner_levels = {}
+	owner_relationships = {}
+	for owner_id in SlotDemoCatalog.STORE_OWNER_IDS.values():
+		var normalized_owner_id := StringName(owner_id)
+		owner_relationships[normalized_owner_id] = OwnerRelationshipState.new(
+			normalized_owner_id
+		)
 	random.seed = random_seed
 	for store_id in SlotDemoCatalog.INITIAL_SHELF_ITEMS:
 		store_shelf_capacities[store_id] = DEFAULT_SHELF_CAPACITY
@@ -72,6 +86,8 @@ func reset(shared_wallet: PlayerWallet = null, random_seed: int = 1999) -> void:
 	active_synthesis = null
 	first_crafted_output_ids = {}
 	last_synthesis_result = {}
+	last_owner_request_result = {}
+	story_flags = {}
 	select_daily_wishes_for_day(day)
 	state_changed.emit()
 
@@ -103,7 +119,15 @@ func checkout_store(store_id: StringName) -> Dictionary:
 		)
 		if not viability.feasible:
 			return {"ok": false, "reason": RESULT_DAILY_RISK}
-	return transaction.checkout(day)
+	var result := transaction.checkout(day)
+	if not result.ok:
+		return result
+	var relationship_update := _record_store_spend(store_id, int(result.total))
+	result["owner_experience_gained"] = relationship_update.experience_gained
+	result["owner_level_ups"] = relationship_update.level_ups
+	result["owner_level_up_keys"] = relationship_update.level_up_keys
+	state_changed.emit()
+	return result
 
 
 func stage_recycle_card(card: CardItemState) -> Dictionary:
@@ -129,6 +153,107 @@ func card_by_instance_id(instance_id: int) -> CardItemState:
 		if card.instance_id == instance_id:
 			return card
 	return null
+
+
+func relationship_state_for_owner(owner_id: StringName) -> OwnerRelationshipState:
+	return owner_relationships.get(owner_id) as OwnerRelationshipState
+
+
+func relationship_state_for_store(store_id: StringName) -> OwnerRelationshipState:
+	return relationship_state_for_owner(SlotDemoCatalog.owner_id_for_store(store_id))
+
+
+func talk_to_store_owner(store_id: StringName) -> Dictionary:
+	var owner_id := SlotDemoCatalog.owner_id_for_store(store_id)
+	var relationship := relationship_state_for_owner(owner_id)
+	if owner_id.is_empty() or relationship == null:
+		return {"ok": false, "reason": RESULT_UNKNOWN_OWNER}
+	var definition := SlotDemoCatalog.owner_by_id(owner_id)
+	var already_talked := relationship.has_talked_today(day)
+	var update := relationship.record_daily_talk(day, definition)
+	var level_up_keys := _apply_relationship_update(owner_id, update)
+	var dialogue_key := &"slot.owner.placeholder.talk"
+	if already_talked:
+		dialogue_key = (
+			definition.repeat_dialogue_key
+			if definition != null else &"slot.owner.placeholder.repeat"
+		)
+	elif definition != null:
+		dialogue_key = definition.dialogue_key_for_day(day)
+	state_changed.emit()
+	return {
+		"ok": true,
+		"reason": RESULT_OK,
+		"owner_id": owner_id,
+		"dialogue_key": dialogue_key,
+		"experience_gained": update.experience_gained,
+		"level_ups": update.level_ups,
+		"level_up_keys": level_up_keys,
+		"already_talked": already_talked,
+	}
+
+
+func is_request_completed(request_id: StringName) -> bool:
+	var request := SlotDemoCatalog.request_by_id(request_id)
+	var relationship := (
+		relationship_state_for_owner(request.owner_id)
+		if request != null else null
+	)
+	return relationship != null and relationship.completed_request_ids.has(request_id)
+
+
+func submit_owner_request(request_id: StringName) -> Dictionary:
+	if active_synthesis != null:
+		return {"ok": false, "reason": RESULT_SYNTHESIS_ACTIVE}
+	if pending_transition != null:
+		return {"ok": false, "reason": RESULT_TRANSITION_ACTIVE}
+	var request := SlotDemoCatalog.request_by_id(request_id)
+	if request == null or request_id not in activity_state.active_request_ids:
+		return {"ok": false, "reason": RESULT_UNKNOWN_REQUEST}
+	if is_request_completed(request_id):
+		return {"ok": false, "reason": RESULT_REQUEST_COMPLETED}
+	var evaluation := activity_state.evaluation_for(request_id)
+	if not evaluation.is_ready:
+		return {"ok": false, "reason": RESULT_RECIPE_NOT_READY}
+	if not activity_state.all_daily_wishes_confirmed():
+		var viability := tonight_is_satisfiable()
+		if not viability.feasible:
+			return {"ok": false, "reason": RESULT_DAILY_RISK}
+	var cards := activity_state.cards_for_activity(request_id)
+	if cards.size() != 1:
+		return {"ok": false, "reason": RESULT_INPUTS_CHANGED}
+	var card := cards[0]
+	var item_id := card.definition_id
+	var result_text_key := request.result_text_key_for_item(item_id)
+	if result_text_key.is_empty():
+		return {"ok": false, "reason": RESULT_INPUTS_CHANGED}
+	var relationship := relationship_state_for_owner(request.owner_id)
+	var owner_definition := SlotDemoCatalog.owner_by_id(request.owner_id)
+	if relationship == null or owner_definition == null:
+		return {"ok": false, "reason": RESULT_UNKNOWN_OWNER}
+	var consumed := activity_state.consume_activity_cards(request_id)
+	activity_state.lock_activity(request_id)
+	var reward := request.experience_for_item(item_id)
+	var update := relationship.complete_request(request_id, reward, owner_definition)
+	var level_up_keys := _apply_relationship_update(request.owner_id, update)
+	var flag_value := request.story_flag_value_for_item(item_id)
+	if not request.story_flag_key.is_empty() and not flag_value.is_empty():
+		story_flags[request.story_flag_key] = flag_value
+	last_owner_request_result = {
+		"ok": true,
+		"reason": RESULT_OK,
+		"request_id": request_id,
+		"owner_id": request.owner_id,
+		"item_id": item_id,
+		"result_text_key": result_text_key,
+		"experience_gained": update.experience_gained,
+		"level_ups": update.level_ups,
+		"level_up_keys": level_up_keys,
+		"consumed_count": consumed.size(),
+		"story_flag_value": flag_value,
+	}
+	state_changed.emit()
+	return last_owner_request_result
 
 
 func begin_new_day(new_day: int) -> void:
@@ -381,16 +506,82 @@ func finish_night_transition() -> Dictionary:
 
 
 func set_owner_level(owner_id: StringName, level: int) -> void:
-	var previous := int(owner_levels.get(owner_id, 0))
-	if level <= previous:
+	var relationship := relationship_state_for_owner(owner_id)
+	var definition := SlotDemoCatalog.owner_by_id(owner_id)
+	if relationship == null or definition == null or level <= relationship.level:
 		return
-	owner_levels[owner_id] = level
-	if owner_id == BALLOON_OWNER and previous < 1 and level >= 1:
+	var previous := relationship.level
+	var gained_levels := relationship.force_level(level, definition)
+	_apply_owner_level_unlocks(owner_id, previous, relationship.level)
+	owner_levels[owner_id] = relationship.level
+	if not gained_levels.is_empty():
+		state_changed.emit()
+
+
+func _record_store_spend(store_id: StringName, paid_amount: int) -> Dictionary:
+	var owner_id := SlotDemoCatalog.owner_id_for_store(store_id)
+	var relationship := relationship_state_for_owner(owner_id)
+	var definition := SlotDemoCatalog.owner_by_id(owner_id)
+	if relationship == null:
+		return _empty_relationship_update()
+	var update := relationship.record_spend(paid_amount, definition)
+	var level_up_keys := _apply_relationship_update(owner_id, update)
+	return {
+		"experience_gained": update.experience_gained,
+		"level_ups": update.level_ups,
+		"level_up_keys": level_up_keys,
+	}
+
+
+func _apply_relationship_update(owner_id: StringName, update: Dictionary) -> Array[StringName]:
+	var relationship := relationship_state_for_owner(owner_id)
+	var definition := SlotDemoCatalog.owner_by_id(owner_id)
+	if relationship == null:
+		return []
+	var gained_levels: Array = update.get("level_ups", [])
+	var previous_level := relationship.level - gained_levels.size()
+	owner_levels[owner_id] = relationship.level
+	_apply_owner_level_unlocks(owner_id, previous_level, relationship.level)
+	var level_up_keys: Array[StringName] = []
+	if definition != null:
+		for raw_level in gained_levels:
+			var key := definition.level_up_text_key(int(raw_level))
+			if not key.is_empty():
+				level_up_keys.append(key)
+	return level_up_keys
+
+
+func _apply_owner_level_unlocks(
+	owner_id: StringName,
+	previous_level: int,
+	level: int,
+) -> void:
+	if owner_id != BALLOON_OWNER:
+		return
+	if previous_level < 1 and level >= 1:
 		store_shelf_capacities[SlotDemoCatalog.STORE_TOY] = 7
 		var transaction := transaction_for_store(SlotDemoCatalog.STORE_TOY)
 		_ensure_shelf_capacity(transaction, 7)
 		transaction.shelf_slots[6].stock(WINDUP_MOTH)
-	state_changed.emit()
+	if previous_level < 2 and level >= 2:
+		if TEDDY_RECIPE not in activity_state.known_recipe_ids:
+			activity_state.known_recipe_ids.append(TEDDY_RECIPE)
+		if BALLOON_HUG_REQUEST not in activity_state.active_request_ids:
+			activity_state.active_request_ids.append(BALLOON_HUG_REQUEST)
+		activity_state.state_changed.emit()
+	if previous_level < 3 and level >= 3:
+		var definition := SlotDemoCatalog.owner_by_id(owner_id)
+		var transaction := transaction_for_store(SlotDemoCatalog.STORE_TOY)
+		if definition != null and transaction != null:
+			transaction.set_discount_rate(definition.discount_rate)
+
+
+func _empty_relationship_update() -> Dictionary:
+	return {
+		"experience_gained": 0,
+		"level_ups": [],
+		"level_up_keys": [],
+	}
 
 
 func _make_initial_shelves(store_id: StringName) -> Array[ShelfSlotState]:

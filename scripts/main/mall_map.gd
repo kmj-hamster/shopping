@@ -57,6 +57,7 @@ func show_closed_notice(store_id: StringName) -> void:
 
 func show_demo_complete() -> void:
 	schedule_panel.visible = false
+	_refresh_demo_complete_body()
 	demo_complete_scrim.visible = true
 	demo_complete_panel.visible = true
 
@@ -276,9 +277,21 @@ func _apply_locale_texts() -> void:
 	next_day_button.text = TranslationServer.translate(&"map.next_day")
 	schedule_title_label.text = TranslationServer.translate(&"map.schedule.title")
 	demo_complete_title.text = TranslationServer.translate(&"demo.complete.title")
-	demo_complete_body.text = TranslationServer.translate(&"demo.complete.body")
+	_refresh_demo_complete_body()
 	demo_continue_button.text = TranslationServer.translate(&"demo.complete.continue")
 	_refresh_notice()
+
+
+func _refresh_demo_complete_body() -> void:
+	if demo_complete_body == null:
+		return
+	var branch := StringName(commerce.story_flags.get(&"balloon_hug", &""))
+	var body_key := &"demo.complete.body"
+	if branch == &"memory":
+		body_key = &"demo.complete.body.balloon_memory"
+	elif branch == &"comfort":
+		body_key = &"demo.complete.body.balloon_comfort"
+	demo_complete_body.text = TranslationServer.translate(body_key)
 
 
 func _refresh_notice() -> void:
