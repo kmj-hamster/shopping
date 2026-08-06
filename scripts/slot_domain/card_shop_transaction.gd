@@ -159,7 +159,13 @@ func checkout(day: int) -> Dictionary:
 	var next_instance_id := _next_instance_id()
 	var purchased: Array[CardItemState] = []
 	for definition in definitions:
-		purchased.append(CardItemState.new(next_instance_id, definition.id, day, store_id))
+		purchased.append(CardItemState.new(
+			next_instance_id,
+			definition.id,
+			day,
+			store_id,
+			price_for(definition),
+		))
 		next_instance_id += 1
 
 	# Validation is complete before the first mutation, so checkout is atomic.

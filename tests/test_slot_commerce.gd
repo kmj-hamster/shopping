@@ -78,7 +78,7 @@ func test_balloon_level_one_unlocks_second_page_with_clockwork_moth() -> void:
 	assert_eq(toy.shelf_slots_for_page(1).size(), 6)
 
 
-func test_recycling_can_be_cancelled_or_paid_at_eighty_percent() -> void:
+func test_recycling_can_be_cancelled_or_refunded_at_purchase_price() -> void:
 	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
 	var toy := commerce.transaction_for_store(SlotDemoCatalog.STORE_TOY)
 	assert_true(toy.select_shelf_slot(toy.shelf_slots[0].slot_id).ok)
@@ -86,16 +86,34 @@ func test_recycling_can_be_cancelled_or_paid_at_eighty_percent() -> void:
 	var card := commerce.inventory[0]
 	assert_true(commerce.stage_recycle_card(card).ok)
 	assert_eq(card.location, CardItemState.Location.RECYCLE)
-	assert_eq(commerce.recycle_transaction.cart_total(), 9)
+	assert_eq(commerce.recycle_transaction.cart_total(), 12)
 	assert_eq(commerce.recycle_transaction.cancel(), 1)
 	assert_eq(card.location, CardItemState.Location.HAND)
 
 	assert_true(commerce.stage_recycle_card(card).ok)
 	var result := commerce.checkout_recycling()
 	assert_true(result.ok)
-	assert_eq(result.total, 9)
-	assert_eq(commerce.wallet.money, 117)
+	assert_eq(result.total, 12)
+	assert_eq(commerce.wallet.money, 120)
 	assert_true(commerce.inventory.is_empty())
+
+
+func test_recycling_refunds_discounted_purchase_price_without_profit() -> void:
+	var commerce := SlotCommerceState.new(PlayerWallet.new(120), 7)
+	var toy := commerce.transaction_for_store(SlotDemoCatalog.STORE_TOY)
+	toy.set_discount_rate(0.25)
+	assert_true(toy.select_shelf_slot(toy.shelf_slots[0].slot_id).ok)
+	var checkout := commerce.checkout_store(SlotDemoCatalog.STORE_TOY)
+	assert_true(checkout.ok)
+	assert_eq(checkout.total, 9)
+	var card := checkout.purchased[0] as CardItemState
+	assert_eq(card.purchase_price, 9)
+
+	assert_true(commerce.stage_recycle_card(card).ok)
+	var recycled := commerce.checkout_recycling()
+	assert_true(recycled.ok)
+	assert_eq(recycled.total, 9)
+	assert_eq(commerce.wallet.money, 120)
 
 
 func test_reordering_hand_cards_preserves_non_hand_inventory_positions() -> void:

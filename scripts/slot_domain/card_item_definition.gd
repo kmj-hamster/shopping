@@ -44,7 +44,7 @@ func resale_value() -> int:
 		return 0
 	if is_crafted:
 		return fixed_resale_value
-	return int(floori(base_price * 0.8))
+	return base_price
 
 
 func validation_errors() -> PackedStringArray:

@@ -62,6 +62,7 @@ func to_dictionary(commerce: SlotCommerceState) -> Dictionary:
 			"definition_id": String(card.definition_id),
 			"acquired_day": card.acquired_day,
 			"acquisition_source": String(card.acquisition_source),
+			"purchase_price": card.purchase_price,
 			"location": card.location,
 			"activity_id": String(card.activity_id),
 			"slot_id": String(card.slot_id),
@@ -152,6 +153,7 @@ func _restore(commerce: SlotCommerceState, payload: Dictionary) -> bool:
 			definition_id,
 			int(card_data.get("acquired_day", 1)),
 			StringName(card_data.get("acquisition_source", "shop")),
+			int(card_data.get("purchase_price", 0)),
 		)
 		card.location = clampi(
 			int(card_data.get("location", CardItemState.Location.HAND)),

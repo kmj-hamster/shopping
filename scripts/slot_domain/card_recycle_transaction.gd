@@ -59,7 +59,11 @@ func cart_total() -> int:
 	for card in staged_cards():
 		var definition := SlotDemoCatalog.item_by_id(card.definition_id)
 		if definition != null:
-			total += definition.resale_value()
+			total += (
+				card.purchase_price
+				if card.purchase_price > 0
+				else definition.resale_value()
+			)
 	return total
 
 

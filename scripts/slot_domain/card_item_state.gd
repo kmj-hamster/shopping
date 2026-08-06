@@ -12,6 +12,7 @@ var instance_id: int
 var definition_id: StringName
 var acquired_day: int
 var acquisition_source: StringName
+var purchase_price: int
 var location := Location.HAND
 var activity_id: StringName
 var slot_id: StringName
@@ -23,11 +24,13 @@ func _init(
 	selected_definition_id: StringName = &"",
 	day_acquired: int = 1,
 	source: StringName = &"shop",
+	paid_price: int = 0,
 ) -> void:
 	instance_id = selected_instance_id
 	definition_id = selected_definition_id
 	acquired_day = day_acquired
 	acquisition_source = source
+	purchase_price = maxi(0, paid_price)
 
 
 func assign_to(

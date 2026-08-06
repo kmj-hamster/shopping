@@ -20,6 +20,7 @@ func test_round_trip_preserves_inventory_slots_shelves_relationships_and_carts()
 	assert_true(source.talk_to_store_owner(SlotDemoCatalog.STORE_TOY).ok)
 	var hungry := _add_card(source, &"fast_hash_brown", 100)
 	var spare := _add_card(source, &"flower_sunflower", 101)
+	spare.purchase_price = 17
 	var recycled := _add_card(source, &"toy_glass_marble", 102)
 	assert_true(source.activity_state.assign_card(&"wish_hungry", &"hungry", hungry).ok)
 	assert_true(source.activity_state.confirm_daily_wish(&"wish_hungry").ok)
@@ -38,6 +39,7 @@ func test_round_trip_preserves_inventory_slots_shelves_relationships_and_carts()
 	assert_eq(restored.wallet.money, 137)
 	assert_eq(restored.inventory.size(), 3)
 	assert_eq(restored.card_by_instance_id(spare.instance_id).location, CardItemState.Location.HAND)
+	assert_eq(restored.card_by_instance_id(spare.instance_id).purchase_price, 17)
 	assert_eq(
 		restored.activity_state.card_for_slot(&"wish_hungry", &"hungry").instance_id,
 		hungry.instance_id,
