@@ -12,6 +12,40 @@ func test_new_game_starts_with_ten_coins_open_stores_and_day_one_tasks() -> void
 	assert_not_null(state.task_instance_for_definition(&"order_hamster_midnight_supper"))
 	assert_not_null(state.task_instance_for_definition(&"care_hungry"))
 	assert_eq(state.active_tasks().size(), 2)
+	for store_id in [&"toy", &"flower", &"fast_food", &"record", &"book"]:
+		assert_eq(state.transaction_for_store(store_id).shelf_slots.size(), 6)
+
+
+func test_store_slots_are_independent_and_daily_basic_stock_refills() -> void:
+	var state := QuestGameState.new()
+	var fast_food := state.transaction_for_store(&"fast_food")
+	assert_eq(fast_food.shelf_slots[0].item_id, &"fast_hash_brown")
+	assert_eq(fast_food.shelf_slots[1].item_id, &"fast_hash_brown")
+	assert_true(fast_food.select_shelf_slot(fast_food.shelf_slots[0].slot_id).ok)
+	var checkout := state.checkout_store(&"fast_food")
+	assert_true(checkout.ok)
+	assert_true(fast_food.shelf_slots[0].is_empty())
+	assert_eq(fast_food.shelf_slots[1].item_id, &"fast_hash_brown")
+	assert_eq(state.wallet.money, 8)
+	assert_eq(checkout.purchased[0].purchase_price, 2)
+	assert_true(state.begin_next_day().ok)
+	assert_true(state.apply_arc_effects().ok)
+	assert_true(state.finish_arc().ok)
+	assert_eq(fast_food.shelf_slots[0].item_id, &"fast_hash_brown")
+
+
+func test_recycling_refunds_the_exact_purchase_price() -> void:
+	var state := QuestGameState.new()
+	var flower := state.transaction_for_store(&"flower")
+	assert_true(flower.select_shelf_slot(flower.shelf_slots[0].slot_id).ok)
+	var card := state.checkout_store(&"flower").purchased[0] as CardItemState
+	assert_eq(state.wallet.money, 8)
+	assert_true(state.stage_recycle_card(card).ok)
+	var recycled := state.checkout_recycle()
+	assert_true(recycled.ok)
+	assert_eq(recycled.total, 2)
+	assert_eq(state.wallet.money, 10)
+	assert_does_not_have(state.inventory, card)
 
 
 func test_task_can_be_confirmed_cancelled_and_edited_again() -> void:

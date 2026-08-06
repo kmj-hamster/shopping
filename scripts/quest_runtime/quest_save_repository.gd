@@ -94,12 +94,13 @@ func to_dictionary(state: QuestGameState) -> Dictionary:
 		"discovered_recipe_ids": _string_array(state.discovered_recipe_ids.keys()),
 		"owner_states": _string_dictionary(state.owner_states),
 		"pending_arc": _serialize_arc(state.pending_arc),
+		"commerce": state.commerce_snapshot(),
 	}
 
 
 func _restore(state: QuestGameState, payload: Dictionary) -> bool:
 	state.day = maxi(1, int(payload.get("day", 1)))
-	state.wallet = PlayerWallet.new(maxi(0, int(payload.get("wallet", 10))))
+	state.wallet.money = maxi(0, int(payload.get("wallet", 10)))
 	state.inventory.clear()
 	for raw_card in payload.get("inventory", []):
 		var data := raw_card as Dictionary
@@ -159,6 +160,8 @@ func _restore(state: QuestGameState, payload: Dictionary) -> bool:
 		int(payload.get("next_task_instance_id", 1)),
 		_next_task_id(state.task_instances),
 	)
+	if not state.restore_commerce_snapshot(payload.get("commerce", {})):
+		return false
 	if not _assignments_are_valid(state):
 		return false
 	state.state_changed.emit()

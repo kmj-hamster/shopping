@@ -38,6 +38,26 @@ func test_round_trip_preserves_cards_tasks_map_and_story_state() -> void:
 	assert_true(restored.is_store_unlocked(&"record"))
 
 
+func test_round_trip_preserves_empty_finite_shelves_and_recycle_staging() -> void:
+	var source := QuestGameState.new()
+	var toy := source.transaction_for_store(&"toy")
+	assert_true(toy.select_shelf_slot(toy.shelf_slots[3].slot_id).ok)
+	var moth := source.checkout_store(&"toy").purchased[0] as CardItemState
+	assert_true(toy.shelf_slots[3].is_empty())
+	var flower := source.transaction_for_store(&"flower")
+	assert_true(flower.select_shelf_slot(flower.shelf_slots[0].slot_id).ok)
+	var sunflower := source.checkout_store(&"flower").purchased[0] as CardItemState
+	assert_true(source.stage_recycle_card(sunflower).ok)
+	assert_true(repository.save(source))
+
+	var restored := QuestGameState.new()
+	assert_true(repository.load_into(restored).ok)
+	assert_true(restored.transaction_for_store(&"toy").shelf_slots[3].is_empty())
+	assert_eq(restored.recycle_transaction.staged_instance_ids, [sunflower.instance_id])
+	assert_eq(restored.card_by_instance_id(sunflower.instance_id).location, CardItemState.Location.RECYCLE)
+	assert_eq(restored.card_by_instance_id(moth.instance_id).purchase_price, 6)
+
+
 func test_pending_arc_resumes_before_effects_without_duplicate_reward() -> void:
 	var source := _state_with_confirmed_awake_order()
 	assert_eq(source.begin_next_day().confirmed_task_count, 1)

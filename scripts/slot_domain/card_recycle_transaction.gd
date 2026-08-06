@@ -11,20 +11,23 @@ const RESULT_UNAVAILABLE := &"unavailable"
 var inventory: Array[CardItemState] = []
 var wallet: PlayerWallet
 var staged_instance_ids: Array[int] = []
+var definition_resolver: Callable
 
 
 func _init(
 	shared_inventory: Array[CardItemState] = [],
 	shared_wallet: PlayerWallet = null,
+	item_definition_resolver: Callable = Callable(),
 ) -> void:
 	inventory = shared_inventory
 	wallet = shared_wallet if shared_wallet != null else PlayerWallet.new()
+	definition_resolver = item_definition_resolver
 
 
 func stage(card: CardItemState) -> Dictionary:
 	if card == null or not inventory.has(card) or card.location != CardItemState.Location.HAND:
 		return _result(false, RESULT_NOT_OWNED)
-	var definition := SlotDemoCatalog.item_by_id(card.definition_id)
+	var definition := _definition_by_id(card.definition_id)
 	if definition == null or not definition.can_recycle:
 		return _result(false, RESULT_UNAVAILABLE)
 	card.assign_to(&"recycling", &"counter", CardItemState.Location.RECYCLE)
@@ -57,7 +60,7 @@ func cart_count() -> int:
 func cart_total() -> int:
 	var total := 0
 	for card in staged_cards():
-		var definition := SlotDemoCatalog.item_by_id(card.definition_id)
+		var definition := _definition_by_id(card.definition_id)
 		if definition != null:
 			total += (
 				card.purchase_price
@@ -75,7 +78,7 @@ func checkout() -> Dictionary:
 		return _result(false, RESULT_NOT_OWNED)
 	var total := cart_total()
 	for card in staged:
-		var definition := SlotDemoCatalog.item_by_id(card.definition_id)
+		var definition := _definition_by_id(card.definition_id)
 		if definition == null or not definition.can_recycle:
 			return _result(false, RESULT_UNAVAILABLE)
 
@@ -99,3 +102,9 @@ func cancel() -> int:
 
 func _result(ok: bool, reason: StringName) -> Dictionary:
 	return {"ok": ok, "reason": reason}
+
+
+func _definition_by_id(item_id: StringName) -> CardItemDefinition:
+	if definition_resolver.is_valid():
+		return definition_resolver.call(item_id) as CardItemDefinition
+	return SlotDemoCatalog.item_by_id(item_id)

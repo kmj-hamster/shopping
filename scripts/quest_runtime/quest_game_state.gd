@@ -30,6 +30,8 @@ var known_recipe_hint_ids: Dictionary = {}
 var discovered_recipe_ids: Dictionary = {}
 var owner_states: Dictionary = {}
 var pending_arc: ArcTransitionState
+var store_transactions: Dictionary = {}
+var recycle_transaction: CardRecycleTransaction
 var next_card_instance_id := 1
 var next_task_instance_id := 1
 
@@ -61,6 +63,7 @@ func reset() -> void:
 	pending_arc = null
 	next_card_instance_id = 1
 	next_task_instance_id = 1
+	_build_commerce()
 	activate_scheduled_tasks(day)
 	state_changed.emit()
 
@@ -130,6 +133,120 @@ func card_by_instance_id(instance_id: int) -> CardItemState:
 		if card.instance_id == instance_id:
 			return card
 	return null
+
+
+func transaction_for_store(store_id: StringName) -> CardShopTransaction:
+	return store_transactions.get(store_id) as CardShopTransaction
+
+
+func checkout_store(store_id: StringName) -> Dictionary:
+	var transaction := transaction_for_store(store_id)
+	if transaction == null or not is_store_unlocked(store_id):
+		return _result(false, RESULT_STORE_LOCKED)
+	var result := transaction.checkout(day)
+	if result.ok:
+		_sync_next_card_instance_id()
+	return result
+
+
+func stage_recycle_card(card: CardItemState) -> Dictionary:
+	return recycle_transaction.stage(card)
+
+
+func unstage_recycle_card(card: CardItemState) -> bool:
+	return recycle_transaction.unstage(card)
+
+
+func checkout_recycle() -> Dictionary:
+	return recycle_transaction.checkout()
+
+
+func cancel_recycle() -> int:
+	return recycle_transaction.cancel()
+
+
+func commerce_snapshot() -> Dictionary:
+	var shelves: Dictionary = {}
+	for store_id in store_transactions:
+		var transaction := transaction_for_store(store_id)
+		var item_ids: Array[String] = []
+		for slot in transaction.shelf_slots:
+			item_ids.append(String(slot.item_id))
+		shelves[String(store_id)] = item_ids
+	return {
+		"shelves": shelves,
+		"recycle_staged_instance_ids": recycle_transaction.staged_instance_ids.duplicate(),
+	}
+
+
+func restore_commerce_snapshot(snapshot: Dictionary) -> bool:
+	for transaction_value in store_transactions.values():
+		(transaction_value as CardShopTransaction).cancel_cart()
+	for card in inventory:
+		if card.location == CardItemState.Location.RECYCLE:
+			card.return_to_hand()
+	recycle_transaction.staged_instance_ids.clear()
+	if snapshot.is_empty():
+		return true
+	var shelves := snapshot.get("shelves", {}) as Dictionary
+	for raw_store_id in shelves:
+		var store_id := StringName(raw_store_id)
+		var transaction := transaction_for_store(store_id)
+		var item_ids := shelves[raw_store_id] as Array
+		if transaction == null or item_ids.size() != transaction.shelf_slots.size():
+			return false
+		for index in item_ids.size():
+			var item_id := StringName(item_ids[index])
+			var item := QuestArcCatalog.item_by_id(item_id) if not item_id.is_empty() else null
+			if item != null and item.store_id != store_id:
+				return false
+			if not item_id.is_empty() and item == null:
+				return false
+			transaction.shelf_slots[index].stock(item_id)
+	for raw_card_id in snapshot.get("recycle_staged_instance_ids", []):
+		var card := card_by_instance_id(int(raw_card_id))
+		if card == null or not recycle_transaction.stage(card).ok:
+			return false
+	return true
+
+
+func reorder_hand_card(card: CardItemState, target_index: int) -> bool:
+	if card == null or not inventory.has(card) or card.location != CardItemState.Location.HAND:
+		return false
+	var hand_cards: Array[CardItemState] = []
+	for owned in inventory:
+		if owned.location == CardItemState.Location.HAND and owned != card:
+			hand_cards.append(owned)
+	var normalized_index := clampi(target_index, 0, hand_cards.size())
+	var inventory_index := inventory.size()
+	if normalized_index < hand_cards.size():
+		inventory_index = inventory.find(hand_cards[normalized_index])
+	inventory.erase(card)
+	inventory.insert(clampi(inventory_index, 0, inventory.size()), card)
+	state_changed.emit()
+	return true
+
+
+func refill_daily_shelves() -> void:
+	var content := QuestArcCatalog.manifest()
+	if content == null:
+		return
+	for raw_store in content.stores:
+		var store := raw_store as StoreDefinition
+		var transaction := transaction_for_store(store.id) if store != null else null
+		if store == null or transaction == null:
+			continue
+		transaction.cancel_cart()
+		for index in mini(store.initial_shelf_item_ids.size(), transaction.shelf_slots.size()):
+			var slot := transaction.shelf_slots[index]
+			var item := QuestArcCatalog.item_by_id(store.initial_shelf_item_ids[index])
+			if (
+				slot.is_empty()
+				and item != null
+				and item.supply_mode == QuestItemDefinition.SupplyMode.DAILY_BASIC
+			):
+				slot.stock(item.id)
+	state_changed.emit()
 
 
 func grant_item(
@@ -362,6 +479,7 @@ func finish_arc() -> Dictionary:
 		return _result(false, RESULT_EFFECTS_PENDING)
 	day += 1
 	pending_arc = null
+	refill_daily_shelves()
 	var activated := activate_scheduled_tasks(day)
 	state_changed.emit()
 	return {
@@ -459,6 +577,51 @@ func _apply_story_effect(effect: StoryEffect) -> void:
 			unlocked_store_ids[effect.target_id] = true
 		StoryEffect.Kind.GIVE_ITEM:
 			grant_item(effect.target_id, &"story")
+
+
+func _build_commerce() -> void:
+	store_transactions.clear()
+	var resolver := func(item_id: StringName) -> QuestItemDefinition:
+		return QuestArcCatalog.item_by_id(item_id)
+	var content := QuestArcCatalog.manifest()
+	if content != null:
+		for raw_store in content.stores:
+			var store := raw_store as StoreDefinition
+			if store == null or store.id == &"recycling":
+				continue
+			var shelves: Array[ShelfSlotState] = []
+			for index in store.initial_capacity:
+				var item_id := (
+					store.initial_shelf_item_ids[index]
+					if index < store.initial_shelf_item_ids.size()
+					else &""
+				)
+				shelves.append(ShelfSlotState.new(
+					store.id,
+					StringName("%s_shelf_%d" % [store.id, index + 1]),
+					item_id,
+					1,
+				))
+			var transaction := CardShopTransaction.new(
+				store.id,
+				wallet,
+				inventory,
+				shelves,
+				resolver,
+			)
+			transaction.state_changed.connect(_on_transaction_state_changed)
+			store_transactions[store.id] = transaction
+	recycle_transaction = CardRecycleTransaction.new(inventory, wallet, resolver)
+	recycle_transaction.state_changed.connect(_on_transaction_state_changed)
+
+
+func _on_transaction_state_changed() -> void:
+	state_changed.emit()
+
+
+func _sync_next_card_instance_id() -> void:
+	for card in inventory:
+		next_card_instance_id = maxi(next_card_instance_id, card.instance_id + 1)
 
 
 func _rule_by_id(definition: TaskDefinition, slot_id: StringName) -> CardSlotRule:

@@ -20,6 +20,7 @@ var shelf_slots: Array[ShelfSlotState] = []
 var selected_shelf_slot_ids: Array[StringName] = []
 var discount_rate := 0.0
 var unlocked_page_count := 1
+var definition_resolver: Callable
 
 
 func _init(
@@ -27,11 +28,13 @@ func _init(
 	shared_wallet: PlayerWallet = null,
 	shared_inventory: Array[CardItemState] = [],
 	initial_shelf_slots: Array[ShelfSlotState] = [],
+	item_definition_resolver: Callable = Callable(),
 ) -> void:
 	store_id = selected_store_id
 	wallet = shared_wallet if shared_wallet != null else PlayerWallet.new()
 	inventory = shared_inventory
 	shelf_slots = initial_shelf_slots
+	definition_resolver = item_definition_resolver
 
 
 func shelf_slot(slot_id: StringName) -> ShelfSlotState:
@@ -116,7 +119,7 @@ func cart_total() -> int:
 	var total := 0
 	for slot_id in selected_shelf_slot_ids:
 		var slot := shelf_slot(slot_id)
-		var definition := SlotDemoCatalog.item_by_id(slot.item_id) if slot != null else null
+		var definition := _definition_by_id(slot.item_id) if slot != null else null
 		if definition != null:
 			total += price_for(definition)
 	return total
@@ -147,7 +150,7 @@ func checkout(day: int) -> Dictionary:
 			return _result(false, RESULT_UNKNOWN_SLOT)
 		if slot.is_empty():
 			return _result(false, RESULT_SLOT_EMPTY)
-		var definition := SlotDemoCatalog.item_by_id(slot.item_id)
+		var definition := _definition_by_id(slot.item_id)
 		if definition == null or definition.store_id != store_id:
 			return _result(false, RESULT_INVALID_ITEM)
 		selected_slots.append(slot)
@@ -196,6 +199,12 @@ func _next_instance_id() -> int:
 	for card in inventory:
 		result = maxi(result, card.instance_id + 1)
 	return result
+
+
+func _definition_by_id(item_id: StringName) -> CardItemDefinition:
+	if definition_resolver.is_valid():
+		return definition_resolver.call(item_id) as CardItemDefinition
+	return SlotDemoCatalog.item_by_id(item_id)
 
 
 func _result(ok: bool, reason: StringName) -> Dictionary:
