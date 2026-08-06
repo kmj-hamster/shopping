@@ -14,8 +14,7 @@ generated cache.
 
 ## Collaboration documents
 
-- Current quest-chain and delivery-Arc content design: [`docs/quest-arc-content-design.md`](docs/quest-arc-content-design.md)
-- Archived three-night prototype note: [`docs/slot-card-three-day-demo-design.md`](docs/slot-card-three-day-demo-design.md)
+- Current and only gameplay/UI feature specification: [`docs/game-feature-design.md`](docs/game-feature-design.md)
 - Human workflow: [`docs/cross-platform-art-collaboration.md`](docs/cross-platform-art-collaboration.md)
 - Instructions for an artist's AI assistant: [`ARTIST_AI.md`](ARTIST_AI.md)
 - Codex/Godot automation workflow: [`docs/godot-codex-workflow.md`](docs/godot-codex-workflow.md)
