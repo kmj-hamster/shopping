@@ -107,4 +107,4 @@ func _result(ok: bool, reason: StringName) -> Dictionary:
 func _definition_by_id(item_id: StringName) -> CardItemDefinition:
 	if definition_resolver.is_valid():
 		return definition_resolver.call(item_id) as CardItemDefinition
-	return SlotDemoCatalog.item_by_id(item_id)
+	return null
