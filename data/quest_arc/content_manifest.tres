@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="GameContentManifest" load_steps=65 format=3]
+[gd_resource type="Resource" script_class="GameContentManifest" load_steps=70 format=3]
 
 [ext_resource type="Script" path="res://scripts/quest_domain/game_content_manifest.gd" id="1_manifest"]
 [ext_resource type="Script" path="res://scripts/quest_domain/property_definition.gd" id="2_property"]
@@ -42,6 +42,11 @@
 [ext_resource type="Resource" path="res://data/quest_arc/stores/recycling.tres" id="40_store"]
 [ext_resource type="Resource" path="res://data/quest_arc/store_unlocks/unlock_record_store.tres" id="41_unlock"]
 [ext_resource type="Resource" path="res://data/quest_arc/store_unlocks/unlock_book_store.tres" id="42_unlock"]
+[ext_resource type="Resource" path="res://data/quest_arc/owners/balloon.tres" id="43_owner"]
+[ext_resource type="Resource" path="res://data/quest_arc/owners/sunflower.tres" id="44_owner"]
+[ext_resource type="Resource" path="res://data/quest_arc/owners/mouse.tres" id="45_owner"]
+[ext_resource type="Resource" path="res://data/quest_arc/owners/gramophone.tres" id="46_owner"]
+[ext_resource type="Resource" path="res://data/quest_arc/owners/magical_girl.tres" id="47_owner"]
 
 [sub_resource type="Resource" id="PropertyReading"]
 script = ExtResource("2_property")
@@ -203,3 +208,4 @@ tasks = Array[Resource]([ExtResource("24_task"), ExtResource("25_task"), ExtReso
 recipes = Array[Resource]([ExtResource("33_recipe"), ExtResource("34_recipe")])
 stores = Array[Resource]([ExtResource("35_store"), ExtResource("36_store"), ExtResource("37_store"), ExtResource("38_store"), ExtResource("39_store"), ExtResource("40_store")])
 store_unlocks = Array[Resource]([ExtResource("41_unlock"), ExtResource("42_unlock")])
+owners = Array[Resource]([ExtResource("43_owner"), ExtResource("44_owner"), ExtResource("45_owner"), ExtResource("46_owner"), ExtResource("47_owner")])

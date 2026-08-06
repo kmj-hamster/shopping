@@ -6,5 +6,6 @@
 script = ExtResource("1_store")
 id = &"flower"
 display_name_key = &"store.flower"
+owner_id = &"sunflower"
 initially_unlocked = true
 initial_shelf_item_ids = Array[StringName]([&"flower_sunflower", &"flower_sunflower", &"flower_sunflower", &"flower_night_jasmine", &"flower_night_jasmine", &"flower_lavender_sachet"])

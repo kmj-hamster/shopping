@@ -41,6 +41,22 @@ static func store_by_id(store_id: StringName) -> StoreDefinition:
 	return null
 
 
+static func owner_by_id(owner_id: StringName) -> OwnerDefinition:
+	var content := manifest()
+	if content == null:
+		return null
+	for raw_owner in content.owners:
+		var owner := raw_owner as OwnerDefinition
+		if owner != null and owner.id == owner_id:
+			return owner
+	return null
+
+
+static func owner_for_store(store_id: StringName) -> OwnerDefinition:
+	var store := store_by_id(store_id)
+	return owner_by_id(store.owner_id) if store != null and not store.owner_id.is_empty() else null
+
+
 static func recipe_by_id(recipe_id: StringName) -> SynthesisRecipeDefinition:
 	var content := manifest()
 	if content == null:

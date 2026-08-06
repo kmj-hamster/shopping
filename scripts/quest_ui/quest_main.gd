@@ -32,6 +32,7 @@ func _build_global_interface() -> void:
 	task_dock.setup(state)
 	task_dock.rule_focused.connect(_on_rule_focused)
 	task_dock.item_inspected.connect(_show_item)
+	task_dock.owner_result_presented.connect(_on_owner_result_presented)
 	add_child(task_dock)
 	synthesis_interface = QuestSynthesisInterface.new()
 	synthesis_interface.name = "QuestSynthesisInterface"
@@ -95,6 +96,14 @@ func _on_rule_focused(rule: CardSlotRule) -> void:
 	hand_bar.set_highlight_rule(rule)
 	if current_screen != null and current_screen.has_method("set_highlight_rule"):
 		current_screen.set_highlight_rule(rule)
+
+
+func _on_owner_result_presented(store_id: StringName, text_key: StringName) -> void:
+	if (
+		current_screen is QuestShopScreen
+		and (current_screen as QuestShopScreen).store_id == store_id
+	):
+		(current_screen as QuestShopScreen).show_owner_result(text_key)
 
 
 func _on_next_day_requested() -> void:

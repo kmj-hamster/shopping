@@ -4,6 +4,7 @@ extends PanelContainer
 signal closed
 signal rule_focused(rule: CardSlotRule)
 signal item_inspected(definition: CardItemDefinition)
+signal owner_result_presented(store_id: StringName, text_key: StringName)
 
 var state: QuestGameState
 var task_instance_id: int
@@ -114,9 +115,10 @@ func _on_action_pressed() -> void:
 		return
 	var definition := QuestArcCatalog.task_by_id(task.definition_id)
 	if definition.settlement_mode == TaskDefinition.SettlementMode.OWNER_IMMEDIATE:
-		var result := state.submit_owner_task(task.instance_id)
+		var result := state.submit_owner_task(task.instance_id, current_store_id)
 		if result.ok:
 			feedback_label.text = TranslationServer.translate(StringName(result.result_text_key))
+			owner_result_presented.emit(definition.store_id, StringName(result.result_text_key))
 			closed.emit()
 	elif task.confirmed:
 		state.cancel_task_confirmation(task.instance_id)

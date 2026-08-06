@@ -6,5 +6,6 @@
 script = ExtResource("1_store")
 id = &"fast_food"
 display_name_key = &"store.fast_food"
+owner_id = &"mouse"
 initially_unlocked = true
 initial_shelf_item_ids = Array[StringName]([&"fast_hash_brown", &"fast_hash_brown", &"fast_warm_milk", &"fast_warm_milk", &"fast_banana_soda", &"fast_banana_soda"])

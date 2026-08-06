@@ -58,6 +58,23 @@ func test_round_trip_preserves_empty_finite_shelves_and_recycle_staging() -> voi
 	assert_eq(restored.card_by_instance_id(moth.instance_id).purchase_price, 6)
 
 
+func test_round_trip_preserves_owner_unlocked_page_and_event_stock() -> void:
+	var source := QuestGameState.new()
+	source.task_history[&"order_lost_found_birthday"] = &"plain"
+	source.story_flags[&"balloon_event_available"] = &"true"
+	assert_true(source.interact_with_store_owner(&"toy").activated)
+	assert_true(repository.save(source))
+
+	var restored := QuestGameState.new()
+	assert_true(repository.load_into(restored).ok)
+	var fast_food := restored.transaction_for_store(&"fast_food")
+	assert_eq(fast_food.unlocked_page_count, 2)
+	assert_eq(fast_food.shelf_slots_for_page(2).size(), 1)
+	assert_eq(fast_food.shelf_slots_for_page(2)[0].item_id, &"fast_co2_cylinder")
+	assert_true(restored.recipe_is_available(&"recipe_banana_water"))
+	assert_true(restored.known_recipe_hint_ids.has(&"recipe_banana_water"))
+
+
 func test_pending_arc_resumes_before_effects_without_duplicate_reward() -> void:
 	var source := _state_with_confirmed_awake_order()
 	assert_eq(source.begin_next_day().confirmed_task_count, 1)

@@ -44,6 +44,16 @@ func test_all_quest_arc_content_keys_exist_in_chinese_and_english() -> void:
 		keys.append(unlock.slot_rule.display_name_key)
 		keys.append(unlock.prompt_text_key)
 		keys.append(unlock.result_text_key)
+	for raw_owner in manifest.owners:
+		var owner := raw_owner as OwnerDefinition
+		keys.append(owner.display_name_key)
+		keys.append(owner.idle_dialogue_key)
+		keys.append(owner.item_comment_key)
+		if not owner.request_task_id.is_empty():
+			keys.append(owner.request_dialogue_key)
+			keys.append(owner.reminder_dialogue_key)
+			for raw_key in owner.state_dialogue_keys.values():
+				keys.append(StringName(raw_key))
 
 	for locale in [&"zh_CN", &"en"]:
 		TranslationServer.set_locale(locale)

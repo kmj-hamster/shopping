@@ -3,6 +3,7 @@ extends Resource
 
 @export var id: StringName
 @export var display_name_key: StringName
+@export var owner_id: StringName
 @export var initially_unlocked := false
 @export var unlock_definition_id: StringName
 @export_range(1, 6, 1) var initial_capacity := 6

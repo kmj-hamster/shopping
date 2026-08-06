@@ -152,6 +152,48 @@ func test_recycle_screen_returns_actual_purchase_price() -> void:
 	assert_true(state.inventory.is_empty())
 
 
+func test_owner_conversation_opens_request_second_shop_page_and_recipe_tab() -> void:
+	var main := await _spawn_main()
+	var state := GameState.quest_state
+	state.task_history[&"order_lost_found_birthday"] = &"plain"
+	state.story_flags[&"balloon_event_available"] = &"true"
+	main._show_shop(&"toy")
+	await get_tree().process_frame
+	var toy_shop := main.current_screen as QuestShopScreen
+	toy_shop._on_owner_pressed()
+	await get_tree().process_frame
+	assert_not_null(state.task_instance_for_definition(&"owner_balloon_erase_smile"))
+	assert_true(toy_shop.owner_dialogue_label.text.contains("香蕉水"))
+	assert_eq(main.task_dock.bookmark_column.get_child_count(), 3)
+
+	main._show_shop(&"fast_food")
+	await get_tree().process_frame
+	var food_shop := main.current_screen as QuestShopScreen
+	assert_false((food_shop.page_buttons[2] as Button).disabled)
+	food_shop._on_page_pressed(2)
+	assert_eq(food_shop.current_page, 2)
+	assert_eq(food_shop.shelf_buttons.size(), 1)
+
+	main.synthesis_interface._toggle_panel()
+	await get_tree().process_frame
+	assert_eq(main.synthesis_interface.recipe_tabs.get_child_count(), 2)
+
+	main._show_shop(&"toy")
+	await get_tree().process_frame
+	var request := state.task_instance_for_definition(&"owner_balloon_erase_smile")
+	var answer := state.grant_item(&"fast_co2_cylinder")
+	assert_true(state.assign_card(request.instance_id, &"answer", answer).ok)
+	main.task_dock._toggle_task(request.instance_id)
+	await get_tree().process_frame
+	main.task_dock.task_window._on_action_pressed()
+	await get_tree().process_frame
+	assert_true(request.settled)
+	assert_eq(
+		(main.current_screen as QuestShopScreen).owner_dialogue_label.text,
+		TranslationServer.translate(&"quest.task.owner_balloon.result.ground"),
+	)
+
+
 func _spawn_main() -> QuestMain:
 	var packed := load("res://scenes/main/main.tscn") as PackedScene
 	var main := packed.instantiate() as QuestMain

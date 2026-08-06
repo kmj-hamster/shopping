@@ -11,7 +11,9 @@ func test_manifest_loads_complete_valid_first_content_batch() -> void:
 	assert_eq(manifest.recipes.size(), 2)
 	assert_eq(manifest.stores.size(), 6)
 	assert_eq(manifest.store_unlocks.size(), 2)
+	assert_eq(manifest.owners.size(), 5)
 	assert_true(manifest.validation_errors().is_empty(), str(manifest.validation_errors()))
+	assert_eq(QuestArcCatalog.owner_for_store(&"toy").id, &"balloon")
 
 
 func test_items_use_small_prices_and_hybrid_property_limits() -> void:

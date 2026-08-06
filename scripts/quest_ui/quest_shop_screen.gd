@@ -13,11 +13,19 @@ var money_label: Label
 var checkout_button: Button
 var feedback_label: Label
 var owner_name_label: Label
+var owner_button: Button
+var owner_dialogue_label: Label
+var talk_button: Button
+var page_row: HBoxContainer
 var recycle_zone: QuestRecycleDropZone
 var recycle_row: HBoxContainer
 var shelf_buttons: Dictionary = {}
+var page_buttons: Dictionary = {}
 var highlight_rule: CardSlotRule
 var refresh_queued := false
+var current_page := 1
+var owner_dialogue_override_key: StringName
+var owner_dialogue_item_name := ""
 
 
 func setup(game_state: QuestGameState, selected_store_id: StringName) -> void:
@@ -106,6 +114,16 @@ func _build_interface() -> void:
 	checkout_button.custom_minimum_size = Vector2(150, 42)
 	checkout_button.pressed.connect(_on_checkout_pressed)
 	shelf_header.add_child(checkout_button)
+	page_row = HBoxContainer.new()
+	page_row.add_theme_constant_override("separation", 8)
+	shelf_column.add_child(page_row)
+	for page_index in range(1, CardShopTransaction.MAX_PAGE_COUNT + 1):
+		var page_button := Button.new()
+		page_button.custom_minimum_size = Vector2(44, 32)
+		page_button.toggle_mode = true
+		page_button.pressed.connect(_on_page_pressed.bind(page_index))
+		page_row.add_child(page_button)
+		page_buttons[page_index] = page_button
 	shelf_grid = GridContainer.new()
 	shelf_grid.columns = 3
 	shelf_grid.add_theme_constant_override("h_separation", 12)
@@ -128,25 +146,47 @@ func _build_interface() -> void:
 	owner_column.alignment = BoxContainer.ALIGNMENT_CENTER
 	owner_column.add_theme_constant_override("separation", 16)
 	owner_panel.add_child(owner_column)
-	var portrait := TextureRect.new()
-	portrait.custom_minimum_size = Vector2(360, 310)
-	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	portrait.texture = _owner_texture()
-	owner_column.add_child(portrait)
+	owner_button = Button.new()
+	owner_button.custom_minimum_size = Vector2(360, 225)
+	owner_button.icon = _owner_texture()
+	owner_button.expand_icon = true
+	owner_button.pressed.connect(_on_owner_pressed)
+	owner_column.add_child(owner_button)
 	owner_name_label = Label.new()
 	owner_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	owner_name_label.add_theme_font_size_override("font_size", 19)
 	owner_name_label.add_theme_color_override("font_color", Color("d7c99e"))
 	owner_column.add_child(owner_name_label)
+	owner_dialogue_label = Label.new()
+	owner_dialogue_label.custom_minimum_size = Vector2(360, 82)
+	owner_dialogue_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	owner_dialogue_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	owner_dialogue_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	owner_dialogue_label.add_theme_color_override("font_color", Color("aebbb4"))
+	owner_column.add_child(owner_dialogue_label)
+	talk_button = Button.new()
+	talk_button.custom_minimum_size = Vector2(150, 38)
+	talk_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	talk_button.pressed.connect(_on_owner_pressed)
+	owner_column.add_child(talk_button)
 
 
 func refresh() -> void:
 	if state == null or shelf_grid == null:
 		return
 	var store := QuestArcCatalog.store_by_id(store_id)
+	var owner := QuestArcCatalog.owner_for_store(store_id)
 	title_label.text = str(TranslationServer.translate(store.display_name_key)) if store != null else ""
-	owner_name_label.text = title_label.text
+	owner_name_label.text = (
+		TranslationServer.translate(owner.display_name_key)
+		if owner != null
+		else TranslationServer.translate(&"quest.ui.owner.none")
+	)
+	owner_button.visible = owner != null and state.owner_is_visible(store_id)
+	owner_button.disabled = not owner_button.visible
+	talk_button.visible = owner != null and owner_button.visible
+	talk_button.text = TranslationServer.translate(&"quest.ui.owner.talk")
+	_refresh_owner_dialogue()
 	money_label.text = TranslationServer.translate(&"quest.ui.money") % state.wallet.money
 	for child in shelf_grid.get_children():
 		child.free()
@@ -158,7 +198,19 @@ func refresh() -> void:
 
 
 func _build_retail_contents() -> void:
-	for slot in transaction.shelf_slots:
+	page_row.visible = true
+	current_page = clampi(current_page, 1, transaction.unlocked_page_count)
+	for page_index in page_buttons:
+		var page_button := page_buttons[page_index] as Button
+		page_button.text = str(page_index)
+		page_button.disabled = not transaction.is_page_unlocked(page_index)
+		page_button.button_pressed = page_index == current_page
+		page_button.tooltip_text = (
+			""
+			if transaction.is_page_unlocked(page_index)
+			else TranslationServer.translate(&"quest.ui.shop.page_locked")
+		)
+	for slot in transaction.shelf_slots_for_page(current_page):
 		var button := Button.new()
 		button.custom_minimum_size = Vector2(225, 150)
 		if slot.is_empty():
@@ -181,6 +233,7 @@ func _build_retail_contents() -> void:
 
 
 func _build_recycle_contents() -> void:
+	page_row.visible = false
 	checkout_button.text = TranslationServer.translate(&"quest.ui.recycle.checkout") % [
 		state.recycle_transaction.cart_count(), state.recycle_transaction.cart_total()
 	]
@@ -214,8 +267,50 @@ func _build_recycle_contents() -> void:
 func _on_shelf_pressed(slot_id: StringName) -> void:
 	var slot := transaction.shelf_slot(slot_id)
 	if slot != null and not slot.is_empty():
-		item_inspected.emit(QuestArcCatalog.item_by_id(slot.item_id))
+		var definition := QuestArcCatalog.item_by_id(slot.item_id)
+		item_inspected.emit(definition)
+		var owner := QuestArcCatalog.owner_for_store(store_id)
+		if owner != null:
+			owner_dialogue_override_key = owner.item_comment_key
+			owner_dialogue_item_name = definition.localized_name()
+			_refresh_owner_dialogue()
 	transaction.toggle_shelf_slot(slot_id)
+
+
+func _on_page_pressed(page_index: int) -> void:
+	if transaction == null or not transaction.is_page_unlocked(page_index):
+		return
+	current_page = page_index
+	refresh()
+
+
+func _on_owner_pressed() -> void:
+	var result := state.interact_with_store_owner(store_id)
+	if not result.ok:
+		return
+	owner_dialogue_override_key = StringName(result.text_key)
+	owner_dialogue_item_name = ""
+	refresh()
+
+
+func show_owner_result(text_key: StringName) -> void:
+	owner_dialogue_override_key = text_key
+	owner_dialogue_item_name = ""
+	refresh()
+
+
+func _refresh_owner_dialogue() -> void:
+	if owner_dialogue_label == null:
+		return
+	var key := owner_dialogue_override_key
+	if key.is_empty():
+		key = state.owner_dialogue_key(store_id)
+	if key.is_empty():
+		owner_dialogue_label.text = ""
+	elif owner_dialogue_item_name.is_empty():
+		owner_dialogue_label.text = TranslationServer.translate(key)
+	else:
+		owner_dialogue_label.text = TranslationServer.translate(key) % owner_dialogue_item_name
 
 
 func set_highlight_rule(rule: CardSlotRule) -> void:

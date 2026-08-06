@@ -19,6 +19,7 @@ const RESULT_STORE_ALREADY_OPEN := &"store_already_open"
 const RESULT_STORE_LOCKED := &"store_locked"
 const RESULT_UNKNOWN_RECIPE := &"unknown_recipe"
 const RESULT_SYNTHESIS_ACTIVE := &"synthesis_active"
+const RESULT_UNKNOWN_OWNER := &"unknown_owner"
 
 var day := 1
 var wallet := PlayerWallet.new(10)
@@ -157,6 +158,57 @@ func checkout_store(store_id: StringName) -> Dictionary:
 	return result
 
 
+func owner_dialogue_key(store_id: StringName) -> StringName:
+	var owner := QuestArcCatalog.owner_for_store(store_id)
+	if owner == null:
+		return &""
+	var owner_state := StringName(owner_states.get(owner.id, &""))
+	if not owner_state.is_empty():
+		return owner.dialogue_for_state(owner_state)
+	if task_instance_for_definition(owner.request_task_id) != null:
+		return owner.reminder_dialogue_key
+	return owner.idle_dialogue_key
+
+
+func owner_is_visible(store_id: StringName) -> bool:
+	var owner := QuestArcCatalog.owner_for_store(store_id)
+	if owner == null:
+		return false
+	return StringName(owner_states.get(owner.id, &"")) not in owner.portrait_hidden_states
+
+
+func interact_with_store_owner(store_id: StringName) -> Dictionary:
+	var owner := QuestArcCatalog.owner_for_store(store_id)
+	if owner == null:
+		return _result(false, RESULT_UNKNOWN_OWNER)
+	var owner_state := StringName(owner_states.get(owner.id, &""))
+	if not owner_state.is_empty():
+		return _owner_result(owner, owner.dialogue_for_state(owner_state), false)
+	if owner.request_task_id.is_empty():
+		return _owner_result(owner, owner.idle_dialogue_key, false)
+	if task_instance_for_definition(owner.request_task_id) != null:
+		return _owner_result(owner, owner.reminder_dialogue_key, false)
+	if task_history.has(owner.request_task_id):
+		return _owner_result(owner, owner.idle_dialogue_key, false)
+	if (
+		StringName(story_flags.get(owner.request_available_flag, &""))
+		!= owner.request_required_value
+	):
+		return _owner_result(owner, owner.idle_dialogue_key, false)
+
+	var recipe := QuestArcCatalog.recipe_by_id(owner.request_recipe_id)
+	if recipe != null:
+		known_recipe_hint_ids[recipe.id] = true
+		if not recipe.unlock_story_flag.is_empty():
+			story_flags[recipe.unlock_story_flag] = &"true"
+	var task := activate_task(owner.request_task_id)
+	if task == null:
+		return _owner_result(owner, owner.idle_dialogue_key, false)
+	_stock_owner_event_item(owner)
+	state_changed.emit()
+	return _owner_result(owner, owner.request_dialogue_key, true, task.instance_id)
+
+
 func stage_recycle_card(card: CardItemState) -> Dictionary:
 	return recycle_transaction.stage(card)
 
@@ -174,15 +226,21 @@ func cancel_recycle() -> int:
 
 
 func commerce_snapshot() -> Dictionary:
-	var shelves: Dictionary = {}
+	var stores: Dictionary = {}
 	for store_id in store_transactions:
 		var transaction := transaction_for_store(store_id)
-		var item_ids: Array[String] = []
+		var slots: Array[Dictionary] = []
 		for slot in transaction.shelf_slots:
-			item_ids.append(String(slot.item_id))
-		shelves[String(store_id)] = item_ids
+			slots.append({
+				"item_id": String(slot.item_id),
+				"page_index": slot.page_index,
+			})
+		stores[String(store_id)] = {
+			"unlocked_page_count": transaction.unlocked_page_count,
+			"slots": slots,
+		}
 	return {
-		"shelves": shelves,
+		"stores": stores,
 		"recycle_staged_instance_ids": recycle_transaction.staged_instance_ids.duplicate(),
 	}
 
@@ -196,21 +254,27 @@ func restore_commerce_snapshot(snapshot: Dictionary) -> bool:
 	recycle_transaction.staged_instance_ids.clear()
 	if snapshot.is_empty():
 		return true
-	var shelves := snapshot.get("shelves", {}) as Dictionary
-	for raw_store_id in shelves:
+	var stores := snapshot.get("stores", snapshot.get("shelves", {})) as Dictionary
+	var modern_format := snapshot.has("stores")
+	for raw_store_id in stores:
 		var store_id := StringName(raw_store_id)
 		var transaction := transaction_for_store(store_id)
-		var item_ids := shelves[raw_store_id] as Array
-		if transaction == null or item_ids.size() != transaction.shelf_slots.size():
+		if transaction == null:
 			return false
-		for index in item_ids.size():
-			var item_id := StringName(item_ids[index])
-			var item := QuestArcCatalog.item_by_id(item_id) if not item_id.is_empty() else null
-			if item != null and item.store_id != store_id:
+		var store_snapshot: Variant = stores[raw_store_id]
+		if modern_format:
+			if not store_snapshot is Dictionary:
 				return false
-			if not item_id.is_empty() and item == null:
+			var data := store_snapshot as Dictionary
+			if not _restore_store_slots(
+				transaction,
+				data.get("slots", []) as Array,
+				int(data.get("unlocked_page_count", 1)),
+			):
 				return false
-			transaction.shelf_slots[index].stock(item_id)
+		else:
+			if not _restore_legacy_store_slots(transaction, store_snapshot as Array):
+				return false
 	for raw_card_id in snapshot.get("recycle_staged_instance_ids", []):
 		var card := card_by_instance_id(int(raw_card_id))
 		if card == null or not recycle_transaction.stage(card).ok:
@@ -324,7 +388,7 @@ func return_card_to_hand(card: CardItemState) -> bool:
 
 
 func select_synthesis_recipe(recipe_id: StringName) -> bool:
-	if active_synthesis != null or QuestArcCatalog.recipe_by_id(recipe_id) == null:
+	if active_synthesis != null or not recipe_is_available(recipe_id):
 		return false
 	for card_id in synthesis_assignments.values():
 		var card := card_by_instance_id(int(card_id))
@@ -336,11 +400,32 @@ func select_synthesis_recipe(recipe_id: StringName) -> bool:
 	return true
 
 
+func recipe_is_available(recipe_id: StringName) -> bool:
+	var recipe := QuestArcCatalog.recipe_by_id(recipe_id)
+	if recipe == null:
+		return false
+	if not recipe.unlock_story_flag.is_empty():
+		return StringName(story_flags.get(recipe.unlock_story_flag, &"")) == &"true"
+	return true
+
+
+func available_synthesis_recipe_ids() -> Array[StringName]:
+	var result: Array[StringName] = []
+	var content := QuestArcCatalog.manifest()
+	if content == null:
+		return result
+	for raw_recipe in content.recipes:
+		var recipe := raw_recipe as SynthesisRecipeDefinition
+		if recipe != null and recipe_is_available(recipe.id):
+			result.append(recipe.id)
+	return result
+
+
 func assign_synthesis_card(slot_id: StringName, card: CardItemState) -> Dictionary:
 	if active_synthesis != null:
 		return _result(false, RESULT_SYNTHESIS_ACTIVE)
 	var recipe := QuestArcCatalog.recipe_by_id(synthesis_recipe_id)
-	if recipe == null:
+	if recipe == null or not recipe_is_available(recipe.id):
 		return _result(false, RESULT_UNKNOWN_RECIPE)
 	if card == null or not inventory.has(card):
 		return _result(false, RESULT_NOT_OWNED)
@@ -367,7 +452,7 @@ func assign_synthesis_card(slot_id: StringName, card: CardItemState) -> Dictiona
 
 func synthesis_evaluation() -> Dictionary:
 	var recipe := QuestArcCatalog.recipe_by_id(synthesis_recipe_id)
-	if recipe == null:
+	if recipe == null or not recipe_is_available(recipe.id):
 		return {"is_complete": false, "slot_results": []}
 	var items: Array[CardItemDefinition] = []
 	for raw_rule in recipe.slot_rules:
@@ -381,7 +466,7 @@ func begin_synthesis() -> Dictionary:
 	if active_synthesis != null:
 		return _result(false, RESULT_SYNTHESIS_ACTIVE)
 	var recipe := QuestArcCatalog.recipe_by_id(synthesis_recipe_id)
-	if recipe == null:
+	if recipe == null or not recipe_is_available(recipe.id):
 		return _result(false, RESULT_UNKNOWN_RECIPE)
 	var evaluation := synthesis_evaluation()
 	if not evaluation.is_complete:
@@ -615,7 +700,7 @@ func finish_arc() -> Dictionary:
 	}
 
 
-func submit_owner_task(task_instance_id: int) -> Dictionary:
+func submit_owner_task(task_instance_id: int, store_id: StringName = &"") -> Dictionary:
 	if pending_arc != null:
 		return _result(false, RESULT_TRANSITION_ACTIVE)
 	var instance := task_instance(task_instance_id)
@@ -623,6 +708,8 @@ func submit_owner_task(task_instance_id: int) -> Dictionary:
 		return _result(false, RESULT_UNKNOWN_TASK)
 	var definition := QuestArcCatalog.task_by_id(instance.definition_id)
 	if definition == null or definition.settlement_mode != TaskDefinition.SettlementMode.OWNER_IMMEDIATE:
+		return _result(false, RESULT_WRONG_SETTLEMENT)
+	if store_id != definition.store_id:
 		return _result(false, RESULT_WRONG_SETTLEMENT)
 	var evaluation := task_evaluation(task_instance_id)
 	if not evaluation.is_ready:
@@ -700,6 +787,103 @@ func _apply_story_effect(effect: StoryEffect) -> void:
 			unlocked_store_ids[effect.target_id] = true
 		StoryEffect.Kind.GIVE_ITEM:
 			grant_item(effect.target_id, &"story")
+
+
+func _stock_owner_event_item(owner: OwnerDefinition) -> bool:
+	if owner == null or owner.event_item_id.is_empty():
+		return false
+	var transaction := transaction_for_store(owner.event_item_store_id)
+	var item := QuestArcCatalog.item_by_id(owner.event_item_id)
+	if transaction == null or item == null or item.store_id != owner.event_item_store_id:
+		return false
+	for slot in transaction.shelf_slots:
+		if slot.item_id == owner.event_item_id:
+			return false
+	transaction.unlock_page(owner.event_item_page)
+	return transaction.add_shelf_slot(owner.event_item_id, owner.event_item_page) != null
+
+
+func _owner_result(
+	owner: OwnerDefinition,
+	text_key: StringName,
+	activated: bool,
+	task_instance_id: int = 0,
+) -> Dictionary:
+	return {
+		"ok": true,
+		"reason": RESULT_OK,
+		"owner_id": owner.id,
+		"text_key": text_key,
+		"activated": activated,
+		"task_instance_id": task_instance_id,
+	}
+
+
+func _restore_legacy_store_slots(
+	transaction: CardShopTransaction,
+	item_ids: Array,
+) -> bool:
+	if item_ids.size() != transaction.shelf_slots.size():
+		return false
+	for index in item_ids.size():
+		var item_id := StringName(item_ids[index])
+		if not _shelf_item_is_valid(item_id, transaction.store_id):
+			return false
+		transaction.shelf_slots[index].stock(item_id)
+	return true
+
+
+func _restore_store_slots(
+	transaction: CardShopTransaction,
+	raw_slots: Array,
+	unlocked_page_count: int,
+) -> bool:
+	if raw_slots.is_empty() or raw_slots.size() > CardShopTransaction.PAGE_SIZE * 3:
+		return false
+	var required_page_one_count := transaction.shelf_slots_for_page(1).size()
+	var page_counts: Dictionary = {}
+	var restored: Array[ShelfSlotState] = []
+	var highest_page := 1
+	for index in raw_slots.size():
+		if not raw_slots[index] is Dictionary:
+			return false
+		var data := raw_slots[index] as Dictionary
+		var item_id := StringName(data.get("item_id", ""))
+		var page_index := int(data.get("page_index", 1))
+		if (
+			page_index < 1
+			or page_index > ShelfSlotState.MAX_PAGE_COUNT
+			or int(page_counts.get(page_index, 0)) >= CardShopTransaction.PAGE_SIZE
+			or not _shelf_item_is_valid(item_id, transaction.store_id)
+		):
+			return false
+		page_counts[page_index] = int(page_counts.get(page_index, 0)) + 1
+		highest_page = maxi(highest_page, page_index)
+		restored.append(ShelfSlotState.new(
+			transaction.store_id,
+			StringName("%s_shelf_%d" % [transaction.store_id, index + 1]),
+			item_id,
+			page_index,
+		))
+	if (
+		int(page_counts.get(1, 0)) != required_page_one_count
+		or unlocked_page_count < highest_page
+	):
+		return false
+	transaction.shelf_slots = restored
+	transaction.unlocked_page_count = clampi(
+		unlocked_page_count,
+		1,
+		ShelfSlotState.MAX_PAGE_COUNT,
+	)
+	return true
+
+
+func _shelf_item_is_valid(item_id: StringName, store_id: StringName) -> bool:
+	if item_id.is_empty():
+		return true
+	var item := QuestArcCatalog.item_by_id(item_id)
+	return item != null and item.store_id == store_id
 
 
 func _build_commerce() -> void:

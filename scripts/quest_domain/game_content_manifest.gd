@@ -11,22 +11,25 @@ extends Resource
 @export var recipes: Array[Resource] = []
 @export var stores: Array[Resource] = []
 @export var store_unlocks: Array[Resource] = []
+@export var owners: Array[Resource] = []
 
 
 func validation_errors() -> PackedStringArray:
 	var errors := PackedStringArray()
 	var properties_by_id := _resources_by_id(properties, "property", errors)
 	var items_by_id := _resources_by_id(items, "item", errors)
-	_resources_by_id(tasks, "task", errors)
-	_resources_by_id(recipes, "recipe", errors)
+	var tasks_by_id := _resources_by_id(tasks, "task", errors)
+	var recipes_by_id := _resources_by_id(recipes, "recipe", errors)
 	var stores_by_id := _resources_by_id(stores, "store", errors)
 	var unlocks_by_id := _resources_by_id(store_unlocks, "store unlock", errors)
+	var owners_by_id := _resources_by_id(owners, "owner", errors)
 	_validate_resources(properties, errors)
 	_validate_resources(items, errors)
 	_validate_resources(tasks, errors)
 	_validate_resources(recipes, errors)
 	_validate_resources(stores, errors)
 	_validate_resources(store_unlocks, errors)
+	_validate_resources(owners, errors)
 	for raw_item in items:
 		var item := raw_item as QuestItemDefinition
 		if item == null:
@@ -60,10 +63,28 @@ func validation_errors() -> PackedStringArray:
 			continue
 		if not store.unlock_definition_id.is_empty() and not unlocks_by_id.has(store.unlock_definition_id):
 			errors.append("Store %s references missing unlock %s." % [store.id, store.unlock_definition_id])
+		if not store.owner_id.is_empty() and not owners_by_id.has(store.owner_id):
+			errors.append("Store %s references missing owner %s." % [store.id, store.owner_id])
 		for item_id in store.initial_shelf_item_ids:
 			var item := items_by_id.get(item_id) as QuestItemDefinition
 			if item == null or item.store_id != store.id:
 				errors.append("Store %s has invalid initial item %s." % [store.id, item_id])
+	for raw_owner in owners:
+		var owner := raw_owner as OwnerDefinition
+		if owner == null:
+			errors.append("Manifest contains a non-owner resource.")
+			continue
+		var owner_store := stores_by_id.get(owner.store_id) as StoreDefinition
+		if owner_store == null or owner_store.owner_id != owner.id:
+			errors.append("Owner %s is not assigned to store %s." % [owner.id, owner.store_id])
+		if not owner.request_task_id.is_empty():
+			if not tasks_by_id.has(owner.request_task_id):
+				errors.append("Owner %s references missing task %s." % [owner.id, owner.request_task_id])
+			if not recipes_by_id.has(owner.request_recipe_id):
+				errors.append("Owner %s references missing recipe %s." % [owner.id, owner.request_recipe_id])
+			var event_item := items_by_id.get(owner.event_item_id) as QuestItemDefinition
+			if event_item == null or event_item.store_id != owner.event_item_store_id:
+				errors.append("Owner %s references invalid event item %s." % [owner.id, owner.event_item_id])
 	return errors
 
 

@@ -6,5 +6,6 @@
 script = ExtResource("1_store")
 id = &"record"
 display_name_key = &"store.record"
+owner_id = &"gramophone"
 unlock_definition_id = &"unlock_record_store"
 initial_shelf_item_ids = Array[StringName]([&"record_fluorescent_single", &"record_fluorescent_single", &"record_lullaby_cassette", &"record_lullaby_cassette", &"record_rain_blank_tape", &"record_rain_blank_tape"])

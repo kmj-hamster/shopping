@@ -34,6 +34,22 @@ func test_store_slots_are_independent_and_daily_basic_stock_refills() -> void:
 	assert_eq(fast_food.shelf_slots[0].item_id, &"fast_hash_brown")
 
 
+func test_pre_owner_page_v3_commerce_snapshot_still_restores() -> void:
+	var state := QuestGameState.new()
+	var legacy_shelves := {}
+	for store_id in state.store_transactions:
+		var item_ids: Array[String] = []
+		for slot in state.transaction_for_store(store_id).shelf_slots:
+			item_ids.append(String(slot.item_id))
+		legacy_shelves[String(store_id)] = item_ids
+	(legacy_shelves["toy"] as Array)[0] = ""
+	assert_true(state.restore_commerce_snapshot({
+		"shelves": legacy_shelves,
+		"recycle_staged_instance_ids": [],
+	}))
+	assert_true(state.transaction_for_store(&"toy").shelf_slots[0].is_empty())
+
+
 func test_recycling_refunds_the_exact_purchase_price() -> void:
 	var state := QuestGameState.new()
 	var flower := state.transaction_for_store(&"flower")
@@ -158,12 +174,40 @@ func test_map_unlock_consumes_only_the_exact_key_item() -> void:
 	assert_has(state.inventory, sunflower)
 
 
+func test_balloon_conversation_unlocks_request_recipe_and_unique_page_two_stock() -> void:
+	var state := QuestGameState.new()
+	assert_false(state.recipe_is_available(&"recipe_banana_water"))
+	var early := state.interact_with_store_owner(&"toy")
+	assert_true(early.ok)
+	assert_false(early.activated)
+	assert_null(state.task_instance_for_definition(&"owner_balloon_erase_smile"))
+
+	state.task_history[&"order_lost_found_birthday"] = &"plain"
+	state.story_flags[&"balloon_event_available"] = &"true"
+	var opened := state.interact_with_store_owner(&"toy")
+	assert_true(opened.ok)
+	assert_true(opened.activated)
+	assert_not_null(state.task_instance_for_definition(&"owner_balloon_erase_smile"))
+	assert_true(state.known_recipe_hint_ids.has(&"recipe_banana_water"))
+	assert_true(state.recipe_is_available(&"recipe_banana_water"))
+	assert_true(state.select_synthesis_recipe(&"recipe_banana_water"))
+	var fast_food := state.transaction_for_store(&"fast_food")
+	assert_eq(fast_food.unlocked_page_count, 2)
+	assert_eq(fast_food.shelf_slots_for_page(2).size(), 1)
+	assert_eq(fast_food.shelf_slots_for_page(2)[0].item_id, &"fast_co2_cylinder")
+
+	var reminder := state.interact_with_store_owner(&"toy")
+	assert_false(reminder.activated)
+	assert_eq(fast_food.shelf_slots_for_page(2).size(), 1)
+
+
 func test_owner_task_settles_immediately_and_locks_other_branch() -> void:
 	var state := QuestGameState.new()
 	var task := state.activate_task(&"owner_balloon_erase_smile")
 	var thinner := state.grant_item(&"craft_banana_water", &"synthesis")
 	assert_true(state.assign_card(task.instance_id, &"answer", thinner).ok)
-	var result := state.submit_owner_task(task.instance_id)
+	assert_false(state.submit_owner_task(task.instance_id, &"flower").ok)
+	var result := state.submit_owner_task(task.instance_id, &"toy")
 	assert_true(result.ok)
 	assert_eq(result.outcome_id, &"flight")
 	assert_eq(state.story_flags[&"balloon_route"], &"flight")

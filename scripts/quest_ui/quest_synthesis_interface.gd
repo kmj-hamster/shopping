@@ -8,6 +8,7 @@ var state: QuestGameState
 var head_button: TextureButton
 var panel: PanelContainer
 var title_label: Label
+var recipe_tabs: HBoxContainer
 var aspect_row: HBoxContainer
 var slots_row: HBoxContainer
 var preview_label: Label
@@ -64,6 +65,30 @@ func refresh() -> void:
 		badge.add_theme_font_size_override("font_size", 16)
 		badge.add_theme_color_override("font_color", _aspect_color(aspect))
 		aspect_row.add_child(badge)
+	for child in recipe_tabs.get_children():
+		child.free()
+	var available_recipes := state.available_synthesis_recipe_ids()
+	if state.synthesis_recipe_id not in available_recipes and not available_recipes.is_empty():
+		state.select_synthesis_recipe(available_recipes[0])
+	for recipe_id in available_recipes:
+		var option := QuestArcCatalog.recipe_by_id(recipe_id)
+		var tab := Button.new()
+		tab.custom_minimum_size = Vector2(48, 32)
+		tab.toggle_mode = true
+		tab.button_pressed = recipe_id == state.synthesis_recipe_id
+		tab.disabled = state.active_synthesis != null
+		tab.text = (
+			TranslationServer.translate(option.display_name_key)
+			if state.discovered_recipe_ids.has(recipe_id) or not option.hidden_until_preview
+			else "◇"
+		)
+		tab.tooltip_text = (
+			TranslationServer.translate(&"quest.ui.synthesis.known_hint")
+			if state.known_recipe_hint_ids.has(recipe_id)
+			else TranslationServer.translate(&"quest.ui.synthesis.unknown_hint")
+		)
+		tab.pressed.connect(_on_recipe_selected.bind(recipe_id))
+		recipe_tabs.add_child(tab)
 	var recipe := QuestArcCatalog.recipe_by_id(state.synthesis_recipe_id)
 	if recipe == null:
 		return
@@ -158,6 +183,10 @@ func _build_panel() -> void:
 	column.add_child(aspect_row)
 	var divider := HSeparator.new()
 	column.add_child(divider)
+	recipe_tabs = HBoxContainer.new()
+	recipe_tabs.alignment = BoxContainer.ALIGNMENT_CENTER
+	recipe_tabs.add_theme_constant_override("separation", 8)
+	column.add_child(recipe_tabs)
 	title_label = Label.new()
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title_label.add_theme_font_size_override("font_size", 18)
@@ -198,6 +227,12 @@ func _on_action_pressed() -> void:
 	if result.ok:
 		preview_label.text = TranslationServer.translate(StringName(result.preview_key))
 		set_process(true)
+		rule_focused.emit(null)
+	refresh()
+
+
+func _on_recipe_selected(recipe_id: StringName) -> void:
+	if state.select_synthesis_recipe(recipe_id):
 		rule_focused.emit(null)
 	refresh()
 

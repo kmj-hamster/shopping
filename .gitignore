@@ -1,7 +1,8 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
-/test-reports/
+/test-reports/*
+!/test-reports/.gdignore
 /builds/
 
 # macOS Finder metadata

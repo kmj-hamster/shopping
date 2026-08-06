@@ -3,6 +3,7 @@ extends Control
 
 signal rule_focused(rule: CardSlotRule)
 signal item_inspected(definition: CardItemDefinition)
+signal owner_result_presented(store_id: StringName, text_key: StringName)
 
 var state: QuestGameState
 var current_store_id: StringName
@@ -77,6 +78,7 @@ func _toggle_task(instance_id: int) -> void:
 	task_window.closed.connect(_close_task)
 	task_window.rule_focused.connect(rule_focused.emit)
 	task_window.item_inspected.connect(item_inspected.emit)
+	task_window.owner_result_presented.connect(owner_result_presented.emit)
 	add_child(task_window)
 
 

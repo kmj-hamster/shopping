@@ -6,5 +6,6 @@
 script = ExtResource("1_store")
 id = &"book"
 display_name_key = &"store.book"
+owner_id = &"magical_girl"
 unlock_definition_id = &"unlock_book_store"
 initial_shelf_item_ids = Array[StringName]([&"book_bedtime_clipping", &"book_bedtime_clipping", &"book_bedtime_clipping", &"book_bedtime_clipping", &"book_aquarium_issue", &"book_rapid_eye_manual"])
