@@ -25,6 +25,14 @@ enum SettlementMode {
 @export var tie_priority: Array[StringName] = []
 
 
+func outcome_by_id(outcome_id: StringName) -> TaskOutcomeDefinition:
+	for raw_outcome in outcomes:
+		var outcome := raw_outcome as TaskOutcomeDefinition
+		if outcome != null and outcome.id == outcome_id:
+			return outcome
+	return null
+
+
 func validation_errors() -> PackedStringArray:
 	var errors := PackedStringArray()
 	if id.is_empty() or display_name_key.is_empty() or body_text_key.is_empty():
