@@ -34,6 +34,49 @@ func test_shop_shelf_is_selected_before_checkout_and_card_then_enters_hand() -> 
 	assert_true(transaction.shelf_slot(slot_id).is_empty())
 
 
+func test_left_bookmarks_toggle_one_task_window_and_confirm_without_consuming() -> void:
+	var main := await _spawn_main()
+	assert_eq(main.task_dock.bookmark_column.get_child_count(), 2)
+	var care := GameState.quest_state.task_instance_for_definition(&"care_hungry")
+	main.task_dock._toggle_task(care.instance_id)
+	await get_tree().process_frame
+	var first_window := main.task_dock.task_window
+	assert_not_null(first_window)
+	assert_eq(main.task_dock.open_task_instance_id, care.instance_id)
+	var card := GameState.quest_state.grant_item(&"fast_hash_brown")
+	await get_tree().process_frame
+	var slot := first_window.slots_row.get_child(0) as QuestTaskSlot
+	assert_true(slot._can_drop_data(Vector2.ZERO, _drag_data(card)))
+	slot._drop_data(Vector2.ZERO, _drag_data(card))
+	await get_tree().process_frame
+	assert_eq(card.location, CardItemState.Location.ACTIVITY_SLOT)
+	assert_false(main.hand_bar.card_views.has(card.instance_id))
+	main.task_dock.task_window._on_action_pressed()
+	assert_true(care.confirmed)
+	assert_has(GameState.quest_state.inventory, card)
+	main.task_dock._toggle_task(care.instance_id)
+	assert_null(main.task_dock.task_window)
+	assert_eq(main.task_dock.open_task_instance_id, 0)
+
+
+func test_focused_task_slot_highlights_matching_owned_cards_and_shop_goods() -> void:
+	var main := await _spawn_main()
+	var food := GameState.quest_state.grant_item(&"fast_hash_brown")
+	var flower := GameState.quest_state.grant_item(&"flower_sunflower")
+	await get_tree().process_frame
+	var care := GameState.quest_state.task_instance_for_definition(&"care_hungry")
+	var definition := QuestArcCatalog.task_by_id(care.definition_id)
+	var rule := definition.slot_rules[0] as CardSlotRule
+	main._on_rule_focused(rule)
+	assert_true((main.hand_bar.card_views[food.instance_id] as CardHandCard).rule_match_highlighted)
+	assert_false((main.hand_bar.card_views[flower.instance_id] as CardHandCard).rule_match_highlighted)
+	main._show_shop(&"fast_food")
+	await get_tree().process_frame
+	var shop := main.current_screen as QuestShopScreen
+	assert_eq(shop.highlight_rule, rule)
+	assert_eq(shop.shelf_buttons.size(), 6)
+
+
 func test_locked_map_store_only_accepts_its_exact_key_card() -> void:
 	var main := await _spawn_main()
 	var map := main.current_screen as QuestMapScreen

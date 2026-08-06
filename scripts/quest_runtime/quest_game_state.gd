@@ -279,6 +279,9 @@ func assign_card(task_instance_id: int, slot_id: StringName, card: CardItemState
 		return _result(false, RESULT_NOT_OWNED)
 	if card.location not in [CardItemState.Location.HAND, CardItemState.Location.ACTIVITY_SLOT]:
 		return _result(false, RESULT_NOT_OWNED)
+	var previous_task := _task_containing_card(card.instance_id)
+	if previous_task != null and previous_task.confirmed and previous_task != instance:
+		return _result(false, RESULT_LOCKED)
 	var definition := QuestArcCatalog.task_by_id(instance.definition_id)
 	var rule := _rule_by_id(definition, slot_id)
 	if rule == null:

@@ -61,6 +61,19 @@ func test_task_can_be_confirmed_cancelled_and_edited_again() -> void:
 	assert_eq(card.location, CardItemState.Location.HAND)
 
 
+func test_card_locked_in_confirmed_task_cannot_move_to_another_task() -> void:
+	var state := QuestGameState.new()
+	var care := state.task_instance_for_definition(&"care_hungry")
+	var order := state.task_instance_for_definition(&"order_hamster_midnight_supper")
+	var card := state.grant_item(&"fast_hash_brown")
+	assert_true(state.assign_card(care.instance_id, &"food", card).ok)
+	assert_true(state.confirm_task(care.instance_id).ok)
+	var result := state.assign_card(order.instance_id, &"midnight_food", card)
+	assert_false(result.ok)
+	assert_eq(result.reason, QuestGameState.RESULT_LOCKED)
+	assert_eq(care.assigned_instance_id(&"food"), card.instance_id)
+
+
 func test_empty_arc_is_allowed_and_unfinished_tasks_survive_new_day() -> void:
 	var state := QuestGameState.new()
 	var day_one_task_ids := state.active_tasks().map(

@@ -15,6 +15,8 @@ var feedback_label: Label
 var owner_name_label: Label
 var recycle_zone: QuestRecycleDropZone
 var recycle_row: HBoxContainer
+var shelf_buttons: Dictionary = {}
+var highlight_rule: CardSlotRule
 var refresh_queued := false
 
 
@@ -148,6 +150,7 @@ func refresh() -> void:
 	money_label.text = TranslationServer.translate(&"quest.ui.money") % state.wallet.money
 	for child in shelf_grid.get_children():
 		child.free()
+	shelf_buttons.clear()
 	if store_id == &"recycling":
 		_build_recycle_contents()
 	else:
@@ -169,6 +172,8 @@ func _build_retail_contents() -> void:
 			button.toggle_mode = true
 			button.pressed.connect(_on_shelf_pressed.bind(slot.slot_id))
 		shelf_grid.add_child(button)
+		shelf_buttons[slot.slot_id] = button
+		_apply_shelf_highlight(button, slot)
 	checkout_button.text = TranslationServer.translate(&"quest.ui.shop.checkout") % [
 		transaction.cart_count(), transaction.cart_total()
 	]
@@ -211,6 +216,32 @@ func _on_shelf_pressed(slot_id: StringName) -> void:
 	if slot != null and not slot.is_empty():
 		item_inspected.emit(QuestArcCatalog.item_by_id(slot.item_id))
 	transaction.toggle_shelf_slot(slot_id)
+
+
+func set_highlight_rule(rule: CardSlotRule) -> void:
+	highlight_rule = rule
+	if store_id == &"recycling" or transaction == null:
+		return
+	for slot_id in shelf_buttons:
+		_apply_shelf_highlight(shelf_buttons[slot_id] as Button, transaction.shelf_slot(slot_id))
+
+
+func _apply_shelf_highlight(button: Button, slot: ShelfSlotState) -> void:
+	if button == null or slot == null or slot.is_empty():
+		return
+	var definition := QuestArcCatalog.item_by_id(slot.item_id)
+	var matches: bool = (
+		highlight_rule != null
+		and definition != null
+		and CardRuleEvaluator.evaluate(highlight_rule, definition).can_place
+	)
+	button.add_theme_stylebox_override(
+		"normal",
+		UiPalette.panel_style(
+			Color("122326", 0.98) if matches else Color("0b1519", 0.96),
+			Color("e4eee7") if matches else Color("627a76", 0.78),
+		)
+	)
 
 
 func _on_checkout_pressed() -> void:

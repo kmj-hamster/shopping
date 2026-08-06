@@ -103,7 +103,7 @@ func _build_interface() -> void:
 	top.add_child(language_button)
 
 	var layout := {
-		&"recycling": Rect2(56, 140, 230, 112),
+		&"recycling": Rect2(180, 140, 230, 112),
 		&"book": Rect2(750, 130, 245, 132),
 		&"toy": Rect2(88, 314, 242, 148),
 		&"flower": Rect2(360, 386, 200, 142),

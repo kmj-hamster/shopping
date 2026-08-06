@@ -3,12 +3,14 @@ extends Control
 
 var state: QuestGameState
 var current_screen: Control
+var task_dock: QuestTaskDock
 var hand_bar: QuestHandBar
 var detail_popup: ItemDetailPopup
 var arc_overlay: ColorRect
 var arc_day_label: Label
 var arc_result_label: Label
 var transition_in_progress := false
+var focused_rule: CardSlotRule
 var arc_fade_seconds := 0.35
 var arc_result_seconds := 1.35
 var arc_empty_seconds := 1.15
@@ -24,6 +26,12 @@ func _ready() -> void:
 
 
 func _build_global_interface() -> void:
+	task_dock = QuestTaskDock.new()
+	task_dock.name = "QuestTaskDock"
+	task_dock.setup(state)
+	task_dock.rule_focused.connect(_on_rule_focused)
+	task_dock.item_inspected.connect(_show_item)
+	add_child(task_dock)
 	hand_bar = QuestHandBar.new()
 	hand_bar.name = "QuestHandBar"
 	hand_bar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
@@ -46,6 +54,7 @@ func _show_map() -> void:
 	add_child(map)
 	move_child(map, 0)
 	current_screen = map
+	task_dock.set_store_context(&"")
 	hand_bar.visible = true
 
 
@@ -59,6 +68,8 @@ func _show_shop(store_id: StringName) -> void:
 	add_child(shop)
 	move_child(shop, 0)
 	current_screen = shop
+	task_dock.set_store_context(store_id)
+	shop.set_highlight_rule(focused_rule)
 	hand_bar.visible = true
 
 
@@ -70,6 +81,13 @@ func _clear_screen() -> void:
 
 func _show_item(definition: CardItemDefinition) -> void:
 	detail_popup.show_item(definition)
+
+
+func _on_rule_focused(rule: CardSlotRule) -> void:
+	focused_rule = rule
+	hand_bar.set_highlight_rule(rule)
+	if current_screen != null and current_screen.has_method("set_highlight_rule"):
+		current_screen.set_highlight_rule(rule)
 
 
 func _on_next_day_requested() -> void:
