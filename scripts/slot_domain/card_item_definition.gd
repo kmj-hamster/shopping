@@ -22,7 +22,7 @@ func property_value(tag: StringName) -> int:
 
 
 func has_property(tag: StringName) -> bool:
-	return property_value(tag) > 0
+	return property_set != null and property_set.has(tag)
 
 
 func localized_name() -> String:

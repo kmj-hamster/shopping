@@ -16,6 +16,7 @@ static func evaluate(rule: CardSlotRule, item: CardItemDefinition) -> Dictionary
 			"allowed_matches": allowed_matches,
 			"forbidden_matches": forbidden_matches,
 			"insufficient_values": insufficient_values,
+			"item_id_allowed": false,
 		}
 
 	for tag in rule.required_all:
@@ -32,6 +33,7 @@ static func evaluate(rule: CardSlotRule, item: CardItemDefinition) -> Dictionary
 		missing_required.is_empty()
 		and (rule.allowed_any.is_empty() or not allowed_matches.is_empty())
 		and forbidden_matches.is_empty()
+		and (rule.accepted_item_ids.is_empty() or item.id in rule.accepted_item_ids)
 	)
 	for raw_requirement in rule.value_requirements:
 		var requirement := raw_requirement as SlotValueRequirement
@@ -55,4 +57,5 @@ static func evaluate(rule: CardSlotRule, item: CardItemDefinition) -> Dictionary
 		"allowed_matches": allowed_matches,
 		"forbidden_matches": forbidden_matches,
 		"insufficient_values": insufficient_values,
+		"item_id_allowed": rule.accepted_item_ids.is_empty() or item.id in rule.accepted_item_ids,
 	}
