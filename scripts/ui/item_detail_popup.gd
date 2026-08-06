@@ -218,6 +218,7 @@ func _rebuild_properties() -> void:
 		holder.add_child(icon)
 		var value := Label.new()
 		value.text = str(current_definition.property_value(tag))
+		value.visible = current_definition.property_value(tag) > 0
 		value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		value.add_theme_font_size_override("font_size", 16)
 		value.add_theme_color_override("font_color", Color("d9d0b4"))
@@ -231,7 +232,7 @@ func _ordered_property_tags(properties: CardPropertySet) -> Array[StringName]:
 		if properties.has(aspect):
 			result.append(aspect)
 	var remaining: Array[StringName] = []
-	for raw_tag in properties.values:
+	for raw_tag in properties.property_ids():
 		var tag := StringName(raw_tag)
 		if tag not in CardPropertySet.ASPECTS and properties.has(tag):
 			remaining.append(tag)
@@ -253,11 +254,25 @@ func _hide_property_tooltip() -> void:
 
 
 func _property_name_key(tag: StringName) -> StringName:
+	var quest_property := (
+		QuestArcCatalog.property_by_id(tag)
+		if current_definition is QuestItemDefinition
+		else null
+	)
+	if quest_property != null:
+		return quest_property.display_name_key
 	var prefix := "slot.aspect" if tag in CardPropertySet.ASPECTS else "slot.property"
 	return StringName("%s.%s" % [prefix, tag])
 
 
 func _property_description_key(tag: StringName) -> StringName:
+	var quest_property := (
+		QuestArcCatalog.property_by_id(tag)
+		if current_definition is QuestItemDefinition
+		else null
+	)
+	if quest_property != null:
+		return quest_property.description_key
 	return StringName("%s.description" % _property_name_key(tag))
 
 

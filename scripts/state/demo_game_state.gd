@@ -3,76 +3,57 @@ extends Node
 
 signal state_changed
 
-const SAVE_PATH := "user://save_slot_demo_v2.json"
-const SYNTHESIS_SAVE_INTERVAL_MSEC := 500
+const SAVE_PATH := "user://save_quest_arc_v3.json"
 
-var slot_commerce: SlotCommerceState
-var save_repository := SlotSaveRepository.new(SAVE_PATH)
+var quest_state: QuestGameState
+var save_repository := QuestSaveRepository.new(SAVE_PATH)
 var autosave_enabled := true
 var autosave_queued := false
-var last_synthesis_save_msec := 0
 
 
 func _ready() -> void:
 	autosave_enabled = not _is_test_run()
 	if autosave_enabled:
-		load_or_reset_demo()
+		load_or_reset_game()
 	else:
-		reset_demo()
+		reset_game()
 
 
-func load_or_reset_demo() -> bool:
-	var candidate := SlotCommerceState.new(PlayerWallet.new(120))
+func load_or_reset_game() -> bool:
+	var candidate := QuestGameState.new()
 	var loaded := save_repository.load_into(candidate)
 	if not loaded.ok:
-		candidate = SlotCommerceState.new(PlayerWallet.new(120))
-	_set_commerce(candidate)
+		candidate = QuestGameState.new()
+	_set_state(candidate)
 	state_changed.emit()
 	return loaded.ok
 
 
-func reset_demo() -> void:
-	_set_commerce(SlotCommerceState.new(PlayerWallet.new(120)))
+func reset_game() -> void:
+	_set_state(QuestGameState.new())
 	state_changed.emit()
 
 
-func start_new_demo() -> void:
+func start_new_game() -> void:
 	save_repository.erase()
-	reset_demo()
+	reset_game()
 	_save_now()
 
 
-func save_demo_now() -> bool:
+func save_game_now() -> bool:
 	return _save_now()
 
 
-func reload_demo_from_disk() -> bool:
-	return load_or_reset_demo()
-
-
-func _set_commerce(next_commerce: SlotCommerceState) -> void:
-	if slot_commerce != null:
-		if slot_commerce.state_changed.is_connected(_on_commerce_state_changed):
-			slot_commerce.state_changed.disconnect(_on_commerce_state_changed)
-		if slot_commerce.synthesis_progressed.is_connected(_on_synthesis_progressed):
-			slot_commerce.synthesis_progressed.disconnect(_on_synthesis_progressed)
-	slot_commerce = next_commerce
-	slot_commerce.state_changed.connect(_on_commerce_state_changed)
-	slot_commerce.synthesis_progressed.connect(_on_synthesis_progressed)
+func _set_state(next_state: QuestGameState) -> void:
+	if quest_state != null and quest_state.state_changed.is_connected(_on_state_changed):
+		quest_state.state_changed.disconnect(_on_state_changed)
+	quest_state = next_state
+	quest_state.state_changed.connect(_on_state_changed)
 	autosave_queued = false
-	last_synthesis_save_msec = Time.get_ticks_msec()
 
 
-func _on_commerce_state_changed() -> void:
+func _on_state_changed() -> void:
 	state_changed.emit()
-	_queue_autosave()
-
-
-func _on_synthesis_progressed(_active: ActiveSynthesisState) -> void:
-	var now := Time.get_ticks_msec()
-	if now - last_synthesis_save_msec < SYNTHESIS_SAVE_INTERVAL_MSEC:
-		return
-	last_synthesis_save_msec = now
 	_queue_autosave()
 
 
@@ -89,14 +70,14 @@ func _flush_autosave() -> void:
 
 
 func _save_now() -> bool:
-	if not autosave_enabled or slot_commerce == null:
+	if not autosave_enabled or quest_state == null:
 		return false
-	return save_repository.save(slot_commerce)
+	return save_repository.save(quest_state)
 
 
 func _exit_tree() -> void:
-	if autosave_enabled and slot_commerce != null:
-		save_repository.save(slot_commerce)
+	if autosave_enabled and quest_state != null:
+		save_repository.save(quest_state)
 
 
 func _is_test_run() -> bool:
