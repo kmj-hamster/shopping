@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="QuestItemDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/quest_item_definition.gd" id="1_item"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_property_set.gd" id="2_props"]
+
+[sub_resource type="Resource" id="Props"]
+script = ExtResource("2_props")
+tags = Array[StringName]([&"food"])
+values = {&"crispy": 4, &"warm": 2, &"lamp": 2}
+
+[resource]
+script = ExtResource("1_item")
+id = &"fast_hash_brown"
+display_name_key = &"quest.item.fast_hash_brown.name"
+description_key = &"quest.item.fast_hash_brown.description"
+store_id = &"fast_food"
+base_price = 2
+restock_weight = 1
+property_set = SubResource("Props")

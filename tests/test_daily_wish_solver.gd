@@ -74,7 +74,7 @@ func test_checkout_allows_buying_part_of_the_daily_solution() -> void:
 	assert_true(commerce.tonight_is_satisfiable().feasible)
 
 
-func test_recycling_last_viable_card_is_rejected_atomically() -> void:
+func test_full_refund_can_return_last_card_when_money_can_repurchase_solution() -> void:
 	var commerce := SlotCommerceState.new(PlayerWallet.new(20), 1999)
 	var hash_brown := CardItemState.new(1, &"fast_hash_brown")
 	commerce.inventory.append(hash_brown)
@@ -82,11 +82,10 @@ func test_recycling_last_viable_card_is_rejected_atomically() -> void:
 
 	var result := commerce.checkout_recycling()
 
-	assert_false(result.ok)
-	assert_eq(result.reason, SlotCommerceState.RESULT_DAILY_RISK)
-	assert_eq(commerce.wallet.money, 20)
-	assert_has(commerce.inventory, hash_brown)
-	assert_eq(hash_brown.location, CardItemState.Location.RECYCLE)
+	assert_true(result.ok)
+	assert_eq(result.total, 12)
+	assert_eq(commerce.wallet.money, 32)
+	assert_does_not_have(commerce.inventory, hash_brown)
 
 
 func test_twenty_day_structure_always_selects_two_feasible_wishes() -> void:

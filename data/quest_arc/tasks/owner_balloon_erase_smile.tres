@@ -1,0 +1,82 @@
+[gd_resource type="Resource" script_class="TaskDefinition" load_steps=15 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/task_definition.gd" id="1_task"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_slot_rule.gd" id="2_rule"]
+[ext_resource type="Script" path="res://scripts/quest_domain/task_outcome_definition.gd" id="3_outcome"]
+[ext_resource type="Script" path="res://scripts/quest_domain/story_condition.gd" id="4_condition"]
+[ext_resource type="Script" path="res://scripts/quest_domain/story_effect.gd" id="5_effect"]
+
+[sub_resource type="Resource" id="Rule"]
+script = ExtResource("2_rule")
+id = &"answer"
+display_name_key = &"quest.task.owner_balloon.slot"
+accepted_item_ids = Array[StringName]([&"craft_banana_water", &"fast_co2_cylinder"])
+
+[sub_resource type="Resource" id="FlightCondition"]
+script = ExtResource("4_condition")
+kind = 4
+item_ids = Array[StringName]([&"craft_banana_water"])
+
+[sub_resource type="Resource" id="FlightFlag"]
+script = ExtResource("5_effect")
+kind = 1
+target_id = &"balloon_route"
+text_value = &"flight"
+
+[sub_resource type="Resource" id="FlightAspect"]
+script = ExtResource("5_effect")
+kind = 2
+target_id = &"candle"
+amount = 1
+
+[sub_resource type="Resource" id="FlightState"]
+script = ExtResource("5_effect")
+kind = 5
+target_id = &"balloon"
+text_value = &"departed"
+
+[sub_resource type="Resource" id="FlightOutcome"]
+script = ExtResource("3_outcome")
+id = &"flight"
+result_text_key = &"quest.task.owner_balloon.result.flight"
+priority = 10
+conditions = Array[Resource]([SubResource("FlightCondition")])
+effects = Array[Resource]([SubResource("FlightFlag"), SubResource("FlightAspect"), SubResource("FlightState")])
+
+[sub_resource type="Resource" id="GroundFlag"]
+script = ExtResource("5_effect")
+kind = 1
+target_id = &"balloon_route"
+text_value = &"ground"
+
+[sub_resource type="Resource" id="GroundAspect"]
+script = ExtResource("5_effect")
+kind = 2
+target_id = &"pillow"
+amount = 1
+
+[sub_resource type="Resource" id="GroundState"]
+script = ExtResource("5_effect")
+kind = 5
+target_id = &"balloon"
+text_value = &"grounded"
+
+[sub_resource type="Resource" id="GroundOutcome"]
+script = ExtResource("3_outcome")
+id = &"ground"
+result_text_key = &"quest.task.owner_balloon.result.ground"
+is_fallback = true
+effects = Array[Resource]([SubResource("GroundFlag"), SubResource("GroundAspect"), SubResource("GroundState")])
+
+[resource]
+script = ExtResource("1_task")
+id = &"owner_balloon_erase_smile"
+display_name_key = &"quest.task.owner_balloon.name"
+body_text_key = &"quest.task.owner_balloon.body"
+category = 2
+settlement_mode = 1
+activation_day = 3
+owner_id = &"balloon"
+store_id = &"toy"
+slot_rules = Array[Resource]([SubResource("Rule")])
+outcomes = Array[Resource]([SubResource("FlightOutcome"), SubResource("GroundOutcome")])

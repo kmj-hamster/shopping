@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="TaskDefinition" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/task_definition.gd" id="1_task"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_slot_rule.gd" id="2_rule"]
+[ext_resource type="Script" path="res://scripts/slot_domain/slot_value_requirement.gd" id="3_value"]
+[ext_resource type="Script" path="res://scripts/quest_domain/task_outcome_definition.gd" id="4_outcome"]
+
+[sub_resource type="Resource" id="Value"]
+script = ExtResource("3_value")
+mode = 1
+tags = Array[StringName]([&"soft", &"warm"])
+minimum = 2
+
+[sub_resource type="Resource" id="Rule"]
+script = ExtResource("2_rule")
+id = &"shelter"
+display_name_key = &"quest.task.care_rain.slot"
+allowed_any = Array[StringName]([&"soft", &"warm"])
+forbidden_any = Array[StringName]([&"electric"])
+value_requirements = Array[Resource]([SubResource("Value")])
+
+[sub_resource type="Resource" id="Fallback"]
+script = ExtResource("4_outcome")
+id = &"plain"
+result_text_key = &"quest.task.care_rain.result.plain"
+is_fallback = true
+
+[resource]
+script = ExtResource("1_task")
+id = &"care_rain_close"
+display_name_key = &"quest.task.care_rain.name"
+body_text_key = &"quest.task.care_rain.body"
+category = 1
+activation_day = 4
+slot_rules = Array[Resource]([SubResource("Rule")])
+outcomes = Array[Resource]([SubResource("Fallback")])

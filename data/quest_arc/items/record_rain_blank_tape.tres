@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="QuestItemDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/quest_item_definition.gd" id="1_item"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_property_set.gd" id="2_props"]
+
+[sub_resource type="Resource" id="Props"]
+script = ExtResource("2_props")
+tags = Array[StringName]([&"music"])
+values = {&"relaxing": 2, &"candle": 3, &"pillow": 2}
+
+[resource]
+script = ExtResource("1_item")
+id = &"record_rain_blank_tape"
+display_name_key = &"quest.item.record_rain_blank_tape.name"
+description_key = &"quest.item.record_rain_blank_tape.description"
+store_id = &"record"
+base_price = 3
+restock_weight = 1
+property_set = SubResource("Props")

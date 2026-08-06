@@ -6,6 +6,8 @@ extends Resource
 @export var known_at_start := false
 @export var unlock_owner_id: StringName
 @export_range(0, 20, 1) var unlock_level := 0
+@export var unlock_story_flag: StringName
+@export var hidden_until_preview := true
 @export_range(0.1, 30.0, 0.1) var duration_seconds := 2.5
 @export var slot_rules: Array[Resource] = []
 @export var compared_aspects: Array[StringName] = []
@@ -39,6 +41,8 @@ func validation_errors() -> PackedStringArray:
 		errors.append("Recipe id cannot be empty.")
 	if display_name_key.is_empty():
 		errors.append("Recipe %s needs a display name key." % id)
+	if not unlock_owner_id.is_empty() and not unlock_story_flag.is_empty():
+		errors.append("Recipe %s cannot use owner and story-flag unlocks together." % id)
 	if slot_rules.size() < 2:
 		errors.append("Recipe %s needs at least two slots." % id)
 	for raw_rule in slot_rules:

@@ -1,0 +1,114 @@
+[gd_resource type="Resource" script_class="TaskDefinition" load_steps=21 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/task_definition.gd" id="1_task"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_slot_rule.gd" id="2_rule"]
+[ext_resource type="Script" path="res://scripts/quest_domain/task_outcome_definition.gd" id="3_outcome"]
+[ext_resource type="Script" path="res://scripts/quest_domain/story_condition.gd" id="4_condition"]
+[ext_resource type="Script" path="res://scripts/quest_domain/story_effect.gd" id="5_effect"]
+
+[sub_resource type="Resource" id="Rule"]
+script = ExtResource("2_rule")
+id = &"night_plant"
+display_name_key = &"quest.task.order_window.slot"
+required_all = Array[StringName]([&"plant"])
+allowed_any = Array[StringName]([&"lamp", &"candle", &"pillow"])
+
+[sub_resource type="Resource" id="LampCondition"]
+script = ExtResource("4_condition")
+kind = 6
+key = &"lamp"
+
+[sub_resource type="Resource" id="LampMoney"]
+script = ExtResource("5_effect")
+kind = 0
+amount = 6
+
+[sub_resource type="Resource" id="LampFlag"]
+script = ExtResource("5_effect")
+kind = 1
+target_id = &"window_garden"
+text_value = &"false_sun"
+
+[sub_resource type="Resource" id="LampOutcome"]
+script = ExtResource("3_outcome")
+id = &"false_sun"
+result_text_key = &"quest.task.order_window.result.false_sun"
+priority = 10
+conditions = Array[Resource]([SubResource("LampCondition")])
+effects = Array[Resource]([SubResource("LampMoney"), SubResource("LampFlag")])
+
+[sub_resource type="Resource" id="CandleCondition"]
+script = ExtResource("4_condition")
+kind = 6
+key = &"candle"
+
+[sub_resource type="Resource" id="CandleMoney"]
+script = ExtResource("5_effect")
+kind = 0
+amount = 6
+
+[sub_resource type="Resource" id="CandleFlag"]
+script = ExtResource("5_effect")
+kind = 1
+target_id = &"window_garden"
+text_value = &"night_forest"
+
+[sub_resource type="Resource" id="CandleOutcome"]
+script = ExtResource("3_outcome")
+id = &"night_forest"
+result_text_key = &"quest.task.order_window.result.night_forest"
+priority = 10
+conditions = Array[Resource]([SubResource("CandleCondition")])
+effects = Array[Resource]([SubResource("CandleMoney"), SubResource("CandleFlag")])
+
+[sub_resource type="Resource" id="PillowCondition"]
+script = ExtResource("4_condition")
+kind = 6
+key = &"pillow"
+
+[sub_resource type="Resource" id="PillowMoney"]
+script = ExtResource("5_effect")
+kind = 0
+amount = 6
+
+[sub_resource type="Resource" id="PillowFlag"]
+script = ExtResource("5_effect")
+kind = 1
+target_id = &"window_garden"
+text_value = &"rest"
+
+[sub_resource type="Resource" id="PillowOutcome"]
+script = ExtResource("3_outcome")
+id = &"rest"
+result_text_key = &"quest.task.order_window.result.rest"
+priority = 10
+conditions = Array[Resource]([SubResource("PillowCondition")])
+effects = Array[Resource]([SubResource("PillowMoney"), SubResource("PillowFlag")])
+
+[sub_resource type="Resource" id="PlainMoney"]
+script = ExtResource("5_effect")
+kind = 0
+amount = 5
+
+[sub_resource type="Resource" id="PlainFlag"]
+script = ExtResource("5_effect")
+kind = 1
+target_id = &"window_garden"
+text_value = &"plain"
+
+[sub_resource type="Resource" id="PlainOutcome"]
+script = ExtResource("3_outcome")
+id = &"plain"
+result_text_key = &"quest.task.order_window.result.plain"
+is_fallback = true
+effects = Array[Resource]([SubResource("PlainMoney"), SubResource("PlainFlag")])
+
+[resource]
+script = ExtResource("1_task")
+id = &"order_window_without_sun"
+display_name_key = &"quest.task.order_window.name"
+body_text_key = &"quest.task.order_window.body"
+activation_day = 4
+slot_rules = Array[Resource]([SubResource("Rule")])
+outcomes = Array[Resource]([SubResource("LampOutcome"), SubResource("CandleOutcome"), SubResource("PillowOutcome"), SubResource("PlainOutcome")])
+tie_priority = Array[StringName]([&"candle", &"pillow", &"lamp"])

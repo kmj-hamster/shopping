@@ -36,7 +36,7 @@ enabled=PackedStringArray("res://addons/godot_ai/plugin.cfg", "res://addons/gut/
 
 [internationalization]
 
-locale/translations=PackedStringArray("res://localization/ui.en.po", "res://localization/ui.zh_CN.po")
+locale/translations=PackedStringArray("res://localization/ui.en.po", "res://localization/ui.zh_CN.po", "res://localization/quest_arc.en.po", "res://localization/quest_arc.zh_CN.po")
 
 [physics]
 

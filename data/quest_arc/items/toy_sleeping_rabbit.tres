@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="QuestItemDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/quest_item_definition.gd" id="1_item"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_property_set.gd" id="2_props"]
+
+[sub_resource type="Resource" id="Props"]
+script = ExtResource("2_props")
+tags = Array[StringName]([&"toy"])
+values = {&"soft": 3, &"relaxing": 2, &"pillow": 4}
+
+[resource]
+script = ExtResource("1_item")
+id = &"toy_sleeping_rabbit"
+display_name_key = &"quest.item.toy_sleeping_rabbit.name"
+description_key = &"quest.item.toy_sleeping_rabbit.description"
+store_id = &"toy"
+base_price = 5
+restock_weight = 0
+supply_mode = 1
+property_set = SubResource("Props")
