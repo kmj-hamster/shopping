@@ -9,6 +9,7 @@ var store_hotspots: Dictionary = {}
 var title_label: Label
 var day_money_label: Label
 var notice_label: Label
+var notice_panel: PanelContainer
 var next_day_dialog: ConfirmationDialog
 var next_day_button: Button
 var language_button: Button
@@ -63,6 +64,7 @@ func refresh() -> void:
 func show_notice(message_key: StringName) -> void:
 	notice_label.text = TranslationServer.translate(message_key)
 	notice_label.visible = true
+	notice_panel.visible = true
 
 
 func _build_interface() -> void:
@@ -133,9 +135,9 @@ func _build_interface() -> void:
 			store_hotspots[store.id] = hotspot
 			add_child(hotspot)
 
-	var notice_panel := PanelContainer.new()
-	notice_panel.position = Vector2(370, 542)
-	notice_panel.size = Vector2(540, 54)
+	notice_panel = PanelContainer.new()
+	notice_panel.position = Vector2(370, 526)
+	notice_panel.size = Vector2(540, 52)
 	notice_panel.add_theme_stylebox_override(
 		"panel", UiPalette.panel_style(Color("041117", 0.9), Color("617c79", 0.75))
 	)
@@ -146,6 +148,7 @@ func _build_interface() -> void:
 	notice_label.add_theme_color_override("font_color", Color("e2c77b"))
 	notice_label.visible = false
 	notice_panel.add_child(notice_label)
+	notice_panel.visible = false
 
 	next_day_dialog = ConfirmationDialog.new()
 	next_day_dialog.title = TranslationServer.translate(&"quest.ui.next_day.confirm_title")
@@ -164,6 +167,7 @@ func _on_store_pressed(store_id: StringName) -> void:
 		var unlock := QuestArcCatalog.store_unlock_for_store(store_id)
 		notice_label.text = TranslationServer.translate(unlock.prompt_text_key)
 		notice_label.visible = true
+		notice_panel.visible = true
 
 
 func _on_unlock_requested(store_id: StringName, card: CardItemState) -> void:
@@ -171,6 +175,7 @@ func _on_unlock_requested(store_id: StringName, card: CardItemState) -> void:
 	if result.ok:
 		notice_label.text = TranslationServer.translate(StringName(result.result_text_key))
 		notice_label.visible = true
+		notice_panel.visible = true
 	refresh()
 
 

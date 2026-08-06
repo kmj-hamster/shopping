@@ -4,6 +4,7 @@ extends Control
 var state: QuestGameState
 var current_screen: Control
 var task_dock: QuestTaskDock
+var synthesis_interface: QuestSynthesisInterface
 var hand_bar: QuestHandBar
 var detail_popup: ItemDetailPopup
 var arc_overlay: ColorRect
@@ -32,6 +33,12 @@ func _build_global_interface() -> void:
 	task_dock.rule_focused.connect(_on_rule_focused)
 	task_dock.item_inspected.connect(_show_item)
 	add_child(task_dock)
+	synthesis_interface = QuestSynthesisInterface.new()
+	synthesis_interface.name = "QuestSynthesisInterface"
+	synthesis_interface.setup(state)
+	synthesis_interface.rule_focused.connect(_on_rule_focused)
+	synthesis_interface.item_inspected.connect(_show_item)
+	add_child(synthesis_interface)
 	hand_bar = QuestHandBar.new()
 	hand_bar.name = "QuestHandBar"
 	hand_bar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
@@ -150,6 +157,7 @@ func _build_arc_overlay() -> void:
 	arc_overlay.color = Color("010204")
 	arc_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	arc_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	arc_overlay.z_index = 500
 	arc_overlay.visible = false
 	add_child(arc_overlay)
 	var center := CenterContainer.new()

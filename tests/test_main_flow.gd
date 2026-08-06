@@ -77,6 +77,36 @@ func test_focused_task_slot_highlights_matching_owned_cards_and_shop_goods() -> 
 	assert_eq(shop.shelf_buttons.size(), 6)
 
 
+func test_protagonist_head_toggles_synthesis_and_shows_four_aspects() -> void:
+	var main := await _spawn_main()
+	var synthesis := main.synthesis_interface
+	assert_not_null(synthesis.head_button.texture_normal)
+	assert_not_null(synthesis.head_button.texture_hover)
+	assert_false(synthesis.panel.visible)
+	synthesis._toggle_panel()
+	assert_true(synthesis.panel.visible)
+	assert_eq(synthesis.aspect_row.get_child_count(), 4)
+	var filling := GameState.quest_state.grant_item(&"toy_cloth_scraps")
+	var shape := GameState.quest_state.grant_item(&"toy_cloth_scraps")
+	var calm := GameState.quest_state.grant_item(&"toy_sleeping_rabbit")
+	assert_true(GameState.quest_state.assign_synthesis_card(&"soft_filling", filling).ok)
+	assert_true(GameState.quest_state.assign_synthesis_card(&"toy_shape", shape).ok)
+	assert_true(GameState.quest_state.assign_synthesis_card(&"calm", calm).ok)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	assert_false(synthesis.action_button.disabled)
+	assert_true(synthesis.preview_label.text.contains(
+		QuestArcCatalog.item_by_id(&"craft_comfort_bear").localized_name()
+	))
+	synthesis._on_action_pressed()
+	synthesis.set_process(false)
+	assert_not_null(GameState.quest_state.active_synthesis)
+	assert_true(GameState.quest_state.discovered_recipe_ids.has(&"recipe_teddy"))
+	assert_true(GameState.quest_state.advance_synthesis(3.0).completed)
+	assert_eq(GameState.quest_state.inventory.size(), 1)
+	assert_eq(GameState.quest_state.inventory[0].definition_id, &"craft_comfort_bear")
+
+
 func test_locked_map_store_only_accepts_its_exact_key_card() -> void:
 	var main := await _spawn_main()
 	var map := main.current_screen as QuestMapScreen

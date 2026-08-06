@@ -48,6 +48,29 @@ func test_recycling_refunds_the_exact_purchase_price() -> void:
 	assert_does_not_have(state.inventory, card)
 
 
+func test_synthesis_previews_then_consumes_inputs_after_its_timer() -> void:
+	var state := QuestGameState.new()
+	var filling := state.grant_item(&"toy_cloth_scraps")
+	var shape := state.grant_item(&"toy_cloth_scraps")
+	var calm := state.grant_item(&"toy_sleeping_rabbit")
+	assert_true(state.assign_synthesis_card(&"soft_filling", filling).ok)
+	assert_true(state.assign_synthesis_card(&"toy_shape", shape).ok)
+	assert_true(state.assign_synthesis_card(&"calm", calm).ok)
+	var preview := state.synthesis_evaluation()
+	assert_true(preview.is_complete)
+	assert_eq(preview.output_id, &"craft_comfort_bear")
+	assert_true(state.begin_synthesis().ok)
+	assert_true(state.discovered_recipe_ids.has(&"recipe_teddy"))
+	assert_false(state.advance_synthesis(1.0).completed)
+	assert_eq(state.inventory.size(), 3)
+	var completed := state.advance_synthesis(2.0)
+	assert_true(completed.completed)
+	assert_eq(state.inventory.size(), 1)
+	assert_eq(state.inventory[0].definition_id, &"craft_comfort_bear")
+	assert_eq(state.inventory[0].acquisition_source, &"synthesis")
+	assert_null(state.active_synthesis)
+
+
 func test_task_can_be_confirmed_cancelled_and_edited_again() -> void:
 	var state := QuestGameState.new()
 	var task := state.task_instance_for_definition(&"care_hungry")

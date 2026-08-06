@@ -95,6 +95,9 @@ func to_dictionary(state: QuestGameState) -> Dictionary:
 		"owner_states": _string_dictionary(state.owner_states),
 		"pending_arc": _serialize_arc(state.pending_arc),
 		"commerce": state.commerce_snapshot(),
+		"synthesis_recipe_id": String(state.synthesis_recipe_id),
+		"synthesis_assignments": _string_int_dictionary(state.synthesis_assignments),
+		"active_synthesis": _serialize_synthesis(state.active_synthesis),
 	}
 
 
@@ -152,6 +155,11 @@ func _restore(state: QuestGameState, payload: Dictionary) -> bool:
 	state.discovered_recipe_ids = _name_set(payload.get("discovered_recipe_ids", []))
 	state.owner_states = _name_dictionary(payload.get("owner_states", {}))
 	state.pending_arc = _restore_arc(payload.get("pending_arc", {}))
+	state.synthesis_recipe_id = StringName(payload.get("synthesis_recipe_id", "recipe_teddy"))
+	if QuestArcCatalog.recipe_by_id(state.synthesis_recipe_id) == null:
+		return false
+	state.synthesis_assignments = _name_int_dictionary(payload.get("synthesis_assignments", {}))
+	state.active_synthesis = _restore_synthesis(payload.get("active_synthesis", {}))
 	state.next_card_instance_id = maxi(
 		int(payload.get("next_card_instance_id", 1)),
 		_next_card_id(state.inventory),
@@ -184,7 +192,67 @@ func _assignments_are_valid(state: QuestGameState) -> bool:
 			):
 				return false
 			assigned_card_ids[card_id] = true
+	var recipe := QuestArcCatalog.recipe_by_id(state.synthesis_recipe_id)
+	for raw_slot_id in state.synthesis_assignments:
+		var slot_id := StringName(raw_slot_id)
+		var card_id := int(state.synthesis_assignments[raw_slot_id])
+		var card := state.card_by_instance_id(card_id)
+		if (
+			assigned_card_ids.has(card_id)
+			or card == null
+			or card.location != CardItemState.Location.ACTIVITY_SLOT
+			or card.activity_id != state.synthesis_recipe_id
+			or not _recipe_has_slot(recipe, slot_id)
+		):
+			return false
+		assigned_card_ids[card_id] = true
+	if state.active_synthesis != null:
+		if state.active_synthesis.recipe_id != state.synthesis_recipe_id:
+			return false
+		for card_id in state.active_synthesis.input_instance_ids:
+			if not assigned_card_ids.has(card_id):
+				return false
 	return true
+
+
+func _recipe_has_slot(recipe: SynthesisRecipeDefinition, slot_id: StringName) -> bool:
+	if recipe == null:
+		return false
+	for raw_rule in recipe.slot_rules:
+		if (raw_rule as CardSlotRule).id == slot_id:
+			return true
+	return false
+
+
+func _serialize_synthesis(active: ActiveSynthesisState) -> Dictionary:
+	if active == null:
+		return {}
+	return {
+		"recipe_id": String(active.recipe_id),
+		"input_instance_ids": active.input_instance_ids.duplicate(),
+		"output_id": String(active.output_id),
+		"preview_key": String(active.preview_key),
+		"duration_seconds": active.duration_seconds,
+		"remaining_seconds": active.remaining_seconds,
+	}
+
+
+func _restore_synthesis(data: Dictionary) -> ActiveSynthesisState:
+	if data.is_empty():
+		return null
+	var active := ActiveSynthesisState.new(
+		StringName(data.get("recipe_id", "")),
+		_int_array(data.get("input_instance_ids", [])),
+		StringName(data.get("output_id", "")),
+		StringName(data.get("preview_key", "")),
+		float(data.get("duration_seconds", 0.0)),
+	)
+	active.remaining_seconds = clampf(
+		float(data.get("remaining_seconds", active.duration_seconds)),
+		0.0,
+		active.duration_seconds,
+	)
+	return active
 
 
 func _serialize_arc(arc: ArcTransitionState) -> Dictionary:

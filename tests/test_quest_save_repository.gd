@@ -91,6 +91,28 @@ func test_pending_arc_resumes_after_effects_at_next_unread_entry() -> void:
 	assert_eq(restored.day, 2)
 
 
+func test_active_synthesis_round_trip_preserves_inputs_and_remaining_time() -> void:
+	var source := QuestGameState.new()
+	var filling := source.grant_item(&"toy_cloth_scraps")
+	var shape := source.grant_item(&"toy_cloth_scraps")
+	var calm := source.grant_item(&"toy_sleeping_rabbit")
+	assert_true(source.assign_synthesis_card(&"soft_filling", filling).ok)
+	assert_true(source.assign_synthesis_card(&"toy_shape", shape).ok)
+	assert_true(source.assign_synthesis_card(&"calm", calm).ok)
+	assert_true(source.begin_synthesis().ok)
+	assert_false(source.advance_synthesis(1.0).completed)
+	assert_true(repository.save(source))
+
+	var restored := QuestGameState.new()
+	assert_true(repository.load_into(restored).ok)
+	assert_not_null(restored.active_synthesis)
+	assert_almost_eq(restored.active_synthesis.remaining_seconds, 1.5, 0.01)
+	assert_eq(restored.synthesis_assignments.size(), 3)
+	assert_true(restored.advance_synthesis(1.5).completed)
+	assert_eq(restored.inventory.size(), 1)
+	assert_eq(restored.inventory[0].definition_id, &"craft_comfort_bear")
+
+
 func test_version_two_save_is_rejected_instead_of_migrated() -> void:
 	var file := FileAccess.open(TEST_PATH, FileAccess.WRITE)
 	file.store_string(JSON.stringify({"save_version": 2, "content_version": "slot-demo-0.9"}))
