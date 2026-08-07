@@ -11,10 +11,20 @@ func test_project_name_is_shopping() -> void:
 	assert_eq(ProjectSettings.get_setting("application/config/name"), "shopping")
 
 
-func test_map_source_asset_exists() -> void:
-	assert_true(FileAccess.file_exists("res://pic/map.png"))
-	assert_true(FileAccess.file_exists("res://pic/bag.png"))
-	assert_true(FileAccess.file_exists("res://pic/bag-light.png"))
+func test_runtime_art_assets_exist() -> void:
+	assert_true(FileAccess.file_exists("res://resources/background/map.png"))
+	assert_true(FileAccess.file_exists("res://resources/background/toystore.png"))
+	assert_true(FileAccess.file_exists("res://resources/background/flowerstore.jpg"))
+	assert_true(FileAccess.file_exists("res://resources/background/food.png"))
+	assert_true(FileAccess.file_exists("res://resources/background/musicstore.png"))
+	assert_true(FileAccess.file_exists("res://resources/background/bookstore.png"))
+	assert_true(FileAccess.file_exists("res://resources/character/bag.png"))
+	assert_true(FileAccess.file_exists("res://resources/character/bag-light.png"))
+	assert_true(FileAccess.file_exists("res://resources/character/balloon-head.png"))
+	assert_true(FileAccess.file_exists("res://resources/character/flower-head.png"))
+	assert_true(FileAccess.file_exists("res://resources/character/rat-head.png"))
+	assert_true(FileAccess.file_exists("res://resources/character/phonograph-head.png"))
+	assert_true(FileAccess.file_exists("res://resources/character/manga-head.png"))
 
 
 func test_player_facing_shop_scene_is_the_main_scene() -> void:

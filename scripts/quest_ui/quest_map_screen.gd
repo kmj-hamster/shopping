@@ -69,7 +69,7 @@ func show_notice(message_key: StringName) -> void:
 
 func _build_interface() -> void:
 	var background := TextureRect.new()
-	background.texture = load("res://pic/map.png") as Texture2D
+	background.texture = load("res://resources/background/map.png") as Texture2D
 	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

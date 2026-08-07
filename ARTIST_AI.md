@@ -38,8 +38,10 @@ macOS. Read `AGENTS.md`, `godot-codex.json`, and
 - Treat names as case-sensitive even if the current disk is not. `Map.png` and
   `map.png` are different resources. For a case-only rename, rename through a
   temporary filename with `git mv`.
-- Keep runtime images in `pic/` or a deliberately agreed subfolder. Do not
-  embed machine-local paths in scenes or resources.
+- Keep runtime images in `resources/`, grouped by purpose such as
+  `resources/background/` and `resources/character/`. Keep mood boards,
+  screenshots, and source presentations in `ref/`; runtime scenes load only
+  from `resources/`. Do not embed machine-local paths in scenes or resources.
 - Commit a newly added source asset and the corresponding Godot `.import`
   metadata when Godot creates it. Never commit `.godot/`.
 - Do not add `.DS_Store`, `._*`, exported apps, ZIPs, or `builds/`.

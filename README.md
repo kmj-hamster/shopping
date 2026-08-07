@@ -20,6 +20,6 @@ generated cache.
 - Codex/Godot automation workflow: [`docs/godot-codex-workflow.md`](docs/godot-codex-workflow.md)
 - Project-wide agent contract: [`AGENTS.md`](AGENTS.md)
 
-Runtime art currently lives under `pic/`. Godot scenes and resources are text
-source and are reviewed through Git; `.godot/`, test reports, and exported
-builds are local-only.
+Runtime art lives under `resources/`; visual references and source presentations
+live under `ref/`. Godot scenes and resources are text source and are reviewed
+through Git; `.godot/`, test reports, and exported builds are local-only.

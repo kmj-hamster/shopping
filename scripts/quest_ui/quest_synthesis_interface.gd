@@ -133,8 +133,8 @@ func close_panel() -> void:
 func _build_head_button() -> void:
 	head_button = TextureButton.new()
 	head_button.name = "ProtagonistHeadButton"
-	head_button.texture_normal = load("res://pic/bag.png") as Texture2D
-	head_button.texture_hover = load("res://pic/bag-light.png") as Texture2D
+	head_button.texture_normal = load("res://resources/character/bag.png") as Texture2D
+	head_button.texture_hover = load("res://resources/character/bag-light.png") as Texture2D
 	head_button.ignore_texture_size = true
 	head_button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
 	head_button.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)

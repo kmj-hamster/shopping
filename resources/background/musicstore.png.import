@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://rgeldd0fvsg8"
-path="res://.godot/imported/map.png-0da299323c9e4189435e2af7ecd513f2.ctex"
+uid="uid://b8rpi10j5gmmm"
+path="res://.godot/imported/musicstore.png-08756e606b1a71174b12b3e5056178b9.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://pic/map.png"
-dest_files=["res://.godot/imported/map.png-0da299323c9e4189435e2af7ecd513f2.ctex"]
+source_file="res://resources/background/musicstore.png"
+dest_files=["res://.godot/imported/musicstore.png-08756e606b1a71174b12b3e5056178b9.ctex"]
 
 [params]
 

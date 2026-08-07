@@ -61,6 +61,14 @@ func _build_interface() -> void:
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(background)
+	var store_background := TextureRect.new()
+	store_background.texture = _store_background_texture()
+	store_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	store_background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	store_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	store_background.modulate = Color(0.62, 0.68, 0.66, 0.56)
+	store_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(store_background)
 	var glow := ColorRect.new()
 	glow.color = Color("24413d", 0.28)
 	glow.position = Vector2(0, 88)
@@ -355,11 +363,27 @@ func _on_checkout_pressed() -> void:
 
 
 func _owner_texture() -> Texture2D:
-	if store_id == &"toy":
-		return load("res://pic/balloon-head.png") as Texture2D
-	if store_id == &"flower":
-		return load("res://pic/flower-head.png") as Texture2D
-	return null
+	var paths := {
+		&"toy": "res://resources/character/balloon-head.png",
+		&"flower": "res://resources/character/flower-head.png",
+		&"fast_food": "res://resources/character/rat-head.png",
+		&"record": "res://resources/character/phonograph-head.png",
+		&"book": "res://resources/character/manga-head.png",
+	}
+	var path := String(paths.get(store_id, ""))
+	return load(path) as Texture2D if not path.is_empty() else null
+
+
+func _store_background_texture() -> Texture2D:
+	var paths := {
+		&"toy": "res://resources/background/toystore.png",
+		&"flower": "res://resources/background/flowerstore.jpg",
+		&"fast_food": "res://resources/background/food.png",
+		&"record": "res://resources/background/musicstore.png",
+		&"book": "res://resources/background/bookstore.png",
+	}
+	var path := String(paths.get(store_id, ""))
+	return load(path) as Texture2D if not path.is_empty() else null
 
 
 func _queue_refresh() -> void:

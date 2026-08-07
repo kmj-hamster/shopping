@@ -63,9 +63,13 @@ ZIP。大型 PSD/Krita/Blender 源文件在启用 Git LFS 前先协调；GitHub 
 文件名一律按大小写敏感处理。需要只改变大小写时：
 
 ```bash
-git mv pic/OldName.png pic/__rename_tmp.png
-git mv pic/__rename_tmp.png pic/oldname.png
+git mv resources/character/OldName.png resources/character/__rename_tmp.png
+git mv resources/character/__rename_tmp.png resources/character/oldname.png
 ```
+
+运行时图片统一放在 `resources/`，其中背景位于 `resources/background/`，角色与
+界面头像位于 `resources/character/`。参考图、Bug 截图、PDF 与演示文档放在
+`ref/`；该目录带有 `.gdignore`，只用于协作参考。
 
 当前审计结果：游戏脚本、场景、资源和本地化文件中没有机器绝对路径；唯一的
 Windows 绝对路径位于开发工具配置 `godot-codex.json`，Mac 脚本通过
