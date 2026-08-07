@@ -299,6 +299,17 @@ func show_owner_result(text_key: StringName) -> void:
 	refresh()
 
 
+func cancel_pending_purchase() -> void:
+	if transaction != null:
+		transaction.cancel_cart()
+	owner_dialogue_override_key = &""
+	owner_dialogue_item_name = ""
+	if feedback_label != null:
+		feedback_label.text = ""
+	if shelf_popup != null:
+		shelf_popup.visible = false
+
+
 func _refresh_owner_dialogue() -> void:
 	var key := owner_dialogue_override_key
 	if key.is_empty():

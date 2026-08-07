@@ -11,9 +11,15 @@ func test_main_uses_responsive_ppt_regions_and_demo_content() -> void:
 	assert_not_null(main.get_node_or_null("ContentViewportFrame"))
 	assert_not_null(main.find_child("ContentViewport", true, false))
 	assert_not_null(main.get_node_or_null("ProtagonistPortrait"))
-	assert_not_null(main.get_node_or_null("LanguageButton"))
-	assert_lt(main.language_button.anchor_right, 0.05)
-	assert_gt(main.language_button.anchor_top, 0.90)
+	assert_not_null(main.find_child("LanguageButton", true, false))
+	assert_not_null(main.find_child("ClearSaveButton", true, false))
+	assert_not_null(main.get_node_or_null("DebugButtonRow"))
+	assert_eq(main.language_button.get_parent(), main.debug_button_row)
+	assert_eq(main.clear_save_button.get_parent(), main.debug_button_row)
+	assert_gt(main.debug_button_row.anchor_top, 0.90)
+	assert_true(main.clear_save_button.pressed.is_connected(
+		Callable(main, "_on_clear_save_pressed")
+	))
 	assert_not_null(main.forbidden_cursor_texture)
 	assert_true(main.current_screen is QuestMapScreen)
 	assert_eq((main.current_screen as QuestMapScreen).store_hotspots.size(), 2)
@@ -45,6 +51,43 @@ func test_flower_shop_starts_as_scene_and_opens_shelf_on_request() -> void:
 	shop._toggle_shelf_popup()
 	assert_true(shop.shelf_popup.visible)
 	assert_eq(shop.shelf_buttons.size(), 6)
+
+
+func test_leaving_shop_clears_pending_checkout_state() -> void:
+	var main := await _spawn_main()
+	main._show_shop(&"flower")
+	await get_tree().process_frame
+	var shop := main.current_screen as QuestShopScreen
+	var transaction := main.state.transaction_for_store(&"flower")
+	shop._on_shelf_pressed(transaction.shelf_slots[0].slot_id)
+	assert_eq(transaction.cart_count(), 1)
+	assert_true(shop.checkout_button.visible)
+	assert_false(shop.owner_dialogue_override_key.is_empty())
+	shop.leave_requested.emit()
+	await get_tree().process_frame
+	assert_true(main.current_screen is QuestMapScreen)
+	assert_eq(transaction.cart_count(), 0)
+
+
+func test_opening_synthesis_clears_shop_checkout_and_comment() -> void:
+	var main := await _spawn_main()
+	main._show_shop(&"flower")
+	await get_tree().process_frame
+	var shop := main.current_screen as QuestShopScreen
+	var transaction := main.state.transaction_for_store(&"flower")
+	shop._on_shelf_pressed(transaction.shelf_slots[0].slot_id)
+	assert_eq(transaction.cart_count(), 1)
+	main.protagonist_button.pressed.emit()
+	await get_tree().process_frame
+	assert_true(main.current_screen is QuestSynthesisInterface)
+	assert_eq(transaction.cart_count(), 0)
+	main.protagonist_button.pressed.emit()
+	await get_tree().process_frame
+	var returned_shop := main.current_screen as QuestShopScreen
+	assert_not_null(returned_shop)
+	assert_false(returned_shop.checkout_button.visible)
+	assert_true(returned_shop.owner_dialogue_override_key.is_empty())
+	assert_true(returned_shop.owner_dialogue_item_name.is_empty())
 
 
 func test_locked_location_uses_confirmed_popup_then_enters_shop() -> void:
@@ -80,11 +123,25 @@ func test_task_rule_panel_shows_written_bonus_only() -> void:
 		func(task: TaskInstanceState) -> bool: return task.definition_id == &"girl_order"
 	)[0] as TaskInstanceState
 	var definition := QuestArcCatalog.task_by_id(girl_task.definition_id)
+	main._show_item(QuestArcCatalog.item_by_id(&"sunflower"))
+	assert_true(main.detail_popup.visible)
 	main._on_rule_focused(definition.slot_rules[0])
 	assert_true(main.rule_detail_popup.visible)
+	assert_false(main.detail_popup.visible)
+	assert_eq(main.rule_detail_popup.panel.offset_left, ItemDetailPopup.DETAIL_LEFT)
+	assert_eq(main.rule_detail_popup.panel.offset_top, ItemDetailPopup.DETAIL_TOP)
+	assert_eq(main.rule_detail_popup.panel.offset_right, ItemDetailPopup.DETAIL_RIGHT)
+	assert_eq(main.rule_detail_popup.panel.offset_bottom, ItemDetailPopup.DETAIL_BOTTOM)
 	assert_eq(main.rule_detail_popup.required_row.get_child_count(), 1)
 	assert_true(main.rule_detail_popup.bonus_section.visible)
 	assert_eq(main.rule_detail_popup.bonus_row.get_child_count(), 2)
+	var required_chip := main.rule_detail_popup.required_row.get_child(0) as HBoxContainer
+	var required_icon := required_chip.get_child(0) as Button
+	assert_not_null(required_icon)
+	assert_eq(required_icon.custom_minimum_size.x, required_icon.custom_minimum_size.y)
+	main._show_item(QuestArcCatalog.item_by_id(&"sunflower"))
+	assert_true(main.detail_popup.visible)
+	assert_false(main.rule_detail_popup.visible)
 
 
 func test_task_popup_is_small_centered_and_uses_centered_copy() -> void:
@@ -116,20 +173,61 @@ func test_drag_source_disappears_and_preview_is_above_popups() -> void:
 	preview.free()
 
 
-func test_item_detail_is_a_wide_shallow_top_right_strip() -> void:
+func test_item_detail_icons_append_without_overlap_and_close_outside() -> void:
 	var main := await _spawn_main()
-	main._show_item(QuestArcCatalog.item_by_id(&"fries"))
-	assert_eq(main.detail_popup.detail_panel.offset_left, -280.0)
-	assert_eq(main.detail_popup.detail_panel.offset_top, 4.0)
-	assert_eq(main.detail_popup.detail_panel.offset_right, -4.0)
-	assert_eq(main.detail_popup.detail_panel.offset_bottom, 99.0)
-	main.detail_popup._show_property(&"food")
+	main._show_item(QuestArcCatalog.item_by_id(&"sunflower"))
+	await get_tree().process_frame
+	assert_eq(main.detail_popup.detail_panel.offset_left, ItemDetailPopup.DETAIL_LEFT)
+	assert_eq(main.detail_popup.detail_panel.offset_top, ItemDetailPopup.DETAIL_TOP)
+	assert_eq(main.detail_popup.detail_panel.offset_right, ItemDetailPopup.DETAIL_RIGHT)
+	assert_eq(main.detail_popup.detail_panel.offset_bottom, ItemDetailPopup.DETAIL_BOTTOM)
+	assert_not_null(main.detail_popup.item_image.texture)
+	assert_almost_eq(
+		main.detail_popup.item_image.get_parent().size.y,
+		main.detail_popup.description_label.get_parent().size.y,
+		1.0,
+	)
+	var property_band := main.detail_popup.detail_panel.find_child("PropertyBand", true, false) as PanelContainer
+	assert_not_null(property_band)
+	assert_gt(property_band.size.x, main.detail_popup.description_label.size.x)
+	var panel_style := main.detail_popup.detail_panel.get_theme_stylebox("panel") as StyleBoxFlat
+	assert_gt(panel_style.bg_color.a, 0.99)
+	var property_button := main.detail_popup.property_row.get_child(0) as Button
+	assert_not_null(property_button)
+	assert_almost_eq(property_button.size.x, property_button.size.y, 0.01)
+	assert_true(property_button.get_child_count() > 0)
+	var base_icon := property_button.get_child(0) as TextureRect
+	assert_not_null(base_icon)
+	assert_not_null(base_icon.texture)
+	main.detail_popup._show_property(&"lamp")
+	await get_tree().process_frame
 	assert_true(main.detail_popup.detail_panel.visible)
 	assert_true(main.detail_popup.property_panel.visible)
-	assert_gt(
-		main.detail_popup.property_panel.offset_top,
-		main.detail_popup.detail_panel.offset_bottom,
+	var actual_detail_bottom := (
+		main.detail_popup.detail_panel.offset_top
+		+ maxf(
+			main.detail_popup.detail_panel.size.y,
+			main.detail_popup.detail_panel.get_combined_minimum_size().y,
+		)
 	)
+	assert_true(main.detail_popup.property_panel.offset_top >= actual_detail_bottom + 10.0)
+	var property_click := InputEventMouseButton.new()
+	property_click.button_index = MOUSE_BUTTON_LEFT
+	property_click.pressed = true
+	property_click.position = property_button.get_global_rect().get_center()
+	main.detail_popup._input(property_click)
+	assert_true(main.detail_popup.property_panel.visible)
+	main.detail_popup._show_property(&"lamp")
+	assert_false(main.detail_popup.property_panel.visible)
+	main.detail_popup._show_property(&"lamp")
+	assert_true(main.detail_popup.property_panel.visible)
+	var outside_click := InputEventMouseButton.new()
+	outside_click.button_index = MOUSE_BUTTON_LEFT
+	outside_click.pressed = true
+	outside_click.position = Vector2(10, 400)
+	main.detail_popup._input(outside_click)
+	assert_false(main.detail_popup.property_panel.visible)
+	assert_true(main.detail_popup.detail_panel.visible)
 
 
 func test_synthesis_is_a_material_first_dedicated_space() -> void:

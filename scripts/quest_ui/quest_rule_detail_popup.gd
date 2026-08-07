@@ -3,6 +3,7 @@ extends Control
 
 var current_rule: CardSlotRule
 var current_task_definition: TaskDefinition
+var panel: PanelContainer
 var title_label: Label
 var required_row: HBoxContainer
 var bonus_section: VBoxContainer
@@ -13,29 +14,29 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	z_index = 110
-
-	var panel := PanelContainer.new()
+	panel = PanelContainer.new()
 	panel.name = "RuleDetailPanel"
 	panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	panel.offset_left = -388
-	panel.offset_top = 62
-	panel.offset_right = -28
-	panel.offset_bottom = 246
+	panel.offset_left = ItemDetailPopup.DETAIL_LEFT
+	panel.offset_top = ItemDetailPopup.DETAIL_TOP
+	panel.offset_right = ItemDetailPopup.DETAIL_RIGHT
+	panel.offset_bottom = ItemDetailPopup.DETAIL_BOTTOM
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	panel.add_theme_stylebox_override(
-		"panel", UiPalette.panel_style(Color("050708", 0.985), Color("9b8757", 0.94))
+		"panel",
+		ItemDetailPopup.panel_style(Color("020304", 0.998), Color("a58d58", 0.94), 1),
 	)
 	add_child(panel)
 
 	var margin := MarginContainer.new()
 	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_%s" % side, 11)
+		margin.add_theme_constant_override("margin_%s" % side, 7)
 	panel.add_child(margin)
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 7)
+	column.add_theme_constant_override("separation", 3)
 	margin.add_child(column)
-
 	var header := HBoxContainer.new()
+	header.custom_minimum_size = Vector2(0, 22)
 	column.add_child(header)
 	title_label = Label.new()
 	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -44,32 +45,56 @@ func _ready() -> void:
 	header.add_child(title_label)
 	var close_button := Button.new()
 	close_button.text = "×"
-	close_button.custom_minimum_size = Vector2(30, 28)
+	close_button.flat = true
+	close_button.focus_mode = Control.FOCUS_NONE
+	close_button.custom_minimum_size = Vector2(24, 22)
+	close_button.add_theme_font_size_override("font_size", 16)
 	close_button.pressed.connect(close)
 	header.add_child(close_button)
+	var divider := ColorRect.new()
+	divider.custom_minimum_size = Vector2(0, 1)
+	divider.color = Color("a58d58", 0.90)
+	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(divider)
 
 	var must_label := Label.new()
 	must_label.name = "RequiredHeading"
-	must_label.add_theme_font_size_override("font_size", 12)
-	must_label.add_theme_color_override("font_color", Color("81958f"))
+	must_label.custom_minimum_size = Vector2(0, 13)
+	must_label.add_theme_font_size_override("font_size", 11)
+	must_label.add_theme_color_override("font_color", Color("9eb0aa"))
 	column.add_child(must_label)
+	var required_scroll := ScrollContainer.new()
+	required_scroll.custom_minimum_size = Vector2(0, 30)
+	required_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	required_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	column.add_child(required_scroll)
 	required_row = HBoxContainer.new()
 	required_row.name = "RequiredItems"
-	required_row.add_theme_constant_override("separation", 7)
-	column.add_child(required_row)
+	required_row.custom_minimum_size = Vector2(0, 30)
+	required_row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	required_row.add_theme_constant_override("separation", 9)
+	required_scroll.add_child(required_row)
 
 	bonus_section = VBoxContainer.new()
-	bonus_section.add_theme_constant_override("separation", 4)
+	bonus_section.add_theme_constant_override("separation", 3)
 	column.add_child(bonus_section)
 	var bonus_label := Label.new()
 	bonus_label.name = "BonusHeading"
-	bonus_label.add_theme_font_size_override("font_size", 12)
-	bonus_label.add_theme_color_override("font_color", Color("81958f"))
+	bonus_label.custom_minimum_size = Vector2(0, 13)
+	bonus_label.add_theme_font_size_override("font_size", 11)
+	bonus_label.add_theme_color_override("font_color", Color("9eb0aa"))
 	bonus_section.add_child(bonus_label)
+	var bonus_scroll := ScrollContainer.new()
+	bonus_scroll.custom_minimum_size = Vector2(0, 30)
+	bonus_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	bonus_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	bonus_section.add_child(bonus_scroll)
 	bonus_row = HBoxContainer.new()
 	bonus_row.name = "BonusItems"
-	bonus_row.add_theme_constant_override("separation", 7)
-	bonus_section.add_child(bonus_row)
+	bonus_row.custom_minimum_size = Vector2(0, 30)
+	bonus_row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	bonus_row.add_theme_constant_override("separation", 9)
+	bonus_scroll.add_child(bonus_row)
 
 	must_label.text = TranslationServer.translate(&"demo.ui.rule.must")
 	bonus_label.text = TranslationServer.translate(&"demo.ui.rule.bonus")
@@ -118,14 +143,23 @@ func _add_item_requirement(item_id: StringName) -> void:
 	if definition == null:
 		return
 	var chip := HBoxContainer.new()
-	chip.add_theme_constant_override("separation", 5)
+	chip.custom_minimum_size = Vector2(0, 30)
+	chip.add_theme_constant_override("separation", 6)
+	var frame := PanelContainer.new()
+	frame.custom_minimum_size = Vector2(30, 30)
+	frame.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	frame.add_theme_stylebox_override(
+		"panel", ItemDetailPopup.panel_style(Color("f1eee5"), Color("8c7a52"), 1)
+	)
+	chip.add_child(frame)
 	var image := TextureRect.new()
-	image.custom_minimum_size = Vector2(36, 36)
+	image.custom_minimum_size = Vector2(26, 26)
 	image.texture = definition.image
 	image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	image.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	chip.add_child(image)
+	frame.add_child(image)
 	var label := Label.new()
 	label.text = definition.localized_name()
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -136,18 +170,22 @@ func _add_item_requirement(item_id: StringName) -> void:
 
 func _add_property_requirement(row: HBoxContainer, property_id: StringName) -> void:
 	var property := QuestArcCatalog.property_by_id(property_id)
-	var chip := Button.new()
-	chip.focus_mode = Control.FOCUS_NONE
-	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	chip.text = "%s  %s" % [
-		_property_symbol(property_id),
-		TranslationServer.translate(
-			property.display_name_key
-			if property != null
-			else StringName("slot.property.%s" % property_id)
-		),
-	]
-	chip.add_theme_color_override("font_color", _property_color(property_id))
+	var chip := HBoxContainer.new()
+	chip.custom_minimum_size = Vector2(0, 30)
+	chip.add_theme_constant_override("separation", 6)
+	var icon := ItemDetailPopup.make_property_icon_button(property_id, 30)
+	icon.toggle_mode = false
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.add_child(icon)
+	var label := Label.new()
+	label.text = TranslationServer.translate(
+		property.display_name_key
+		if property != null
+		else ItemDetailPopup.property_name_key(property_id)
+	)
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_color_override("font_color", Color("d9d0b4"))
+	chip.add_child(label)
 	row.add_child(chip)
 
 
@@ -173,6 +211,7 @@ func _add_bonus_requirements() -> void:
 			_add_property_requirement(bonus_row, condition.key)
 			var reward := Label.new()
 			reward.text = TranslationServer.translate(&"demo.ui.rule.extra_money") % extra_money
+			reward.custom_minimum_size = Vector2(0, 30)
 			reward.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 			reward.add_theme_color_override("font_color", Color("e3c679"))
 			bonus_row.add_child(reward)
@@ -190,25 +229,6 @@ func _outcome_money(outcome: TaskOutcomeDefinition) -> int:
 func _clear_row(row: HBoxContainer) -> void:
 	for child in row.get_children():
 		child.free()
-
-
-func _property_symbol(property_id: StringName) -> String:
-	var symbols := {
-		&"food": "●",
-		&"salty": "≋",
-		&"plant": "♧",
-		&"drink": "∪",
-		&"metal": "◆",
-		&"tool": "×",
-		&"lamp": "✦",
-		&"mirror": "◇",
-	}
-	return String(symbols.get(property_id, "·"))
-
-
-func _property_color(property_id: StringName) -> Color:
-	var hue := float(absi(String(property_id).hash()) % 360) / 360.0
-	return Color.from_hsv(hue, 0.38, 0.88)
 
 
 func _on_locale_changed(_locale: String) -> void:

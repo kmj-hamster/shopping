@@ -13,7 +13,9 @@ var rule_detail_popup: QuestRuleDetailPopup
 var money_label: Label
 var day_label: Label
 var next_day_button: Button
+var debug_button_row: HBoxContainer
 var language_button: Button
+var clear_save_button: Button
 var forbidden_cursor_texture: Texture2D
 var next_day_dialog: ConfirmationDialog
 var arc_overlay: ColorRect
@@ -144,16 +146,27 @@ func _build_shell() -> void:
 	protagonist_button.pressed.connect(_show_synthesis)
 	add_child(protagonist_button)
 
+	debug_button_row = HBoxContainer.new()
+	debug_button_row.name = "DebugButtonRow"
+	debug_button_row.anchor_left = 0.004
+	debug_button_row.anchor_top = 0.945
+	debug_button_row.anchor_right = 0.17
+	debug_button_row.anchor_bottom = 0.992
+	debug_button_row.add_theme_constant_override("separation", 5)
+	debug_button_row.z_index = 60
+	add_child(debug_button_row)
 	language_button = Button.new()
 	language_button.name = "LanguageButton"
-	language_button.anchor_left = 0.004
-	language_button.anchor_top = 0.945
-	language_button.anchor_right = 0.038
-	language_button.anchor_bottom = 0.992
+	language_button.custom_minimum_size = Vector2(42, 0)
 	language_button.add_theme_font_size_override("font_size", 11)
-	language_button.z_index = 60
 	language_button.pressed.connect(LocaleManager.toggle_locale)
-	add_child(language_button)
+	debug_button_row.add_child(language_button)
+	clear_save_button = Button.new()
+	clear_save_button.name = "ClearSaveButton"
+	clear_save_button.custom_minimum_size = Vector2(104, 0)
+	clear_save_button.add_theme_font_size_override("font_size", 11)
+	clear_save_button.pressed.connect(_on_clear_save_pressed)
+	debug_button_row.add_child(clear_save_button)
 
 	next_day_dialog = ConfirmationDialog.new()
 	next_day_dialog.confirmed.connect(_on_next_day_requested)
@@ -260,6 +273,8 @@ func _clear_screen() -> void:
 			(current_screen as QuestSynthesisInterface).cancel_pending_inputs()
 		elif current_screen is QuestMapScreen:
 			(current_screen as QuestMapScreen)._close_location_popup()
+		elif current_screen is QuestShopScreen:
+			(current_screen as QuestShopScreen).cancel_pending_purchase()
 		current_screen.queue_free()
 	current_screen = null
 	if hand_bar != null:
@@ -308,6 +323,13 @@ func _on_next_day_pressed() -> void:
 	if transition_in_progress:
 		return
 	next_day_dialog.popup_centered(Vector2i(400, 180))
+
+
+func _on_clear_save_pressed() -> void:
+	if transition_in_progress:
+		return
+	GameState.start_new_game()
+	get_tree().reload_current_scene()
 
 
 func _on_next_day_requested() -> void:
@@ -542,6 +564,8 @@ func _refresh_global_text() -> void:
 	day_label.text = TranslationServer.translate(&"demo.ui.night") % state.day
 	next_day_button.text = TranslationServer.translate(&"demo.ui.next_day")
 	language_button.text = LocaleManager.switch_button_text()
+	clear_save_button.text = TranslationServer.translate(&"demo.ui.clear_save")
+	clear_save_button.tooltip_text = TranslationServer.translate(&"demo.ui.clear_save.tooltip")
 	protagonist_button.tooltip_text = TranslationServer.translate(&"quest.ui.synthesis.open")
 	next_day_dialog.title = TranslationServer.translate(&"demo.ui.next_day")
 	next_day_dialog.dialog_text = TranslationServer.translate(&"demo.ui.next_day.question")
