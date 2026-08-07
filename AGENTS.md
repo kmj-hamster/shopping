@@ -12,11 +12,11 @@
 ## Authoring policy
 
 - Prefer text edits for GDScript, shaders, configuration, tests, and simple scenes/resources.
-- Prefer the Godot AI MCP for complex scene trees, Inspector properties, signals, animations, runtime input, logs, and screenshots.
+- Prefer the Godot AI MCP for complex scene trees, Inspector properties, signals, animations, runtime input, and focused log reads. Capture screenshots only when the user explicitly requests Codex-side visual evidence.
 - Treat Godot-generated `.tscn` and `.tres` files as source. Inspect their Git diff after editor or MCP changes.
 - Never edit `.godot/`; it is generated cache state.
 - Keep gameplay rules separate from presentation where practical so deterministic logic can be tested without rendering.
-- Check both locales after changing UI copy, layouts, item names, dialogue, or validation messages; English text must not overflow layouts designed around Chinese copy.
+- Verify both locale key sets after changing UI copy, item names, dialogue, or validation messages. The user owns visual review of wrapping, overflow, composition, and final presentation in both languages.
 
 ## Player-facing UI
 
@@ -30,27 +30,30 @@
 
 1. Inspect the relevant files, active Godot session, and current scene before changing anything.
 2. Make one coherent, reviewable change at a time.
-3. Run `pwsh -File tools/check.ps1` after code, scene, resource, or project-setting changes.
-4. When the editor should be open, run `pwsh -File tools/check-mcp.ps1` or use the equivalent native Godot MCP reads.
-5. For runtime changes, launch the relevant scene, inspect the runtime tree, capture a game screenshot, and read editor/game logs before declaring success.
-6. Stop the test game after automated runtime checks.
-7. Review `git diff --check`, `git diff`, and `git status` before handoff.
+3. Choose validation by risk. Resource-path, asset-import, documentation, and small presentation-only edits use the fast gate: `tools/check.ps1 -ImportOnly` plus the single affected GUT file when one exists. Gameplay rules, runtime state, persistence, and release checkpoints use targeted tests during iteration and one full `tools/check.ps1` before handoff.
+4. Use `tools/check-mcp.ps1` or native Godot MCP reads when editor state, scene structure, Inspector state, or runtime logs provide information that tests cannot provide efficiently.
+5. Codex validates code, imports, deterministic behavior, and absence of parse/load/runtime errors. The user performs all visual composition, image quality, animation-timing, and interaction-feel validation.
+6. Launch the game only when the changed behavior requires a runtime error check. Read editor/game logs after a Codex-driven run, then stop the test game. Skip screenshots and visual tree inspection unless the user asks for them.
+7. Review `git diff --check`, the scoped Git diff, and `git status` before handoff.
 8. On macOS, use `tools/check.sh`; use `tools/export-macos.sh` only on a clean, tested commit when a playable build is requested.
 
 ## Efficiency guardrails
 
-- During iteration, use `tools/check.ps1 -ImportOnly` for an early parse/import gate, then `tools/check.ps1 -SkipImport -TestPath <test.gd>` for the affected GUT file. Run the unfiltered `tools/check.ps1` once before commit or handoff.
+- For a path or asset-reference change, search for the old path, edit references, run `tools/check.ps1 -ImportOnly`, then run the focused environment or portability test. A successful fast gate is sufficient for that change.
+- During gameplay iteration, use `tools/check.ps1 -ImportOnly` for an early parse/import gate, then `tools/check.ps1 -SkipImport -TestPath <test.gd>` for the affected GUT file. Reserve the unfiltered `tools/check.ps1` for gameplay/state/save changes, broad refactors, release checkpoints, or an explicit user request.
+- When one imported image fails, inspect that file once, preserve the source under `ref/` when conversion is appropriate, convert it to a Godot-supported runtime format, and rerun only the import gate. Stop and ask the user when the source is damaged or conversion changes visual content.
 - If the Codex sandbox reports `CreateProcessAsUser`, duplicate `Path`/`PATH`, or denied Godot/GUT user-cache access, retry the exact project script once with sandbox escalation. Do not improvise alternate PowerShell, .NET process, or user-data paths.
 - Use Godot MCP `api_manage` for engine API discovery before web search, and query a known runtime node or `game_eval` before dumping the complete UI tree.
 - Synthetic MCP mouse dragging gets one probe. If `gui_is_dragging()` remains false, stop sending longer input sequences; validate state transitions with focused GUT tests or `game_eval`, then leave physical drag feel to the user.
+- Give MCP one focused attempt for the desired information. When it returns no useful state, disconnects, or requires a long interaction sequence, stop and hand the remaining visual or physical check to the user.
 - Discover deferred tools by filtering `ALL_TOOLS` by exact tool name first. Do not print descriptions for broad keyword matches.
 
 ## Quality gates
 
-- A task is incomplete while import, parsing, GUT tests, or relevant runtime checks fail.
+- A task is incomplete while its selected import, parsing, focused GUT, or relevant runtime error checks fail.
 - Add focused GUT tests under `tests/` for deterministic gameplay and scene behavior.
 - Do not treat a clean game log as sufficient when the editor log contains parse/load errors.
-- Ask the user to judge subjective visual quality and interaction feel after automated checks pass.
+- Report the automated code checks that passed, then hand visual quality and interaction feel to the user without attempting a parallel visual verdict.
 
 ## MCP lifecycle
 
