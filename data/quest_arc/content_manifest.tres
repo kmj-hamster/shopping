@@ -1,211 +1,114 @@
-[gd_resource type="Resource" script_class="GameContentManifest" load_steps=70 format=3]
+[gd_resource type="Resource" script_class="GameContentManifest" load_steps=31 format=3]
 
 [ext_resource type="Script" path="res://scripts/quest_domain/game_content_manifest.gd" id="1_manifest"]
 [ext_resource type="Script" path="res://scripts/quest_domain/property_definition.gd" id="2_property"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/book_bedtime_clipping.tres" id="3_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/book_aquarium_issue.tres" id="4_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/book_rapid_eye_manual.tres" id="5_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/record_lullaby_cassette.tres" id="6_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/record_fluorescent_single.tres" id="7_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/record_rain_blank_tape.tres" id="8_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/flower_sunflower.tres" id="9_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/flower_lavender_sachet.tres" id="10_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/flower_night_jasmine.tres" id="11_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/toy_cloth_scraps.tres" id="12_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/toy_glass_marble.tres" id="13_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/toy_windup_moth.tres" id="14_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/toy_model_paint.tres" id="15_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/toy_sleeping_rabbit.tres" id="16_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/fast_hash_brown.tres" id="17_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/fast_warm_milk.tres" id="18_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/fast_banana_soda.tres" id="19_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/fast_co2_cylinder.tres" id="20_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/craft_childhood_teddy.tres" id="21_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/craft_comfort_bear.tres" id="22_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/craft_banana_water.tres" id="23_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/order_hamster_midnight_supper.tres" id="24_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/order_riverside_broadcast.tres" id="25_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/order_lost_found_birthday.tres" id="26_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/order_window_without_sun.tres" id="27_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/care_hungry.tres" id="28_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/care_sleepless.tres" id="29_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/care_bedside.tres" id="30_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/care_rain_close.tres" id="31_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/owner_balloon_erase_smile.tres" id="32_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/recipes/recipe_teddy.tres" id="33_recipe"]
-[ext_resource type="Resource" path="res://data/quest_arc/recipes/recipe_banana_water.tres" id="34_recipe"]
-[ext_resource type="Resource" path="res://data/quest_arc/stores/toy.tres" id="35_store"]
-[ext_resource type="Resource" path="res://data/quest_arc/stores/flower.tres" id="36_store"]
-[ext_resource type="Resource" path="res://data/quest_arc/stores/fast_food.tres" id="37_store"]
-[ext_resource type="Resource" path="res://data/quest_arc/stores/record.tres" id="38_store"]
-[ext_resource type="Resource" path="res://data/quest_arc/stores/book.tres" id="39_store"]
-[ext_resource type="Resource" path="res://data/quest_arc/stores/recycling.tres" id="40_store"]
-[ext_resource type="Resource" path="res://data/quest_arc/store_unlocks/unlock_record_store.tres" id="41_unlock"]
-[ext_resource type="Resource" path="res://data/quest_arc/store_unlocks/unlock_book_store.tres" id="42_unlock"]
-[ext_resource type="Resource" path="res://data/quest_arc/owners/balloon.tres" id="43_owner"]
-[ext_resource type="Resource" path="res://data/quest_arc/owners/sunflower.tres" id="44_owner"]
-[ext_resource type="Resource" path="res://data/quest_arc/owners/mouse.tres" id="45_owner"]
-[ext_resource type="Resource" path="res://data/quest_arc/owners/gramophone.tres" id="46_owner"]
-[ext_resource type="Resource" path="res://data/quest_arc/owners/magical_girl.tres" id="47_owner"]
-
-[sub_resource type="Resource" id="PropertyReading"]
-script = ExtResource("2_property")
-id = &"reading"
-display_name_key = &"quest.property.reading.name"
-description_key = &"quest.property.reading.description"
-
-[sub_resource type="Resource" id="PropertyMusic"]
-script = ExtResource("2_property")
-id = &"music"
-display_name_key = &"quest.property.music.name"
-description_key = &"quest.property.music.description"
-
-[sub_resource type="Resource" id="PropertyPlant"]
-script = ExtResource("2_property")
-id = &"plant"
-display_name_key = &"quest.property.plant.name"
-description_key = &"quest.property.plant.description"
-
-[sub_resource type="Resource" id="PropertyToy"]
-script = ExtResource("2_property")
-id = &"toy"
-display_name_key = &"quest.property.toy.name"
-description_key = &"quest.property.toy.description"
+[ext_resource type="Resource" path="res://data/quest_arc/items/demo_fries.tres" id="3_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/demo_sunflower.tres" id="4_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/demo_agave.tres" id="5_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/demo_cola.tres" id="6_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/demo_scissors.tres" id="7_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/demo_girl_order.tres" id="8_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/demo_self_care.tres" id="9_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/demo_mouse_order.tres" id="10_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/demo_flower_owner_request.tres" id="11_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/recipes/demo_recipe_scissors.tres" id="12_recipe"]
+[ext_resource type="Resource" path="res://data/quest_arc/stores/demo_flower.tres" id="13_store"]
+[ext_resource type="Resource" path="res://data/quest_arc/stores/demo_record.tres" id="14_store"]
+[ext_resource type="Resource" path="res://data/quest_arc/store_unlocks/demo_unlock_record.tres" id="15_unlock"]
+[ext_resource type="Resource" path="res://data/quest_arc/owners/demo_flower_owner.tres" id="16_owner"]
+[ext_resource type="Resource" path="res://data/quest_arc/owners/demo_record_owner.tres" id="17_owner"]
 
 [sub_resource type="Resource" id="PropertyFood"]
 script = ExtResource("2_property")
 id = &"food"
-display_name_key = &"quest.property.food.name"
-description_key = &"quest.property.food.description"
+display_name_key = &"demo.property.food.name"
+description_key = &"demo.property.food.description"
+
+[sub_resource type="Resource" id="PropertySalty"]
+script = ExtResource("2_property")
+id = &"salty"
+display_name_key = &"demo.property.salty.name"
+description_key = &"demo.property.salty.description"
+
+[sub_resource type="Resource" id="PropertyPlant"]
+script = ExtResource("2_property")
+id = &"plant"
+display_name_key = &"demo.property.plant.name"
+description_key = &"demo.property.plant.description"
 
 [sub_resource type="Resource" id="PropertyDrink"]
 script = ExtResource("2_property")
 id = &"drink"
-display_name_key = &"quest.property.drink.name"
-description_key = &"quest.property.drink.description"
-
-[sub_resource type="Resource" id="PropertySolvent"]
-script = ExtResource("2_property")
-id = &"solvent"
-display_name_key = &"quest.property.solvent.name"
-description_key = &"quest.property.solvent.description"
-
-[sub_resource type="Resource" id="PropertyGas"]
-script = ExtResource("2_property")
-id = &"gas"
-display_name_key = &"quest.property.gas.name"
-description_key = &"quest.property.gas.description"
+display_name_key = &"demo.property.drink.name"
+description_key = &"demo.property.drink.description"
 
 [sub_resource type="Resource" id="PropertyMetal"]
 script = ExtResource("2_property")
 id = &"metal"
-display_name_key = &"quest.property.metal.name"
-description_key = &"quest.property.metal.description"
+display_name_key = &"demo.property.metal.name"
+description_key = &"demo.property.metal.description"
 
-[sub_resource type="Resource" id="PropertyAlcohol"]
+[sub_resource type="Resource" id="PropertyTool"]
 script = ExtResource("2_property")
-id = &"alcohol"
-display_name_key = &"quest.property.alcohol.name"
-description_key = &"quest.property.alcohol.description"
-
-[sub_resource type="Resource" id="PropertyFantasy"]
-script = ExtResource("2_property")
-id = &"fantasy"
-display_name_key = &"quest.property.fantasy.name"
-description_key = &"quest.property.fantasy.description"
-value_kind = 1
-
-[sub_resource type="Resource" id="PropertyMemory"]
-script = ExtResource("2_property")
-id = &"memory"
-display_name_key = &"quest.property.memory.name"
-description_key = &"quest.property.memory.description"
-value_kind = 1
-
-[sub_resource type="Resource" id="PropertyElectric"]
-script = ExtResource("2_property")
-id = &"electric"
-display_name_key = &"quest.property.electric.name"
-description_key = &"quest.property.electric.description"
-value_kind = 1
-
-[sub_resource type="Resource" id="PropertySoft"]
-script = ExtResource("2_property")
-id = &"soft"
-display_name_key = &"quest.property.soft.name"
-description_key = &"quest.property.soft.description"
-value_kind = 1
-
-[sub_resource type="Resource" id="PropertyRelaxing"]
-script = ExtResource("2_property")
-id = &"relaxing"
-display_name_key = &"quest.property.relaxing.name"
-description_key = &"quest.property.relaxing.description"
-value_kind = 1
-
-[sub_resource type="Resource" id="PropertySweet"]
-script = ExtResource("2_property")
-id = &"sweet"
-display_name_key = &"quest.property.sweet.name"
-description_key = &"quest.property.sweet.description"
-value_kind = 1
-
-[sub_resource type="Resource" id="PropertyCrispy"]
-script = ExtResource("2_property")
-id = &"crispy"
-display_name_key = &"quest.property.crispy.name"
-description_key = &"quest.property.crispy.description"
-value_kind = 1
-
-[sub_resource type="Resource" id="PropertyWarm"]
-script = ExtResource("2_property")
-id = &"warm"
-display_name_key = &"quest.property.warm.name"
-description_key = &"quest.property.warm.description"
-value_kind = 1
+id = &"tool"
+display_name_key = &"demo.property.tool.name"
+description_key = &"demo.property.tool.description"
 
 [sub_resource type="Resource" id="PropertyLamp"]
 script = ExtResource("2_property")
 id = &"lamp"
-display_name_key = &"quest.property.lamp.name"
-description_key = &"quest.property.lamp.description"
+display_name_key = &"demo.property.lamp.name"
+description_key = &"demo.property.lamp.description"
 value_kind = 1
 is_night_aspect = true
 
 [sub_resource type="Resource" id="PropertyMirror"]
 script = ExtResource("2_property")
 id = &"mirror"
-display_name_key = &"quest.property.mirror.name"
-description_key = &"quest.property.mirror.description"
+display_name_key = &"demo.property.mirror.name"
+description_key = &"demo.property.mirror.description"
 value_kind = 1
 is_night_aspect = true
 
-[sub_resource type="Resource" id="PropertyCandle"]
+[sub_resource type="Resource" id="PropertyFantasy"]
 script = ExtResource("2_property")
-id = &"candle"
-display_name_key = &"quest.property.candle.name"
-description_key = &"quest.property.candle.description"
+id = &"fantasy"
+display_name_key = &"demo.stat.fantasy.name"
+description_key = &"demo.stat.fantasy.description"
 value_kind = 1
-is_night_aspect = true
 
-[sub_resource type="Resource" id="PropertyPillow"]
+[sub_resource type="Resource" id="PropertyMemory"]
 script = ExtResource("2_property")
-id = &"pillow"
-display_name_key = &"quest.property.pillow.name"
-description_key = &"quest.property.pillow.description"
+id = &"memory"
+display_name_key = &"demo.stat.memory.name"
+description_key = &"demo.stat.memory.description"
 value_kind = 1
-is_night_aspect = true
+
+[sub_resource type="Resource" id="PropertyElectric"]
+script = ExtResource("2_property")
+id = &"electric"
+display_name_key = &"demo.stat.electric.name"
+description_key = &"demo.stat.electric.description"
+value_kind = 1
+
+[sub_resource type="Resource" id="PropertySoft"]
+script = ExtResource("2_property")
+id = &"soft"
+display_name_key = &"demo.stat.soft.name"
+description_key = &"demo.stat.soft.description"
+value_kind = 1
 
 [resource]
 script = ExtResource("1_manifest")
-initial_money = 10
+initial_money = 30
 maximum_item_price = 20
 maximum_properties_per_item = 4
 maximum_aspects_per_item = 2
-properties = Array[Resource]([SubResource("PropertyReading"), SubResource("PropertyMusic"), SubResource("PropertyPlant"), SubResource("PropertyToy"), SubResource("PropertyFood"), SubResource("PropertyDrink"), SubResource("PropertySolvent"), SubResource("PropertyGas"), SubResource("PropertyMetal"), SubResource("PropertyAlcohol"), SubResource("PropertyFantasy"), SubResource("PropertyMemory"), SubResource("PropertyElectric"), SubResource("PropertySoft"), SubResource("PropertyRelaxing"), SubResource("PropertySweet"), SubResource("PropertyCrispy"), SubResource("PropertyWarm"), SubResource("PropertyLamp"), SubResource("PropertyMirror"), SubResource("PropertyCandle"), SubResource("PropertyPillow")])
-items = Array[Resource]([ExtResource("3_item"), ExtResource("4_item"), ExtResource("5_item"), ExtResource("6_item"), ExtResource("7_item"), ExtResource("8_item"), ExtResource("9_item"), ExtResource("10_item"), ExtResource("11_item"), ExtResource("12_item"), ExtResource("13_item"), ExtResource("14_item"), ExtResource("15_item"), ExtResource("16_item"), ExtResource("17_item"), ExtResource("18_item"), ExtResource("19_item"), ExtResource("20_item"), ExtResource("21_item"), ExtResource("22_item"), ExtResource("23_item")])
-tasks = Array[Resource]([ExtResource("24_task"), ExtResource("25_task"), ExtResource("26_task"), ExtResource("27_task"), ExtResource("28_task"), ExtResource("29_task"), ExtResource("30_task"), ExtResource("31_task"), ExtResource("32_task")])
-recipes = Array[Resource]([ExtResource("33_recipe"), ExtResource("34_recipe")])
-stores = Array[Resource]([ExtResource("35_store"), ExtResource("36_store"), ExtResource("37_store"), ExtResource("38_store"), ExtResource("39_store"), ExtResource("40_store")])
-store_unlocks = Array[Resource]([ExtResource("41_unlock"), ExtResource("42_unlock")])
-owners = Array[Resource]([ExtResource("43_owner"), ExtResource("44_owner"), ExtResource("45_owner"), ExtResource("46_owner"), ExtResource("47_owner")])
+starting_item_ids = Array[StringName]([&"fries"])
+properties = Array[Resource]([SubResource("PropertyFood"), SubResource("PropertySalty"), SubResource("PropertyPlant"), SubResource("PropertyDrink"), SubResource("PropertyMetal"), SubResource("PropertyTool"), SubResource("PropertyLamp"), SubResource("PropertyMirror"), SubResource("PropertyFantasy"), SubResource("PropertyMemory"), SubResource("PropertyElectric"), SubResource("PropertySoft")])
+items = Array[Resource]([ExtResource("3_item"), ExtResource("4_item"), ExtResource("5_item"), ExtResource("6_item"), ExtResource("7_item")])
+tasks = Array[Resource]([ExtResource("8_task"), ExtResource("9_task"), ExtResource("10_task"), ExtResource("11_task")])
+recipes = Array[Resource]([ExtResource("12_recipe")])
+stores = Array[Resource]([ExtResource("13_store"), ExtResource("14_store")])
+store_unlocks = Array[Resource]([ExtResource("15_unlock")])
+owners = Array[Resource]([ExtResource("16_owner"), ExtResource("17_owner")])

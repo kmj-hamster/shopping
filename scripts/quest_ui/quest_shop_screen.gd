@@ -7,18 +7,21 @@ signal item_inspected(definition: CardItemDefinition)
 var state: QuestGameState
 var store_id: StringName
 var transaction: CardShopTransaction
+var shelf_popup: PanelContainer
 var shelf_grid: GridContainer
 var title_label: Label
-var money_label: Label
+var owner_portrait: TextureRect
+var navigation_column: VBoxContainer
+var dialogue_panel: PanelContainer
 var checkout_button: Button
 var feedback_label: Label
 var owner_name_label: Label
-var owner_button: Button
 var owner_dialogue_label: Label
-var talk_button: Button
+var shelf_nav_button: Button
+var talk_nav_button: Button
+var leave_nav_button: Button
+var shelf_caption: Label
 var page_row: HBoxContainer
-var recycle_zone: QuestRecycleDropZone
-var recycle_row: HBoxContainer
 var shelf_buttons: Dictionary = {}
 var page_buttons: Dictionary = {}
 var highlight_rule: CardSlotRule
@@ -31,7 +34,7 @@ var owner_dialogue_item_name := ""
 func setup(game_state: QuestGameState, selected_store_id: StringName) -> void:
 	state = game_state
 	store_id = selected_store_id
-	transaction = state.transaction_for_store(store_id) if store_id != &"recycling" else null
+	transaction = state.transaction_for_store(store_id)
 	if is_node_ready():
 		_bind_state()
 		refresh()
@@ -50,163 +53,166 @@ func _bind_state() -> void:
 		state.state_changed.connect(_queue_refresh)
 	if transaction != null and not transaction.state_changed.is_connected(_queue_refresh):
 		transaction.state_changed.connect(_queue_refresh)
-	if state != null and state.recycle_transaction != null:
-		if not state.recycle_transaction.state_changed.is_connected(_queue_refresh):
-			state.recycle_transaction.state_changed.connect(_queue_refresh)
 
 
 func _build_interface() -> void:
-	var background := ColorRect.new()
-	background.color = Color("071218")
+	var background := TextureRect.new()
+	background.texture = _store_background_texture()
+	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(background)
-	var store_background := TextureRect.new()
-	store_background.texture = _store_background_texture()
-	store_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	store_background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	store_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	store_background.modulate = Color(0.62, 0.68, 0.66, 0.56)
-	store_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(store_background)
-	var glow := ColorRect.new()
-	glow.color = Color("24413d", 0.28)
-	glow.position = Vector2(0, 88)
-	glow.size = Vector2(820, 450)
-	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(glow)
+	var night_filter := ColorRect.new()
+	night_filter.color = Color("031014", 0.28)
+	night_filter.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	night_filter.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(night_filter)
 
-	var top := HBoxContainer.new()
-	top.position = Vector2(26, 20)
-	top.size = Vector2(1228, 52)
-	top.add_theme_constant_override("separation", 16)
-	add_child(top)
-	var leave_button := Button.new()
-	leave_button.custom_minimum_size = Vector2(86, 40)
-	leave_button.text = TranslationServer.translate(&"quest.ui.back")
-	leave_button.pressed.connect(leave_requested.emit)
-	top.add_child(leave_button)
-	title_label = Label.new()
-	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title_label.add_theme_font_size_override("font_size", 27)
-	title_label.add_theme_color_override("font_color", Color("d8e7df"))
-	top.add_child(title_label)
-	money_label = Label.new()
-	money_label.add_theme_font_size_override("font_size", 20)
-	money_label.add_theme_color_override("font_color", Color("e3c879"))
-	top.add_child(money_label)
+	owner_portrait = TextureRect.new()
+	owner_portrait.name = "StoreOwnerPortrait"
+	owner_portrait.texture = _owner_texture()
+	owner_portrait.anchor_left = 0.46
+	owner_portrait.anchor_top = 0.035
+	owner_portrait.anchor_right = 0.80
+	owner_portrait.anchor_bottom = 0.80
+	owner_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	owner_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	owner_portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(owner_portrait)
 
-	var shelf_panel := PanelContainer.new()
-	shelf_panel.position = Vector2(30, 92)
-	shelf_panel.size = Vector2(760, 470)
-	shelf_panel.add_theme_stylebox_override(
-		"panel", UiPalette.panel_style(Color("08171c", 0.94), Color("527774", 0.82))
+	navigation_column = VBoxContainer.new()
+	navigation_column.name = "ShopNavigation"
+	navigation_column.anchor_left = 0.835
+	navigation_column.anchor_top = 0.34
+	navigation_column.anchor_right = 0.975
+	navigation_column.anchor_bottom = 0.76
+	navigation_column.add_theme_constant_override("separation", 10)
+	add_child(navigation_column)
+	shelf_nav_button = Button.new()
+	shelf_nav_button.name = "ShelfButton"
+	shelf_nav_button.custom_minimum_size = Vector2(0, 54)
+	shelf_nav_button.pressed.connect(_toggle_shelf_popup)
+	navigation_column.add_child(shelf_nav_button)
+	talk_nav_button = Button.new()
+	talk_nav_button.name = "TalkButton"
+	talk_nav_button.custom_minimum_size = Vector2(0, 54)
+	talk_nav_button.pressed.connect(_on_owner_pressed)
+	navigation_column.add_child(talk_nav_button)
+	leave_nav_button = Button.new()
+	leave_nav_button.name = "LeaveButton"
+	leave_nav_button.custom_minimum_size = Vector2(0, 54)
+	leave_nav_button.pressed.connect(leave_requested.emit)
+	navigation_column.add_child(leave_nav_button)
+
+	dialogue_panel = PanelContainer.new()
+	dialogue_panel.name = "OwnerDialoguePanel"
+	dialogue_panel.anchor_left = 0.405
+	dialogue_panel.anchor_top = 0.735
+	dialogue_panel.anchor_right = 0.815
+	dialogue_panel.anchor_bottom = 0.97
+	dialogue_panel.add_theme_stylebox_override(
+		"panel", UiPalette.panel_style(Color("050b0e", 0.92), Color("837659", 0.86))
 	)
-	add_child(shelf_panel)
-	var shelf_margin := MarginContainer.new()
+	add_child(dialogue_panel)
+	var dialogue_margin := MarginContainer.new()
 	for side in ["left", "right", "top", "bottom"]:
-		shelf_margin.add_theme_constant_override("margin_%s" % side, 18)
-	shelf_panel.add_child(shelf_margin)
-	var shelf_column := VBoxContainer.new()
-	shelf_column.add_theme_constant_override("separation", 14)
-	shelf_margin.add_child(shelf_column)
-	var shelf_header := HBoxContainer.new()
-	shelf_column.add_child(shelf_header)
-	var shelf_caption := Label.new()
-	shelf_caption.text = TranslationServer.translate(&"quest.ui.shop.shelf")
-	shelf_caption.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	shelf_caption.add_theme_font_size_override("font_size", 16)
-	shelf_caption.add_theme_color_override("font_color", Color("8eaaa5"))
-	shelf_header.add_child(shelf_caption)
+		dialogue_margin.add_theme_constant_override("margin_%s" % side, 10)
+	dialogue_panel.add_child(dialogue_margin)
+	var dialogue_row := HBoxContainer.new()
+	dialogue_row.add_theme_constant_override("separation", 12)
+	dialogue_margin.add_child(dialogue_row)
+	var dialogue_text := VBoxContainer.new()
+	dialogue_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dialogue_text.add_theme_constant_override("separation", 2)
+	dialogue_row.add_child(dialogue_text)
+	owner_name_label = Label.new()
+	owner_name_label.add_theme_font_size_override("font_size", 14)
+	owner_name_label.add_theme_color_override("font_color", Color("d9c582"))
+	dialogue_text.add_child(owner_name_label)
+	owner_dialogue_label = Label.new()
+	owner_dialogue_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	owner_dialogue_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	owner_dialogue_label.add_theme_color_override("font_color", Color("c8d0ca"))
+	dialogue_text.add_child(owner_dialogue_label)
+	feedback_label = Label.new()
+	feedback_label.add_theme_font_size_override("font_size", 12)
+	feedback_label.add_theme_color_override("font_color", Color("e0bd72"))
+	dialogue_text.add_child(feedback_label)
 	checkout_button = Button.new()
-	checkout_button.custom_minimum_size = Vector2(150, 42)
+	checkout_button.custom_minimum_size = Vector2(120, 48)
 	checkout_button.pressed.connect(_on_checkout_pressed)
-	shelf_header.add_child(checkout_button)
+	dialogue_row.add_child(checkout_button)
+
+	_build_shelf_popup()
+
+
+func _build_shelf_popup() -> void:
+	shelf_popup = PanelContainer.new()
+	shelf_popup.name = "ShelfPopup"
+	shelf_popup.anchor_left = 0.035
+	shelf_popup.anchor_top = 0.16
+	shelf_popup.anchor_right = 0.39
+	shelf_popup.anchor_bottom = 0.755
+	shelf_popup.add_theme_stylebox_override(
+		"panel", UiPalette.panel_style(Color("071217", 0.98), Color("8c805d", 0.92))
+	)
+	add_child(shelf_popup)
+	var margin := MarginContainer.new()
+	for side in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_%s" % side, 8)
+	shelf_popup.add_child(margin)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 6)
+	margin.add_child(column)
+	var header := HBoxContainer.new()
+	column.add_child(header)
+	shelf_caption = Label.new()
+	shelf_caption.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	shelf_caption.add_theme_font_size_override("font_size", 15)
+	shelf_caption.add_theme_color_override("font_color", Color("d9c582"))
+	header.add_child(shelf_caption)
+	var close_button := Button.new()
+	close_button.text = "×"
+	close_button.custom_minimum_size = Vector2(34, 30)
+	close_button.pressed.connect(_toggle_shelf_popup)
+	header.add_child(close_button)
 	page_row = HBoxContainer.new()
-	page_row.add_theme_constant_override("separation", 8)
-	shelf_column.add_child(page_row)
+	page_row.add_theme_constant_override("separation", 5)
+	column.add_child(page_row)
 	for page_index in range(1, CardShopTransaction.MAX_PAGE_COUNT + 1):
 		var page_button := Button.new()
-		page_button.custom_minimum_size = Vector2(44, 32)
+		page_button.custom_minimum_size = Vector2(44, 24)
 		page_button.toggle_mode = true
 		page_button.pressed.connect(_on_page_pressed.bind(page_index))
 		page_row.add_child(page_button)
 		page_buttons[page_index] = page_button
 	shelf_grid = GridContainer.new()
-	shelf_grid.columns = 3
-	shelf_grid.add_theme_constant_override("h_separation", 12)
-	shelf_grid.add_theme_constant_override("v_separation", 12)
-	shelf_column.add_child(shelf_grid)
-	feedback_label = Label.new()
-	feedback_label.custom_minimum_size = Vector2(0, 44)
-	feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	feedback_label.add_theme_color_override("font_color", Color("d8bf7d"))
-	shelf_column.add_child(feedback_label)
-
-	var owner_panel := PanelContainer.new()
-	owner_panel.position = Vector2(820, 92)
-	owner_panel.size = Vector2(430, 470)
-	owner_panel.add_theme_stylebox_override(
-		"panel", UiPalette.panel_style(Color("071015", 0.95), Color("6c6250", 0.78))
-	)
-	add_child(owner_panel)
-	var owner_column := VBoxContainer.new()
-	owner_column.alignment = BoxContainer.ALIGNMENT_CENTER
-	owner_column.add_theme_constant_override("separation", 16)
-	owner_panel.add_child(owner_column)
-	owner_button = Button.new()
-	owner_button.custom_minimum_size = Vector2(360, 225)
-	owner_button.icon = _owner_texture()
-	owner_button.expand_icon = true
-	owner_button.pressed.connect(_on_owner_pressed)
-	owner_column.add_child(owner_button)
-	owner_name_label = Label.new()
-	owner_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	owner_name_label.add_theme_font_size_override("font_size", 19)
-	owner_name_label.add_theme_color_override("font_color", Color("d7c99e"))
-	owner_column.add_child(owner_name_label)
-	owner_dialogue_label = Label.new()
-	owner_dialogue_label.custom_minimum_size = Vector2(360, 82)
-	owner_dialogue_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	owner_dialogue_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	owner_dialogue_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	owner_dialogue_label.add_theme_color_override("font_color", Color("aebbb4"))
-	owner_column.add_child(owner_dialogue_label)
-	talk_button = Button.new()
-	talk_button.custom_minimum_size = Vector2(150, 38)
-	talk_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	talk_button.pressed.connect(_on_owner_pressed)
-	owner_column.add_child(talk_button)
+	shelf_grid.columns = 2
+	shelf_grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	shelf_grid.add_theme_constant_override("h_separation", 7)
+	shelf_grid.add_theme_constant_override("v_separation", 5)
+	column.add_child(shelf_grid)
+	shelf_popup.visible = false
 
 
 func refresh() -> void:
-	if state == null or shelf_grid == null:
+	if state == null or shelf_grid == null or transaction == null:
 		return
-	var store := QuestArcCatalog.store_by_id(store_id)
 	var owner := QuestArcCatalog.owner_for_store(store_id)
-	title_label.text = str(TranslationServer.translate(store.display_name_key)) if store != null else ""
-	owner_name_label.text = (
-		TranslationServer.translate(owner.display_name_key)
-		if owner != null
-		else TranslationServer.translate(&"quest.ui.owner.none")
-	)
-	owner_button.visible = owner != null and state.owner_is_visible(store_id)
-	owner_button.disabled = not owner_button.visible
-	talk_button.visible = owner != null and owner_button.visible
-	talk_button.text = TranslationServer.translate(&"quest.ui.owner.talk")
+	owner_name_label.text = TranslationServer.translate(owner.display_name_key) if owner != null else ""
+	shelf_nav_button.text = TranslationServer.translate(&"quest.ui.shop.shelf")
+	talk_nav_button.text = TranslationServer.translate(&"quest.ui.owner.talk")
+	leave_nav_button.text = TranslationServer.translate(&"quest.ui.back")
+	shelf_caption.text = TranslationServer.translate(&"quest.ui.shop.shelf")
 	_refresh_owner_dialogue()
-	money_label.text = TranslationServer.translate(&"quest.ui.money") % state.wallet.money
-	for child in shelf_grid.get_children():
-		child.free()
-	shelf_buttons.clear()
-	if store_id == &"recycling":
-		_build_recycle_contents()
-	else:
-		_build_retail_contents()
+	_refresh_shelf()
+	checkout_button.visible = transaction.cart_count() > 0
+	checkout_button.text = TranslationServer.translate(&"quest.ui.shop.checkout") % transaction.cart_total()
+	checkout_button.disabled = transaction.cart_count() == 0
 
 
-func _build_retail_contents() -> void:
-	page_row.visible = true
+func _refresh_shelf() -> void:
 	current_page = clampi(current_page, 1, transaction.unlocked_page_count)
 	for page_index in page_buttons:
 		var page_button := page_buttons[page_index] as Button
@@ -214,62 +220,48 @@ func _build_retail_contents() -> void:
 		page_button.disabled = not transaction.is_page_unlocked(page_index)
 		page_button.button_pressed = page_index == current_page
 		page_button.tooltip_text = (
-			""
-			if transaction.is_page_unlocked(page_index)
+			"" if transaction.is_page_unlocked(page_index)
 			else TranslationServer.translate(&"quest.ui.shop.page_locked")
 		)
+	for child in shelf_grid.get_children():
+		child.free()
+	shelf_buttons.clear()
 	for slot in transaction.shelf_slots_for_page(current_page):
+		var holder := VBoxContainer.new()
+		holder.custom_minimum_size = Vector2(104, 70)
+		holder.add_theme_constant_override("separation", 3)
+		shelf_grid.add_child(holder)
 		var button := Button.new()
-		button.custom_minimum_size = Vector2(225, 150)
+		button.custom_minimum_size = Vector2(104, 52)
 		if slot.is_empty():
 			button.text = TranslationServer.translate(&"quest.ui.shop.sold")
 			button.disabled = true
 		else:
 			var definition := QuestArcCatalog.item_by_id(slot.item_id)
-			button.text = "%s\n◇ %d" % [definition.localized_name(), transaction.price_for(definition)]
+			button.text = definition.localized_name()
+			button.icon = definition.image
+			button.expand_icon = true
 			button.tooltip_text = definition.localized_description()
 			button.button_pressed = transaction.is_selected(slot.slot_id)
 			button.toggle_mode = true
 			button.pressed.connect(_on_shelf_pressed.bind(slot.slot_id))
-		shelf_grid.add_child(button)
+		holder.add_child(button)
+		var price := Label.new()
+		price.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		price.add_theme_color_override("font_color", Color("e1c373"))
+		price.text = (
+			"—" if slot.is_empty()
+			else TranslationServer.translate(&"demo.ui.price") % transaction.price_for(
+				QuestArcCatalog.item_by_id(slot.item_id)
+			)
+		)
+		holder.add_child(price)
 		shelf_buttons[slot.slot_id] = button
 		_apply_shelf_highlight(button, slot)
-	checkout_button.text = TranslationServer.translate(&"quest.ui.shop.checkout") % [
-		transaction.cart_count(), transaction.cart_total()
-	]
-	checkout_button.disabled = transaction.cart_count() == 0
 
 
-func _build_recycle_contents() -> void:
-	page_row.visible = false
-	checkout_button.text = TranslationServer.translate(&"quest.ui.recycle.checkout") % [
-		state.recycle_transaction.cart_count(), state.recycle_transaction.cart_total()
-	]
-	checkout_button.disabled = state.recycle_transaction.cart_count() == 0
-	recycle_zone = QuestRecycleDropZone.new()
-	recycle_zone.state = state
-	recycle_zone.custom_minimum_size = Vector2(700, 260)
-	recycle_zone.add_theme_stylebox_override(
-		"panel", UiPalette.panel_style(Color("0a1113", 0.9), Color("887d5d", 0.82))
-	)
-	shelf_grid.add_child(recycle_zone)
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 12)
-	recycle_zone.add_child(column)
-	var hint := Label.new()
-	hint.text = TranslationServer.translate(&"quest.ui.recycle.hint")
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_color_override("font_color", Color("9daaa4"))
-	column.add_child(hint)
-	recycle_row = HBoxContainer.new()
-	recycle_row.add_theme_constant_override("separation", 8)
-	column.add_child(recycle_row)
-	for card in state.recycle_transaction.staged_cards():
-		var definition := QuestArcCatalog.item_by_id(card.definition_id)
-		var view := CardHandCard.new()
-		view.setup(card, definition)
-		view.inspect_requested.connect(item_inspected.emit)
-		recycle_row.add_child(view)
+func _toggle_shelf_popup() -> void:
+	shelf_popup.visible = not shelf_popup.visible
 
 
 func _on_shelf_pressed(slot_id: StringName) -> void:
@@ -281,8 +273,8 @@ func _on_shelf_pressed(slot_id: StringName) -> void:
 		if owner != null:
 			owner_dialogue_override_key = owner.item_comment_key
 			owner_dialogue_item_name = definition.localized_name()
-			_refresh_owner_dialogue()
 	transaction.toggle_shelf_slot(slot_id)
+	refresh()
 
 
 func _on_page_pressed(page_index: int) -> void:
@@ -308,8 +300,6 @@ func show_owner_result(text_key: StringName) -> void:
 
 
 func _refresh_owner_dialogue() -> void:
-	if owner_dialogue_label == null:
-		return
 	var key := owner_dialogue_override_key
 	if key.is_empty():
 		key = state.owner_dialogue_key(store_id)
@@ -323,7 +313,7 @@ func _refresh_owner_dialogue() -> void:
 
 func set_highlight_rule(rule: CardSlotRule) -> void:
 	highlight_rule = rule
-	if store_id == &"recycling" or transaction == null:
+	if transaction == null:
 		return
 	for slot_id in shelf_buttons:
 		_apply_shelf_highlight(shelf_buttons[slot_id] as Button, transaction.shelf_slot(slot_id))
@@ -343,32 +333,26 @@ func _apply_shelf_highlight(button: Button, slot: ShelfSlotState) -> void:
 		UiPalette.panel_style(
 			Color("122326", 0.98) if matches else Color("0b1519", 0.96),
 			Color("e4eee7") if matches else Color("627a76", 0.78),
-		)
+		),
 	)
 
 
 func _on_checkout_pressed() -> void:
-	var result := (
-		state.checkout_recycle()
-		if store_id == &"recycling"
-		else state.checkout_store(store_id)
-	)
+	var result := state.checkout_store(store_id)
 	feedback_label.text = TranslationServer.translate(
-		&"quest.ui.recycle.done" if result.ok and store_id == &"recycling"
-		else &"quest.ui.shop.done" if result.ok
+		&"quest.ui.shop.done" if result.ok
 		else &"quest.ui.shop.no_money" if result.reason == CardShopTransaction.RESULT_INSUFFICIENT_FUNDS
 		else &"quest.ui.shop.empty"
 	)
+	if result.ok:
+		shelf_popup.visible = false
 	refresh()
 
 
 func _owner_texture() -> Texture2D:
 	var paths := {
-		&"toy": "res://resources/character/balloon-head.png",
 		&"flower": "res://resources/character/flower-head.png",
-		&"fast_food": "res://resources/character/rat-head.png",
 		&"record": "res://resources/character/phonograph-head.png",
-		&"book": "res://resources/character/manga-head.png",
 	}
 	var path := String(paths.get(store_id, ""))
 	return load(path) as Texture2D if not path.is_empty() else null
@@ -376,11 +360,8 @@ func _owner_texture() -> Texture2D:
 
 func _store_background_texture() -> Texture2D:
 	var paths := {
-		&"toy": "res://resources/background/toystore.png",
-		&"flower": "res://resources/background/flowerstore.jpg",
-		&"fast_food": "res://resources/background/food.png",
+		&"flower": "res://resources/background/flowerstore.png",
 		&"record": "res://resources/background/musicstore.png",
-		&"book": "res://resources/background/bookstore.png",
 	}
 	var path := String(paths.get(store_id, ""))
 	return load(path) as Texture2D if not path.is_empty() else null

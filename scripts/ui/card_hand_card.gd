@@ -8,7 +8,7 @@ signal drag_finished(card: CardItemState, succeeded: bool)
 var card: CardItemState
 var definition: CardItemDefinition
 var title_label: Label
-var aspect_label: Label
+var item_image: TextureRect
 var drag_enabled := true
 var drag_in_progress := false
 var drag_origin_location: CardItemState.Location = CardItemState.Location.HAND
@@ -16,6 +16,7 @@ var drag_origin_activity_id: StringName
 var drag_origin_slot_id: StringName
 var drag_origin_self_modulate := Color.WHITE
 var drag_origin_mouse_filter := Control.MOUSE_FILTER_PASS
+var drag_origin_visible := true
 var drag_origin_global_position := Vector2.ZERO
 var drag_grab_position := Vector2.ZERO
 var click_candidate := false
@@ -38,31 +39,34 @@ func setup(
 
 
 func _ready() -> void:
-	custom_minimum_size = Vector2(150, 92)
+	custom_minimum_size = Vector2(112, 128)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	mouse_default_cursor_shape = Control.CURSOR_DRAG
 	var margin := MarginContainer.new()
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	margin.add_theme_constant_override("margin_left", 10)
-	margin.add_theme_constant_override("margin_right", 10)
+	margin.add_theme_constant_override("margin_left", 8)
+	margin.add_theme_constant_override("margin_right", 8)
 	margin.add_theme_constant_override("margin_top", 8)
-	margin.add_theme_constant_override("margin_bottom", 8)
+	margin.add_theme_constant_override("margin_bottom", 7)
 	add_child(margin)
 	var column := VBoxContainer.new()
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_theme_constant_override("separation", 7)
+	column.add_theme_constant_override("separation", 5)
 	margin.add_child(column)
+	item_image = TextureRect.new()
+	item_image.custom_minimum_size = Vector2(92, 88)
+	item_image.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	item_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	item_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	item_image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(item_image)
 	title_label = Label.new()
 	title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	title_label.add_theme_font_size_override("font_size", 14)
+	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title_label.add_theme_font_size_override("font_size", 13)
 	title_label.add_theme_color_override("font_color", Color("d9e7df"))
 	column.add_child(title_label)
-	aspect_label = Label.new()
-	aspect_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	aspect_label.add_theme_font_size_override("font_size", 12)
-	aspect_label.add_theme_color_override("font_color", Color("a7b9b3"))
-	column.add_child(aspect_label)
 	_refresh()
 
 
@@ -70,15 +74,7 @@ func _refresh() -> void:
 	if title_label == null or definition == null:
 		return
 	title_label.text = definition.localized_name()
-	var aspects := PackedStringArray()
-	for aspect in CardPropertySet.ASPECTS:
-		var value := definition.property_value(aspect)
-		if value > 0:
-			aspects.append("%s %d" % [
-				TranslationServer.translate(StringName("slot.aspect.%s" % aspect)),
-				value,
-			])
-	aspect_label.text = " · ".join(aspects)
+	item_image.texture = definition.image
 	_apply_card_style()
 
 
@@ -114,7 +110,11 @@ func apply_rule_highlight(rule: CardSlotRule) -> void:
 
 
 func _apply_card_style() -> void:
-	var style := UiPalette.panel_style(Color("10191d", 0.98), _border_color())
+	var style := UiPalette.panel_style(Color("050708", 0.99), _border_color())
+	style.corner_radius_top_left = 4
+	style.corner_radius_top_right = 4
+	style.corner_radius_bottom_left = 4
+	style.corner_radius_bottom_right = 4
 	if rule_match_highlighted:
 		style.border_color = _border_color().lerp(Color.WHITE, 0.78)
 		style.set_border_width_all(2)
@@ -168,6 +168,8 @@ func _build_drag_preview(grab_position: Vector2) -> CardHandCard:
 	preview.position = -grab_position
 	preview.modulate = modulate
 	preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	preview.z_index = 4096
+	preview.z_as_relative = false
 	return preview
 
 
@@ -179,12 +181,14 @@ func _begin_drag_visual(grab_position: Vector2 = size * 0.5) -> void:
 	drag_origin_slot_id = card.slot_id
 	drag_origin_self_modulate = self_modulate
 	drag_origin_mouse_filter = mouse_filter
+	drag_origin_visible = visible
 	drag_origin_global_position = get_global_rect().position
 	drag_grab_position = grab_position
 	var transparent := self_modulate
 	transparent.a = 0.0
 	self_modulate = transparent
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	visible = false
 	drag_started.emit(card)
 
 
@@ -193,9 +197,6 @@ func _end_drag_visual(drag_succeeded: bool) -> void:
 	drag_finished.emit(card, drag_succeeded)
 	if not drag_succeeded:
 		_animate_return_to_origin()
-	elif _card_remained_at_drag_origin():
-		self_modulate = drag_origin_self_modulate
-		mouse_filter = drag_origin_mouse_filter
 
 
 func _animate_return_to_origin() -> void:
@@ -230,6 +231,7 @@ func _restore_after_drag() -> void:
 	return_animation_active = false
 	self_modulate = drag_origin_self_modulate
 	mouse_filter = drag_origin_mouse_filter
+	visible = drag_origin_visible
 
 
 func _card_remained_at_drag_origin() -> bool:

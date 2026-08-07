@@ -5,6 +5,7 @@ extends Resource
 @export_range(1, 20, 1) var maximum_item_price := 20
 @export_range(1, 8, 1) var maximum_properties_per_item := 4
 @export_range(1, 4, 1) var maximum_aspects_per_item := 2
+@export var starting_item_ids: Array[StringName] = []
 @export var properties: Array[Resource] = []
 @export var items: Array[Resource] = []
 @export var tasks: Array[Resource] = []
@@ -22,6 +23,9 @@ func validation_errors() -> PackedStringArray:
 	var recipes_by_id := _resources_by_id(recipes, "recipe", errors)
 	var stores_by_id := _resources_by_id(stores, "store", errors)
 	var unlocks_by_id := _resources_by_id(store_unlocks, "store unlock", errors)
+	for item_id in starting_item_ids:
+		if not items_by_id.has(item_id):
+			errors.append("Starting inventory references missing item %s." % item_id)
 	var owners_by_id := _resources_by_id(owners, "owner", errors)
 	_validate_resources(properties, errors)
 	_validate_resources(items, errors)

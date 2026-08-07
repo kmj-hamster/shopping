@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="StoreDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/store_definition.gd" id="1_store"]
+
+[resource]
+script = ExtResource("1_store")
+id = &"record"
+display_name_key = &"demo.store.record.name"
+owner_id = &"record_owner"
+unlock_definition_id = &"unlock_record_with_sunflower"

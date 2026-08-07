@@ -87,6 +87,7 @@ func select_shelf_slot(slot_id: StringName) -> Dictionary:
 		return _result(false, RESULT_SLOT_EMPTY)
 	if selected_shelf_slot_ids.has(slot_id):
 		return _result(false, RESULT_ALREADY_SELECTED)
+	selected_shelf_slot_ids.clear()
 	selected_shelf_slot_ids.append(slot_id)
 	state_changed.emit()
 	return _result(true, RESULT_OK)

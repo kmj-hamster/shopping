@@ -26,8 +26,10 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	z_index = 20
 	bookmark_column = VBoxContainer.new()
-	bookmark_column.position = Vector2(0, 118)
-	bookmark_column.size = Vector2(164, 430)
+	bookmark_column.anchor_left = 0.026
+	bookmark_column.anchor_top = 0.17
+	bookmark_column.anchor_right = 0.172
+	bookmark_column.anchor_bottom = 0.68
 	bookmark_column.add_theme_constant_override("separation", 7)
 	bookmark_column.mouse_filter = Control.MOUSE_FILTER_PASS
 	add_child(bookmark_column)
@@ -50,13 +52,14 @@ func refresh() -> void:
 	for task in state.active_tasks():
 		var definition := QuestArcCatalog.task_by_id(task.definition_id)
 		var bookmark := Button.new()
-		bookmark.custom_minimum_size = Vector2(154, 52)
+		bookmark.custom_minimum_size = Vector2(0, 48)
+		bookmark.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		bookmark.text = TranslationServer.translate(definition.display_name_key)
-		bookmark.tooltip_text = TranslationServer.translate(definition.body_text_key)
+		bookmark.tooltip_text = ""
 		bookmark.pressed.connect(_toggle_task.bind(task.instance_id))
 		var border := Color("83b6a6") if task.confirmed else Color("6d766d")
 		bookmark.add_theme_stylebox_override(
-			"normal", UiPalette.panel_style(Color("071317", 0.95), border)
+			"normal", UiPalette.panel_style(Color("0b2528", 0.92), border)
 		)
 		bookmark_column.add_child(bookmark)
 	if open_task_instance_id > 0:

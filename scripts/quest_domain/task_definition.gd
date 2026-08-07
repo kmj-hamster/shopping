@@ -12,11 +12,17 @@ enum SettlementMode {
 	OWNER_IMMEDIATE,
 }
 
+enum SlotMode {
+	ALL,
+	ANY,
+}
+
 @export var id: StringName
 @export var display_name_key: StringName
 @export var body_text_key: StringName
 @export var category := Category.ORDER
 @export var settlement_mode := SettlementMode.ARC
+@export var slot_mode := SlotMode.ALL
 @export_range(1, 999, 1) var activation_day := 1
 @export var owner_id: StringName
 @export var store_id: StringName

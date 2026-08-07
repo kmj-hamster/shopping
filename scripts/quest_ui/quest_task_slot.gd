@@ -103,4 +103,4 @@ func _drop_data(_at_position: Vector2, data: Variant) -> void:
 func _on_gui_input(event: InputEvent) -> void:
 	var click := event as InputEventMouseButton
 	if click != null and click.button_index == MOUSE_BUTTON_LEFT and click.pressed:
-		rule_focused.emit(null if task.confirmed else rule)
+		rule_focused.emit(rule)

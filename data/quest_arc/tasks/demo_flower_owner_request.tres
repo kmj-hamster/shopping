@@ -1,0 +1,65 @@
+[gd_resource type="Resource" script_class="TaskDefinition" load_steps=12 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/task_definition.gd" id="1_task"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_slot_rule.gd" id="2_rule"]
+[ext_resource type="Script" path="res://scripts/quest_domain/task_outcome_definition.gd" id="3_outcome"]
+[ext_resource type="Script" path="res://scripts/quest_domain/story_condition.gd" id="4_condition"]
+[ext_resource type="Script" path="res://scripts/quest_domain/story_effect.gd" id="5_effect"]
+
+[sub_resource type="Resource" id="ScissorsRule"]
+script = ExtResource("2_rule")
+id = &"trim"
+display_name_key = &"demo.task.flower_owner.slot.trim"
+accepted_item_ids = Array[StringName]([&"scissors"])
+
+[sub_resource type="Resource" id="DrinkRule"]
+script = ExtResource("2_rule")
+id = &"nourish"
+display_name_key = &"demo.task.flower_owner.slot.nourish"
+accepted_item_ids = Array[StringName]([&"agave"])
+
+[sub_resource type="Resource" id="ScissorsCondition"]
+script = ExtResource("4_condition")
+kind = 4
+item_ids = Array[StringName]([&"scissors"])
+
+[sub_resource type="Resource" id="TrimmedState"]
+script = ExtResource("5_effect")
+kind = 5
+target_id = &"flower_owner"
+text_value = &"trimmed"
+
+[sub_resource type="Resource" id="TrimmedOutcome"]
+script = ExtResource("3_outcome")
+id = &"trimmed"
+result_text_key = &"demo.task.flower_owner.result.trimmed"
+priority = 10
+conditions = Array[Resource]([SubResource("ScissorsCondition")])
+effects = Array[Resource]([SubResource("TrimmedState")])
+
+[sub_resource type="Resource" id="BloomingState"]
+script = ExtResource("5_effect")
+kind = 5
+target_id = &"flower_owner"
+text_value = &"blooming"
+
+[sub_resource type="Resource" id="BloomingOutcome"]
+script = ExtResource("3_outcome")
+id = &"blooming"
+result_text_key = &"demo.task.flower_owner.result.blooming"
+is_fallback = true
+effects = Array[Resource]([SubResource("BloomingState")])
+
+[resource]
+script = ExtResource("1_task")
+id = &"flower_owner_request"
+display_name_key = &"demo.task.flower_owner.name"
+body_text_key = &"demo.task.flower_owner.body"
+category = 2
+settlement_mode = 1
+slot_mode = 1
+activation_day = 1
+owner_id = &"flower_owner"
+store_id = &"flower"
+slot_rules = Array[Resource]([SubResource("ScissorsRule"), SubResource("DrinkRule")])
+outcomes = Array[Resource]([SubResource("TrimmedOutcome"), SubResource("BloomingOutcome")])

@@ -31,16 +31,22 @@ func validation_errors() -> PackedStringArray:
 		errors.append("Owner needs id, store, and display name: %s." % id)
 	if idle_dialogue_key.is_empty() or item_comment_key.is_empty():
 		errors.append("Owner %s needs idle and item-comment dialogue." % id)
-	var request_fields := [
+	var required_request_fields := [
 		request_available_flag,
 		request_task_id,
 		request_dialogue_key,
 		reminder_dialogue_key,
-		request_recipe_id,
-		event_item_id,
-		event_item_store_id,
 	]
-	var populated := request_fields.count(&"") < request_fields.size()
-	if populated and request_fields.any(func(value: StringName) -> bool: return value.is_empty()):
+	var has_request := required_request_fields.any(
+		func(value: StringName) -> bool: return not value.is_empty()
+	)
+	if has_request and required_request_fields.any(
+		func(value: StringName) -> bool: return value.is_empty()
+	):
 		errors.append("Owner %s has an incomplete request definition." % id)
+	var event_fields := [event_item_id, event_item_store_id]
+	if event_fields.any(func(value: StringName) -> bool: return not value.is_empty()) and event_fields.any(
+		func(value: StringName) -> bool: return value.is_empty()
+	):
+		errors.append("Owner %s has an incomplete event item definition." % id)
 	return errors

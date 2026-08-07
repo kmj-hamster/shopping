@@ -33,7 +33,7 @@ var known_recipe_hint_ids: Dictionary = {}
 var discovered_recipe_ids: Dictionary = {}
 var owner_states: Dictionary = {}
 var pending_arc: ArcTransitionState
-var synthesis_recipe_id: StringName = &"recipe_teddy"
+var synthesis_recipe_id: StringName = &"recipe_scissors"
 var synthesis_assignments: Dictionary = {}
 var active_synthesis: ActiveSynthesisState
 var store_transactions: Dictionary = {}
@@ -53,10 +53,10 @@ func reset() -> void:
 	inventory = []
 	task_instances = []
 	task_history = {}
-	story_flags = {}
+	story_flags = {&"flower_request_available": &"true"}
 	protagonist_aspect_counts = {}
-	for aspect in CardPropertySet.ASPECTS:
-		protagonist_aspect_counts[aspect] = 0
+	for stat_id in CardPropertySet.PROTAGONIST_STATS:
+		protagonist_aspect_counts[stat_id] = 0
 	unlocked_store_ids = {}
 	if content != null:
 		for raw_store in content.stores:
@@ -67,12 +67,15 @@ func reset() -> void:
 	discovered_recipe_ids = {}
 	owner_states = {}
 	pending_arc = null
-	synthesis_recipe_id = &"recipe_teddy"
+	synthesis_recipe_id = &"recipe_scissors"
 	synthesis_assignments = {}
 	active_synthesis = null
 	next_card_instance_id = 1
 	next_task_instance_id = 1
 	_build_commerce()
+	if content != null:
+		for item_id in content.starting_item_ids:
+			grant_item(item_id, &"demo_start")
 	activate_scheduled_tasks(day)
 	state_changed.emit()
 
@@ -400,6 +403,20 @@ func select_synthesis_recipe(recipe_id: StringName) -> bool:
 	return true
 
 
+func clear_synthesis_assignments() -> bool:
+	if active_synthesis != null:
+		return false
+	if synthesis_assignments.is_empty():
+		return true
+	for card_id in synthesis_assignments.values():
+		var card := card_by_instance_id(int(card_id))
+		if card != null:
+			card.return_to_hand()
+	synthesis_assignments.clear()
+	state_changed.emit()
+	return true
+
+
 func recipe_is_available(recipe_id: StringName) -> bool:
 	var recipe := QuestArcCatalog.recipe_by_id(recipe_id)
 	if recipe == null:
@@ -525,6 +542,7 @@ func task_evaluation(task_instance_id: int) -> Dictionary:
 	var items: Array[CardItemDefinition] = []
 	var slot_results: Array[Dictionary] = []
 	var ready := definition != null and not definition.slot_rules.is_empty()
+	var executable_slot_count := 0
 	for raw_rule in definition.slot_rules if definition != null else []:
 		var rule := raw_rule as CardSlotRule
 		var card := card_by_instance_id(instance.assigned_instance_id(rule.id))
@@ -532,7 +550,11 @@ func task_evaluation(task_instance_id: int) -> Dictionary:
 		var evaluation := CardRuleEvaluator.evaluate(rule, item)
 		slot_results.append(evaluation)
 		items.append(item)
-		ready = ready and evaluation.can_execute
+		executable_slot_count += int(evaluation.can_execute)
+		if definition.slot_mode == TaskDefinition.SlotMode.ALL:
+			ready = ready and evaluation.can_execute
+	if definition != null and definition.slot_mode == TaskDefinition.SlotMode.ANY:
+		ready = executable_slot_count > 0
 	var outcome := QuestArcRules.outcome_for(
 		definition,
 		items,
@@ -566,13 +588,9 @@ func confirm_task(task_instance_id: int) -> Dictionary:
 
 
 func cancel_task_confirmation(task_instance_id: int) -> bool:
-	var instance := task_instance(task_instance_id)
-	if instance == null or not instance.confirmed or pending_arc != null:
-		return false
-	instance.confirmed = false
-	instance.resolved_outcome_id = &""
-	state_changed.emit()
-	return true
+	# shopping0807 treats submission as a permanent choice.
+	# Keep this API for save compatibility, but never reopen a submitted task.
+	return false
 
 
 func begin_next_day() -> Dictionary:
@@ -588,12 +606,32 @@ func begin_next_day() -> Dictionary:
 		var outcome := definition.outcome_by_id(instance.resolved_outcome_id)
 		if outcome == null:
 			return _result(false, RESULT_NOT_READY)
+		var item_definition_ids: Array[StringName] = []
+		for card_id in instance.assigned_instance_ids():
+			var card := card_by_instance_id(card_id)
+			if card != null:
+				item_definition_ids.append(card.definition_id)
+		var reward_money := 0
+		var reward_stats: Dictionary = {}
+		for raw_effect in outcome.effects:
+			var effect := raw_effect as StoryEffect
+			if effect == null:
+				continue
+			if effect.kind == StoryEffect.Kind.ADD_MONEY:
+				reward_money += effect.amount
+			elif effect.kind == StoryEffect.Kind.ADD_PROTAGONIST_ASPECT:
+				reward_stats[effect.target_id] = int(
+					reward_stats.get(effect.target_id, 0)
+				) + effect.amount
 		entries.append({
 			"task_instance_id": instance.instance_id,
 			"task_definition_id": definition.id,
 			"outcome_id": outcome.id,
 			"result_text_key": outcome.result_text_key,
 			"card_instance_ids": instance.assigned_instance_ids(),
+			"item_definition_ids": item_definition_ids,
+			"reward_money": reward_money,
+			"reward_stats": reward_stats,
 		})
 	pending_arc = ArcTransitionState.new(day, entries)
 	state_changed.emit()
@@ -646,10 +684,6 @@ func apply_arc_effects() -> Dictionary:
 		var outcome := resolved.outcome as TaskOutcomeDefinition
 		var consumed_items: Array[QuestItemDefinition] = []
 		consumed_items.assign(resolved.items)
-		if definition.category == TaskDefinition.Category.SELF_CARE:
-			for item in consumed_items:
-				for aspect in item.property_set.present_aspects():
-					protagonist_aspect_counts[aspect] = int(protagonist_aspect_counts.get(aspect, 0)) + 1
 		for raw_effect in outcome.effects:
 			_apply_story_effect(raw_effect as StoryEffect)
 		for raw_card in resolved.cards:

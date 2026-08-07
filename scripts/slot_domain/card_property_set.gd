@@ -11,6 +11,12 @@ const ASPECTS: Array[StringName] = [
 	ASPECT_CANDLE,
 	ASPECT_PILLOW,
 ]
+const PROTAGONIST_STATS: Array[StringName] = [
+	&"fantasy",
+	&"memory",
+	&"electric",
+	&"soft",
+]
 
 @export var values: Dictionary = {}
 @export var tags: Array[StringName] = []

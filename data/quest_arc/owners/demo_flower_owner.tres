@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="OwnerDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/owner_definition.gd" id="1_owner"]
+
+[resource]
+script = ExtResource("1_owner")
+id = &"flower_owner"
+store_id = &"flower"
+display_name_key = &"demo.owner.flower.name"
+idle_dialogue_key = &"demo.owner.flower.idle"
+item_comment_key = &"demo.owner.flower.item_comment"
+request_available_flag = &"flower_request_available"
+request_task_id = &"flower_owner_request"
+request_dialogue_key = &"demo.owner.flower.request"
+reminder_dialogue_key = &"demo.owner.flower.reminder"
+request_recipe_id = &"recipe_scissors"
+event_item_id = &"cola"
+event_item_store_id = &"flower"
+event_item_page = 2
+state_dialogue_keys = {&"blooming": &"demo.owner.flower.state.blooming", &"trimmed": &"demo.owner.flower.state.trimmed"}

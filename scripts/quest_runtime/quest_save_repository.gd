@@ -1,9 +1,9 @@
 class_name QuestSaveRepository
 extends RefCounted
 
-const SAVE_VERSION := 3
-const CONTENT_VERSION := "quest-arc-1"
-const DEFAULT_PATH := "user://save_quest_arc_v3.json"
+const SAVE_VERSION := 4
+const CONTENT_VERSION := "shopping0807-demo-1"
+const DEFAULT_PATH := "user://save_shopping0807_v1.json"
 
 var save_path: String
 
@@ -55,15 +55,21 @@ func erase() -> bool:
 func to_dictionary(state: QuestGameState) -> Dictionary:
 	var cards: Array[Dictionary] = []
 	for card in state.inventory:
+		var is_temporary_synthesis_card := (
+			card.location == CardItemState.Location.ACTIVITY_SLOT
+			and QuestArcCatalog.recipe_by_id(card.activity_id) != null
+		)
 		cards.append({
 			"instance_id": card.instance_id,
 			"definition_id": String(card.definition_id),
 			"acquired_day": card.acquired_day,
 			"acquisition_source": String(card.acquisition_source),
 			"purchase_price": card.purchase_price,
-			"location": card.location,
-			"activity_id": String(card.activity_id),
-			"slot_id": String(card.slot_id),
+			"location": (
+				CardItemState.Location.HAND if is_temporary_synthesis_card else card.location
+			),
+			"activity_id": "" if is_temporary_synthesis_card else String(card.activity_id),
+			"slot_id": "" if is_temporary_synthesis_card else String(card.slot_id),
 			"use_count": card.use_count,
 		})
 	var tasks: Array[Dictionary] = []
@@ -96,8 +102,6 @@ func to_dictionary(state: QuestGameState) -> Dictionary:
 		"pending_arc": _serialize_arc(state.pending_arc),
 		"commerce": state.commerce_snapshot(),
 		"synthesis_recipe_id": String(state.synthesis_recipe_id),
-		"synthesis_assignments": _string_int_dictionary(state.synthesis_assignments),
-		"active_synthesis": _serialize_synthesis(state.active_synthesis),
 	}
 
 
@@ -147,19 +151,24 @@ func _restore(state: QuestGameState, payload: Dictionary) -> bool:
 	state.protagonist_aspect_counts = _name_int_dictionary(
 		payload.get("protagonist_aspect_counts", {})
 	)
-	for aspect in CardPropertySet.ASPECTS:
-		if not state.protagonist_aspect_counts.has(aspect):
-			state.protagonist_aspect_counts[aspect] = 0
+	for stat_id in CardPropertySet.PROTAGONIST_STATS:
+		if not state.protagonist_aspect_counts.has(stat_id):
+			state.protagonist_aspect_counts[stat_id] = 0
 	state.unlocked_store_ids = _name_set(payload.get("unlocked_store_ids", []))
 	state.known_recipe_hint_ids = _name_set(payload.get("known_recipe_hint_ids", []))
 	state.discovered_recipe_ids = _name_set(payload.get("discovered_recipe_ids", []))
 	state.owner_states = _name_dictionary(payload.get("owner_states", {}))
 	state.pending_arc = _restore_arc(payload.get("pending_arc", {}))
-	state.synthesis_recipe_id = StringName(payload.get("synthesis_recipe_id", "recipe_teddy"))
+	state.synthesis_recipe_id = StringName(payload.get("synthesis_recipe_id", "recipe_scissors"))
 	if QuestArcCatalog.recipe_by_id(state.synthesis_recipe_id) == null:
 		return false
-	state.synthesis_assignments = _name_int_dictionary(payload.get("synthesis_assignments", {}))
-	state.active_synthesis = _restore_synthesis(payload.get("active_synthesis", {}))
+	# shopping0807 treats synthesis placement as a screen-local draft.
+	# Older compatible saves may contain these fields; return their cards to hand.
+	state.synthesis_assignments = {}
+	state.active_synthesis = null
+	for card in state.inventory:
+		if QuestArcCatalog.recipe_by_id(card.activity_id) != null:
+			card.return_to_hand()
 	state.next_card_instance_id = maxi(
 		int(payload.get("next_card_instance_id", 1)),
 		_next_card_id(state.inventory),
@@ -192,67 +201,7 @@ func _assignments_are_valid(state: QuestGameState) -> bool:
 			):
 				return false
 			assigned_card_ids[card_id] = true
-	var recipe := QuestArcCatalog.recipe_by_id(state.synthesis_recipe_id)
-	for raw_slot_id in state.synthesis_assignments:
-		var slot_id := StringName(raw_slot_id)
-		var card_id := int(state.synthesis_assignments[raw_slot_id])
-		var card := state.card_by_instance_id(card_id)
-		if (
-			assigned_card_ids.has(card_id)
-			or card == null
-			or card.location != CardItemState.Location.ACTIVITY_SLOT
-			or card.activity_id != state.synthesis_recipe_id
-			or not _recipe_has_slot(recipe, slot_id)
-		):
-			return false
-		assigned_card_ids[card_id] = true
-	if state.active_synthesis != null:
-		if state.active_synthesis.recipe_id != state.synthesis_recipe_id:
-			return false
-		for card_id in state.active_synthesis.input_instance_ids:
-			if not assigned_card_ids.has(card_id):
-				return false
 	return true
-
-
-func _recipe_has_slot(recipe: SynthesisRecipeDefinition, slot_id: StringName) -> bool:
-	if recipe == null:
-		return false
-	for raw_rule in recipe.slot_rules:
-		if (raw_rule as CardSlotRule).id == slot_id:
-			return true
-	return false
-
-
-func _serialize_synthesis(active: ActiveSynthesisState) -> Dictionary:
-	if active == null:
-		return {}
-	return {
-		"recipe_id": String(active.recipe_id),
-		"input_instance_ids": active.input_instance_ids.duplicate(),
-		"output_id": String(active.output_id),
-		"preview_key": String(active.preview_key),
-		"duration_seconds": active.duration_seconds,
-		"remaining_seconds": active.remaining_seconds,
-	}
-
-
-func _restore_synthesis(data: Dictionary) -> ActiveSynthesisState:
-	if data.is_empty():
-		return null
-	var active := ActiveSynthesisState.new(
-		StringName(data.get("recipe_id", "")),
-		_int_array(data.get("input_instance_ids", [])),
-		StringName(data.get("output_id", "")),
-		StringName(data.get("preview_key", "")),
-		float(data.get("duration_seconds", 0.0)),
-	)
-	active.remaining_seconds = clampf(
-		float(data.get("remaining_seconds", active.duration_seconds)),
-		0.0,
-		active.duration_seconds,
-	)
-	return active
 
 
 func _serialize_arc(arc: ArcTransitionState) -> Dictionary:
@@ -261,11 +210,14 @@ func _serialize_arc(arc: ArcTransitionState) -> Dictionary:
 	var entries: Array[Dictionary] = []
 	for entry in arc.entries:
 		entries.append({
-			"task_instance_id": int(entry.task_instance_id),
-			"task_definition_id": String(entry.task_definition_id),
-			"outcome_id": String(entry.outcome_id),
-			"result_text_key": String(entry.result_text_key),
-			"card_instance_ids": _int_array(entry.card_instance_ids),
+			"task_instance_id": int(entry.get("task_instance_id", 0)),
+			"task_definition_id": String(entry.get("task_definition_id", "")),
+			"outcome_id": String(entry.get("outcome_id", "")),
+			"result_text_key": String(entry.get("result_text_key", "")),
+			"card_instance_ids": _int_array(entry.get("card_instance_ids", [])),
+			"item_definition_ids": _string_array(entry.get("item_definition_ids", [])),
+			"reward_money": int(entry.get("reward_money", 0)),
+			"reward_stats": _string_int_dictionary(entry.get("reward_stats", {})),
 		})
 	return {
 		"from_day": arc.from_day,
@@ -287,6 +239,9 @@ func _restore_arc(data: Dictionary) -> ArcTransitionState:
 			"outcome_id": StringName(entry.get("outcome_id", "")),
 			"result_text_key": StringName(entry.get("result_text_key", "")),
 			"card_instance_ids": _int_array(entry.get("card_instance_ids", [])),
+			"item_definition_ids": _name_array(entry.get("item_definition_ids", [])),
+			"reward_money": int(entry.get("reward_money", 0)),
+			"reward_stats": _name_int_dictionary(entry.get("reward_stats", {})),
 		})
 	var arc := ArcTransitionState.new(int(data.get("from_day", 1)), entries)
 	arc.effects_applied = bool(data.get("effects_applied", false))
@@ -321,6 +276,13 @@ func _int_array(values: Array) -> Array[int]:
 	var result: Array[int] = []
 	for value in values:
 		result.append(int(value))
+	return result
+
+
+func _name_array(values: Array) -> Array[StringName]:
+	var result: Array[StringName] = []
+	for value in values:
+		result.append(StringName(value))
 	return result
 
 

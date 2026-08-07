@@ -9,6 +9,7 @@ var card_row: HBoxContainer
 var empty_label: Label
 var title_label: Label
 var card_views: Dictionary = {}
+var temporarily_hidden_card_ids: Dictionary = {}
 var refresh_queued := false
 
 
@@ -23,16 +24,16 @@ func setup(game_state: QuestGameState) -> void:
 
 
 func _ready() -> void:
-	custom_minimum_size = Vector2(0, 132)
+	custom_minimum_size = Vector2(0, 150)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	add_theme_stylebox_override(
-		"panel", UiPalette.panel_style(Color("020609", 0.97), Color("4f6968", 0.86))
+		"panel", UiPalette.panel_style(Color("020609", 0.94), Color("4f6968", 0.76))
 	)
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 20)
-	margin.add_theme_constant_override("margin_right", 116)
-	margin.add_theme_constant_override("margin_top", 8)
-	margin.add_theme_constant_override("margin_bottom", 8)
+	margin.add_theme_constant_override("margin_right", 20)
+	margin.add_theme_constant_override("margin_top", 7)
+	margin.add_theme_constant_override("margin_bottom", 7)
 	add_child(margin)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 4)
@@ -40,9 +41,10 @@ func _ready() -> void:
 	title_label = Label.new()
 	title_label.add_theme_font_size_override("font_size", 12)
 	title_label.add_theme_color_override("font_color", Color("8ca49f"))
+	title_label.visible = false
 	column.add_child(title_label)
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(0, 94)
+	scroll.custom_minimum_size = Vector2(0, 132)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	column.add_child(scroll)
@@ -65,6 +67,8 @@ func refresh() -> void:
 	for card in state.inventory:
 		if card.location != CardItemState.Location.HAND:
 			continue
+		if temporarily_hidden_card_ids.has(card.instance_id):
+			continue
 		var definition := QuestArcCatalog.item_by_id(card.definition_id)
 		if definition == null:
 			continue
@@ -76,7 +80,7 @@ func refresh() -> void:
 		card_views[card.instance_id] = view
 	if card_views.is_empty():
 		empty_label = Label.new()
-		empty_label.custom_minimum_size = Vector2(260, 86)
+		empty_label.custom_minimum_size = Vector2(260, 126)
 		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		empty_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		empty_label.add_theme_color_override("font_color", Color("60736f"))
@@ -88,6 +92,23 @@ func set_highlight_rule(rule: CardSlotRule) -> void:
 	highlight_rule = rule
 	for view in card_views.values():
 		(view as CardHandCard).apply_rule_highlight(rule)
+
+
+func set_card_temporarily_hidden(card: CardItemState, hidden: bool) -> void:
+	if card == null:
+		return
+	if hidden:
+		temporarily_hidden_card_ids[card.instance_id] = true
+	else:
+		temporarily_hidden_card_ids.erase(card.instance_id)
+	refresh()
+
+
+func clear_temporarily_hidden_cards() -> void:
+	if temporarily_hidden_card_ids.is_empty():
+		return
+	temporarily_hidden_card_ids.clear()
+	refresh()
 
 
 func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:

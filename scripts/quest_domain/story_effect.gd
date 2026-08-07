@@ -25,7 +25,7 @@ func validation_errors() -> PackedStringArray:
 			if amount < 0:
 				errors.append("Money effects cannot remove money in this content layer.")
 		Kind.ADD_PROTAGONIST_ASPECT:
-			if target_id not in CardPropertySet.ASPECTS or amount <= 0:
+			if target_id not in CardPropertySet.PROTAGONIST_STATS or amount <= 0:
 				errors.append("Aspect effects need a known aspect and positive amount.")
 		Kind.SET_FLAG:
 			if target_id.is_empty() or text_value.is_empty():

@@ -1,0 +1,52 @@
+[gd_resource type="Resource" script_class="TaskDefinition" load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/task_definition.gd" id="1_task"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_slot_rule.gd" id="2_rule"]
+[ext_resource type="Script" path="res://scripts/quest_domain/task_outcome_definition.gd" id="3_outcome"]
+[ext_resource type="Script" path="res://scripts/quest_domain/story_condition.gd" id="4_condition"]
+[ext_resource type="Script" path="res://scripts/quest_domain/story_effect.gd" id="5_effect"]
+
+[sub_resource type="Resource" id="Rule"]
+script = ExtResource("2_rule")
+id = &"food"
+display_name_key = &"demo.task.girl.slot"
+required_all = Array[StringName]([&"food"])
+
+[sub_resource type="Resource" id="SaltyCondition"]
+script = ExtResource("4_condition")
+kind = 5
+key = &"salty"
+
+[sub_resource type="Resource" id="BonusMoney"]
+script = ExtResource("5_effect")
+kind = 0
+amount = 12
+
+[sub_resource type="Resource" id="SaltyOutcome"]
+script = ExtResource("3_outcome")
+id = &"salty"
+result_text_key = &"demo.task.girl.result.salty"
+priority = 10
+conditions = Array[Resource]([SubResource("SaltyCondition")])
+effects = Array[Resource]([SubResource("BonusMoney")])
+
+[sub_resource type="Resource" id="PlainMoney"]
+script = ExtResource("5_effect")
+kind = 0
+amount = 8
+
+[sub_resource type="Resource" id="PlainOutcome"]
+script = ExtResource("3_outcome")
+id = &"plain"
+result_text_key = &"demo.task.girl.result.plain"
+is_fallback = true
+effects = Array[Resource]([SubResource("PlainMoney")])
+
+[resource]
+script = ExtResource("1_task")
+id = &"girl_order"
+display_name_key = &"demo.task.girl.name"
+body_text_key = &"demo.task.girl.body"
+activation_day = 1
+slot_rules = Array[Resource]([SubResource("Rule")])
+outcomes = Array[Resource]([SubResource("SaltyOutcome"), SubResource("PlainOutcome")])

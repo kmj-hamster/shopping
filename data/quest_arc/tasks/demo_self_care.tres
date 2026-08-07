@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="TaskDefinition" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/task_definition.gd" id="1_task"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_slot_rule.gd" id="2_rule"]
+[ext_resource type="Script" path="res://scripts/quest_domain/task_outcome_definition.gd" id="3_outcome"]
+[ext_resource type="Script" path="res://scripts/quest_domain/story_effect.gd" id="4_effect"]
+
+[sub_resource type="Resource" id="Rule"]
+script = ExtResource("2_rule")
+id = &"drink"
+display_name_key = &"demo.task.self_care.slot"
+required_all = Array[StringName]([&"drink"])
+
+[sub_resource type="Resource" id="FantasyEffect"]
+script = ExtResource("4_effect")
+kind = 2
+target_id = &"fantasy"
+amount = 1
+
+[sub_resource type="Resource" id="Outcome"]
+script = ExtResource("3_outcome")
+id = &"sleep"
+result_text_key = &"demo.task.self_care.result"
+is_fallback = true
+effects = Array[Resource]([SubResource("FantasyEffect")])
+
+[resource]
+script = ExtResource("1_task")
+id = &"self_care"
+display_name_key = &"demo.task.self_care.name"
+body_text_key = &"demo.task.self_care.body"
+category = 1
+activation_day = 1
+slot_rules = Array[Resource]([SubResource("Rule")])
+outcomes = Array[Resource]([SubResource("Outcome")])

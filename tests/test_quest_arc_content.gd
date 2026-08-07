@@ -1,72 +1,82 @@
 extends GutTest
 
 
-func test_manifest_loads_complete_valid_first_content_batch() -> void:
+func test_manifest_is_the_shopping0807_demo_whitelist() -> void:
 	var manifest := QuestArcCatalog.manifest()
 	assert_not_null(manifest)
-	assert_eq(manifest.initial_money, 10)
-	assert_eq(manifest.properties.size(), 22)
-	assert_eq(manifest.items.size(), 21)
-	assert_eq(manifest.tasks.size(), 9)
-	assert_eq(manifest.recipes.size(), 2)
-	assert_eq(manifest.stores.size(), 6)
-	assert_eq(manifest.store_unlocks.size(), 2)
-	assert_eq(manifest.owners.size(), 5)
+	assert_eq(manifest.initial_money, 30)
+	assert_eq(manifest.starting_item_ids, [&"fries"])
+	assert_eq(manifest.properties.size(), 12)
+	assert_eq(manifest.items.size(), 5)
+	assert_eq(manifest.tasks.size(), 4)
+	assert_eq(manifest.recipes.size(), 1)
+	assert_eq(manifest.stores.size(), 2)
+	assert_eq(manifest.store_unlocks.size(), 1)
+	assert_eq(manifest.owners.size(), 2)
 	assert_true(manifest.validation_errors().is_empty(), str(manifest.validation_errors()))
-	assert_eq(QuestArcCatalog.owner_for_store(&"toy").id, &"balloon")
 
 
-func test_items_use_small_prices_and_hybrid_property_limits() -> void:
+func test_only_ppt_items_are_runtime_visible_and_have_images() -> void:
+	var expected_ids: Array[StringName] = [
+		&"fries", &"sunflower", &"agave", &"cola", &"scissors",
+	]
+	var actual_ids: Array[StringName] = []
 	for raw_item in QuestArcCatalog.manifest().items:
 		var item := raw_item as QuestItemDefinition
 		assert_not_null(item)
-		assert_between(item.base_price, 0, 20, String(item.id))
-		assert_lte(item.property_set.property_count(), 4, String(item.id))
-		assert_lte(item.property_set.present_aspects().size(), 2, String(item.id))
-	var hash_brown := QuestArcCatalog.item_by_id(&"fast_hash_brown")
-	assert_true(hash_brown.property_set.tags.has(&"food"))
-	assert_eq(hash_brown.property_value(&"food"), 0)
-	assert_eq(hash_brown.property_value(&"crispy"), 4)
+		actual_ids.append(item.id)
+		assert_not_null(item.image, String(item.id))
+	actual_ids.sort()
+	expected_ids.sort()
+	assert_eq(actual_ids, expected_ids)
+	assert_null(QuestArcCatalog.item_by_id(&"fast_hash_brown"))
+	assert_null(QuestArcCatalog.store_by_id(&"recycling"))
 
 
-func test_store_unlocks_consume_exact_map_keys() -> void:
+func test_record_shop_unlock_consumes_a_sunflower() -> void:
 	var record_store := QuestArcCatalog.store_by_id(&"record")
-	var record_unlock := QuestArcCatalog.store_unlock_by_id(record_store.unlock_definition_id)
+	var unlock := QuestArcCatalog.store_unlock_by_id(record_store.unlock_definition_id)
 	assert_false(record_store.initially_unlocked)
 	assert_true(QuestArcRules.store_unlock_accepts(
-		record_unlock,
-		QuestArcCatalog.item_by_id(&"toy_windup_moth"),
+		unlock,
+		QuestArcCatalog.item_by_id(&"sunflower"),
 	))
 	assert_false(QuestArcRules.store_unlock_accepts(
-		record_unlock,
-		QuestArcCatalog.item_by_id(&"flower_sunflower"),
+		unlock,
+		QuestArcCatalog.item_by_id(&"fries"),
 	))
-	assert_true(record_unlock.consume_item)
+	assert_true(unlock.consume_item)
 
 
-func test_authored_tasks_activate_by_day_without_completion_prerequisites() -> void:
-	var expected := {
-		&"order_hamster_midnight_supper": 1,
-		&"order_riverside_broadcast": 2,
-		&"order_lost_found_birthday": 3,
-		&"order_window_without_sun": 4,
-		&"care_hungry": 1,
-		&"care_sleepless": 2,
-		&"care_bedside": 3,
-		&"care_rain_close": 4,
-	}
-	for task_id in expected:
-		assert_eq(QuestArcCatalog.task_by_id(task_id).activation_day, expected[task_id])
+func test_new_game_uses_ppt_money_tasks_and_starting_hand() -> void:
+	var state := QuestGameState.new()
+	assert_eq(state.wallet.money, 30)
+	assert_eq(state.inventory.size(), 1)
+	assert_eq(state.inventory[0].definition_id, &"fries")
+	assert_true(state.is_store_unlocked(&"flower"))
+	assert_false(state.is_store_unlocked(&"record"))
+	assert_eq(state.synthesis_recipe_id, &"recipe_scissors")
+	assert_not_null(state.task_instance_for_definition(&"girl_order"))
+	assert_not_null(state.task_instance_for_definition(&"self_care"))
+	assert_not_null(state.task_instance_for_definition(&"mouse_order"))
+	assert_null(state.task_instance_for_definition(&"flower_owner_request"))
 
 
-func test_first_order_resolves_awake_or_sleep_and_pays_small_reward() -> void:
-	var task := QuestArcCatalog.task_by_id(&"order_hamster_midnight_supper")
-	var awake := QuestArcRules.outcome_for(task, [QuestArcCatalog.item_by_id(&"fast_hash_brown")])
-	var sleep := QuestArcRules.outcome_for(task, [QuestArcCatalog.item_by_id(&"fast_warm_milk")])
-	assert_eq(awake.id, &"awake")
-	assert_eq(sleep.id, &"sleep")
-	assert_eq(_money_reward(awake), 5)
-	assert_eq(_money_reward(sleep), 4)
+func test_girl_request_pays_the_ppt_salty_reward() -> void:
+	var task := QuestArcCatalog.task_by_id(&"girl_order")
+	var outcome := QuestArcRules.outcome_for(task, [QuestArcCatalog.item_by_id(&"fries")])
+	assert_eq(outcome.id, &"salty")
+	assert_eq(_money_reward(outcome), 12)
+
+
+func test_flower_owner_request_is_an_explicit_either_or_choice() -> void:
+	var task := QuestArcCatalog.task_by_id(&"flower_owner_request")
+	assert_eq(task.slot_mode, TaskDefinition.SlotMode.ANY)
+	assert_eq(task.slot_rules.size(), 2)
+	var trim_rule := task.slot_rules[0] as CardSlotRule
+	var nourish_rule := task.slot_rules[1] as CardSlotRule
+	assert_eq(trim_rule.accepted_item_ids, [&"scissors"])
+	assert_eq(nourish_rule.accepted_item_ids, [&"agave"])
 
 
 func _money_reward(outcome: TaskOutcomeDefinition) -> int:

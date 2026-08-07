@@ -3,7 +3,7 @@ extends Node
 
 signal state_changed
 
-const SAVE_PATH := "user://save_quest_arc_v3.json"
+const SAVE_PATH := "user://save_shopping0807_v1.json"
 
 var quest_state: QuestGameState
 var save_repository := QuestSaveRepository.new(SAVE_PATH)

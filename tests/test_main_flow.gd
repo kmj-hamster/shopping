@@ -5,193 +5,91 @@ func before_each() -> void:
 	GameState.reset_game()
 
 
-func test_main_opens_new_map_with_global_card_hand() -> void:
+func test_flower_shop_purchase_moves_sunflower_into_center_hand() -> void:
 	var main := await _spawn_main()
-	assert_true(main is QuestMain)
-	assert_true(main.current_screen is QuestMapScreen)
-	assert_eq((main.current_screen as QuestMapScreen).store_hotspots.size(), 6)
-	assert_eq(main.state, GameState.quest_state)
-	assert_eq(main.hand_bar.state, GameState.quest_state)
-	assert_eq(main.hand_bar.card_views.size(), 0)
-
-
-func test_shop_shelf_is_selected_before_checkout_and_card_then_enters_hand() -> void:
-	var main := await _spawn_main()
-	main._show_shop(&"fast_food")
+	main._show_shop(&"flower")
 	await get_tree().process_frame
 	var shop := main.current_screen as QuestShopScreen
-	var transaction := GameState.quest_state.transaction_for_store(&"fast_food")
-	var slot_id := transaction.shelf_slots[0].slot_id
-	shop._on_shelf_pressed(slot_id)
+	var transaction := GameState.quest_state.transaction_for_store(&"flower")
+	var sunflower_slot := transaction.shelf_slots[0]
+	assert_eq(sunflower_slot.item_id, &"sunflower")
+	shop._on_shelf_pressed(sunflower_slot.slot_id)
 	assert_eq(transaction.cart_count(), 1)
-	assert_true(GameState.quest_state.inventory.is_empty())
 	shop._on_checkout_pressed()
 	await get_tree().process_frame
 	await get_tree().process_frame
-	assert_eq(GameState.quest_state.inventory.size(), 1)
-	assert_eq(GameState.quest_state.wallet.money, 8)
-	assert_eq(main.hand_bar.card_views.size(), 1)
-	assert_true(transaction.shelf_slot(slot_id).is_empty())
+	assert_eq(GameState.quest_state.wallet.money, 20)
+	assert_eq(GameState.quest_state.inventory.size(), 2)
+	assert_not_null(_card_by_definition(GameState.quest_state, &"sunflower"))
+	assert_eq(main.hand_bar.card_views.size(), 2)
 
 
-func test_left_bookmarks_toggle_one_task_window_and_confirm_without_consuming() -> void:
-	var main := await _spawn_main()
-	assert_eq(main.task_dock.bookmark_column.get_child_count(), 2)
-	var care := GameState.quest_state.task_instance_for_definition(&"care_hungry")
-	main.task_dock._toggle_task(care.instance_id)
-	await get_tree().process_frame
-	var first_window := main.task_dock.task_window
-	assert_not_null(first_window)
-	assert_eq(main.task_dock.open_task_instance_id, care.instance_id)
-	var card := GameState.quest_state.grant_item(&"fast_hash_brown")
-	await get_tree().process_frame
-	var slot := first_window.slots_row.get_child(0) as QuestTaskSlot
-	assert_true(slot._can_drop_data(Vector2.ZERO, _drag_data(card)))
-	slot._drop_data(Vector2.ZERO, _drag_data(card))
-	await get_tree().process_frame
-	assert_eq(card.location, CardItemState.Location.ACTIVITY_SLOT)
-	assert_false(main.hand_bar.card_views.has(card.instance_id))
-	main.task_dock.task_window._on_action_pressed()
-	assert_true(care.confirmed)
-	assert_has(GameState.quest_state.inventory, card)
-	main.task_dock._toggle_task(care.instance_id)
-	assert_null(main.task_dock.task_window)
-	assert_eq(main.task_dock.open_task_instance_id, 0)
-
-
-func test_focused_task_slot_highlights_matching_owned_cards_and_shop_goods() -> void:
-	var main := await _spawn_main()
-	var food := GameState.quest_state.grant_item(&"fast_hash_brown")
-	var flower := GameState.quest_state.grant_item(&"flower_sunflower")
-	await get_tree().process_frame
-	var care := GameState.quest_state.task_instance_for_definition(&"care_hungry")
-	var definition := QuestArcCatalog.task_by_id(care.definition_id)
-	var rule := definition.slot_rules[0] as CardSlotRule
-	main._on_rule_focused(rule)
-	assert_true((main.hand_bar.card_views[food.instance_id] as CardHandCard).rule_match_highlighted)
-	assert_false((main.hand_bar.card_views[flower.instance_id] as CardHandCard).rule_match_highlighted)
-	main._show_shop(&"fast_food")
-	await get_tree().process_frame
-	var shop := main.current_screen as QuestShopScreen
-	assert_eq(shop.highlight_rule, rule)
-	assert_eq(shop.shelf_buttons.size(), 6)
-
-
-func test_protagonist_head_toggles_synthesis_and_shows_four_aspects() -> void:
-	var main := await _spawn_main()
-	var synthesis := main.synthesis_interface
-	assert_not_null(synthesis.head_button.texture_normal)
-	assert_not_null(synthesis.head_button.texture_hover)
-	assert_false(synthesis.panel.visible)
-	synthesis._toggle_panel()
-	assert_true(synthesis.panel.visible)
-	assert_eq(synthesis.aspect_row.get_child_count(), 4)
-	var filling := GameState.quest_state.grant_item(&"toy_cloth_scraps")
-	var shape := GameState.quest_state.grant_item(&"toy_cloth_scraps")
-	var calm := GameState.quest_state.grant_item(&"toy_sleeping_rabbit")
-	assert_true(GameState.quest_state.assign_synthesis_card(&"soft_filling", filling).ok)
-	assert_true(GameState.quest_state.assign_synthesis_card(&"toy_shape", shape).ok)
-	assert_true(GameState.quest_state.assign_synthesis_card(&"calm", calm).ok)
-	await get_tree().process_frame
-	await get_tree().process_frame
-	assert_false(synthesis.action_button.disabled)
-	assert_true(synthesis.preview_label.text.contains(
-		QuestArcCatalog.item_by_id(&"craft_comfort_bear").localized_name()
-	))
-	synthesis._on_action_pressed()
-	synthesis.set_process(false)
-	assert_not_null(GameState.quest_state.active_synthesis)
-	assert_true(GameState.quest_state.discovered_recipe_ids.has(&"recipe_teddy"))
-	assert_true(GameState.quest_state.advance_synthesis(3.0).completed)
-	assert_eq(GameState.quest_state.inventory.size(), 1)
-	assert_eq(GameState.quest_state.inventory[0].definition_id, &"craft_comfort_bear")
-
-
-func test_locked_map_store_only_accepts_its_exact_key_card() -> void:
-	var main := await _spawn_main()
-	var map := main.current_screen as QuestMapScreen
-	var record_hotspot := map.store_hotspots[&"record"] as QuestStoreHotspot
-	var sunflower := GameState.quest_state.grant_item(&"flower_sunflower")
-	var moth := GameState.quest_state.grant_item(&"toy_windup_moth")
-	assert_false(record_hotspot._can_drop_data(Vector2.ZERO, _drag_data(sunflower)))
-	assert_true(record_hotspot._can_drop_data(Vector2.ZERO, _drag_data(moth)))
-	map._on_unlock_requested(&"record", moth)
-	assert_true(GameState.quest_state.is_store_unlocked(&"record"))
-	assert_null(GameState.quest_state.card_by_instance_id(moth.instance_id))
-	assert_not_null(GameState.quest_state.card_by_instance_id(sunflower.instance_id))
-
-
-func test_next_day_is_allowed_without_confirmed_tasks_and_finishes_empty_arc() -> void:
-	var main := await _spawn_main()
-	main.arc_fade_seconds = 0.0
-	main.arc_result_seconds = 0.0
-	main.arc_empty_seconds = 0.0
-	main.arc_new_day_seconds = 0.0
-	main._on_next_day_requested()
-	for index in 12:
-		await get_tree().process_frame
-	assert_eq(GameState.quest_state.day, 2)
-	assert_null(GameState.quest_state.pending_arc)
-	assert_false(main.transition_in_progress)
-	assert_true(main.hand_bar.visible)
-
-
-func test_recycle_screen_returns_actual_purchase_price() -> void:
-	var main := await _spawn_main()
+func test_shop_keeps_only_one_item_selected_for_checkout() -> void:
 	var state := GameState.quest_state
 	var transaction := state.transaction_for_store(&"flower")
-	assert_true(transaction.select_shelf_slot(transaction.shelf_slots[0].slot_id).ok)
-	var card := state.checkout_store(&"flower").purchased[0] as CardItemState
-	assert_eq(state.wallet.money, 8)
-	main._show_shop(&"recycling")
-	await get_tree().process_frame
-	var recycle := main.current_screen as QuestShopScreen
-	assert_true(state.stage_recycle_card(card).ok)
-	recycle._on_checkout_pressed()
-	assert_eq(state.wallet.money, 10)
-	assert_true(state.inventory.is_empty())
-
-
-func test_owner_conversation_opens_request_second_shop_page_and_recipe_tab() -> void:
-	var main := await _spawn_main()
-	var state := GameState.quest_state
-	state.task_history[&"order_lost_found_birthday"] = &"plain"
-	state.story_flags[&"balloon_event_available"] = &"true"
-	main._show_shop(&"toy")
-	await get_tree().process_frame
-	var toy_shop := main.current_screen as QuestShopScreen
-	toy_shop._on_owner_pressed()
-	await get_tree().process_frame
-	assert_not_null(state.task_instance_for_definition(&"owner_balloon_erase_smile"))
-	assert_true(toy_shop.owner_dialogue_label.text.contains("香蕉水"))
-	assert_eq(main.task_dock.bookmark_column.get_child_count(), 3)
-
-	main._show_shop(&"fast_food")
-	await get_tree().process_frame
-	var food_shop := main.current_screen as QuestShopScreen
-	assert_false((food_shop.page_buttons[2] as Button).disabled)
-	food_shop._on_page_pressed(2)
-	assert_eq(food_shop.current_page, 2)
-	assert_eq(food_shop.shelf_buttons.size(), 1)
-
-	main.synthesis_interface._toggle_panel()
-	await get_tree().process_frame
-	assert_eq(main.synthesis_interface.recipe_tabs.get_child_count(), 2)
-
-	main._show_shop(&"toy")
-	await get_tree().process_frame
-	var request := state.task_instance_for_definition(&"owner_balloon_erase_smile")
-	var answer := state.grant_item(&"fast_co2_cylinder")
-	assert_true(state.assign_card(request.instance_id, &"answer", answer).ok)
-	main.task_dock._toggle_task(request.instance_id)
-	await get_tree().process_frame
-	main.task_dock.task_window._on_action_pressed()
-	await get_tree().process_frame
-	assert_true(request.settled)
-	assert_eq(
-		(main.current_screen as QuestShopScreen).owner_dialogue_label.text,
-		TranslationServer.translate(&"quest.task.owner_balloon.result.ground"),
+	var available_slots := transaction.shelf_slots.filter(
+		func(slot: ShelfSlotState) -> bool: return not slot.is_empty()
 	)
+	assert_true(available_slots.size() >= 2)
+	var first := available_slots[0] as ShelfSlotState
+	var second := available_slots[1] as ShelfSlotState
+	assert_true(transaction.toggle_shelf_slot(first.slot_id).ok)
+	assert_true(transaction.toggle_shelf_slot(second.slot_id).ok)
+	assert_eq(transaction.cart_count(), 1)
+	assert_false(transaction.is_selected(first.slot_id))
+	assert_true(transaction.is_selected(second.slot_id))
+
+
+func test_submitted_arc_task_is_permanently_locked() -> void:
+	var state := GameState.quest_state
+	var task := state.task_instance_for_definition(&"girl_order")
+	var fries := _card_by_definition(state, &"fries")
+	assert_true(state.assign_card(task.instance_id, &"food", fries).ok)
+	assert_true(state.confirm_task(task.instance_id).ok)
+	assert_true(task.confirmed)
+	assert_false(state.cancel_task_confirmation(task.instance_id))
+	assert_false(state.return_card_to_hand(fries))
+	assert_eq(fries.location, CardItemState.Location.ACTIVITY_SLOT)
+
+
+func test_flower_owner_request_requires_submission_inside_flower_shop() -> void:
+	var state := GameState.quest_state
+	var interaction := state.interact_with_store_owner(&"flower")
+	assert_true(interaction.ok)
+	var task := state.task_instance_for_definition(&"flower_owner_request")
+	assert_not_null(task)
+	assert_eq(state.transaction_for_store(&"flower").unlocked_page_count, 2)
+	var scissors := state.grant_item(&"scissors", &"test")
+	assert_true(state.assign_card(task.instance_id, &"trim", scissors).ok)
+	assert_false(state.submit_owner_task(task.instance_id, &"record").ok)
+	var result := state.submit_owner_task(task.instance_id, &"flower")
+	assert_true(result.ok)
+	assert_eq(result.outcome_id, &"trimmed")
+	assert_eq(state.owner_states[&"flower_owner"], &"trimmed")
+
+
+func test_only_ppt_recipe_turns_cola_and_sunflower_into_scissors() -> void:
+	var state := GameState.quest_state
+	var cola := state.grant_item(&"cola", &"test")
+	var sunflower := state.grant_item(&"sunflower", &"test")
+	assert_true(state.assign_synthesis_card(&"metal", cola).ok)
+	assert_true(state.assign_synthesis_card(&"lamp", sunflower).ok)
+	assert_true(state.synthesis_evaluation().is_complete)
+	assert_true(state.begin_synthesis().ok)
+	var result := state.advance_synthesis(1.0)
+	assert_true(result.completed)
+	assert_null(state.card_by_instance_id(cola.instance_id))
+	assert_null(state.card_by_instance_id(sunflower.instance_id))
+	assert_not_null(_card_by_definition(state, &"scissors"))
+
+
+func test_sunflower_unlocks_record_shop_and_is_consumed() -> void:
+	var state := GameState.quest_state
+	var sunflower := state.grant_item(&"sunflower", &"test")
+	var result := state.unlock_store(&"record", sunflower)
+	assert_true(result.ok)
+	assert_true(state.is_store_unlocked(&"record"))
+	assert_null(state.card_by_instance_id(sunflower.instance_id))
 
 
 func _spawn_main() -> QuestMain:
@@ -202,5 +100,8 @@ func _spawn_main() -> QuestMain:
 	return main
 
 
-func _drag_data(card: CardItemState) -> Dictionary:
-	return {"kind": &"card_item", "card": card, "source": &"hand"}
+func _card_by_definition(state: QuestGameState, definition_id: StringName) -> CardItemState:
+	for card in state.inventory:
+		if card.definition_id == definition_id:
+			return card
+	return null
