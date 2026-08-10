@@ -6,6 +6,8 @@ const UI_THEME: Theme = preload("res://resources/fonts/shancha_ui_theme.tres")
 var state: QuestGameState
 var current_screen: Control
 var screen_host: Control
+var map_screen: QuestMapScreen
+var shop_screens: Dictionary = {}
 var task_dock: QuestTaskDock
 var synthesis_interface: QuestSynthesisInterface
 var protagonist_button: TextureButton
@@ -209,32 +211,38 @@ func _bind_state() -> void:
 
 
 func _show_map() -> void:
-	_clear_screen()
-	var map := QuestMapScreen.new()
-	map.name = "QuestMapScreen"
-	map.setup(state)
-	map.shop_requested.connect(_show_shop)
-	map.card_staging_changed.connect(_on_card_staging_changed)
-	map.rule_focused.connect(_on_rule_focused)
-	screen_host.add_child(map)
-	map.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	current_screen = map
+	_deactivate_current_screen()
+	if map_screen == null:
+		map_screen = QuestMapScreen.new()
+		map_screen.name = "QuestMapScreen"
+		map_screen.setup(state)
+		map_screen.shop_requested.connect(_show_shop)
+		map_screen.card_staging_changed.connect(_on_card_staging_changed)
+		map_screen.rule_focused.connect(_on_rule_focused)
+		screen_host.add_child(map_screen)
+		map_screen.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_activate_screen(map_screen)
+	map_screen.refresh()
 	task_dock.set_store_context(&"")
 	hand_bar.visible = true
 
 
 func _show_shop(store_id: StringName) -> void:
 	hand_bar.clear_temporarily_hidden_cards()
-	_clear_screen()
-	var shop := QuestShopScreen.new()
-	shop.name = "%sShopScreen" % String(store_id).to_pascal_case()
-	shop.setup(state, store_id)
-	shop.leave_requested.connect(_show_map)
-	shop.item_inspected.connect(_show_item)
-	shop.checkout_completed.connect(_on_shop_checkout_completed)
-	screen_host.add_child(shop)
-	shop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	current_screen = shop
+	_deactivate_current_screen()
+	var shop := shop_screens.get(store_id) as QuestShopScreen
+	if shop == null:
+		shop = QuestShopScreen.new()
+		shop.name = "%sShopScreen" % String(store_id).to_pascal_case()
+		shop.setup(state, store_id)
+		shop.leave_requested.connect(_show_map)
+		shop.item_inspected.connect(_show_item)
+		shop.checkout_completed.connect(_on_shop_checkout_completed)
+		screen_host.add_child(shop)
+		shop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		shop_screens[store_id] = shop
+	_activate_screen(shop)
+	shop.refresh()
 	task_dock.set_store_context(store_id)
 	shop.set_highlight_rule(focused_rule)
 	hand_bar.visible = true
@@ -249,17 +257,19 @@ func _show_synthesis() -> void:
 		if current_screen is QuestShopScreen
 		else &""
 	)
-	_clear_screen()
-	synthesis_interface = QuestSynthesisInterface.new()
-	synthesis_interface.name = "QuestSynthesisInterface"
-	synthesis_interface.setup(state)
-	synthesis_interface.leave_requested.connect(_return_from_synthesis)
-	synthesis_interface.item_inspected.connect(_show_item)
-	synthesis_interface.card_staging_changed.connect(_on_card_staging_changed)
-	synthesis_interface.details_cleared.connect(_close_detail_popups)
-	screen_host.add_child(synthesis_interface)
-	synthesis_interface.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	current_screen = synthesis_interface
+	_deactivate_current_screen()
+	if synthesis_interface == null:
+		synthesis_interface = QuestSynthesisInterface.new()
+		synthesis_interface.name = "QuestSynthesisInterface"
+		synthesis_interface.setup(state)
+		synthesis_interface.leave_requested.connect(_return_from_synthesis)
+		synthesis_interface.item_inspected.connect(_show_item)
+		synthesis_interface.card_staging_changed.connect(_on_card_staging_changed)
+		synthesis_interface.details_cleared.connect(_close_detail_popups)
+		screen_host.add_child(synthesis_interface)
+		synthesis_interface.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_activate_screen(synthesis_interface)
+	synthesis_interface.refresh()
 	task_dock.set_store_context(&"")
 	_on_rule_focused(null)
 	hand_bar.visible = true
@@ -272,7 +282,7 @@ func _return_from_synthesis() -> void:
 		_show_map()
 
 
-func _clear_screen() -> void:
+func _deactivate_current_screen() -> void:
 	if current_screen != null and is_instance_valid(current_screen):
 		if current_screen is QuestSynthesisInterface:
 			(current_screen as QuestSynthesisInterface).cancel_pending_inputs()
@@ -280,12 +290,19 @@ func _clear_screen() -> void:
 			(current_screen as QuestMapScreen)._close_location_popup()
 		elif current_screen is QuestShopScreen:
 			(current_screen as QuestShopScreen).cancel_pending_purchase()
-		current_screen.queue_free()
+		current_screen.visible = false
 	current_screen = null
 	if hand_bar != null:
 		hand_bar.clear_temporarily_hidden_cards()
 	if detail_popup != null:
 		detail_popup.close()
+
+
+func _activate_screen(screen: Control) -> void:
+	if screen == null:
+		return
+	screen.visible = true
+	current_screen = screen
 
 
 func _show_item(definition: CardItemDefinition) -> void:

@@ -133,6 +133,14 @@ func cancel_pending_inputs() -> void:
 	if state != null:
 		state.clear_synthesis_draft()
 	phase = Phase.DRAFT
+	narrative_state = NarrativeState.IDLE
+	current_narrative_label = null
+	if draft_layer != null:
+		draft_layer.visible = true
+	if narrative_overlay != null:
+		narrative_overlay.visible = false
+	if result_layer != null:
+		result_layer.visible = false
 
 
 func _build_interface() -> void:

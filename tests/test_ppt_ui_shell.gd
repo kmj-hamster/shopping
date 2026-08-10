@@ -138,6 +138,31 @@ func test_switching_shelf_selection_updates_existing_views_without_global_refres
 	assert_same(shop.shelf_buttons[second.slot_id], second_button)
 
 
+func test_shop_reuses_six_fixed_shelf_views_for_dialogue_and_pages() -> void:
+	var main := await _spawn_main()
+	main._show_shop(&"flower")
+	await get_tree().process_frame
+	var shop := main.current_screen as QuestShopScreen
+	var transaction := main.state.transaction_for_store(&"flower")
+	var roots: Array[Control] = []
+	var buttons: Array[Button] = []
+	for view in shop.shelf_views:
+		roots.append(view.root as Control)
+		buttons.append(view.button as Button)
+	shop.show_owner_result(&"demo.owner.flower.idle")
+	assert_eq(shop.shelf_grid.get_child_count(), CardShopTransaction.PAGE_SIZE)
+	for view_index in shop.shelf_views.size():
+		assert_same(shop.shelf_views[view_index].root, roots[view_index])
+		assert_same(shop.shelf_views[view_index].button, buttons[view_index])
+	assert_true(transaction.unlock_page(2))
+	shop._on_page_pressed(2)
+	assert_eq(shop.current_page, 2)
+	assert_eq(shop.shelf_grid.get_child_count(), CardShopTransaction.PAGE_SIZE)
+	for view_index in shop.shelf_views.size():
+		assert_same(shop.shelf_views[view_index].root, roots[view_index])
+		assert_same(shop.shelf_views[view_index].button, buttons[view_index])
+
+
 func test_leaving_shop_clears_pending_checkout_state() -> void:
 	var main := await _spawn_main()
 	main._show_shop(&"flower")
@@ -243,6 +268,8 @@ func test_task_rule_panel_shows_written_bonus_only() -> void:
 	assert_true(main.rule_detail_popup.bonus_section.visible)
 	assert_eq(main.rule_detail_popup.bonus_row.get_child_count(), 2)
 	var required_chip := main.rule_detail_popup.required_row.get_child(0) as HBoxContainer
+	var bonus_property_view := main.rule_detail_popup.bonus_row.get_child(0) as Control
+	var bonus_reward_view := main.rule_detail_popup.bonus_row.get_child(1) as Control
 	var required_icon := required_chip.get_child(0) as Button
 	assert_not_null(required_icon)
 	assert_eq(required_icon.custom_minimum_size.x, required_icon.custom_minimum_size.y)
@@ -271,6 +298,9 @@ func test_task_rule_panel_shows_written_bonus_only() -> void:
 	main.rule_detail_popup._input(outside_click)
 	assert_false(main.rule_detail_popup.visible)
 	main._on_rule_focused(definition.slot_rules[0])
+	assert_same(main.rule_detail_popup.required_row.get_child(0), required_chip)
+	assert_same(main.rule_detail_popup.bonus_row.get_child(0), bonus_property_view)
+	assert_same(main.rule_detail_popup.bonus_row.get_child(1), bonus_reward_view)
 	main._show_item(QuestArcCatalog.item_by_id(&"sunflower"))
 	assert_true(main.detail_popup.visible)
 	assert_false(main.rule_detail_popup.visible)
@@ -381,6 +411,11 @@ func test_task_assignment_reuses_bookmark_popup_slot_and_card_view() -> void:
 	assert_same(slot.card_view, preallocated_card_view)
 	assert_same(slot.card_view.card, fries)
 	assert_true(slot.card_view.visible)
+	main.task_dock._toggle_task(task.instance_id)
+	assert_null(main.task_dock.task_window)
+	main.task_dock._toggle_task(task.instance_id)
+	assert_same(main.task_dock.task_window, popup)
+	assert_true(popup.visible)
 
 
 func test_task_assignment_inside_shop_does_not_rebuild_shelf_views() -> void:
@@ -505,7 +540,9 @@ func test_item_detail_icons_append_without_overlap_and_close_outside() -> void:
 		main.detail_popup.property_panel.get_theme_stylebox("panel") as StyleBoxFlat
 	)
 	assert_almost_eq(property_panel_style.bg_color.a, 0.5, 0.001)
-	var property_button := main.detail_popup.property_row.get_child(0) as Button
+	var lamp_view := main.detail_popup.property_views[&"lamp"] as Dictionary
+	var property_root := lamp_view.root as Control
+	var property_button := lamp_view.button as Button
 	assert_not_null(property_button)
 	assert_almost_eq(property_button.size.x, property_button.size.y, 0.01)
 	assert_true(property_button.get_child_count() > 0)
@@ -541,6 +578,10 @@ func test_item_detail_icons_append_without_overlap_and_close_outside() -> void:
 	main.detail_popup._input(outside_click)
 	assert_false(main.detail_popup.property_panel.visible)
 	assert_true(main.detail_popup.detail_panel.visible)
+	main._show_item(QuestArcCatalog.item_by_id(&"fries"))
+	main._show_item(QuestArcCatalog.item_by_id(&"sunflower"))
+	assert_same((main.detail_popup.property_views[&"lamp"] as Dictionary).root, property_root)
+	assert_same((main.detail_popup.property_views[&"lamp"] as Dictionary).button, property_button)
 
 
 func test_synthesis_is_a_material_first_dedicated_space() -> void:
@@ -606,6 +647,32 @@ func test_protagonist_button_toggles_synthesis_back_to_previous_shop() -> void:
 	assert_eq((main.current_screen as QuestShopScreen).store_id, &"flower")
 
 
+func test_primary_screens_are_reused_across_navigation() -> void:
+	var main := await _spawn_main()
+	var map := main.current_screen as QuestMapScreen
+	main._show_shop(&"flower")
+	await get_tree().process_frame
+	var shop := main.current_screen as QuestShopScreen
+	main._show_map()
+	await get_tree().process_frame
+	assert_same(main.current_screen, map)
+	main._show_shop(&"flower")
+	await get_tree().process_frame
+	assert_same(main.current_screen, shop)
+	main._show_synthesis()
+	await get_tree().process_frame
+	var synthesis := main.current_screen as QuestSynthesisInterface
+	main._return_from_synthesis()
+	await get_tree().process_frame
+	main._show_synthesis()
+	await get_tree().process_frame
+	assert_same(main.current_screen, synthesis)
+	assert_eq(synthesis.phase, QuestSynthesisInterface.Phase.DRAFT)
+	assert_true(synthesis.draft_layer.visible)
+	assert_false(synthesis.narrative_overlay.visible)
+	assert_false(synthesis.result_layer.visible)
+
+
 func test_arc_uses_item_strip_reward_summary_and_click_advance() -> void:
 	var main := await _spawn_main()
 	var task := main.state.task_instance_for_definition(&"girl_order")
@@ -638,6 +705,7 @@ func test_closing_location_popup_returns_unconfirmed_card() -> void:
 	var map := main.current_screen as QuestMapScreen
 	map._on_store_pressed(&"record")
 	await get_tree().process_frame
+	var popup := map.location_popup
 	map.location_popup.unlock_slot._drop_data(
 		Vector2.ZERO,
 		{"kind": &"card_item", "card": sunflower},
@@ -647,6 +715,11 @@ func test_closing_location_popup_returns_unconfirmed_card() -> void:
 	assert_null(map.location_popup)
 	assert_true(main.hand_bar.card_views.has(sunflower.instance_id))
 	assert_false(main.state.is_store_unlocked(&"record"))
+	map._on_store_pressed(&"record")
+	await get_tree().process_frame
+	assert_same(map.location_popup, popup)
+	assert_null(map.location_popup.unlock_slot.pending_card)
+	assert_true(map.location_popup.visible)
 
 
 func test_switching_spaces_clears_location_popup_draft() -> void:

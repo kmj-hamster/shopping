@@ -15,6 +15,9 @@ var property_name: Label
 var property_description: Label
 var selected_property_id: StringName
 var property_buttons: Dictionary = {}
+var requirement_views: Dictionary = {}
+var requirement_occurrences: Dictionary = {}
+var requirement_row_positions: Dictionary = {}
 
 
 func _ready() -> void:
@@ -165,9 +168,10 @@ func _refresh() -> void:
 	var bonus_heading := find_child("BonusHeading", true, false) as Label
 	required_heading.text = TranslationServer.translate(&"demo.ui.rule.must")
 	bonus_heading.text = TranslationServer.translate(&"demo.ui.rule.bonus")
-	_clear_row(required_row)
-	_clear_row(bonus_row)
+	_hide_requirement_views()
 	property_buttons.clear()
+	requirement_occurrences.clear()
+	requirement_row_positions = {&"required": 0, &"bonus": 0}
 	for item_id in current_rule.accepted_item_ids:
 		_add_item_requirement(item_id)
 	for property_id in current_rule.required_all:
@@ -175,7 +179,7 @@ func _refresh() -> void:
 	for property_id in current_rule.allowed_any:
 		_add_property_requirement(required_row, property_id)
 	_add_bonus_requirements()
-	bonus_section.visible = bonus_row.get_child_count() > 0
+	bonus_section.visible = int(requirement_row_positions.get(&"bonus", 0)) > 0
 	if property_panel.visible and not selected_property_id.is_empty():
 		_update_property_panel_content(selected_property_id)
 	_update_property_button_states()
@@ -185,51 +189,95 @@ func _add_item_requirement(item_id: StringName) -> void:
 	var definition := QuestArcCatalog.item_by_id(item_id)
 	if definition == null:
 		return
-	var chip := HBoxContainer.new()
-	chip.custom_minimum_size = Vector2(0, 30)
-	chip.add_theme_constant_override("separation", 6)
-	var frame := PanelContainer.new()
-	frame.custom_minimum_size = Vector2(30, 30)
-	frame.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	frame.add_theme_stylebox_override(
-		"panel", ItemDetailPopup.panel_style(Color("f1eee5"), Color("8c7a52"), 1)
-	)
-	chip.add_child(frame)
-	var image := TextureRect.new()
-	image.custom_minimum_size = Vector2(26, 26)
-	image.texture = definition.image
-	image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	image.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame.add_child(image)
-	var label := Label.new()
-	label.text = definition.localized_name()
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_color_override("font_color", Color("d9d0b4"))
-	chip.add_child(label)
-	required_row.add_child(chip)
+	var key := _next_requirement_key(&"required", &"item", item_id)
+	var view: Dictionary = requirement_views.get(key, {})
+	if view.is_empty():
+		var chip := HBoxContainer.new()
+		chip.custom_minimum_size = Vector2(0, 30)
+		chip.add_theme_constant_override("separation", 6)
+		var frame := PanelContainer.new()
+		frame.custom_minimum_size = Vector2(30, 30)
+		frame.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		frame.add_theme_stylebox_override(
+			"panel", ItemDetailPopup.panel_style(Color("f1eee5"), Color("8c7a52"), 1)
+		)
+		chip.add_child(frame)
+		var image := TextureRect.new()
+		image.custom_minimum_size = Vector2(26, 26)
+		image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		frame.add_child(image)
+		var label := Label.new()
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		label.add_theme_color_override("font_color", Color("d9d0b4"))
+		chip.add_child(label)
+		required_row.add_child(chip)
+		view = {"root": chip, "image": image, "label": label}
+		requirement_views[key] = view
+	(view.image as TextureRect).texture = definition.image
+	(view.label as Label).text = definition.localized_name()
+	_show_requirement_view(key, required_row)
 
 
-func _add_property_requirement(row: HBoxContainer, property_id: StringName) -> void:
+func _add_property_requirement(row: HBoxContainer, property_id: StringName) -> StringName:
 	var property := QuestArcCatalog.property_by_id(property_id)
-	var chip := HBoxContainer.new()
-	chip.custom_minimum_size = Vector2(0, 30)
-	chip.add_theme_constant_override("separation", 6)
-	var icon := ItemDetailPopup.make_property_icon_button(property_id, 30)
-	icon.pressed.connect(_show_property.bind(property_id))
-	chip.add_child(icon)
+	var section := &"bonus" if row == bonus_row else &"required"
+	var key := _next_requirement_key(section, &"property", property_id)
+	var view: Dictionary = requirement_views.get(key, {})
+	if view.is_empty():
+		var chip := HBoxContainer.new()
+		chip.custom_minimum_size = Vector2(0, 30)
+		chip.add_theme_constant_override("separation", 6)
+		var icon := ItemDetailPopup.make_property_icon_button(property_id, 30)
+		icon.pressed.connect(_show_property.bind(property_id))
+		chip.add_child(icon)
+		var label := Label.new()
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		label.add_theme_color_override("font_color", Color("d9d0b4"))
+		chip.add_child(label)
+		row.add_child(chip)
+		view = {"root": chip, "button": icon, "label": label}
+		requirement_views[key] = view
+	var icon := view.button as Button
+	icon.tooltip_text = TranslationServer.translate(ItemDetailPopup.property_name_key(property_id))
 	_register_property_button(property_id, icon)
-	var label := Label.new()
-	label.text = TranslationServer.translate(
+	(view.label as Label).text = TranslationServer.translate(
 		property.display_name_key
 		if property != null
 		else ItemDetailPopup.property_name_key(property_id)
 	)
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_color_override("font_color", Color("d9d0b4"))
-	chip.add_child(label)
-	row.add_child(chip)
+	_show_requirement_view(key, row)
+	return key
+
+
+func _next_requirement_key(
+	section: StringName,
+	kind: StringName,
+	definition_id: StringName,
+) -> StringName:
+	var base := StringName("%s:%s:%s" % [section, kind, definition_id])
+	var occurrence := int(requirement_occurrences.get(base, 0))
+	requirement_occurrences[base] = occurrence + 1
+	return StringName("%s:%d" % [base, occurrence])
+
+
+func _show_requirement_view(key: StringName, row: HBoxContainer) -> void:
+	var view := requirement_views[key] as Dictionary
+	var root := view.root as Control
+	root.visible = true
+	var section := &"bonus" if row == bonus_row else &"required"
+	var position := int(requirement_row_positions.get(section, 0))
+	if root.get_index() != position:
+		row.move_child(root, position)
+	requirement_row_positions[section] = position + 1
+
+
+func _hide_requirement_views() -> void:
+	for raw_view in requirement_views.values():
+		var view := raw_view as Dictionary
+		(view.root as Control).visible = false
 
 
 func _register_property_button(property_id: StringName, button: Button) -> void:
@@ -391,13 +439,21 @@ func _add_bonus_requirements() -> void:
 			var condition := raw_condition as StoryCondition
 			if condition == null or condition.kind != StoryCondition.Kind.ITEM_HAS_PROPERTY:
 				continue
-			_add_property_requirement(bonus_row, condition.key)
-			var reward := Label.new()
-			reward.text = TranslationServer.translate(&"demo.ui.rule.extra_money") % extra_money
-			reward.custom_minimum_size = Vector2(0, 30)
-			reward.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-			reward.add_theme_color_override("font_color", Color("e3c679"))
-			bonus_row.add_child(reward)
+			var property_key := _add_property_requirement(bonus_row, condition.key)
+			var reward_key := StringName("%s:reward" % property_key)
+			var reward_view: Dictionary = requirement_views.get(reward_key, {})
+			if reward_view.is_empty():
+				var reward := Label.new()
+				reward.custom_minimum_size = Vector2(0, 30)
+				reward.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+				reward.add_theme_color_override("font_color", Color("e3c679"))
+				bonus_row.add_child(reward)
+				reward_view = {"root": reward, "label": reward}
+				requirement_views[reward_key] = reward_view
+			(reward_view.label as Label).text = (
+				TranslationServer.translate(&"demo.ui.rule.extra_money") % extra_money
+			)
+			_show_requirement_view(reward_key, bonus_row)
 
 
 func _outcome_money(outcome: TaskOutcomeDefinition) -> int:
@@ -407,11 +463,6 @@ func _outcome_money(outcome: TaskOutcomeDefinition) -> int:
 		if effect != null and effect.kind == StoryEffect.Kind.ADD_MONEY:
 			amount += effect.amount
 	return amount
-
-
-func _clear_row(row: HBoxContainer) -> void:
-	for child in row.get_children():
-		child.free()
 
 
 func _on_locale_changed(_locale: String) -> void:

@@ -10,6 +10,7 @@ var store_hotspots: Dictionary = {}
 var notice_label: Label
 var notice_panel: PanelContainer
 var location_popup: QuestLocationPopup
+var location_popups: Dictionary = {}
 
 
 func setup(game_state: QuestGameState) -> void:
@@ -131,20 +132,27 @@ func _on_store_pressed(store_id: StringName) -> void:
 
 func _open_location_popup(store_id: StringName) -> void:
 	_close_location_popup()
-	location_popup = QuestLocationPopup.new()
-	location_popup.name = "LocationPopup"
-	location_popup.setup(state, store_id)
-	location_popup.closed.connect(_close_location_popup)
-	location_popup.staging_changed.connect(card_staging_changed.emit)
-	location_popup.rule_focused.connect(rule_focused.emit)
-	location_popup.unlock_confirmed.connect(_on_unlock_confirmed)
-	add_child(location_popup)
+	location_popup = location_popups.get(store_id) as QuestLocationPopup
+	if location_popup == null:
+		location_popup = QuestLocationPopup.new()
+		location_popup.name = "%sLocationPopup" % String(store_id).to_pascal_case()
+		location_popup.setup(state, store_id)
+		location_popup.closed.connect(_close_location_popup)
+		location_popup.staging_changed.connect(card_staging_changed.emit)
+		location_popup.rule_focused.connect(rule_focused.emit)
+		location_popup.unlock_confirmed.connect(_on_unlock_confirmed)
+		add_child(location_popup)
+		location_popups[store_id] = location_popup
+	else:
+		location_popup.refresh()
+		location_popup._focus_rule()
+	location_popup.visible = true
 
 
 func _close_location_popup() -> void:
 	if location_popup != null and is_instance_valid(location_popup):
 		location_popup.release_pending_card()
-		location_popup.queue_free()
+		location_popup.visible = false
 	location_popup = null
 	rule_focused.emit(null)
 

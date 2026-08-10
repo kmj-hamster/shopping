@@ -11,6 +11,7 @@ var bookmark_column: VBoxContainer
 var task_window: QuestTaskWindow
 var open_task_instance_id := 0
 var bookmark_buttons: Dictionary = {}
+var task_windows: Dictionary = {}
 
 
 func setup(game_state: QuestGameState) -> void:
@@ -72,6 +73,7 @@ func refresh() -> void:
 		_update_bookmark(bookmark, task)
 		if bookmark.get_index() != index:
 			bookmark_column.move_child(bookmark, index)
+	_reconcile_task_windows(desired_ids)
 	if open_task_instance_id > 0:
 		var open_task := state.task_instance(open_task_instance_id)
 		if open_task == null or open_task.settled:
@@ -107,21 +109,44 @@ func _toggle_task(instance_id: int) -> void:
 		return
 	_close_task()
 	open_task_instance_id = instance_id
-	task_window = QuestTaskWindow.new()
-	task_window.setup(state, instance_id, current_store_id)
-	task_window.closed.connect(_close_task)
-	task_window.rule_focused.connect(rule_focused.emit)
-	task_window.item_inspected.connect(item_inspected.emit)
-	task_window.owner_result_presented.connect(owner_result_presented.emit)
-	add_child(task_window)
+	task_window = task_windows.get(instance_id) as QuestTaskWindow
+	if task_window == null:
+		task_window = QuestTaskWindow.new()
+		task_window.setup(state, instance_id, current_store_id)
+		task_window.closed.connect(_close_task)
+		task_window.rule_focused.connect(rule_focused.emit)
+		task_window.item_inspected.connect(item_inspected.emit)
+		task_window.owner_result_presented.connect(owner_result_presented.emit)
+		add_child(task_window)
+		task_windows[instance_id] = task_window
+	else:
+		task_window.current_store_id = current_store_id
+		task_window.refresh()
+	task_window.visible = true
 
 
 func _close_task() -> void:
 	open_task_instance_id = 0
 	rule_focused.emit(null)
 	if task_window != null and is_instance_valid(task_window):
-		task_window.queue_free()
+		task_window.visible = false
 	task_window = null
+
+
+func _reconcile_task_windows(desired_ids: Array[int]) -> void:
+	for raw_instance_id in task_windows.keys().duplicate():
+		var instance_id := int(raw_instance_id)
+		if desired_ids.has(instance_id):
+			continue
+		var obsolete := task_windows[instance_id] as QuestTaskWindow
+		task_windows.erase(instance_id)
+		if obsolete != null:
+			obsolete.visible = false
+			obsolete.queue_free()
+		if open_task_instance_id == instance_id:
+			open_task_instance_id = 0
+			task_window = null
+			rule_focused.emit(null)
 
 
 func _on_state_delta(delta: QuestStateDelta) -> void:

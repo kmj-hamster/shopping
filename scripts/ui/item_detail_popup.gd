@@ -24,6 +24,7 @@ var property_name: Label
 var property_description: Label
 var close_button: Button
 var property_buttons: Dictionary = {}
+var property_views: Dictionary = {}
 
 
 func _ready() -> void:
@@ -285,39 +286,65 @@ func _refresh() -> void:
 
 
 func _rebuild_properties() -> void:
-	for child in property_row.get_children():
-		child.free()
+	for raw_view in property_views.values():
+		var cached_view := raw_view as Dictionary
+		(cached_view.root as Control).visible = false
 	property_buttons.clear()
 	if current_definition.property_set == null:
 		return
 	var tags := _ordered_property_tags(current_definition.property_set)
 	for index in range(tags.size()):
-		var tag := tags[index]
-		if index > 0:
-			var separator := Label.new()
-			separator.text = "◆"
-			separator.custom_minimum_size = Vector2(10, 30)
-			separator.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-			separator.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-			separator.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			separator.add_theme_font_size_override("font_size", 7)
-			separator.add_theme_color_override("font_color", Color("b69b5d"))
-			property_row.add_child(separator)
-		var icon := make_property_icon_button(tag, 30)
-		icon.pressed.connect(_show_property.bind(tag))
-		property_row.add_child(icon)
+		var tag := StringName(tags[index])
+		var view := _ensure_property_view(tag)
+		var root := view.root as HBoxContainer
+		var separator := view.separator as Label
+		var icon := view.button as Button
+		var value := view.value as Label
+		root.visible = true
+		separator.visible = index > 0
+		icon.tooltip_text = TranslationServer.translate(property_name_key(tag))
 		property_buttons[tag] = icon
 		var amount := current_definition.property_value(tag)
-		if amount > 0:
-			var value := Label.new()
-			value.text = str(amount)
-			value.custom_minimum_size = Vector2(14, 30)
-			value.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-			value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-			value.add_theme_font_size_override("font_size", 13)
-			value.add_theme_color_override("font_color", Color("e7dcc0"))
-			property_row.add_child(value)
+		value.text = str(amount)
+		value.visible = amount > 0
+		if root.get_index() != index:
+			property_row.move_child(root, index)
 	_update_property_button_states()
+
+
+func _ensure_property_view(tag: StringName) -> Dictionary:
+	if property_views.has(tag):
+		return property_views[tag] as Dictionary
+	var root := HBoxContainer.new()
+	root.add_theme_constant_override("separation", 3)
+	property_row.add_child(root)
+	var separator := Label.new()
+	separator.text = "◆"
+	separator.custom_minimum_size = Vector2(10, 30)
+	separator.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	separator.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	separator.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	separator.add_theme_font_size_override("font_size", 7)
+	separator.add_theme_color_override("font_color", Color("b69b5d"))
+	root.add_child(separator)
+	var icon := make_property_icon_button(tag, 30)
+	icon.pressed.connect(_show_property.bind(tag))
+	root.add_child(icon)
+	var value := Label.new()
+	value.custom_minimum_size = Vector2(14, 30)
+	value.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	value.add_theme_font_size_override("font_size", 13)
+	value.add_theme_color_override("font_color", Color("e7dcc0"))
+	root.add_child(value)
+	var view := {
+		"root": root,
+		"separator": separator,
+		"button": icon,
+		"value": value,
+	}
+	property_views[tag] = view
+	return view
 
 
 func _ordered_property_tags(properties: CardPropertySet) -> Array[StringName]:

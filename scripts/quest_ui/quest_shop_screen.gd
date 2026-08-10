@@ -28,6 +28,8 @@ var shelf_caption: Label
 var page_row: HBoxContainer
 var shelf_buttons: Dictionary = {}
 var page_buttons: Dictionary = {}
+var shelf_views: Array[Dictionary] = []
+var shelf_view_slot_ids: Array[StringName] = []
 var highlight_rule: CardSlotRule
 var current_page := 1
 var owner_dialogue_override_key: StringName
@@ -38,7 +40,6 @@ var owner_dialogue_is_typing := false
 var owner_dialogue_generation := 0
 var owner_dialogue_voice_index := 0
 var owner_dialogue_voice_players: Array[AudioStreamPlayer] = []
-var restart_owner_dialogue_on_refresh := false
 
 
 func setup(game_state: QuestGameState, selected_store_id: StringName) -> void:
@@ -217,7 +218,31 @@ func _build_shelf_popup() -> void:
 	shelf_grid.add_theme_constant_override("h_separation", 7)
 	shelf_grid.add_theme_constant_override("v_separation", 5)
 	column.add_child(shelf_grid)
+	_build_shelf_views()
 	shelf_popup.visible = false
+
+
+func _build_shelf_views() -> void:
+	for view_index in CardShopTransaction.PAGE_SIZE:
+		var holder := VBoxContainer.new()
+		holder.custom_minimum_size = Vector2(104, 70)
+		holder.add_theme_constant_override("separation", 3)
+		shelf_grid.add_child(holder)
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(104, 52)
+		button.toggle_mode = true
+		button.pressed.connect(_on_shelf_view_pressed.bind(view_index))
+		holder.add_child(button)
+		var price := Label.new()
+		price.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		price.add_theme_color_override("font_color", Color("e1c373"))
+		holder.add_child(price)
+		shelf_views.append({
+			"root": holder,
+			"button": button,
+			"price": price,
+		})
+		shelf_view_slot_ids.append(&"")
 
 
 func refresh() -> void:
@@ -229,8 +254,7 @@ func refresh() -> void:
 	talk_nav_button.text = TranslationServer.translate(&"quest.ui.owner.talk")
 	leave_nav_button.text = TranslationServer.translate(&"quest.ui.back")
 	shelf_caption.text = TranslationServer.translate(&"quest.ui.shop.shelf")
-	_refresh_owner_dialogue(restart_owner_dialogue_on_refresh)
-	restart_owner_dialogue_on_refresh = false
+	_refresh_owner_dialogue()
 	_refresh_shelf()
 	_refresh_checkout_state()
 
@@ -252,41 +276,50 @@ func _refresh_shelf() -> void:
 			"" if transaction.is_page_unlocked(page_index)
 			else TranslationServer.translate(&"quest.ui.shop.page_locked")
 		)
-	for child in shelf_grid.get_children():
-		child.free()
 	shelf_buttons.clear()
-	for slot in transaction.shelf_slots_for_page(current_page):
-		var holder := VBoxContainer.new()
-		holder.custom_minimum_size = Vector2(104, 70)
-		holder.add_theme_constant_override("separation", 3)
-		shelf_grid.add_child(holder)
-		var button := Button.new()
-		button.custom_minimum_size = Vector2(104, 52)
+	var slots := transaction.shelf_slots_for_page(current_page)
+	for view_index in shelf_views.size():
+		var view := shelf_views[view_index]
+		var holder := view.root as VBoxContainer
+		var button := view.button as Button
+		var price := view.price as Label
+		if view_index >= slots.size():
+			holder.visible = false
+			shelf_view_slot_ids[view_index] = &""
+			continue
+		var slot := slots[view_index] as ShelfSlotState
+		holder.visible = true
+		shelf_view_slot_ids[view_index] = slot.slot_id
+		button.icon = null
+		button.tooltip_text = ""
+		button.button_pressed = false
 		if slot.is_empty():
 			button.text = TranslationServer.translate(&"quest.ui.shop.sold")
 			button.disabled = true
 		else:
 			var definition := QuestArcCatalog.item_by_id(slot.item_id)
-			button.text = definition.localized_name()
-			button.icon = definition.image
+			button.text = definition.localized_name() if definition != null else ""
+			button.icon = definition.image if definition != null else null
 			button.expand_icon = true
-			button.tooltip_text = definition.localized_description()
+			button.tooltip_text = definition.localized_description() if definition != null else ""
 			button.button_pressed = transaction.is_selected(slot.slot_id)
-			button.toggle_mode = true
-			button.pressed.connect(_on_shelf_pressed.bind(slot.slot_id))
-		holder.add_child(button)
-		var price := Label.new()
-		price.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		price.add_theme_color_override("font_color", Color("e1c373"))
+			button.disabled = false
 		price.text = (
 			"—" if slot.is_empty()
 			else TranslationServer.translate(&"demo.ui.price") % transaction.price_for(
 				QuestArcCatalog.item_by_id(slot.item_id)
 			)
 		)
-		holder.add_child(price)
 		shelf_buttons[slot.slot_id] = button
 		_apply_shelf_highlight(button, slot)
+
+
+func _on_shelf_view_pressed(view_index: int) -> void:
+	if view_index < 0 or view_index >= shelf_view_slot_ids.size():
+		return
+	var slot_id := shelf_view_slot_ids[view_index]
+	if not slot_id.is_empty():
+		_on_shelf_pressed(slot_id)
 
 
 func _toggle_shelf_popup() -> void:
@@ -319,7 +352,7 @@ func _on_page_pressed(page_index: int) -> void:
 	if transaction == null or not transaction.is_page_unlocked(page_index):
 		return
 	current_page = page_index
-	refresh()
+	_refresh_shelf()
 
 
 func _on_owner_pressed() -> void:
@@ -331,15 +364,13 @@ func _on_owner_pressed() -> void:
 		return
 	owner_dialogue_override_key = StringName(result.text_key)
 	owner_dialogue_item_name = ""
-	restart_owner_dialogue_on_refresh = true
-	refresh()
+	_refresh_owner_dialogue(true)
 
 
 func show_owner_result(text_key: StringName) -> void:
 	owner_dialogue_override_key = text_key
 	owner_dialogue_item_name = ""
-	restart_owner_dialogue_on_refresh = true
-	refresh()
+	_refresh_owner_dialogue(true)
 
 
 func cancel_pending_purchase() -> void:
@@ -465,9 +496,13 @@ func set_highlight_rule(rule: CardSlotRule) -> void:
 
 
 func _apply_shelf_highlight(button: Button, slot: ShelfSlotState) -> void:
-	if button == null or slot == null or slot.is_empty():
+	if button == null:
 		return
-	var definition := QuestArcCatalog.item_by_id(slot.item_id)
+	var definition := (
+		QuestArcCatalog.item_by_id(slot.item_id)
+		if slot != null and not slot.is_empty()
+		else null
+	)
 	var matches: bool = (
 		highlight_rule != null
 		and definition != null
