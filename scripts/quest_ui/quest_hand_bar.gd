@@ -3,14 +3,25 @@ extends PanelContainer
 
 signal item_inspected(definition: CardItemDefinition)
 
+const RULE_MATCH_LIFT := 8.0
+const NORMAL_CARD_GAP := 8.0
+const HOVER_CARD_GAP := 6.0
+const HOVER_Z_INDEX := 1000
+
 var state: QuestGameState
 var highlight_rule: CardSlotRule
+var card_scroll: ScrollContainer
 var card_row: HBoxContainer
 var empty_label: Label
 var title_label: Label
 var card_views: Dictionary = {}
+var card_wrappers: Dictionary = {}
 var temporarily_hidden_card_ids: Dictionary = {}
+var hovered_card_id := -1
+var overlap_active := false
 var refresh_queued := false
+var layout_queued := false
+var rebuilding_cards := false
 
 
 func setup(game_state: QuestGameState) -> void:
@@ -43,14 +54,17 @@ func _ready() -> void:
 	title_label.add_theme_color_override("font_color", Color("8ca49f"))
 	title_label.visible = false
 	column.add_child(title_label)
-	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(0, 132)
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	column.add_child(scroll)
+	card_scroll = ScrollContainer.new()
+	card_scroll.custom_minimum_size = Vector2(0, 132)
+	card_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	card_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	card_scroll.clip_contents = false
+	card_scroll.resized.connect(_queue_card_layout)
+	column.add_child(card_scroll)
 	card_row = HBoxContainer.new()
-	card_row.add_theme_constant_override("separation", 8)
-	scroll.add_child(card_row)
+	card_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card_row.add_theme_constant_override("separation", 0)
+	card_scroll.add_child(card_row)
 	LocaleManager.locale_changed.connect(_on_locale_changed)
 	_refresh_locale()
 	refresh()
@@ -59,10 +73,16 @@ func _ready() -> void:
 func refresh() -> void:
 	if card_row == null:
 		return
-	for child in card_row.get_children():
-		child.free()
+	rebuilding_cards = true
+	var previous_children := card_row.get_children()
+	hovered_card_id = -1
+	overlap_active = false
 	card_views.clear()
+	card_wrappers.clear()
+	for child in previous_children:
+		child.free()
 	if state == null:
+		rebuilding_cards = false
 		return
 	for card in state.inventory:
 		if card.location != CardItemState.Location.HAND:
@@ -72,12 +92,24 @@ func refresh() -> void:
 		var definition := QuestArcCatalog.item_by_id(card.definition_id)
 		if definition == null:
 			continue
+		var wrapper := Control.new()
+		wrapper.name = "HandCardWrapper%d" % card.instance_id
+		wrapper.custom_minimum_size = QuestTaskSlot.CARD_SIZE
+		wrapper.clip_contents = false
+		wrapper.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var view := CardHandCard.new()
 		view.setup(card, definition)
 		view.inspect_requested.connect(item_inspected.emit)
-		card_row.add_child(view)
+		view.mouse_entered.connect(_on_card_hovered.bind(card.instance_id))
+		view.mouse_exited.connect(_on_card_unhovered.bind(card.instance_id))
+		wrapper.add_child(view)
+		card_row.add_child(wrapper)
+		view.size = CardHandCard.CARD_SIZE
 		view.apply_rule_highlight(highlight_rule)
 		card_views[card.instance_id] = view
+		card_wrappers[card.instance_id] = wrapper
+	rebuilding_cards = false
+	_layout_cards_for_rule()
 	if card_views.is_empty():
 		empty_label = Label.new()
 		empty_label.custom_minimum_size = Vector2(260, 126)
@@ -86,12 +118,138 @@ func refresh() -> void:
 		empty_label.add_theme_color_override("font_color", Color("60736f"))
 		empty_label.text = TranslationServer.translate(&"quest.ui.hand.empty")
 		card_row.add_child(empty_label)
+	_queue_card_layout()
 
 
 func set_highlight_rule(rule: CardSlotRule) -> void:
 	highlight_rule = rule
 	for view in card_views.values():
 		(view as CardHandCard).apply_rule_highlight(rule)
+	_layout_cards_for_rule()
+
+
+func _layout_cards_for_rule() -> void:
+	if state == null or card_row == null:
+		return
+	var matching_ids: Array[int] = []
+	var remaining_ids: Array[int] = []
+	for card in state.inventory:
+		if not card_views.has(card.instance_id):
+			continue
+		var view := card_views[card.instance_id] as CardHandCard
+		if view.rule_match_highlighted:
+			matching_ids.append(card.instance_id)
+		else:
+			remaining_ids.append(card.instance_id)
+	var ordered_ids := matching_ids + remaining_ids
+	for index in range(ordered_ids.size()):
+		var instance_id := ordered_ids[index]
+		var wrapper := card_wrappers[instance_id] as Control
+		var view := card_views[instance_id] as CardHandCard
+		card_row.move_child(wrapper, index)
+		var lift := RULE_MATCH_LIFT if view.rule_match_highlighted else 0.0
+		view.offset_top = -lift
+		view.offset_bottom = CardHandCard.CARD_SIZE.y - lift
+	_apply_card_spacing(ordered_ids)
+
+
+func _apply_card_spacing(ordered_ids: Array[int]) -> void:
+	var count := ordered_ids.size()
+	if count == 0 or card_scroll == null:
+		overlap_active = false
+		return
+	var available_width := card_scroll.size.x
+	if available_width <= 0.0:
+		return
+	var card_width := CardHandCard.CARD_SIZE.x
+	var natural_width := card_width * count + NORMAL_CARD_GAP * maxi(count - 1, 0)
+	overlap_active = natural_width > available_width
+	var positions: Array[float] = []
+	if not overlap_active or count == 1:
+		for index in count:
+			positions.append(index * (card_width + NORMAL_CARD_GAP))
+	else:
+		var step := maxf((available_width - card_width) / float(count - 1), 0.0)
+		for index in count:
+			positions.append(index * step)
+		var hovered_index := ordered_ids.find(hovered_card_id)
+		if hovered_index >= 0:
+			positions = _hovered_positions(count, hovered_index, available_width, positions)
+
+	for index in count:
+		var instance_id := ordered_ids[index]
+		var wrapper := card_wrappers[instance_id] as Control
+		var view := card_views[instance_id] as CardHandCard
+		var allocated_width := (
+			positions[index + 1] - positions[index]
+			if index + 1 < count
+			else card_width
+		)
+		wrapper.custom_minimum_size = Vector2(maxf(allocated_width, 0.0), CardHandCard.CARD_SIZE.y)
+		view.position.x = 0.0
+		view.size.x = card_width
+		view.z_index = (
+			HOVER_Z_INDEX
+			if instance_id == hovered_card_id
+			else (500 + index if view.rule_match_highlighted else index)
+		)
+	card_row.queue_sort()
+
+
+func _hovered_positions(
+	count: int,
+	hovered_index: int,
+	available_width: float,
+	base_positions: Array[float],
+) -> Array[float]:
+	var positions := base_positions.duplicate()
+	var card_width := CardHandCard.CARD_SIZE.x
+	var last_x := maxf(available_width - card_width, 0.0)
+	var hover_x := clampf(base_positions[hovered_index], 0.0, last_x)
+	var cards_after := count - hovered_index - 1
+	if cards_after > 0:
+		hover_x = minf(hover_x, maxf(last_x - card_width - HOVER_CARD_GAP, 0.0))
+	positions[hovered_index] = hover_x
+
+	if hovered_index > 0:
+		var before_step := hover_x / float(hovered_index)
+		for index in hovered_index:
+			positions[index] = index * before_step
+	if cards_after > 0:
+		var after_start := hover_x + card_width + HOVER_CARD_GAP
+		if cards_after == 1:
+			positions[hovered_index + 1] = last_x
+		else:
+			var after_step := maxf((last_x - after_start) / float(cards_after - 1), 0.0)
+			for offset in range(1, cards_after + 1):
+				positions[hovered_index + offset] = after_start + (offset - 1) * after_step
+	return positions
+
+
+func _on_card_hovered(instance_id: int) -> void:
+	if rebuilding_cards or hovered_card_id == instance_id:
+		return
+	hovered_card_id = instance_id
+	_layout_cards_for_rule()
+
+
+func _on_card_unhovered(instance_id: int) -> void:
+	if rebuilding_cards or hovered_card_id != instance_id:
+		return
+	hovered_card_id = -1
+	_layout_cards_for_rule()
+
+
+func _queue_card_layout() -> void:
+	if layout_queued:
+		return
+	layout_queued = true
+	call_deferred("_flush_card_layout")
+
+
+func _flush_card_layout() -> void:
+	layout_queued = false
+	_layout_cards_for_rule()
 
 
 func set_card_temporarily_hidden(card: CardItemState, hidden: bool) -> void:
@@ -134,13 +292,21 @@ func _hand_insertion_index(at_position: Vector2, dragged_card: CardItemState) ->
 	var pointer_x := get_global_rect().position.x + at_position.x
 	var insertion_index := 0
 	for child in card_row.get_children():
-		var view := child as CardHandCard
+		var view := _card_view_for_row_child(child)
 		if view == null or view.card == dragged_card:
 			continue
 		if pointer_x < view.get_global_rect().get_center().x:
 			return insertion_index
 		insertion_index += 1
 	return insertion_index
+
+
+func _card_view_for_row_child(child: Node) -> CardHandCard:
+	if child is CardHandCard:
+		return child as CardHandCard
+	if child != null and child.get_child_count() > 0:
+		return child.get_child(0) as CardHandCard
+	return null
 
 
 func _queue_refresh() -> void:

@@ -423,6 +423,10 @@ msgid "quest.ui.task.slot.weak"
 msgstr "Not enough"
 msgid "quest.ui.task.confirm"
 msgstr "Confirm"
+msgid "quest.ui.task.deliver_tomorrow"
+msgstr "Deliver tomorrow"
+msgid "quest.ui.task.enjoy_tonight"
+msgstr "Enjoy at home tonight"
 msgid "quest.ui.task.cancel_confirm"
 msgstr "Unconfirm"
 msgid "quest.ui.task.confirmed"
@@ -559,6 +563,198 @@ msgid "demo.recipe.scissors.slot.lamp"
 msgstr "Lamp influence"
 msgid "demo.recipe.scissors.preview"
 msgstr "Snip, snip, snip—【Metal, tempered by Lamp, can become scissors.】"
+
+msgid "demo.property.flower.name"
+msgstr "Flower"
+
+msgid "demo.property.flower.description"
+msgstr "Something that blooms, withers, and leaves a scent behind."
+
+msgid "demo.property.toy.name"
+msgstr "Toy"
+
+msgid "demo.property.toy.description"
+msgstr "Something made for play or companionship."
+
+msgid "demo.property.rose.name"
+msgstr "Rose"
+
+msgid "demo.property.rose.description"
+msgstr "A flower that has never grown inside Concrete City."
+
+msgid "demo.property.teddy_bear.name"
+msgstr "Teddy Bear"
+
+msgid "demo.property.teddy_bear.description"
+msgstr "The particular outline left by a bear-shaped toy."
+
+msgid "demo.property.gauze.name"
+msgstr "Gauze"
+
+msgid "demo.property.gauze.description"
+msgstr "An aspect that gives distant imaginings a thin outline."
+
+msgid "demo.property.pillow.name"
+msgstr "Pillow"
+
+msgid "demo.property.pillow.description"
+msgstr "An aspect that makes things soft, settled, and safe to lean on."
+
+msgid "demo.persona.ease.name"
+msgstr "Ease"
+
+msgid "demo.persona.ease.description"
+msgstr "Your understanding of rest and being held. It provides only Pillow."
+
+msgid "demo.persona.reverie.name"
+msgstr "Reverie"
+
+msgid "demo.persona.reverie.description"
+msgstr "The imagination with which you shape what does not exist. It provides only Gauze."
+
+msgid "demo.persona.reminiscence.name"
+msgstr "Reminiscence"
+
+msgid "demo.persona.reminiscence.description"
+msgstr "Your ability to see the past inside old things. It provides only Mirror."
+
+msgid "demo.persona.clarity.name"
+msgstr "Clarity"
+
+msgid "demo.persona.clarity.description"
+msgstr "Your ability to illuminate and recognize an outline. It provides only Lamp."
+
+msgid "demo.item.toy_block.name"
+msgstr "Old Building Block"
+
+msgid "demo.item.toy_block.description"
+msgstr "A faded wooden block that still counts as a toy."
+
+msgid "demo.item.midnight_rose.name"
+msgstr "Midnight Rose"
+
+msgid "demo.item.midnight_rose.description"
+msgstr "A rose that does not exist in Concrete City. Its petals resemble a piece of remembered midnight."
+
+msgid "demo.item.worn_teddy.name"
+msgstr "Worn Teddy Bear"
+
+msgid "demo.item.worn_teddy.description"
+msgstr "Its worn patches make it seem as if someone held it for years."
+
+msgid "demo.item.baby_teddy.name"
+msgstr "Baby Comfort Bear"
+
+msgid "demo.item.baby_teddy.description"
+msgstr "Soft enough to catch a cry and remain through a very long sleep."
+
+msgid "demo.item.pale_teddy.name"
+msgstr "Pale Teddy Bear"
+
+msgid "demo.item.pale_teddy.description"
+msgstr "Its color stayed on the far side of the mirror, leaving a quiet pale toy."
+
+msgid "demo.item.soft_gauze.name"
+msgstr "Soft Gauze"
+
+msgid "demo.item.soft_gauze.description"
+msgstr "A soft scrap carrying Gauze 2 and Pillow 2, useful only as a temporary aspect in synthesis."
+
+msgid "demo.item.mirror_shard.name"
+msgstr "Old Mirror Shard"
+
+msgid "demo.item.mirror_shard.description"
+msgstr "An old shard carrying Mirror 2 and Lamp 2, useful only as a temporary aspect in synthesis."
+
+msgid "demo.recipe.base.flower"
+msgstr "Any flower"
+
+msgid "demo.recipe.base.toy"
+msgstr "Any toy"
+
+msgid "demo.recipe.base.worn_teddy"
+msgstr "Worn Teddy Bear"
+
+msgid "demo.recipe.midnight_rose.name"
+msgstr "Midnight Rose"
+
+msgid "demo.recipe.worn_teddy.name"
+msgstr "Worn Teddy Bear"
+
+msgid "demo.recipe.baby_teddy.name"
+msgstr "Baby Comfort Bear"
+
+msgid "demo.recipe.pale_teddy.name"
+msgstr "Pale Teddy Bear"
+
+msgid "demo.recipe.midnight_rose.process.1"
+msgstr "You remember a flower that has never bloomed in Concrete City."
+
+msgid "demo.recipe.midnight_rose.process.2"
+msgstr "Gauze wraps that nonexistent memory around a set of petals."
+
+msgid "demo.recipe.midnight_rose.process.3"
+msgstr "The color of midnight slowly acquires a scent."
+
+msgid "demo.recipe.worn_teddy.process.1"
+msgstr "The toy's hard corners soften in your palm."
+
+msgid "demo.recipe.worn_teddy.process.2"
+msgstr "Pillow fills it with time that has already been held."
+
+msgid "demo.recipe.worn_teddy.process.3"
+msgstr "Wear appears on it before memory does."
+
+msgid "demo.recipe.baby_teddy.process.1"
+msgstr "Old stuffing becomes full again."
+
+msgid "demo.recipe.baby_teddy.process.2"
+msgstr "Pillow teaches every seam how to comfort."
+
+msgid "demo.recipe.baby_teddy.process.3"
+msgstr "It waits quietly for the next cry."
+
+msgid "demo.recipe.pale_teddy.process.1"
+msgstr "The mirror draws the color out of the toy."
+
+msgid "demo.recipe.pale_teddy.process.2"
+msgstr "Its old outline becomes clearer inside the pallor."
+
+msgid "demo.recipe.pale_teddy.process.3"
+msgstr "It opens its eyes from inside the reflection."
+
+msgid "demo.recipe.scissors.process.1"
+msgstr "Metal reveals a sharp outline beneath the lamp."
+
+msgid "demo.recipe.scissors.process.2"
+msgstr "Two thin blades bite together in your imagination."
+
+msgid "demo.ui.synthesis.base"
+msgstr "Material"
+
+msgid "demo.ui.synthesis.fuel"
+msgstr "Temporary Aspect"
+
+msgid "demo.ui.synthesis.candidates"
+msgstr "Possible Shapes"
+
+msgid "demo.ui.synthesis.no_candidates"
+msgstr "No shape appears inside the bag"
+
+msgid "demo.ui.synthesis.totals"
+msgstr "Properties in the Bag"
+
+msgid "demo.ui.synthesis.personas"
+msgstr "Choose One Persona"
+
+msgid "demo.ui.synthesis.unknown_candidate"
+msgstr "???"
+
+msgid "demo.ui.synthesis.flip_result"
+msgstr "Click to reveal"
+
+msgid "demo.ui.synthesis.drag_result"
+msgstr "Drag it to your hand, or simply leave"
 
 msgid "demo.task.girl.name"
 msgstr "The Little Girl's Request"

@@ -3,6 +3,10 @@ extends Control
 
 signal leave_requested
 signal item_inspected(definition: CardItemDefinition)
+signal checkout_completed
+
+const DIALOGUE_SILENT_CHARACTERS := " \t\r\n，。！？、；：,.!?;:…—-（）()“”\"'"
+const DIALOGUE_VOICE_PLAYER_COUNT := 3
 
 var state: QuestGameState
 var store_id: StringName
@@ -29,6 +33,13 @@ var refresh_queued := false
 var current_page := 1
 var owner_dialogue_override_key: StringName
 var owner_dialogue_item_name := ""
+var owner_dialogue_char_seconds := 0.055
+var owner_dialogue_full_text := ""
+var owner_dialogue_is_typing := false
+var owner_dialogue_generation := 0
+var owner_dialogue_voice_index := 0
+var owner_dialogue_voice_players: Array[AudioStreamPlayer] = []
+var restart_owner_dialogue_on_refresh := false
 
 
 func setup(game_state: QuestGameState, selected_store_id: StringName) -> void:
@@ -51,8 +62,8 @@ func _ready() -> void:
 func _bind_state() -> void:
 	if state != null and not state.state_changed.is_connected(_queue_refresh):
 		state.state_changed.connect(_queue_refresh)
-	if transaction != null and not transaction.state_changed.is_connected(_queue_refresh):
-		transaction.state_changed.connect(_queue_refresh)
+	if transaction != null and not transaction.selection_changed.is_connected(_on_selection_changed):
+		transaction.selection_changed.connect(_on_selection_changed)
 
 
 func _build_interface() -> void:
@@ -114,28 +125,35 @@ func _build_interface() -> void:
 	dialogue_panel.add_theme_stylebox_override(
 		"panel", UiPalette.panel_style(Color("050b0e", 0.92), Color("837659", 0.86))
 	)
+	dialogue_panel.gui_input.connect(_on_dialogue_panel_gui_input)
 	add_child(dialogue_panel)
 	var dialogue_margin := MarginContainer.new()
+	dialogue_margin.mouse_filter = Control.MOUSE_FILTER_PASS
 	for side in ["left", "right", "top", "bottom"]:
 		dialogue_margin.add_theme_constant_override("margin_%s" % side, 10)
 	dialogue_panel.add_child(dialogue_margin)
 	var dialogue_row := HBoxContainer.new()
+	dialogue_row.mouse_filter = Control.MOUSE_FILTER_PASS
 	dialogue_row.add_theme_constant_override("separation", 12)
 	dialogue_margin.add_child(dialogue_row)
 	var dialogue_text := VBoxContainer.new()
+	dialogue_text.mouse_filter = Control.MOUSE_FILTER_PASS
 	dialogue_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	dialogue_text.add_theme_constant_override("separation", 2)
 	dialogue_row.add_child(dialogue_text)
 	owner_name_label = Label.new()
+	owner_name_label.mouse_filter = Control.MOUSE_FILTER_PASS
 	owner_name_label.add_theme_font_size_override("font_size", 14)
 	owner_name_label.add_theme_color_override("font_color", Color("d9c582"))
 	dialogue_text.add_child(owner_name_label)
 	owner_dialogue_label = Label.new()
+	owner_dialogue_label.mouse_filter = Control.MOUSE_FILTER_PASS
 	owner_dialogue_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	owner_dialogue_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	owner_dialogue_label.add_theme_color_override("font_color", Color("c8d0ca"))
 	dialogue_text.add_child(owner_dialogue_label)
 	feedback_label = Label.new()
+	feedback_label.mouse_filter = Control.MOUSE_FILTER_PASS
 	feedback_label.add_theme_font_size_override("font_size", 12)
 	feedback_label.add_theme_color_override("font_color", Color("e0bd72"))
 	dialogue_text.add_child(feedback_label)
@@ -144,7 +162,16 @@ func _build_interface() -> void:
 	checkout_button.pressed.connect(_on_checkout_pressed)
 	dialogue_row.add_child(checkout_button)
 
+	_build_dialogue_voice_players()
 	_build_shelf_popup()
+
+
+func _build_dialogue_voice_players() -> void:
+	for index in range(DIALOGUE_VOICE_PLAYER_COUNT):
+		var player := AudioStreamPlayer.new()
+		player.name = "OwnerDialogueVoice%d" % (index + 1)
+		add_child(player)
+		owner_dialogue_voice_players.append(player)
 
 
 func _build_shelf_popup() -> void:
@@ -205,8 +232,13 @@ func refresh() -> void:
 	talk_nav_button.text = TranslationServer.translate(&"quest.ui.owner.talk")
 	leave_nav_button.text = TranslationServer.translate(&"quest.ui.back")
 	shelf_caption.text = TranslationServer.translate(&"quest.ui.shop.shelf")
-	_refresh_owner_dialogue()
+	_refresh_owner_dialogue(restart_owner_dialogue_on_refresh)
+	restart_owner_dialogue_on_refresh = false
 	_refresh_shelf()
+	_refresh_checkout_state()
+
+
+func _refresh_checkout_state() -> void:
 	checkout_button.visible = transaction.cart_count() > 0
 	checkout_button.text = TranslationServer.translate(&"quest.ui.shop.checkout") % transaction.cart_total()
 	checkout_button.disabled = transaction.cart_count() == 0
@@ -274,7 +306,16 @@ func _on_shelf_pressed(slot_id: StringName) -> void:
 			owner_dialogue_override_key = owner.item_comment_key
 			owner_dialogue_item_name = definition.localized_name()
 	transaction.toggle_shelf_slot(slot_id)
-	refresh()
+
+
+func _on_selection_changed(previous_slot_id: StringName, selected_slot_id: StringName) -> void:
+	for slot_id in [previous_slot_id, selected_slot_id]:
+		if slot_id.is_empty() or not shelf_buttons.has(slot_id):
+			continue
+		var button := shelf_buttons[slot_id] as Button
+		button.button_pressed = transaction.is_selected(slot_id)
+	_refresh_checkout_state()
+	_refresh_owner_dialogue()
 
 
 func _on_page_pressed(page_index: int) -> void:
@@ -285,41 +326,137 @@ func _on_page_pressed(page_index: int) -> void:
 
 
 func _on_owner_pressed() -> void:
+	if owner_dialogue_is_typing:
+		_finish_owner_dialogue_line()
+		return
 	var result := state.interact_with_store_owner(store_id)
 	if not result.ok:
 		return
 	owner_dialogue_override_key = StringName(result.text_key)
 	owner_dialogue_item_name = ""
+	restart_owner_dialogue_on_refresh = true
 	refresh()
 
 
 func show_owner_result(text_key: StringName) -> void:
 	owner_dialogue_override_key = text_key
 	owner_dialogue_item_name = ""
+	restart_owner_dialogue_on_refresh = true
 	refresh()
 
 
 func cancel_pending_purchase() -> void:
-	if transaction != null:
-		transaction.cancel_cart()
+	_cancel_owner_dialogue_playback()
 	owner_dialogue_override_key = &""
 	owner_dialogue_item_name = ""
+	if transaction != null:
+		transaction.cancel_cart()
 	if feedback_label != null:
 		feedback_label.text = ""
 	if shelf_popup != null:
 		shelf_popup.visible = false
 
 
-func _refresh_owner_dialogue() -> void:
+func _refresh_owner_dialogue(force_restart := false) -> void:
 	var key := owner_dialogue_override_key
 	if key.is_empty():
 		key = state.owner_dialogue_key(store_id)
+	var dialogue_text := ""
 	if key.is_empty():
-		owner_dialogue_label.text = ""
+		dialogue_text = ""
 	elif owner_dialogue_item_name.is_empty():
-		owner_dialogue_label.text = TranslationServer.translate(key)
+		dialogue_text = TranslationServer.translate(key)
 	else:
-		owner_dialogue_label.text = TranslationServer.translate(key) % owner_dialogue_item_name
+		dialogue_text = TranslationServer.translate(key) % owner_dialogue_item_name
+	_present_owner_dialogue(dialogue_text, force_restart)
+
+
+func _present_owner_dialogue(dialogue_text: String, force_restart := false) -> void:
+	if not force_restart and dialogue_text == owner_dialogue_full_text:
+		return
+	owner_dialogue_generation += 1
+	owner_dialogue_full_text = dialogue_text
+	owner_dialogue_voice_index = 0
+	_stop_owner_dialogue_voice()
+	owner_dialogue_label.text = dialogue_text
+	if dialogue_text.is_empty():
+		owner_dialogue_label.visible_characters = -1
+		owner_dialogue_is_typing = false
+		return
+	owner_dialogue_label.visible_characters = 0
+	owner_dialogue_is_typing = true
+	_run_owner_dialogue_typewriter(owner_dialogue_generation)
+
+
+func _run_owner_dialogue_typewriter(generation: int) -> void:
+	var voiced_character_count := 0
+	for index in range(owner_dialogue_full_text.length()):
+		if generation != owner_dialogue_generation:
+			return
+		var character := owner_dialogue_full_text.substr(index, 1)
+		owner_dialogue_label.visible_characters = index + 1
+		if _is_dialogue_voice_character(character):
+			if voiced_character_count % 2 == 0:
+				_play_owner_dialogue_voice()
+			voiced_character_count += 1
+		if owner_dialogue_char_seconds > 0.0:
+			var delay := owner_dialogue_char_seconds
+			if not _is_dialogue_voice_character(character):
+				delay *= 1.8
+			await get_tree().create_timer(delay).timeout
+	if generation == owner_dialogue_generation:
+		owner_dialogue_label.visible_characters = -1
+		owner_dialogue_is_typing = false
+
+
+func _finish_owner_dialogue_line() -> void:
+	owner_dialogue_generation += 1
+	owner_dialogue_is_typing = false
+	owner_dialogue_label.visible_characters = -1
+	_stop_owner_dialogue_voice()
+
+
+func _cancel_owner_dialogue_playback() -> void:
+	owner_dialogue_generation += 1
+	owner_dialogue_is_typing = false
+	_stop_owner_dialogue_voice()
+
+
+func _play_owner_dialogue_voice() -> void:
+	var owner := QuestArcCatalog.owner_for_store(store_id)
+	if owner == null or owner.dialogue_voice_streams.is_empty():
+		return
+	var player := owner_dialogue_voice_players[
+		owner_dialogue_voice_index % owner_dialogue_voice_players.size()
+	] as AudioStreamPlayer
+	player.stream = owner.dialogue_voice_streams[
+		owner_dialogue_voice_index % owner.dialogue_voice_streams.size()
+	]
+	player.pitch_scale = owner.dialogue_voice_pitch_scale
+	player.volume_db = owner.dialogue_voice_volume_db
+	player.play()
+	owner_dialogue_voice_index += 1
+
+
+func _stop_owner_dialogue_voice() -> void:
+	for player in owner_dialogue_voice_players:
+		player.stop()
+
+
+func _is_dialogue_voice_character(character: String) -> bool:
+	return not character.is_empty() and not DIALOGUE_SILENT_CHARACTERS.contains(character)
+
+
+func _on_dialogue_panel_gui_input(event: InputEvent) -> void:
+	var mouse_event := event as InputEventMouseButton
+	if (
+		mouse_event == null
+		or mouse_event.button_index != MOUSE_BUTTON_LEFT
+		or not mouse_event.pressed
+	):
+		return
+	accept_event()
+	_on_owner_pressed()
 
 
 func set_highlight_rule(rule: CardSlotRule) -> void:
@@ -357,7 +494,8 @@ func _on_checkout_pressed() -> void:
 	)
 	if result.ok:
 		shelf_popup.visible = false
-	refresh()
+		checkout_completed.emit()
+	_refresh_checkout_state()
 
 
 func _owner_texture() -> Texture2D:

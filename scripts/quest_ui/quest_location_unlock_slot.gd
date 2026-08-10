@@ -25,7 +25,7 @@ func setup(
 
 
 func _ready() -> void:
-	custom_minimum_size = Vector2(150, 166)
+	custom_minimum_size = Vector2(100, 166)
 	add_theme_stylebox_override(
 		"panel", UiPalette.panel_style(Color("17140f", 0.96), Color("8b7754"))
 	)
@@ -79,7 +79,7 @@ func _rebuild() -> void:
 		child.free()
 	if pending_card == null:
 		var empty_label := Label.new()
-		empty_label.custom_minimum_size = Vector2(126, 142)
+		empty_label.custom_minimum_size = Vector2(84, 142)
 		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		empty_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		empty_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

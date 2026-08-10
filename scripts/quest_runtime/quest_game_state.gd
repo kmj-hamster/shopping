@@ -33,9 +33,10 @@ var known_recipe_hint_ids: Dictionary = {}
 var discovered_recipe_ids: Dictionary = {}
 var owner_states: Dictionary = {}
 var pending_arc: ArcTransitionState
-var synthesis_recipe_id: StringName = &"recipe_scissors"
-var synthesis_assignments: Dictionary = {}
-var active_synthesis: ActiveSynthesisState
+var synthesis_base_instance_id := 0
+var synthesis_fuel_instance_id := 0
+var synthesis_persona_id: StringName
+var synthesis_candidate_recipe_id: StringName
 var store_transactions: Dictionary = {}
 var recycle_transaction: CardRecycleTransaction
 var next_card_instance_id := 1
@@ -56,7 +57,9 @@ func reset() -> void:
 	story_flags = {&"flower_request_available": &"true"}
 	protagonist_aspect_counts = {}
 	for stat_id in CardPropertySet.PROTAGONIST_STATS:
-		protagonist_aspect_counts[stat_id] = 0
+		protagonist_aspect_counts[stat_id] = int(
+			content.initial_protagonist_stats.get(stat_id, 0) if content != null else 0
+		)
 	unlocked_store_ids = {}
 	if content != null:
 		for raw_store in content.stores:
@@ -67,9 +70,10 @@ func reset() -> void:
 	discovered_recipe_ids = {}
 	owner_states = {}
 	pending_arc = null
-	synthesis_recipe_id = &"recipe_scissors"
-	synthesis_assignments = {}
-	active_synthesis = null
+	synthesis_base_instance_id = 0
+	synthesis_fuel_instance_id = 0
+	synthesis_persona_id = &""
+	synthesis_candidate_recipe_id = &""
 	next_card_instance_id = 1
 	next_task_instance_id = 1
 	_build_commerce()
@@ -383,37 +387,26 @@ func return_card_to_hand(card: CardItemState) -> bool:
 		if instance.confirmed:
 			return false
 		instance.clear_assignment_for_card(card.instance_id)
-	elif active_synthesis != null or not _clear_synthesis_assignment_for_card(card.instance_id):
+	elif not _clear_synthesis_assignment_for_card(card.instance_id):
 		return false
 	card.return_to_hand()
 	state_changed.emit()
 	return true
 
 
-func select_synthesis_recipe(recipe_id: StringName) -> bool:
-	if active_synthesis != null or not recipe_is_available(recipe_id):
-		return false
-	for card_id in synthesis_assignments.values():
-		var card := card_by_instance_id(int(card_id))
+func clear_synthesis_draft() -> bool:
+	var changed := false
+	for card_id in [synthesis_base_instance_id, synthesis_fuel_instance_id]:
+		var card := card_by_instance_id(card_id)
 		if card != null:
 			card.return_to_hand()
-	synthesis_assignments.clear()
-	synthesis_recipe_id = recipe_id
-	state_changed.emit()
-	return true
-
-
-func clear_synthesis_assignments() -> bool:
-	if active_synthesis != null:
-		return false
-	if synthesis_assignments.is_empty():
-		return true
-	for card_id in synthesis_assignments.values():
-		var card := card_by_instance_id(int(card_id))
-		if card != null:
-			card.return_to_hand()
-	synthesis_assignments.clear()
-	state_changed.emit()
+			changed = true
+	synthesis_base_instance_id = 0
+	synthesis_fuel_instance_id = 0
+	synthesis_persona_id = &""
+	synthesis_candidate_recipe_id = &""
+	if changed:
+		state_changed.emit()
 	return true
 
 
@@ -438,99 +431,128 @@ func available_synthesis_recipe_ids() -> Array[StringName]:
 	return result
 
 
-func assign_synthesis_card(slot_id: StringName, card: CardItemState) -> Dictionary:
-	if active_synthesis != null:
-		return _result(false, RESULT_SYNTHESIS_ACTIVE)
-	var recipe := QuestArcCatalog.recipe_by_id(synthesis_recipe_id)
-	if recipe == null or not recipe_is_available(recipe.id):
-		return _result(false, RESULT_UNKNOWN_RECIPE)
+func assign_synthesis_base(card: CardItemState) -> Dictionary:
+	return _assign_synthesis_card(&"base", card)
+
+
+func assign_synthesis_fuel(card: CardItemState) -> Dictionary:
+	return _assign_synthesis_card(&"fuel", card)
+
+
+func _assign_synthesis_card(role_id: StringName, card: CardItemState) -> Dictionary:
+	if role_id not in [&"base", &"fuel"]:
+		return _result(false, RESULT_UNKNOWN_SLOT)
 	if card == null or not inventory.has(card):
 		return _result(false, RESULT_NOT_OWNED)
 	var previous_task := _task_containing_card(card.instance_id)
 	if previous_task != null and previous_task.confirmed:
 		return _result(false, RESULT_LOCKED)
-	var rule := _recipe_rule_by_id(recipe, slot_id)
-	if rule == null:
-		return _result(false, RESULT_UNKNOWN_SLOT)
-	var evaluation := CardRuleEvaluator.evaluate(rule, QuestArcCatalog.item_by_id(card.definition_id))
-	if not evaluation.can_place:
-		return _result(false, RESULT_REJECTED, evaluation)
-	var occupied_id := int(synthesis_assignments.get(slot_id, 0))
+	var occupied_id := (
+		synthesis_base_instance_id if role_id == &"base" else synthesis_fuel_instance_id
+	)
 	if occupied_id > 0 and occupied_id != card.instance_id:
-		return _result(false, RESULT_OCCUPIED, evaluation)
+		return _result(false, RESULT_OCCUPIED)
 	if previous_task != null:
 		previous_task.clear_assignment_for_card(card.instance_id)
 	_clear_synthesis_assignment_for_card(card.instance_id)
-	synthesis_assignments[slot_id] = card.instance_id
-	card.assign_to(synthesis_recipe_id, slot_id)
+	if role_id == &"base":
+		synthesis_base_instance_id = card.instance_id
+	else:
+		synthesis_fuel_instance_id = card.instance_id
+	card.assign_to(&"synthesis", role_id)
+	synthesis_candidate_recipe_id = &""
 	state_changed.emit()
-	return _result(true, RESULT_OK, evaluation)
+	return _result(true, RESULT_OK)
 
 
-func synthesis_evaluation() -> Dictionary:
-	var recipe := QuestArcCatalog.recipe_by_id(synthesis_recipe_id)
-	if recipe == null or not recipe_is_available(recipe.id):
-		return {"is_complete": false, "slot_results": []}
-	var items: Array[CardItemDefinition] = []
-	for raw_rule in recipe.slot_rules:
-		var rule := raw_rule as CardSlotRule
-		var card := card_by_instance_id(int(synthesis_assignments.get(rule.id, 0)))
-		items.append(QuestArcCatalog.item_by_id(card.definition_id) if card != null else null)
-	return SynthesisRules.evaluate(recipe, items)
+func select_synthesis_persona(persona_id: StringName) -> bool:
+	if persona_id not in CardPropertySet.PROTAGONIST_STATS:
+		return false
+	synthesis_persona_id = &"" if synthesis_persona_id == persona_id else persona_id
+	synthesis_candidate_recipe_id = &""
+	state_changed.emit()
+	return true
+
+
+func synthesis_base_card() -> CardItemState:
+	return card_by_instance_id(synthesis_base_instance_id)
+
+
+func synthesis_fuel_card() -> CardItemState:
+	return card_by_instance_id(synthesis_fuel_instance_id)
+
+
+func synthesis_aspect_totals() -> Dictionary:
+	var base_card := synthesis_base_card()
+	var fuel_card := synthesis_fuel_card()
+	return SynthesisRules.aspect_totals(
+		QuestArcCatalog.item_by_id(base_card.definition_id) if base_card != null else null,
+		QuestArcCatalog.item_by_id(fuel_card.definition_id) if fuel_card != null else null,
+		synthesis_persona_id,
+		protagonist_aspect_counts,
+	)
+
+
+func synthesis_candidates() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var base_card := synthesis_base_card()
+	var base_item := (
+		QuestArcCatalog.item_by_id(base_card.definition_id) if base_card != null else null
+	)
+	if base_item == null:
+		return result
+	var totals := synthesis_aspect_totals()
+	for recipe_id in available_synthesis_recipe_ids():
+		var recipe := QuestArcCatalog.recipe_by_id(recipe_id)
+		var evaluation := SynthesisRules.evaluate_candidate(recipe, base_item, totals)
+		if evaluation.is_visible:
+			evaluation["recipe_id"] = recipe.id
+			evaluation["required_aspects"] = recipe.required_aspects.duplicate()
+			result.append(evaluation)
+	return result
+
+
+func select_synthesis_candidate(recipe_id: StringName) -> bool:
+	for candidate in synthesis_candidates():
+		if StringName(candidate.recipe_id) == recipe_id and candidate.is_complete:
+			synthesis_candidate_recipe_id = recipe_id
+			state_changed.emit()
+			return true
+	return false
 
 
 func begin_synthesis() -> Dictionary:
-	if active_synthesis != null:
-		return _result(false, RESULT_SYNTHESIS_ACTIVE)
-	var recipe := QuestArcCatalog.recipe_by_id(synthesis_recipe_id)
+	var recipe := QuestArcCatalog.recipe_by_id(synthesis_candidate_recipe_id)
 	if recipe == null or not recipe_is_available(recipe.id):
 		return _result(false, RESULT_UNKNOWN_RECIPE)
-	var evaluation := synthesis_evaluation()
-	if not evaluation.is_complete:
-		return _result(false, RESULT_NOT_READY, evaluation)
-	var input_ids: Array[int] = []
-	for raw_rule in recipe.slot_rules:
-		input_ids.append(int(synthesis_assignments.get((raw_rule as CardSlotRule).id, 0)))
-	active_synthesis = ActiveSynthesisState.new(
-		recipe.id,
-		input_ids,
-		StringName(evaluation.output_id),
-		StringName(evaluation.preview_key),
-		recipe.duration_seconds,
-	)
-	discovered_recipe_ids[recipe.id] = true
-	state_changed.emit()
-	return _result(true, RESULT_OK, evaluation)
-
-
-func advance_synthesis(delta: float) -> Dictionary:
-	if active_synthesis == null:
-		return _result(false, RESULT_NOT_READY)
-	if not active_synthesis.advance(delta):
-		return {
-			"ok": true,
-			"reason": RESULT_OK,
-			"completed": false,
-			"progress": active_synthesis.progress_ratio(),
-		}
-	for card_id in active_synthesis.input_instance_ids:
+	var selected: Dictionary = {}
+	for candidate in synthesis_candidates():
+		if StringName(candidate.recipe_id) == recipe.id:
+			selected = candidate
+			break
+	if selected.is_empty() or not selected.is_complete:
+		return _result(false, RESULT_NOT_READY, selected)
+	var input_ids: Array[int] = [synthesis_base_instance_id]
+	if synthesis_fuel_instance_id > 0:
+		input_ids.append(synthesis_fuel_instance_id)
+	for card_id in input_ids:
 		var card := card_by_instance_id(card_id)
-		if card == null or int(synthesis_assignments.get(card.slot_id, 0)) != card_id:
+		if card == null or card.activity_id != &"synthesis":
 			return _result(false, RESULT_NOT_READY)
-	var output_id := active_synthesis.output_id
-	var preview_key := active_synthesis.preview_key
-	for card_id in active_synthesis.input_instance_ids:
+	for card_id in input_ids:
 		inventory.erase(card_by_instance_id(card_id))
-	synthesis_assignments.clear()
-	active_synthesis = null
-	var output := grant_item(output_id, &"synthesis")
+	discovered_recipe_ids[recipe.id] = true
+	synthesis_base_instance_id = 0
+	synthesis_fuel_instance_id = 0
+	synthesis_candidate_recipe_id = &""
+	var output := grant_item(recipe.output_id, &"synthesis")
 	state_changed.emit()
 	return {
 		"ok": true,
 		"reason": RESULT_OK,
-		"completed": true,
 		"output": output,
-		"preview_key": preview_key,
+		"recipe_id": recipe.id,
+		"process_text_keys": recipe.process_text_keys.duplicate(),
 	}
 
 
@@ -989,10 +1011,14 @@ func _recipe_rule_by_id(
 
 
 func _clear_synthesis_assignment_for_card(card_instance_id: int) -> bool:
-	for slot_id in synthesis_assignments.keys():
-		if int(synthesis_assignments[slot_id]) == card_instance_id:
-			synthesis_assignments.erase(slot_id)
-			return true
+	if synthesis_base_instance_id == card_instance_id:
+		synthesis_base_instance_id = 0
+		synthesis_candidate_recipe_id = &""
+		return true
+	if synthesis_fuel_instance_id == card_instance_id:
+		synthesis_fuel_instance_id = 0
+		synthesis_candidate_recipe_id = &""
+		return true
 	return false
 
 

@@ -423,6 +423,10 @@ msgid "quest.ui.task.slot.weak"
 msgstr "数值不足"
 msgid "quest.ui.task.confirm"
 msgstr "确认"
+msgid "quest.ui.task.deliver_tomorrow"
+msgstr "明天送货"
+msgid "quest.ui.task.enjoy_tonight"
+msgstr "今晚回家后享用"
 msgid "quest.ui.task.cancel_confirm"
 msgstr "取消确认"
 msgid "quest.ui.task.confirmed"
@@ -559,6 +563,198 @@ msgid "demo.recipe.scissors.slot.lamp"
 msgstr "灯的影响"
 msgid "demo.recipe.scissors.preview"
 msgstr "咔嚓、咔嚓、咔嚓——【以金属为原料，加上灯的影响，可以合成剪刀。】"
+
+msgid "demo.property.flower.name"
+msgstr "花"
+
+msgid "demo.property.flower.description"
+msgstr "一类会开放、凋谢，并留下气味的东西。"
+
+msgid "demo.property.toy.name"
+msgstr "玩具"
+
+msgid "demo.property.toy.description"
+msgstr "为了游戏或陪伴而制成的东西。"
+
+msgid "demo.property.rose.name"
+msgstr "玫瑰"
+
+msgid "demo.property.rose.description"
+msgstr "砼城里没有生长过的花。"
+
+msgid "demo.property.teddy_bear.name"
+msgstr "泰迪熊"
+
+msgid "demo.property.teddy_bear.description"
+msgstr "一只熊形玩偶留下的特殊轮廓。"
+
+msgid "demo.property.gauze.name"
+msgstr "纱"
+
+msgid "demo.property.gauze.description"
+msgstr "让遥远想象获得轻薄轮廓的性相。"
+
+msgid "demo.property.pillow.name"
+msgstr "枕"
+
+msgid "demo.property.pillow.description"
+msgstr "让事物柔软、安稳并适合依靠的性相。"
+
+msgid "demo.persona.ease.name"
+msgstr "安逸"
+
+msgid "demo.persona.ease.description"
+msgstr "你对休息与被包裹的理解。它只提供枕。"
+
+msgid "demo.persona.reverie.name"
+msgstr "遐思"
+
+msgid "demo.persona.reverie.description"
+msgstr "你让不存在之物显形的想象。它只提供纱。"
+
+msgid "demo.persona.reminiscence.name"
+msgstr "追忆"
+
+msgid "demo.persona.reminiscence.description"
+msgstr "你从旧物中看见过去的能力。它只提供镜。"
+
+msgid "demo.persona.clarity.name"
+msgstr "清明"
+
+msgid "demo.persona.clarity.description"
+msgstr "你照亮并辨认轮廓的能力。它只提供灯。"
+
+msgid "demo.item.toy_block.name"
+msgstr "旧积木"
+
+msgid "demo.item.toy_block.description"
+msgstr "颜色已经褪去的木积木，仍然算得上一件玩具。"
+
+msgid "demo.item.midnight_rose.name"
+msgstr "午夜玫瑰"
+
+msgid "demo.item.midnight_rose.description"
+msgstr "砼城中不存在的玫瑰。花瓣像午夜里被想起的一小片天空。"
+
+msgid "demo.item.worn_teddy.name"
+msgstr "破旧泰迪熊"
+
+msgid "demo.item.worn_teddy.description"
+msgstr "磨损的位置好像曾经被谁抱过很多年。"
+
+msgid "demo.item.baby_teddy.name"
+msgstr "婴儿安抚熊"
+
+msgid "demo.item.baby_teddy.description"
+msgstr "柔软得足以接住哭声，也足以陪伴一场很长的睡眠。"
+
+msgid "demo.item.pale_teddy.name"
+msgstr "苍白泰迪熊"
+
+msgid "demo.item.pale_teddy.description"
+msgstr "镜中的颜色被留在了另一边，只剩下一只安静的苍白玩偶。"
+
+msgid "demo.item.soft_gauze.name"
+msgstr "柔软纱布"
+
+msgid "demo.item.soft_gauze.description"
+msgstr "一小块带着纱2与枕2的柔软布料，只适合在合成时提供临时性相。"
+
+msgid "demo.item.mirror_shard.name"
+msgstr "旧镜片"
+
+msgid "demo.item.mirror_shard.description"
+msgstr "一枚带着镜2与灯2的旧镜片，只适合在合成时提供临时性相。"
+
+msgid "demo.recipe.base.flower"
+msgstr "任意花"
+
+msgid "demo.recipe.base.toy"
+msgstr "任意玩具"
+
+msgid "demo.recipe.base.worn_teddy"
+msgstr "破旧泰迪熊"
+
+msgid "demo.recipe.midnight_rose.name"
+msgstr "午夜玫瑰"
+
+msgid "demo.recipe.worn_teddy.name"
+msgstr "破旧泰迪熊"
+
+msgid "demo.recipe.baby_teddy.name"
+msgstr "婴儿安抚熊"
+
+msgid "demo.recipe.pale_teddy.name"
+msgstr "苍白泰迪熊"
+
+msgid "demo.recipe.midnight_rose.process.1"
+msgstr "你记得一种从未在砼城开放过的花。"
+
+msgid "demo.recipe.midnight_rose.process.2"
+msgstr "纱把那段不存在的记忆裹在花瓣外。"
+
+msgid "demo.recipe.midnight_rose.process.3"
+msgstr "午夜的颜色慢慢有了香气。"
+
+msgid "demo.recipe.worn_teddy.process.1"
+msgstr "玩具的棱角在掌心里变得柔软。"
+
+msgid "demo.recipe.worn_teddy.process.2"
+msgstr "枕替它填入一段被拥抱过的时间。"
+
+msgid "demo.recipe.worn_teddy.process.3"
+msgstr "磨损先于记忆出现在它身上。"
+
+msgid "demo.recipe.baby_teddy.process.1"
+msgstr "旧棉絮重新蓬松起来。"
+
+msgid "demo.recipe.baby_teddy.process.2"
+msgstr "枕让每一处接缝都学会安慰。"
+
+msgid "demo.recipe.baby_teddy.process.3"
+msgstr "它安静地等待下一次哭声。"
+
+msgid "demo.recipe.pale_teddy.process.1"
+msgstr "镜面从玩偶身上取走颜色。"
+
+msgid "demo.recipe.pale_teddy.process.2"
+msgstr "旧日的轮廓在苍白中变得清楚。"
+
+msgid "demo.recipe.pale_teddy.process.3"
+msgstr "它从倒影里睁开眼睛。"
+
+msgid "demo.recipe.scissors.process.1"
+msgstr "金属在灯下显出锋利的轮廓。"
+
+msgid "demo.recipe.scissors.process.2"
+msgstr "两片薄刃在想象中咬合。"
+
+msgid "demo.ui.synthesis.base"
+msgstr "原料"
+
+msgid "demo.ui.synthesis.fuel"
+msgstr "临时性相"
+
+msgid "demo.ui.synthesis.candidates"
+msgstr "可能的形状"
+
+msgid "demo.ui.synthesis.no_candidates"
+msgstr "袋中没有浮现任何形状"
+
+msgid "demo.ui.synthesis.totals"
+msgstr "袋中属性"
+
+msgid "demo.ui.synthesis.personas"
+msgstr "选择一种人格"
+
+msgid "demo.ui.synthesis.unknown_candidate"
+msgstr "？？？"
+
+msgid "demo.ui.synthesis.flip_result"
+msgstr "点击翻开"
+
+msgid "demo.ui.synthesis.drag_result"
+msgstr "拖入手牌，或直接离开"
 
 msgid "demo.task.girl.name"
 msgstr "小女孩的委托"

@@ -8,6 +8,13 @@ var title_label: Label
 var required_row: HBoxContainer
 var bonus_section: VBoxContainer
 var bonus_row: HBoxContainer
+var property_panel: PanelContainer
+var property_icon_image: TextureRect
+var property_icon_fallback: Label
+var property_name: Label
+var property_description: Label
+var selected_property_id: StringName
+var property_buttons: Dictionary = {}
 
 
 func _ready() -> void:
@@ -24,7 +31,9 @@ func _ready() -> void:
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	panel.add_theme_stylebox_override(
 		"panel",
-		ItemDetailPopup.panel_style(Color("020304", 0.998), Color("a58d58", 0.94), 1),
+		ItemDetailPopup.panel_style(
+			ItemDetailPopup.POPUP_BACKGROUND, Color("a58d58", 0.94), 1
+		),
 	)
 	add_child(panel)
 
@@ -40,6 +49,8 @@ func _ready() -> void:
 	column.add_child(header)
 	title_label = Label.new()
 	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	title_label.max_lines_visible = 1
 	title_label.add_theme_font_size_override("font_size", 17)
 	title_label.add_theme_color_override("font_color", Color("e3c679"))
 	header.add_child(title_label)
@@ -96,10 +107,24 @@ func _ready() -> void:
 	bonus_row.add_theme_constant_override("separation", 9)
 	bonus_scroll.add_child(bonus_row)
 
+	_build_property_panel()
 	must_label.text = TranslationServer.translate(&"demo.ui.rule.must")
 	bonus_label.text = TranslationServer.translate(&"demo.ui.rule.bonus")
 	LocaleManager.locale_changed.connect(_on_locale_changed)
 	visible = false
+
+
+func _input(event: InputEvent) -> void:
+	if not visible or event is not InputEventMouseButton:
+		return
+	var mouse_event := event as InputEventMouseButton
+	if mouse_event.button_index != MOUSE_BUTTON_LEFT or not mouse_event.pressed:
+		return
+	if panel.get_global_rect().has_point(mouse_event.position):
+		return
+	if property_panel.visible and property_panel.get_global_rect().has_point(mouse_event.position):
+		return
+	close()
 
 
 func show_rule(rule: CardSlotRule, task_definition: TaskDefinition = null) -> void:
@@ -108,6 +133,8 @@ func show_rule(rule: CardSlotRule, task_definition: TaskDefinition = null) -> vo
 		return
 	current_rule = rule
 	current_task_definition = task_definition
+	selected_property_id = &""
+	property_panel.visible = false
 	visible = true
 	_refresh()
 
@@ -116,18 +143,31 @@ func close() -> void:
 	visible = false
 	current_rule = null
 	current_task_definition = null
+	selected_property_id = &""
+	if property_panel != null:
+		property_panel.visible = false
+	_update_property_button_states()
 
 
 func _refresh() -> void:
 	if current_rule == null or title_label == null:
 		return
-	title_label.text = TranslationServer.translate(&"demo.ui.rule.title")
+	var owner_request := (
+		current_task_definition != null
+		and current_task_definition.category == TaskDefinition.Category.OWNER_REQUEST
+	)
+	title_label.text = TranslationServer.translate(
+		current_rule.display_name_key if owner_request else &"demo.ui.rule.title"
+	)
+	title_label.add_theme_font_size_override("font_size", 12 if owner_request else 17)
+	title_label.tooltip_text = title_label.text if owner_request else ""
 	var required_heading := find_child("RequiredHeading", true, false) as Label
 	var bonus_heading := find_child("BonusHeading", true, false) as Label
 	required_heading.text = TranslationServer.translate(&"demo.ui.rule.must")
 	bonus_heading.text = TranslationServer.translate(&"demo.ui.rule.bonus")
 	_clear_row(required_row)
 	_clear_row(bonus_row)
+	property_buttons.clear()
 	for item_id in current_rule.accepted_item_ids:
 		_add_item_requirement(item_id)
 	for property_id in current_rule.required_all:
@@ -136,6 +176,9 @@ func _refresh() -> void:
 		_add_property_requirement(required_row, property_id)
 	_add_bonus_requirements()
 	bonus_section.visible = bonus_row.get_child_count() > 0
+	if property_panel.visible and not selected_property_id.is_empty():
+		_update_property_panel_content(selected_property_id)
+	_update_property_button_states()
 
 
 func _add_item_requirement(item_id: StringName) -> void:
@@ -174,9 +217,9 @@ func _add_property_requirement(row: HBoxContainer, property_id: StringName) -> v
 	chip.custom_minimum_size = Vector2(0, 30)
 	chip.add_theme_constant_override("separation", 6)
 	var icon := ItemDetailPopup.make_property_icon_button(property_id, 30)
-	icon.toggle_mode = false
-	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.pressed.connect(_show_property.bind(property_id))
 	chip.add_child(icon)
+	_register_property_button(property_id, icon)
 	var label := Label.new()
 	label.text = TranslationServer.translate(
 		property.display_name_key
@@ -187,6 +230,146 @@ func _add_property_requirement(row: HBoxContainer, property_id: StringName) -> v
 	label.add_theme_color_override("font_color", Color("d9d0b4"))
 	chip.add_child(label)
 	row.add_child(chip)
+
+
+func _register_property_button(property_id: StringName, button: Button) -> void:
+	var buttons := property_buttons.get(property_id, []) as Array
+	buttons.append(button)
+	property_buttons[property_id] = buttons
+
+
+func _show_property(property_id: StringName) -> void:
+	if property_panel.visible and selected_property_id == property_id:
+		_hide_property_panel()
+		return
+	selected_property_id = property_id
+	_update_property_panel_content(property_id)
+	property_panel.visible = true
+	_position_property_panel()
+	_update_property_button_states()
+
+
+func _update_property_panel_content(property_id: StringName) -> void:
+	var texture := ItemDetailPopup.property_icon_texture(property_id)
+	property_icon_image.texture = texture
+	property_icon_image.visible = texture != null
+	property_icon_fallback.text = ItemDetailPopup.property_symbol(property_id)
+	property_icon_fallback.visible = texture == null
+	property_name.text = TranslationServer.translate(ItemDetailPopup.property_name_key(property_id))
+	property_description.text = TranslationServer.translate(
+		ItemDetailPopup.property_description_key(property_id)
+	)
+
+
+func _hide_property_panel() -> void:
+	selected_property_id = &""
+	property_panel.visible = false
+	_update_property_button_states()
+
+
+func _update_property_button_states() -> void:
+	for raw_property_id in property_buttons:
+		var property_id := StringName(raw_property_id)
+		var buttons := property_buttons[raw_property_id] as Array
+		for raw_button in buttons:
+			var button := raw_button as Button
+			if button != null:
+				button.button_pressed = property_panel != null and property_panel.visible and selected_property_id == property_id
+
+
+func _build_property_panel() -> void:
+	property_panel = PanelContainer.new()
+	property_panel.name = "RulePropertyDetailPanel"
+	property_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	property_panel.offset_left = ItemDetailPopup.DETAIL_LEFT
+	property_panel.offset_top = ItemDetailPopup.DETAIL_BOTTOM + ItemDetailPopup.PROPERTY_GAP
+	property_panel.offset_right = ItemDetailPopup.DETAIL_RIGHT
+	property_panel.offset_bottom = (
+		ItemDetailPopup.DETAIL_BOTTOM
+		+ ItemDetailPopup.PROPERTY_GAP
+		+ ItemDetailPopup.PROPERTY_HEIGHT
+	)
+	property_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	property_panel.add_theme_stylebox_override(
+		"panel",
+		ItemDetailPopup.panel_style(
+			ItemDetailPopup.POPUP_BACKGROUND, Color("a58d58", 0.94), 1
+		),
+	)
+	add_child(property_panel)
+	var margin := MarginContainer.new()
+	for side in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_%s" % side, 9)
+	property_panel.add_child(margin)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 11)
+	margin.add_child(row)
+	var icon_frame := PanelContainer.new()
+	icon_frame.custom_minimum_size = Vector2(78, 78)
+	icon_frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	icon_frame.add_theme_stylebox_override(
+		"panel", ItemDetailPopup.panel_style(Color("f1eee5"), Color("a58d58"), 1)
+	)
+	row.add_child(icon_frame)
+	var icon_stack := Control.new()
+	icon_stack.custom_minimum_size = Vector2(76, 76)
+	icon_frame.add_child(icon_stack)
+	property_icon_image = TextureRect.new()
+	property_icon_image.anchor_right = 1.0
+	property_icon_image.anchor_bottom = 1.0
+	property_icon_image.offset_left = 9.0
+	property_icon_image.offset_top = 9.0
+	property_icon_image.offset_right = -9.0
+	property_icon_image.offset_bottom = -9.0
+	property_icon_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	property_icon_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	property_icon_image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon_stack.add_child(property_icon_image)
+	property_icon_fallback = Label.new()
+	property_icon_fallback.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	property_icon_fallback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	property_icon_fallback.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	property_icon_fallback.add_theme_font_size_override("font_size", 32)
+	property_icon_fallback.add_theme_color_override("font_color", Color("141718"))
+	property_icon_fallback.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon_stack.add_child(property_icon_fallback)
+	var text_column := VBoxContainer.new()
+	text_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	text_column.add_theme_constant_override("separation", 4)
+	row.add_child(text_column)
+	property_name = Label.new()
+	property_name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	property_name.add_theme_font_size_override("font_size", 16)
+	property_name.add_theme_color_override("font_color", Color("e3c679"))
+	text_column.add_child(property_name)
+	var divider := ColorRect.new()
+	divider.custom_minimum_size = Vector2(0, 1)
+	divider.color = Color("a58d58", 0.90)
+	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	text_column.add_child(divider)
+	property_description = Label.new()
+	property_description.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	property_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	property_description.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	property_description.max_lines_visible = 3
+	property_description.add_theme_font_size_override("font_size", 11)
+	property_description.add_theme_color_override("font_color", Color("d8ddd9"))
+	text_column.add_child(property_description)
+	property_panel.visible = false
+	_position_property_panel()
+
+
+func _position_property_panel() -> void:
+	if panel == null or property_panel == null:
+		return
+	var panel_height := maxf(panel.size.y, panel.get_combined_minimum_size().y)
+	var property_height := maxf(
+		ItemDetailPopup.PROPERTY_HEIGHT,
+		property_panel.get_combined_minimum_size().y,
+	)
+	var property_top := panel.offset_top + panel_height + ItemDetailPopup.PROPERTY_GAP
+	property_panel.offset_top = property_top
+	property_panel.offset_bottom = property_top + property_height
 
 
 func _add_bonus_requirements() -> void:

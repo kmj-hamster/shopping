@@ -5,6 +5,8 @@ signal inspect_requested(definition: CardItemDefinition)
 signal drag_started(card: CardItemState)
 signal drag_finished(card: CardItemState, succeeded: bool)
 
+const CARD_SIZE := Vector2(88, 146)
+
 var card: CardItemState
 var definition: CardItemDefinition
 var title_label: Label
@@ -39,7 +41,7 @@ func setup(
 
 
 func _ready() -> void:
-	custom_minimum_size = Vector2(112, 128)
+	custom_minimum_size = CARD_SIZE
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	mouse_default_cursor_shape = Control.CURSOR_DRAG
 	var margin := MarginContainer.new()
@@ -54,7 +56,7 @@ func _ready() -> void:
 	column.add_theme_constant_override("separation", 5)
 	margin.add_child(column)
 	item_image = TextureRect.new()
-	item_image.custom_minimum_size = Vector2(92, 88)
+	item_image.custom_minimum_size = Vector2(72, 88)
 	item_image.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	item_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	item_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -83,7 +85,7 @@ func _border_color() -> Color:
 		return Color("d5b66f")
 	if definition.has_property(CardPropertySet.ASPECT_MIRROR):
 		return Color("7ca9bd")
-	if definition.has_property(CardPropertySet.ASPECT_CANDLE):
+	if definition.has_property(CardPropertySet.ASPECT_GAUZE):
 		return Color("9a82bb")
 	return Color("bd8fa5")
 

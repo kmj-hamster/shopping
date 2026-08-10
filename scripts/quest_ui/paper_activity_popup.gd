@@ -4,6 +4,7 @@ extends PanelContainer
 signal closed
 
 var title_label: Label
+var body_margin: MarginContainer
 var body_label: Label
 var slots_row: HBoxContainer
 var feedback_label: Label
@@ -43,13 +44,15 @@ func _ready() -> void:
 	close_button.pressed.connect(closed.emit)
 	header.add_child(close_button)
 
+	body_margin = MarginContainer.new()
+	column.add_child(body_margin)
 	body_label = Label.new()
 	body_label.name = "PopupBody"
 	body_label.custom_minimum_size = Vector2(0, 72)
 	body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body_label.add_theme_font_size_override("font_size", 15)
 	body_label.add_theme_color_override("font_color", Color("4d4437"))
-	column.add_child(body_label)
+	body_margin.add_child(body_label)
 
 	slots_row = HBoxContainer.new()
 	slots_row.name = "PopupSlots"

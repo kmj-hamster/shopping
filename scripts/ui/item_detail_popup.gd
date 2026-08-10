@@ -7,6 +7,8 @@ const DETAIL_RIGHT := -4.0
 const DETAIL_BOTTOM := 150.0
 const PROPERTY_GAP := 10.0
 const PROPERTY_HEIGHT := 104.0
+const POPUP_BACKGROUND := Color("020304", 0.5)
+const PROPERTY_BAND_BACKGROUND := Color("080a0b", 0.5)
 
 var current_definition: CardItemDefinition
 var selected_property_id: StringName
@@ -78,7 +80,7 @@ func _build_detail_panel() -> void:
 	_apply_detail_anchors(detail_panel)
 	detail_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	detail_panel.add_theme_stylebox_override(
-		"panel", panel_style(Color("020304", 0.998), Color("a58d58", 0.94), 1)
+		"panel", panel_style(POPUP_BACKGROUND, Color("a58d58", 0.94), 1)
 	)
 	add_child(detail_panel)
 
@@ -150,7 +152,7 @@ func _build_detail_panel() -> void:
 	property_band.name = "PropertyBand"
 	property_band.custom_minimum_size = Vector2(0, 38)
 	property_band.add_theme_stylebox_override(
-		"panel", panel_style(Color("080a0b", 0.997), Color("9a834f", 0.90), 1)
+		"panel", panel_style(PROPERTY_BAND_BACKGROUND, Color("9a834f", 0.90), 1)
 	)
 	column.add_child(property_band)
 	var band_margin := MarginContainer.new()
@@ -177,7 +179,7 @@ func _build_property_panel() -> void:
 	_apply_property_anchors(property_panel)
 	property_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	property_panel.add_theme_stylebox_override(
-		"panel", panel_style(Color("020304", 0.998), Color("a58d58", 0.94), 1)
+		"panel", panel_style(POPUP_BACKGROUND, Color("a58d58", 0.94), 1)
 	)
 	add_child(property_panel)
 	var margin := MarginContainer.new()
@@ -418,8 +420,17 @@ static func property_description_key(tag: StringName) -> StringName:
 
 static func property_icon_texture(tag: StringName) -> Texture2D:
 	var paths := {
+		&"food": "res://resources/ui/property-food.png",
+		&"salty": "res://resources/ui/property-salty.png",
 		&"lamp": "res://resources/ui/property-lamp.png",
+		&"mirror": "res://resources/ui/property-mirror.svg",
+		&"gauze": "res://resources/ui/property-gauze.svg",
+		&"pillow": "res://resources/ui/property-pillow.svg",
 		&"plant": "res://resources/ui/property-plant.png",
+		&"flower": "res://resources/ui/property-plant.png",
+		&"rose": "res://resources/item-midnight-rose.svg",
+		&"toy": "res://resources/item-toy-block.svg",
+		&"teddy_bear": "res://resources/item-worn-teddy.svg",
 		&"drink": "res://resources/ui/property-drink.png",
 		&"tool": "res://resources/ui/property-tool.png",
 	}
@@ -431,9 +442,15 @@ static func property_symbol(tag: StringName) -> String:
 	var symbols := {
 		&"lamp": "✦",
 		&"mirror": "◇",
+		&"gauze": "≋",
+		&"pillow": "▱",
 		&"food": "●",
 		&"salty": "≋",
 		&"plant": "♧",
+		&"flower": "♧",
+		&"rose": "✿",
+		&"toy": "□",
+		&"teddy_bear": "⌁",
 		&"drink": "∪",
 		&"metal": "◆",
 		&"tool": "×",

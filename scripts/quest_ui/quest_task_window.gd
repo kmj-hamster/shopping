@@ -26,6 +26,8 @@ func _ready() -> void:
 	anchor_right = 0.83
 	anchor_bottom = 0.70
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	body_margin.add_theme_constant_override("margin_left", 36)
+	body_margin.add_theme_constant_override("margin_right", 36)
 	body_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	body_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	action_button.pressed.connect(_on_action_pressed)
@@ -68,13 +70,14 @@ func refresh() -> void:
 		if current_store_id != definition.store_id:
 			feedback_label.text = TranslationServer.translate(&"quest.ui.task.owner_elsewhere")
 			action_button.tooltip_text = feedback_label.text
-	elif task.confirmed:
-		action_button.text = TranslationServer.translate(&"demo.ui.task.locked")
-		action_button.disabled = true
-		feedback_label.text = TranslationServer.translate(&"demo.ui.task.locked_hint")
 	else:
-		action_button.text = TranslationServer.translate(&"quest.ui.task.confirm")
-		action_button.disabled = not evaluation.is_ready
+		action_button.text = TranslationServer.translate(
+			&"quest.ui.task.enjoy_tonight"
+			if definition.category == TaskDefinition.Category.SELF_CARE
+			else &"quest.ui.task.deliver_tomorrow"
+		)
+		action_button.disabled = task.confirmed or not evaluation.is_ready
+		action_button.tooltip_text = ""
 		if not evaluation.is_ready and not task.assignments.is_empty():
 			feedback_label.text = TranslationServer.translate(&"quest.ui.task.not_ready")
 

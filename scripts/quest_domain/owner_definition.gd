@@ -17,6 +17,10 @@ extends Resource
 @export_range(1, 3, 1) var event_item_page := 2
 @export var state_dialogue_keys: Dictionary = {}
 @export var portrait_hidden_states: Array[StringName] = []
+@export_group("Dialogue Voice")
+@export var dialogue_voice_streams: Array[AudioStream] = []
+@export_range(0.5, 2.0, 0.01) var dialogue_voice_pitch_scale := 1.0
+@export_range(-40.0, 6.0, 0.1) var dialogue_voice_volume_db := 0.0
 
 
 func dialogue_for_state(state_id: StringName) -> StringName:

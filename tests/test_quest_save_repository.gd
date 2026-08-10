@@ -30,7 +30,7 @@ func test_round_trip_preserves_ppt_cards_tasks_and_map_state() -> void:
 	assert_eq(restored.wallet.money, 30)
 	assert_true(restored.task_instance_for_definition(&"girl_order").confirmed)
 	assert_true(restored.is_store_unlocked(&"record"))
-	assert_eq(restored.inventory.size(), 1)
+	assert_eq(restored.inventory.size(), 6)
 	assert_eq(restored.inventory[0].definition_id, &"fries")
 
 
@@ -66,14 +66,16 @@ func test_synthesis_placement_is_not_persisted() -> void:
 	var source := QuestGameState.new()
 	var cola := source.grant_item(&"cola", &"test")
 	var sunflower := source.grant_item(&"sunflower", &"test")
-	assert_true(source.assign_synthesis_card(&"metal", cola).ok)
-	assert_true(source.assign_synthesis_card(&"lamp", sunflower).ok)
+	assert_true(source.assign_synthesis_base(cola).ok)
+	assert_true(source.assign_synthesis_fuel(sunflower).ok)
+	assert_true(source.select_synthesis_persona(&"clarity"))
 	assert_true(repository.save(source))
 
 	var restored := QuestGameState.new()
 	assert_true(repository.load_into(restored).ok)
-	assert_null(restored.active_synthesis)
-	assert_true(restored.synthesis_assignments.is_empty())
+	assert_eq(restored.synthesis_base_instance_id, 0)
+	assert_eq(restored.synthesis_fuel_instance_id, 0)
+	assert_true(restored.synthesis_persona_id.is_empty())
 	assert_eq(_card_by_definition(restored, &"cola").location, CardItemState.Location.HAND)
 	assert_eq(_card_by_definition(restored, &"sunflower").location, CardItemState.Location.HAND)
 

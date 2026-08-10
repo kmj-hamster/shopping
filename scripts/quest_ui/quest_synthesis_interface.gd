@@ -4,18 +4,49 @@ extends Control
 signal leave_requested
 signal item_inspected(definition: CardItemDefinition)
 signal card_staging_changed(card: CardItemState, staged: bool)
+signal details_cleared
+
+enum Phase {
+	DRAFT,
+	NARRATIVE,
+	RESULT,
+}
+
+enum NarrativeState {
+	IDLE,
+	FADING,
+	HOLDING,
+}
+
+const NARRATIVE_FADE_SECONDS := 0.55
+const NARRATIVE_HOLD_SECONDS := 1.25
 
 var state: QuestGameState
-var material_row: HBoxContainer
-var candidate_button: Button
-var candidate_hint_panel: PanelContainer
-var candidate_hint_label: Label
-var output_holder: CenterContainer
+var phase := Phase.DRAFT
+var draft_layer: Control
+var totals_row: HBoxContainer
+var base_slot_host: CenterContainer
+var fuel_slot_host: CenterContainer
+var candidate_list: VBoxContainer
+var candidate_empty_label: Label
+var candidate_buttons: Dictionary = {}
+var persona_row: HBoxContainer
+var persona_buttons: Dictionary = {}
+var persona_definitions: Dictionary = {}
 var action_button: Button
-var empty_candidate_label: Label
-var candidate_selected := false
 var material_slots: Array[QuestSynthesisMaterialSlot] = []
-var output_animation_seconds := 0.32
+var narrative_overlay: ColorRect
+var narrative_column: VBoxContainer
+var narrative_lines: Array[String] = []
+var narrative_index := -1
+var narrative_state := NarrativeState.IDLE
+var narrative_timer := 0.0
+var current_narrative_label: Label
+var result_layer: Control
+var result_holder: CenterContainer
+var result_hint: Label
+var pending_output: CardItemState
+var result_revealed := false
 var refresh_queued := false
 
 
@@ -24,7 +55,6 @@ func setup(game_state: QuestGameState) -> void:
 	if state != null and not state.state_changed.is_connected(_queue_refresh):
 		state.state_changed.connect(_queue_refresh)
 	if is_node_ready():
-		_prepare_recipe()
 		refresh()
 
 
@@ -32,157 +62,76 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_build_interface()
-	_prepare_recipe()
 	LocaleManager.locale_changed.connect(_on_locale_changed)
+	set_process(false)
 	refresh()
 
 
 func refresh() -> void:
-	if state == null or material_row == null:
+	if state == null or draft_layer == null or phase != Phase.DRAFT:
 		return
-	_rebuild_materials()
-	var has_materials := not state.synthesis_assignments.is_empty()
-	var evaluation := state.synthesis_evaluation()
-	empty_candidate_label.visible = not has_materials
-	candidate_button.visible = has_materials
-	candidate_button.text = (
-		QuestArcCatalog.item_by_id(StringName(evaluation.output_id)).localized_name()
-		if evaluation.is_complete
-		else "◇"
-	)
-	candidate_button.tooltip_text = TranslationServer.translate(&"demo.ui.synthesis.inspect")
-	candidate_hint_panel.visible = has_materials and candidate_selected
-	if candidate_hint_panel.visible:
-		var recipe := _recipe()
-		candidate_hint_label.text = (
-			TranslationServer.translate(recipe.preview_key_for_output(&"scissors"))
-			if recipe != null
-			else ""
-		)
-	_rebuild_output(evaluation)
+	_rebuild_totals()
+	_rebuild_material_slots()
+	_rebuild_candidates()
+	_rebuild_personas()
 	action_button.text = TranslationServer.translate(&"quest.ui.synthesis.action")
-	action_button.visible = evaluation.is_complete
-	action_button.disabled = not evaluation.is_complete
+	action_button.visible = not state.synthesis_candidate_recipe_id.is_empty()
+	action_button.disabled = state.synthesis_candidate_recipe_id.is_empty()
 
 
-func can_stage_card(card: CardItemState) -> bool:
+func can_stage_card(role_id: StringName, card: CardItemState) -> bool:
 	if state == null or card == null or card not in state.inventory:
 		return false
 	if card.location != CardItemState.Location.HAND:
 		return false
-	return _available_rule_for_card(card) != null
+	return role_id in [&"base", &"fuel"]
 
 
-func stage_card(card: CardItemState) -> bool:
-	var rule := _available_rule_for_card(card)
-	if rule == null:
-		return false
-	var result := state.assign_synthesis_card(rule.id, card)
+func stage_card(role_id: StringName, card: CardItemState) -> bool:
+	var result := (
+		state.assign_synthesis_base(card)
+		if role_id == &"base"
+		else state.assign_synthesis_fuel(card)
+	)
 	return bool(result.ok)
 
 
-func remove_material(card: CardItemState) -> void:
+func remove_material(_role_id: StringName, card: CardItemState) -> void:
 	if state != null:
 		state.return_card_to_hand(card)
 
 
 func cancel_pending_inputs() -> void:
-	candidate_selected = false
+	set_process(false)
+	if pending_output != null:
+		card_staging_changed.emit(pending_output, false)
+		pending_output = null
 	if state != null:
-		state.clear_synthesis_assignments()
-
-
-func _prepare_recipe() -> void:
-	if state == null:
-		return
-	if state.synthesis_recipe_id != &"recipe_scissors":
-		state.select_synthesis_recipe(&"recipe_scissors")
-
-
-func _recipe() -> SynthesisRecipeDefinition:
-	return QuestArcCatalog.recipe_by_id(&"recipe_scissors")
-
-
-func _available_rule_for_card(card: CardItemState) -> CardSlotRule:
-	var recipe := _recipe()
-	var definition := QuestArcCatalog.item_by_id(card.definition_id) if card != null else null
-	if recipe == null or definition == null:
-		return null
-	for raw_rule in recipe.slot_rules:
-		var rule := raw_rule as CardSlotRule
-		if state.synthesis_assignments.has(rule.id):
-			continue
-		if CardRuleEvaluator.evaluate(rule, definition).can_place:
-			return rule
-	return null
-
-
-func _assigned_cards() -> Array[CardItemState]:
-	var result: Array[CardItemState] = []
-	var recipe := _recipe()
-	if recipe == null:
-		return result
-	for raw_rule in recipe.slot_rules:
-		var rule := raw_rule as CardSlotRule
-		var card := state.card_by_instance_id(int(state.synthesis_assignments.get(rule.id, 0)))
-		if card != null:
-			result.append(card)
-	return result
-
-
-func _rebuild_materials() -> void:
-	for child in material_row.get_children():
-		child.free()
-	material_slots.clear()
-	var cards := _assigned_cards()
-	for index in 2:
-		var slot := QuestSynthesisMaterialSlot.new()
-		slot.name = "MaterialSlot%d" % (index + 1)
-		slot.setup(self, cards[index] if index < cards.size() else null)
-		slot.item_inspected.connect(item_inspected.emit)
-		material_row.add_child(slot)
-		material_slots.append(slot)
-
-
-func _rebuild_output(evaluation: Dictionary) -> void:
-	for child in output_holder.get_children():
-		child.free()
-	if not evaluation.is_complete:
-		var placeholder := Label.new()
-		placeholder.text = "◇"
-		placeholder.add_theme_font_size_override("font_size", 44)
-		placeholder.add_theme_color_override("font_color", Color("556562"))
-		output_holder.add_child(placeholder)
-		return
-	var definition := QuestArcCatalog.item_by_id(StringName(evaluation.output_id))
-	var preview := CardHandCard.new()
-	preview.name = "SynthesisOutputPreview"
-	preview.setup(null, definition, false)
-	preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	output_holder.add_child(preview)
+		state.clear_synthesis_draft()
+	phase = Phase.DRAFT
 
 
 func _build_interface() -> void:
 	var background := ColorRect.new()
-	background.color = Color("031014")
+	background.color = Color("020b10")
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(background)
-	var inner_glow := ColorRect.new()
-	inner_glow.color = Color("123936", 0.34)
-	inner_glow.anchor_left = 0.03
-	inner_glow.anchor_top = 0.05
-	inner_glow.anchor_right = 0.97
-	inner_glow.anchor_bottom = 0.95
-	inner_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(inner_glow)
+	var distant_glow := ColorRect.new()
+	distant_glow.color = Color("1a5b59", 0.24)
+	distant_glow.anchor_left = 0.04
+	distant_glow.anchor_top = 0.06
+	distant_glow.anchor_right = 0.96
+	distant_glow.anchor_bottom = 0.94
+	distant_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(distant_glow)
 
 	var title := Label.new()
 	title.name = "SynthesisTitle"
-	title.anchor_left = 0.04
-	title.anchor_top = 0.04
-	title.anchor_right = 0.64
-	title.anchor_bottom = 0.14
+	title.anchor_left = 0.035
+	title.anchor_top = 0.025
+	title.anchor_right = 0.38
+	title.anchor_bottom = 0.11
 	title.add_theme_font_size_override("font_size", 25)
 	title.add_theme_color_override("font_color", Color("ddc985"))
 	title.text = TranslationServer.translate(&"quest.ui.synthesis.title")
@@ -190,156 +139,551 @@ func _build_interface() -> void:
 
 	var close_button := Button.new()
 	close_button.name = "LeaveSynthesisButton"
-	close_button.anchor_left = 0.91
-	close_button.anchor_top = 0.035
-	close_button.anchor_right = 0.97
-	close_button.anchor_bottom = 0.12
+	close_button.anchor_left = 0.935
+	close_button.anchor_top = 0.025
+	close_button.anchor_right = 0.985
+	close_button.anchor_bottom = 0.105
 	close_button.text = "×"
 	close_button.tooltip_text = TranslationServer.translate(&"demo.ui.synthesis.leave")
 	close_button.pressed.connect(leave_requested.emit)
 	add_child(close_button)
 
-	var material_panel := PanelContainer.new()
-	material_panel.anchor_left = 0.055
-	material_panel.anchor_top = 0.18
-	material_panel.anchor_right = 0.60
-	material_panel.anchor_bottom = 0.87
-	material_panel.add_theme_stylebox_override(
-		"panel", UiPalette.panel_style(Color("07191d", 0.82), Color("58766f", 0.68))
-	)
-	add_child(material_panel)
-	var material_margin := MarginContainer.new()
-	for side in ["left", "right", "top", "bottom"]:
-		material_margin.add_theme_constant_override("margin_%s" % side, 18)
-	material_panel.add_child(material_margin)
-	var material_column := VBoxContainer.new()
-	material_column.alignment = BoxContainer.ALIGNMENT_CENTER
-	material_column.add_theme_constant_override("separation", 18)
-	material_margin.add_child(material_column)
-	var material_heading := Label.new()
-	material_heading.name = "MaterialHeading"
-	material_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	material_heading.add_theme_font_size_override("font_size", 14)
-	material_heading.add_theme_color_override("font_color", Color("86a39b"))
-	material_heading.text = TranslationServer.translate(&"demo.ui.synthesis.materials")
-	material_column.add_child(material_heading)
-	material_row = HBoxContainer.new()
-	material_row.name = "MaterialRow"
-	material_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	material_row.add_theme_constant_override("separation", 18)
-	material_column.add_child(material_row)
+	draft_layer = Control.new()
+	draft_layer.name = "SynthesisDraft"
+	draft_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(draft_layer)
+	_build_totals_panel()
+	_build_material_region()
+	_build_candidate_region()
+	_build_persona_region()
+	_build_narrative_overlay()
+	_build_result_layer()
 
-	var result_panel := PanelContainer.new()
-	result_panel.anchor_left = 0.64
-	result_panel.anchor_top = 0.18
-	result_panel.anchor_right = 0.95
-	result_panel.anchor_bottom = 0.87
-	result_panel.add_theme_stylebox_override(
-		"panel", UiPalette.panel_style(Color("050a0c", 0.94), Color("876f47", 0.8))
+
+func _build_totals_panel() -> void:
+	var panel := PanelContainer.new()
+	panel.anchor_left = 0.25
+	panel.anchor_top = 0.035
+	panel.anchor_right = 0.75
+	panel.anchor_bottom = 0.16
+	panel.add_theme_stylebox_override(
+		"panel", UiPalette.panel_style(Color("061216", 0.78), Color("607a73", 0.62))
 	)
-	add_child(result_panel)
-	var result_margin := MarginContainer.new()
+	draft_layer.add_child(panel)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_top", 6)
+	margin.add_theme_constant_override("margin_bottom", 6)
+	panel.add_child(margin)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 3)
+	margin.add_child(column)
+	var label := Label.new()
+	label.name = "TotalsHeading"
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 11)
+	label.add_theme_color_override("font_color", Color("8ea59f"))
+	label.text = TranslationServer.translate(&"demo.ui.synthesis.totals")
+	column.add_child(label)
+	totals_row = HBoxContainer.new()
+	totals_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	totals_row.add_theme_constant_override("separation", 8)
+	column.add_child(totals_row)
+
+
+func _build_material_region() -> void:
+	base_slot_host = _make_slot_host(0.04, 0.28, 0.29, 0.67, &"demo.ui.synthesis.base")
+	fuel_slot_host = _make_slot_host(0.71, 0.28, 0.96, 0.67, &"demo.ui.synthesis.fuel")
+
+
+func _make_slot_host(
+	left: float,
+	top: float,
+	right: float,
+	bottom: float,
+	label_key: StringName,
+) -> CenterContainer:
+	var panel := PanelContainer.new()
+	panel.anchor_left = left
+	panel.anchor_top = top
+	panel.anchor_right = right
+	panel.anchor_bottom = bottom
+	panel.add_theme_stylebox_override("panel", UiPalette.panel_style(Color("031014", 0.36)))
+	draft_layer.add_child(panel)
+	var column := VBoxContainer.new()
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override("separation", 7)
+	panel.add_child(column)
+	var label := Label.new()
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 13)
+	label.add_theme_color_override("font_color", Color("c8b67f"))
+	label.text = TranslationServer.translate(label_key)
+	column.add_child(label)
+	var host := CenterContainer.new()
+	host.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_child(host)
+	return host
+
+
+func _build_candidate_region() -> void:
+	var panel := PanelContainer.new()
+	panel.anchor_left = 0.30
+	panel.anchor_top = 0.19
+	panel.anchor_right = 0.70
+	panel.anchor_bottom = 0.68
+	panel.add_theme_stylebox_override(
+		"panel", UiPalette.panel_style(Color("040b0e", 0.84), Color("836f48", 0.72))
+	)
+	draft_layer.add_child(panel)
+	var margin := MarginContainer.new()
 	for side in ["left", "right", "top", "bottom"]:
-		result_margin.add_theme_constant_override("margin_%s" % side, 14)
-	result_panel.add_child(result_margin)
-	var result_column := VBoxContainer.new()
-	result_column.add_theme_constant_override("separation", 10)
-	result_margin.add_child(result_column)
-	var candidate_heading := Label.new()
-	candidate_heading.name = "CandidateHeading"
-	candidate_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	candidate_heading.add_theme_color_override("font_color", Color("86a39b"))
-	candidate_heading.text = TranslationServer.translate(&"demo.ui.synthesis.potential")
-	result_column.add_child(candidate_heading)
-	empty_candidate_label = Label.new()
-	empty_candidate_label.custom_minimum_size = Vector2(0, 52)
-	empty_candidate_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	empty_candidate_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	empty_candidate_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	empty_candidate_label.add_theme_color_override("font_color", Color("667d77"))
-	empty_candidate_label.text = TranslationServer.translate(&"demo.ui.synthesis.empty")
-	result_column.add_child(empty_candidate_label)
-	candidate_button = Button.new()
-	candidate_button.name = "PotentialRecipeButton"
-	candidate_button.custom_minimum_size = Vector2(0, 48)
-	candidate_button.add_theme_font_size_override("font_size", 19)
-	candidate_button.pressed.connect(_on_candidate_pressed)
-	result_column.add_child(candidate_button)
-	candidate_hint_panel = PanelContainer.new()
-	candidate_hint_panel.add_theme_stylebox_override(
-		"panel", UiPalette.panel_style(Color("10181a", 0.96), Color("5e6f69"))
-	)
-	result_column.add_child(candidate_hint_panel)
-	candidate_hint_label = Label.new()
-	candidate_hint_label.custom_minimum_size = Vector2(0, 62)
-	candidate_hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	candidate_hint_label.add_theme_font_size_override("font_size", 12)
-	candidate_hint_label.add_theme_color_override("font_color", Color("c8bea0"))
-	candidate_hint_panel.add_child(candidate_hint_label)
-	var result_spacer := Control.new()
-	result_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	result_column.add_child(result_spacer)
-	output_holder = CenterContainer.new()
-	output_holder.name = "SynthesisOutputHolder"
-	output_holder.custom_minimum_size = Vector2(0, 140)
-	result_column.add_child(output_holder)
+		margin.add_theme_constant_override("margin_%s" % side, 12)
+	panel.add_child(margin)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 8)
+	margin.add_child(column)
+	var heading := Label.new()
+	heading.name = "CandidateHeading"
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.add_theme_font_size_override("font_size", 14)
+	heading.add_theme_color_override("font_color", Color("ddc985"))
+	heading.text = TranslationServer.translate(&"demo.ui.synthesis.candidates")
+	column.add_child(heading)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	column.add_child(scroll)
+	candidate_list = VBoxContainer.new()
+	candidate_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	candidate_list.add_theme_constant_override("separation", 7)
+	scroll.add_child(candidate_list)
+	candidate_empty_label = Label.new()
+	candidate_empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	candidate_empty_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	candidate_empty_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	candidate_empty_label.add_theme_color_override("font_color", Color("62746f"))
+	candidate_empty_label.text = TranslationServer.translate(&"demo.ui.synthesis.no_candidates")
+	candidate_list.add_child(candidate_empty_label)
 	action_button = Button.new()
 	action_button.name = "SynthesisActionButton"
-	action_button.custom_minimum_size = Vector2(150, 42)
+	action_button.custom_minimum_size = Vector2(150, 38)
 	action_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	action_button.pressed.connect(_on_action_pressed)
-	result_column.add_child(action_button)
+	column.add_child(action_button)
 
 
-func _on_candidate_pressed() -> void:
-	candidate_selected = not candidate_selected
-	refresh()
+func _build_persona_region() -> void:
+	var panel := PanelContainer.new()
+	panel.anchor_left = 0.15
+	panel.anchor_top = 0.70
+	panel.anchor_right = 0.85
+	panel.anchor_bottom = 0.985
+	panel.add_theme_stylebox_override(
+		"panel", UiPalette.panel_style(Color("031014", 0.56), Color("506b66", 0.54))
+	)
+	draft_layer.add_child(panel)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 10)
+	margin.add_theme_constant_override("margin_right", 10)
+	margin.add_theme_constant_override("margin_top", 7)
+	margin.add_theme_constant_override("margin_bottom", 7)
+	panel.add_child(margin)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 5)
+	margin.add_child(column)
+	var heading := Label.new()
+	heading.name = "PersonaHeading"
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.add_theme_font_size_override("font_size", 12)
+	heading.add_theme_color_override("font_color", Color("8ea59f"))
+	heading.text = TranslationServer.translate(&"demo.ui.synthesis.personas")
+	column.add_child(heading)
+	persona_row = HBoxContainer.new()
+	persona_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	persona_row.add_theme_constant_override("separation", 9)
+	column.add_child(persona_row)
+
+
+func _build_narrative_overlay() -> void:
+	narrative_overlay = ColorRect.new()
+	narrative_overlay.name = "SynthesisNarrative"
+	narrative_overlay.color = Color.BLACK
+	narrative_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	narrative_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	narrative_overlay.gui_input.connect(_on_narrative_input)
+	add_child(narrative_overlay)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	narrative_overlay.add_child(center)
+	narrative_column = VBoxContainer.new()
+	narrative_column.custom_minimum_size = Vector2(560, 0)
+	narrative_column.add_theme_constant_override("separation", 18)
+	center.add_child(narrative_column)
+	narrative_overlay.visible = false
+
+
+func _build_result_layer() -> void:
+	result_layer = Control.new()
+	result_layer.name = "SynthesisResult"
+	result_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(result_layer)
+	_add_result_empty_slot(0.08, 0.30, 0.28, 0.66)
+	_add_result_empty_slot(0.72, 0.30, 0.92, 0.66)
+	var center := CenterContainer.new()
+	center.anchor_left = 0.28
+	center.anchor_top = 0.18
+	center.anchor_right = 0.72
+	center.anchor_bottom = 0.76
+	result_layer.add_child(center)
+	var column := VBoxContainer.new()
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override("separation", 16)
+	center.add_child(column)
+	result_holder = CenterContainer.new()
+	result_holder.custom_minimum_size = Vector2(190, 190)
+	column.add_child(result_holder)
+	result_hint = Label.new()
+	result_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	result_hint.add_theme_font_size_override("font_size", 13)
+	result_hint.add_theme_color_override("font_color", Color("c8bea0"))
+	column.add_child(result_hint)
+	result_layer.visible = false
+
+
+func _add_result_empty_slot(left: float, top: float, right: float, bottom: float) -> void:
+	var host := CenterContainer.new()
+	host.anchor_left = left
+	host.anchor_top = top
+	host.anchor_right = right
+	host.anchor_bottom = bottom
+	result_layer.add_child(host)
+	var empty_slot := PanelContainer.new()
+	empty_slot.custom_minimum_size = QuestSynthesisMaterialSlot.SLOT_SIZE
+	var style := UiPalette.panel_style(Color("050708", 0.54), Color("6e6958", 0.50))
+	style.corner_radius_top_left = 58
+	style.corner_radius_top_right = 58
+	style.corner_radius_bottom_left = 58
+	style.corner_radius_bottom_right = 58
+	style.set_border_width_all(2)
+	empty_slot.add_theme_stylebox_override("panel", style)
+	host.add_child(empty_slot)
+	var mark := Label.new()
+	mark.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	mark.text = "+"
+	mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	mark.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	mark.add_theme_font_size_override("font_size", 40)
+	mark.add_theme_color_override("font_color", Color("65716d", 0.64))
+	empty_slot.add_child(mark)
+
+
+func _rebuild_totals() -> void:
+	for child in totals_row.get_children():
+		child.free()
+	var base_card := state.synthesis_base_card()
+	if base_card != null:
+		var base := QuestArcCatalog.item_by_id(base_card.definition_id)
+		if base != null and base.property_set != null:
+			for tag in base.property_set.tags:
+				_add_property_chip(totals_row, tag, 0)
+	var totals := state.synthesis_aspect_totals()
+	for aspect in CardPropertySet.ASPECTS:
+		var amount := int(totals.get(aspect, 0))
+		if amount > 0:
+			_add_property_chip(totals_row, aspect, amount)
+	if totals_row.get_child_count() == 0:
+		var placeholder := Label.new()
+		placeholder.text = "—"
+		placeholder.add_theme_color_override("font_color", Color("62746f"))
+		totals_row.add_child(placeholder)
+
+
+func _add_property_chip(parent: Container, tag: StringName, amount: int) -> void:
+	var chip := HBoxContainer.new()
+	chip.add_theme_constant_override("separation", 3)
+	parent.add_child(chip)
+	var icon := ItemDetailPopup.make_property_icon_button(tag, 28)
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.add_child(icon)
+	if amount > 0:
+		var value := Label.new()
+		value.text = str(amount)
+		value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		value.add_theme_font_size_override("font_size", 13)
+		value.add_theme_color_override("font_color", Color("e8ddbf"))
+		chip.add_child(value)
+
+
+func _rebuild_material_slots() -> void:
+	for host in [base_slot_host, fuel_slot_host]:
+		for child in host.get_children():
+			child.free()
+	material_slots.clear()
+	for role_id in [&"base", &"fuel"]:
+		var slot := QuestSynthesisMaterialSlot.new()
+		var assigned := (
+			state.synthesis_base_card() if role_id == &"base" else state.synthesis_fuel_card()
+		)
+		slot.setup(self, role_id, assigned)
+		slot.item_inspected.connect(item_inspected.emit)
+		(base_slot_host if role_id == &"base" else fuel_slot_host).add_child(slot)
+		material_slots.append(slot)
+
+
+func _rebuild_candidates() -> void:
+	for child in candidate_list.get_children():
+		child.free()
+	candidate_buttons.clear()
+	var candidates := state.synthesis_candidates()
+	if candidates.is_empty():
+		candidate_empty_label = Label.new()
+		candidate_empty_label.custom_minimum_size = Vector2(0, 96)
+		candidate_empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		candidate_empty_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		candidate_empty_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		candidate_empty_label.add_theme_color_override("font_color", Color("62746f"))
+		candidate_empty_label.text = TranslationServer.translate(&"demo.ui.synthesis.no_candidates")
+		candidate_list.add_child(candidate_empty_label)
+		return
+	var totals := state.synthesis_aspect_totals()
+	for candidate in candidates:
+		var recipe_id := StringName(candidate.recipe_id)
+		var recipe := QuestArcCatalog.recipe_by_id(recipe_id)
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(0, 58)
+		button.disabled = not candidate.is_complete
+		button.toggle_mode = true
+		button.button_pressed = state.synthesis_candidate_recipe_id == recipe_id
+		if candidate.is_complete:
+			button.text = QuestArcCatalog.item_by_id(recipe.output_id).localized_name()
+		else:
+			button.text = TranslationServer.translate(&"demo.ui.synthesis.unknown_candidate")
+		button.add_theme_font_size_override("font_size", 15)
+		button.add_theme_color_override(
+			"font_color", Color("dfd5b7") if candidate.is_complete else Color("707673")
+		)
+		button.pressed.connect(_on_candidate_pressed.bind(recipe_id))
+		candidate_list.add_child(button)
+		candidate_buttons[recipe_id] = button
+		var requirements := HBoxContainer.new()
+		requirements.alignment = BoxContainer.ALIGNMENT_CENTER
+		requirements.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		for raw_aspect in recipe.required_aspects:
+			var aspect := StringName(raw_aspect)
+			_add_requirement_chip(
+				requirements,
+				aspect,
+				int(totals.get(aspect, 0)),
+				int(recipe.required_aspects[raw_aspect]),
+			)
+		button.add_child(requirements)
+		requirements.anchor_left = 0.58
+		requirements.anchor_top = 0.12
+		requirements.anchor_right = 0.96
+		requirements.anchor_bottom = 0.88
+
+
+func _add_requirement_chip(
+	parent: Container,
+	aspect: StringName,
+	actual: int,
+	required: int,
+) -> void:
+	var icon := ItemDetailPopup.make_property_icon_button(aspect, 26)
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(icon)
+	var value := Label.new()
+	value.text = "%d/%d" % [actual, required]
+	value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	value.add_theme_font_size_override("font_size", 12)
+	value.add_theme_color_override(
+		"font_color", Color("d9c98f") if actual >= required else Color("777c79")
+	)
+	parent.add_child(value)
+
+
+func _rebuild_personas() -> void:
+	for child in persona_row.get_children():
+		child.free()
+	persona_buttons.clear()
+	for persona_id in CardPropertySet.PROTAGONIST_STATS:
+		var definition := _persona_definition(persona_id)
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(118, 82)
+		button.toggle_mode = true
+		button.button_pressed = state.synthesis_persona_id == persona_id
+		button.text = "%s\n%s  %d" % [
+			definition.localized_name(),
+			TranslationServer.translate(
+				QuestArcCatalog.property_by_id(CardPropertySet.aspect_for_persona(persona_id)).display_name_key
+			),
+			int(state.protagonist_aspect_counts.get(persona_id, 0)),
+		]
+		button.add_theme_font_size_override("font_size", 13)
+		button.pressed.connect(_on_persona_pressed.bind(persona_id))
+		persona_row.add_child(button)
+		persona_buttons[persona_id] = button
+
+
+func _persona_definition(persona_id: StringName) -> CardItemDefinition:
+	var definition := persona_definitions.get(persona_id) as CardItemDefinition
+	if definition == null:
+		definition = CardItemDefinition.new()
+		definition.id = StringName("persona_%s" % persona_id)
+		definition.display_name_key = StringName("demo.persona.%s.name" % persona_id)
+		definition.description_key = StringName("demo.persona.%s.description" % persona_id)
+		definition.can_recycle = false
+		definition.can_be_synthesis_base = false
+		definition.property_set = CardPropertySet.new()
+		definition.image = ItemDetailPopup.property_icon_texture(
+			CardPropertySet.aspect_for_persona(persona_id)
+		)
+		persona_definitions[persona_id] = definition
+	definition.property_set.values = {
+		CardPropertySet.aspect_for_persona(persona_id): int(
+			state.protagonist_aspect_counts.get(persona_id, 0)
+		),
+	}
+	return definition
+
+
+func _on_persona_pressed(persona_id: StringName) -> void:
+	if state.select_synthesis_persona(persona_id):
+		item_inspected.emit(_persona_definition(persona_id))
+
+
+func _on_candidate_pressed(recipe_id: StringName) -> void:
+	if not state.select_synthesis_candidate(recipe_id):
+		return
+	# State changes already queue a deferred refresh. Rebuilding here would free the
+	# pressed button while its signal is still being emitted.
+	action_button.visible = true
+	action_button.disabled = false
+	var recipe := QuestArcCatalog.recipe_by_id(recipe_id)
+	item_inspected.emit(QuestArcCatalog.item_by_id(recipe.output_id))
 
 
 func _on_action_pressed() -> void:
-	var begin_result := state.begin_synthesis()
-	if not begin_result.ok:
+	var result := state.begin_synthesis()
+	if not result.ok:
 		return
-	var completed := state.advance_synthesis(999.0)
-	if not completed.get("completed", false):
+	pending_output = result.output as CardItemState
+	card_staging_changed.emit(pending_output, true)
+	details_cleared.emit()
+	_start_narrative(result.process_text_keys)
+
+
+func _start_narrative(text_keys: Array) -> void:
+	phase = Phase.NARRATIVE
+	draft_layer.visible = false
+	result_layer.visible = false
+	narrative_overlay.visible = true
+	for child in narrative_column.get_children():
+		child.free()
+	narrative_lines.clear()
+	for raw_key in text_keys:
+		narrative_lines.append(TranslationServer.translate(StringName(raw_key)))
+	narrative_index = -1
+	narrative_state = NarrativeState.IDLE
+	_advance_narrative()
+	set_process(true)
+
+
+func _process(delta: float) -> void:
+	if phase != Phase.NARRATIVE or current_narrative_label == null:
 		return
-	var output := completed.output as CardItemState
-	card_staging_changed.emit(output, true)
-	await _play_output_animation(output)
-	card_staging_changed.emit(output, false)
-	candidate_selected = false
+	match narrative_state:
+		NarrativeState.FADING:
+			var alpha := minf(1.0, current_narrative_label.modulate.a + delta / NARRATIVE_FADE_SECONDS)
+			current_narrative_label.modulate.a = alpha
+			if alpha >= 1.0:
+				narrative_state = NarrativeState.HOLDING
+				narrative_timer = NARRATIVE_HOLD_SECONDS
+		NarrativeState.HOLDING:
+			narrative_timer -= delta
+			if narrative_timer <= 0.0:
+				_advance_narrative()
+
+
+func _on_narrative_input(event: InputEvent) -> void:
+	var mouse := event as InputEventMouseButton
+	if mouse == null or mouse.button_index != MOUSE_BUTTON_LEFT or not mouse.pressed:
+		return
+	if narrative_state == NarrativeState.FADING:
+		current_narrative_label.modulate.a = 1.0
+		narrative_state = NarrativeState.HOLDING
+		narrative_timer = NARRATIVE_HOLD_SECONDS
+	elif narrative_state == NarrativeState.HOLDING:
+		_advance_narrative()
+
+
+func _advance_narrative() -> void:
+	narrative_index += 1
+	if narrative_index >= narrative_lines.size():
+		_show_result()
+		return
+	current_narrative_label = Label.new()
+	current_narrative_label.text = narrative_lines[narrative_index]
+	current_narrative_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	current_narrative_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	current_narrative_label.add_theme_font_size_override("font_size", 18)
+	current_narrative_label.add_theme_color_override("font_color", Color("e4dfd2"))
+	current_narrative_label.modulate.a = 0.0
+	narrative_column.add_child(current_narrative_label)
+	narrative_state = NarrativeState.FADING
+
+
+func _show_result() -> void:
+	set_process(false)
+	phase = Phase.RESULT
+	narrative_state = NarrativeState.IDLE
+	narrative_overlay.visible = false
+	result_layer.visible = true
+	result_revealed = false
+	_rebuild_result()
+
+
+func _rebuild_result() -> void:
+	for child in result_holder.get_children():
+		child.free()
+	if pending_output == null:
+		return
+	if not result_revealed:
+		var back := Button.new()
+		back.custom_minimum_size = CardHandCard.CARD_SIZE
+		back.text = "◇\n◇\n◇"
+		back.add_theme_font_size_override("font_size", 24)
+		back.pressed.connect(_reveal_result)
+		result_holder.add_child(back)
+		result_hint.text = TranslationServer.translate(&"demo.ui.synthesis.flip_result")
+		return
+	var definition := QuestArcCatalog.item_by_id(pending_output.definition_id)
+	var card_view := CardHandCard.new()
+	card_view.setup(pending_output, definition, true)
+	card_view.inspect_requested.connect(item_inspected.emit)
+	card_view.drag_finished.connect(_on_result_drag_finished)
+	result_holder.add_child(card_view)
+	result_hint.text = TranslationServer.translate(&"demo.ui.synthesis.drag_result")
+
+
+func _reveal_result() -> void:
+	result_revealed = true
+	_rebuild_result()
+
+
+func _on_result_drag_finished(_card: CardItemState, succeeded: bool) -> void:
+	if not succeeded or pending_output == null:
+		return
+	card_staging_changed.emit(pending_output, false)
+	pending_output = null
+	phase = Phase.DRAFT
+	result_layer.visible = false
+	draft_layer.visible = true
 	refresh()
-
-
-func _play_output_animation(output: CardItemState) -> void:
-	if output == null or output_animation_seconds <= 0.0 or not is_inside_tree():
-		return
-	var definition := QuestArcCatalog.item_by_id(output.definition_id)
-	var overlay := CanvasLayer.new()
-	overlay.layer = 300
-	get_tree().root.add_child(overlay)
-	var flying_card := CardHandCard.new()
-	flying_card.setup(output, definition, false)
-	flying_card.position = output_holder.get_global_rect().get_center() - Vector2(56, 64)
-	flying_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	overlay.add_child(flying_card)
-	var viewport_size := get_viewport_rect().size
-	var tween := flying_card.create_tween()
-	tween.set_parallel(true)
-	tween.tween_property(
-		flying_card,
-		"position",
-		Vector2(viewport_size.x * 0.51, viewport_size.y - 145),
-		output_animation_seconds,
-	).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tween.tween_property(
-		flying_card,
-		"scale",
-		Vector2(0.72, 0.72),
-		output_animation_seconds,
-	)
-	await tween.finished
-	overlay.queue_free()
 
 
 func _queue_refresh() -> void:
@@ -355,22 +699,19 @@ func _flush_refresh() -> void:
 
 
 func _on_locale_changed(_locale: String) -> void:
-	_build_text_refresh()
-	refresh()
-
-
-func _build_text_refresh() -> void:
 	var title := find_child("SynthesisTitle", true, false) as Label
 	var leave_button := find_child("LeaveSynthesisButton", true, false) as Button
-	var material_heading := find_child("MaterialHeading", true, false) as Label
+	var totals_heading := find_child("TotalsHeading", true, false) as Label
 	var candidate_heading := find_child("CandidateHeading", true, false) as Label
+	var persona_heading := find_child("PersonaHeading", true, false) as Label
 	if title != null:
 		title.text = TranslationServer.translate(&"quest.ui.synthesis.title")
 	if leave_button != null:
 		leave_button.tooltip_text = TranslationServer.translate(&"demo.ui.synthesis.leave")
-	if material_heading != null:
-		material_heading.text = TranslationServer.translate(&"demo.ui.synthesis.materials")
+	if totals_heading != null:
+		totals_heading.text = TranslationServer.translate(&"demo.ui.synthesis.totals")
 	if candidate_heading != null:
-		candidate_heading.text = TranslationServer.translate(&"demo.ui.synthesis.potential")
-	if empty_candidate_label != null:
-		empty_candidate_label.text = TranslationServer.translate(&"demo.ui.synthesis.empty")
+		candidate_heading.text = TranslationServer.translate(&"demo.ui.synthesis.candidates")
+	if persona_heading != null:
+		persona_heading.text = TranslationServer.translate(&"demo.ui.synthesis.personas")
+	refresh()

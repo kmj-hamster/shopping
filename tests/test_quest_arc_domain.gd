@@ -19,7 +19,7 @@ func test_quest_item_rejects_more_than_four_properties_or_two_aspects() -> void:
 	assert_true(_contains(too_many.validation_errors(), "more than four"))
 
 	var too_many_aspects := _item(&"too_many_aspects", [&"food"], {
-		&"lamp": 1, &"mirror": 1, &"candle": 1,
+		&"lamp": 1, &"mirror": 1, &"gauze": 1,
 	})
 	assert_true(_contains(too_many_aspects.validation_errors(), "more than two"))
 
@@ -56,19 +56,19 @@ func test_exact_item_rule_is_suitable_for_map_unlocks() -> void:
 
 
 func test_task_outcome_uses_dominant_aspect_and_declared_tie_priority() -> void:
-	var candle_condition := StoryCondition.new()
-	candle_condition.kind = StoryCondition.Kind.DOMINANT_ASPECT
-	candle_condition.key = &"candle"
-	var candle_outcome := _outcome(&"tide", false, [candle_condition])
+	var gauze_condition := StoryCondition.new()
+	gauze_condition.kind = StoryCondition.Kind.DOMINANT_ASPECT
+	gauze_condition.key = &"gauze"
+	var gauze_outcome := _outcome(&"tide", false, [gauze_condition])
 	var fallback := _outcome(&"plain", true)
 	var task := TaskDefinition.new()
 	task.id = &"radio_order"
 	task.display_name_key = &"task.radio.name"
 	task.body_text_key = &"task.radio.body"
 	task.slot_rules = [_simple_rule(&"sound")]
-	task.outcomes = [candle_outcome, fallback]
-	task.tie_priority = [&"candle", &"mirror", &"pillow", &"lamp"]
-	var tied_item := _item(&"rain_tape", [&"music"], {&"candle": 3, &"pillow": 3})
+	task.outcomes = [gauze_outcome, fallback]
+	task.tie_priority = [&"gauze", &"mirror", &"pillow", &"lamp"]
+	var tied_item := _item(&"rain_tape", [&"music"], {&"gauze": 3, &"pillow": 3})
 	assert_eq(QuestArcRules.outcome_for(task, [tied_item]).id, &"tide")
 
 

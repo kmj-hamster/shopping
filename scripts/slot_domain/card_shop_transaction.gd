@@ -2,6 +2,7 @@ class_name CardShopTransaction
 extends RefCounted
 
 signal state_changed
+signal selection_changed(previous_slot_id: StringName, selected_slot_id: StringName)
 
 const RESULT_OK := &"ok"
 const RESULT_EMPTY := &"empty"
@@ -87,9 +88,10 @@ func select_shelf_slot(slot_id: StringName) -> Dictionary:
 		return _result(false, RESULT_SLOT_EMPTY)
 	if selected_shelf_slot_ids.has(slot_id):
 		return _result(false, RESULT_ALREADY_SELECTED)
+	var previous_slot_id := selected_shelf_slot_id()
 	selected_shelf_slot_ids.clear()
 	selected_shelf_slot_ids.append(slot_id)
-	state_changed.emit()
+	selection_changed.emit(previous_slot_id, slot_id)
 	return _result(true, RESULT_OK)
 
 
@@ -97,7 +99,7 @@ func deselect_shelf_slot(slot_id: StringName) -> bool:
 	if not selected_shelf_slot_ids.has(slot_id):
 		return false
 	selected_shelf_slot_ids.erase(slot_id)
-	state_changed.emit()
+	selection_changed.emit(slot_id, &"")
 	return true
 
 
@@ -110,6 +112,10 @@ func toggle_shelf_slot(slot_id: StringName) -> Dictionary:
 
 func is_selected(slot_id: StringName) -> bool:
 	return selected_shelf_slot_ids.has(slot_id)
+
+
+func selected_shelf_slot_id() -> StringName:
+	return selected_shelf_slot_ids[0] if not selected_shelf_slot_ids.is_empty() else &""
 
 
 func cart_count() -> int:
@@ -189,9 +195,10 @@ func checkout(day: int) -> Dictionary:
 
 func cancel_cart() -> int:
 	var removed := selected_shelf_slot_ids.size()
+	var previous_slot_id := selected_shelf_slot_id()
 	selected_shelf_slot_ids.clear()
 	if removed > 0:
-		state_changed.emit()
+		selection_changed.emit(previous_slot_id, &"")
 	return removed
 
 

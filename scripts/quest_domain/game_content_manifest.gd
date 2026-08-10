@@ -5,6 +5,7 @@ extends Resource
 @export_range(1, 20, 1) var maximum_item_price := 20
 @export_range(1, 8, 1) var maximum_properties_per_item := 4
 @export_range(1, 4, 1) var maximum_aspects_per_item := 2
+@export var initial_protagonist_stats: Dictionary = {}
 @export var starting_item_ids: Array[StringName] = []
 @export var properties: Array[Resource] = []
 @export var items: Array[Resource] = []
@@ -26,6 +27,10 @@ func validation_errors() -> PackedStringArray:
 	for item_id in starting_item_ids:
 		if not items_by_id.has(item_id):
 			errors.append("Starting inventory references missing item %s." % item_id)
+	for stat_id in CardPropertySet.PROTAGONIST_STATS:
+		var amount := int(initial_protagonist_stats.get(stat_id, 0))
+		if amount < 0 or amount > 20:
+			errors.append("Initial protagonist stat %s must be between 0 and 20." % stat_id)
 	var owners_by_id := _resources_by_id(owners, "owner", errors)
 	_validate_resources(properties, errors)
 	_validate_resources(items, errors)
@@ -53,7 +58,9 @@ func validation_errors() -> PackedStringArray:
 	for raw_recipe in recipes:
 		var recipe := raw_recipe as SynthesisRecipeDefinition
 		if recipe != null:
-			_validate_slot_rules(recipe.slot_rules, properties_by_id, items_by_id, errors)
+			_validate_slot_rules([recipe.base_rule], properties_by_id, items_by_id, errors)
+			if not items_by_id.has(recipe.output_id):
+				errors.append("Recipe %s references missing output %s." % [recipe.id, recipe.output_id])
 	for raw_unlock in store_unlocks:
 		var unlock := raw_unlock as StoreUnlockDefinition
 		if unlock == null:
@@ -84,7 +91,10 @@ func validation_errors() -> PackedStringArray:
 		if not owner.request_task_id.is_empty():
 			if not tasks_by_id.has(owner.request_task_id):
 				errors.append("Owner %s references missing task %s." % [owner.id, owner.request_task_id])
-			if not recipes_by_id.has(owner.request_recipe_id):
+			if (
+				not owner.request_recipe_id.is_empty()
+				and not recipes_by_id.has(owner.request_recipe_id)
+			):
 				errors.append("Owner %s references missing recipe %s." % [owner.id, owner.request_recipe_id])
 			var event_item := items_by_id.get(owner.event_item_id) as QuestItemDefinition
 			if event_item == null or event_item.store_id != owner.event_item_store_id:

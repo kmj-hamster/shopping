@@ -31,6 +31,7 @@ func _ready() -> void:
 	bookmark_column.anchor_right = 0.172
 	bookmark_column.anchor_bottom = 0.68
 	bookmark_column.add_theme_constant_override("separation", 7)
+	bookmark_column.clip_contents = true
 	bookmark_column.mouse_filter = Control.MOUSE_FILTER_PASS
 	add_child(bookmark_column)
 	LocaleManager.locale_changed.connect(_on_locale_changed)
@@ -54,8 +55,10 @@ func refresh() -> void:
 		var bookmark := Button.new()
 		bookmark.custom_minimum_size = Vector2(0, 48)
 		bookmark.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		bookmark.clip_text = true
 		bookmark.text = TranslationServer.translate(definition.display_name_key)
 		bookmark.tooltip_text = ""
+		bookmark.add_theme_font_size_override("font_size", 12)
 		bookmark.pressed.connect(_toggle_task.bind(task.instance_id))
 		var border := Color("83b6a6") if task.confirmed else Color("6d766d")
 		bookmark.add_theme_stylebox_override(

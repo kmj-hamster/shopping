@@ -1,6 +1,8 @@
-[gd_resource type="Resource" script_class="OwnerDefinition" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="OwnerDefinition" load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/quest_domain/owner_definition.gd" id="1_owner"]
+[ext_resource type="AudioStream" path="res://resources/audio/dialogue/robot_blip_a.wav" id="2_voice_a"]
+[ext_resource type="AudioStream" path="res://resources/audio/dialogue/robot_blip_b.wav" id="3_voice_b"]
 
 [resource]
 script = ExtResource("1_owner")
@@ -9,3 +11,4 @@ store_id = &"record"
 display_name_key = &"demo.owner.record.name"
 idle_dialogue_key = &"demo.owner.record.idle"
 item_comment_key = &"demo.owner.record.item_comment"
+dialogue_voice_streams = Array[AudioStream]([ExtResource("2_voice_a"), ExtResource("3_voice_b")])

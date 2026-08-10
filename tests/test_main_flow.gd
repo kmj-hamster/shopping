@@ -19,9 +19,9 @@ func test_flower_shop_purchase_moves_sunflower_into_center_hand() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	assert_eq(GameState.quest_state.wallet.money, 20)
-	assert_eq(GameState.quest_state.inventory.size(), 2)
+	assert_eq(GameState.quest_state.inventory.size(), 7)
 	assert_not_null(_card_by_definition(GameState.quest_state, &"sunflower"))
-	assert_eq(main.hand_bar.card_views.size(), 2)
+	assert_eq(main.hand_bar.card_views.size(), 7)
 
 
 func test_shop_keeps_only_one_item_selected_for_checkout() -> void:
@@ -38,6 +38,26 @@ func test_shop_keeps_only_one_item_selected_for_checkout() -> void:
 	assert_eq(transaction.cart_count(), 1)
 	assert_false(transaction.is_selected(first.slot_id))
 	assert_true(transaction.is_selected(second.slot_id))
+
+
+func test_shop_selection_is_local_but_checkout_changes_global_state() -> void:
+	var state := GameState.quest_state
+	var transaction := state.transaction_for_store(&"flower")
+	var slot := transaction.shelf_slots.filter(
+		func(candidate: ShelfSlotState) -> bool: return not candidate.is_empty()
+	)[0] as ShelfSlotState
+	var global_change_count := [0]
+	var selection_events: Array[Array] = []
+	state.state_changed.connect(func() -> void: global_change_count[0] += 1)
+	transaction.selection_changed.connect(
+		func(previous_id: StringName, selected_id: StringName) -> void:
+			selection_events.append([previous_id, selected_id])
+	)
+	assert_true(transaction.toggle_shelf_slot(slot.slot_id).ok)
+	assert_eq(global_change_count[0], 0)
+	assert_eq(selection_events, [[&"", slot.slot_id]])
+	assert_true(state.checkout_store(&"flower").ok)
+	assert_eq(global_change_count[0], 1)
 
 
 func test_submitted_arc_task_is_permanently_locked() -> void:
@@ -68,19 +88,52 @@ func test_flower_owner_request_requires_submission_inside_flower_shop() -> void:
 	assert_eq(state.owner_states[&"flower_owner"], &"trimmed")
 
 
-func test_only_ppt_recipe_turns_cola_and_sunflower_into_scissors() -> void:
+func test_new_synthesis_consumes_base_but_not_persona_and_creates_rose() -> void:
 	var state := GameState.quest_state
-	var cola := state.grant_item(&"cola", &"test")
-	var sunflower := state.grant_item(&"sunflower", &"test")
-	assert_true(state.assign_synthesis_card(&"metal", cola).ok)
-	assert_true(state.assign_synthesis_card(&"lamp", sunflower).ok)
-	assert_true(state.synthesis_evaluation().is_complete)
-	assert_true(state.begin_synthesis().ok)
-	var result := state.advance_synthesis(1.0)
-	assert_true(result.completed)
-	assert_null(state.card_by_instance_id(cola.instance_id))
+	var sunflower := _card_by_definition(state, &"sunflower")
+	var soft_gauze := _card_by_definition(state, &"soft_gauze")
+	var reverie_before: int = int(state.protagonist_aspect_counts[&"reverie"])
+	assert_true(state.assign_synthesis_base(sunflower).ok)
+	assert_true(state.assign_synthesis_fuel(soft_gauze).ok)
+	assert_true(state.select_synthesis_persona(&"reverie"))
+	assert_true(state.select_synthesis_candidate(&"recipe_midnight_rose"))
+	var result := state.begin_synthesis()
+	assert_true(result.ok)
 	assert_null(state.card_by_instance_id(sunflower.instance_id))
-	assert_not_null(_card_by_definition(state, &"scissors"))
+	assert_null(state.card_by_instance_id(soft_gauze.instance_id))
+	assert_eq(state.protagonist_aspect_counts[&"reverie"], reverie_before)
+	assert_not_null(_card_by_definition(state, &"midnight_rose"))
+
+
+func test_worn_teddy_can_be_used_for_both_second_step_recipes() -> void:
+	var state := GameState.quest_state
+	var toy := _card_by_definition(state, &"toy_block")
+	var soft_gauze_cards := state.inventory.filter(
+		func(card: CardItemState) -> bool: return card.definition_id == &"soft_gauze"
+	)
+	assert_eq(soft_gauze_cards.size(), 2)
+	assert_true(state.assign_synthesis_base(toy).ok)
+	assert_true(state.assign_synthesis_fuel(soft_gauze_cards[0]).ok)
+	assert_true(state.select_synthesis_persona(&"ease"))
+	assert_true(state.select_synthesis_candidate(&"recipe_worn_teddy"))
+	var first_step := state.begin_synthesis()
+	assert_true(first_step.ok)
+	var worn := first_step.output as CardItemState
+	assert_not_null(worn)
+	assert_true(state.assign_synthesis_base(worn).ok)
+	assert_true(state.assign_synthesis_fuel(soft_gauze_cards[1]).ok)
+	assert_true(state.select_synthesis_candidate(&"recipe_baby_teddy"))
+	assert_true(state.begin_synthesis().ok)
+	assert_not_null(_card_by_definition(state, &"baby_teddy"))
+
+	worn = state.grant_item(&"worn_teddy", &"test")
+	var mirror_shard := _card_by_definition(state, &"mirror_shard")
+	assert_true(state.assign_synthesis_base(worn).ok)
+	assert_true(state.assign_synthesis_fuel(mirror_shard).ok)
+	assert_true(state.select_synthesis_persona(&"reminiscence"))
+	assert_true(state.select_synthesis_candidate(&"recipe_pale_teddy"))
+	assert_true(state.begin_synthesis().ok)
+	assert_not_null(_card_by_definition(state, &"pale_teddy"))
 
 
 func test_sunflower_unlocks_record_shop_and_is_consumed() -> void:

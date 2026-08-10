@@ -5,11 +5,13 @@ func test_manifest_is_the_shopping0807_demo_whitelist() -> void:
 	var manifest := QuestArcCatalog.manifest()
 	assert_not_null(manifest)
 	assert_eq(manifest.initial_money, 30)
-	assert_eq(manifest.starting_item_ids, [&"fries"])
-	assert_eq(manifest.properties.size(), 12)
-	assert_eq(manifest.items.size(), 5)
+	assert_eq(manifest.starting_item_ids, [
+		&"fries", &"sunflower", &"toy_block", &"soft_gauze", &"soft_gauze", &"mirror_shard",
+	])
+	assert_eq(manifest.properties.size(), 14)
+	assert_eq(manifest.items.size(), 12)
 	assert_eq(manifest.tasks.size(), 4)
-	assert_eq(manifest.recipes.size(), 1)
+	assert_eq(manifest.recipes.size(), 4)
 	assert_eq(manifest.stores.size(), 2)
 	assert_eq(manifest.store_unlocks.size(), 1)
 	assert_eq(manifest.owners.size(), 2)
@@ -19,6 +21,8 @@ func test_manifest_is_the_shopping0807_demo_whitelist() -> void:
 func test_only_ppt_items_are_runtime_visible_and_have_images() -> void:
 	var expected_ids: Array[StringName] = [
 		&"fries", &"sunflower", &"agave", &"cola", &"scissors",
+		&"toy_block", &"midnight_rose", &"worn_teddy", &"baby_teddy", &"pale_teddy",
+		&"soft_gauze", &"mirror_shard",
 	]
 	var actual_ids: Array[StringName] = []
 	for raw_item in QuestArcCatalog.manifest().items:
@@ -51,11 +55,12 @@ func test_record_shop_unlock_consumes_a_sunflower() -> void:
 func test_new_game_uses_ppt_money_tasks_and_starting_hand() -> void:
 	var state := QuestGameState.new()
 	assert_eq(state.wallet.money, 30)
-	assert_eq(state.inventory.size(), 1)
+	assert_eq(state.inventory.size(), 6)
 	assert_eq(state.inventory[0].definition_id, &"fries")
 	assert_true(state.is_store_unlocked(&"flower"))
 	assert_false(state.is_store_unlocked(&"record"))
-	assert_eq(state.synthesis_recipe_id, &"recipe_scissors")
+	assert_eq(state.protagonist_aspect_counts[&"ease"], 3)
+	assert_eq(state.synthesis_base_instance_id, 0)
 	assert_not_null(state.task_instance_for_definition(&"girl_order"))
 	assert_not_null(state.task_instance_for_definition(&"self_care"))
 	assert_not_null(state.task_instance_for_definition(&"mouse_order"))

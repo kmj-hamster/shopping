@@ -14,7 +14,7 @@ required_all = Array[StringName]([&"drink"])
 [sub_resource type="Resource" id="FantasyEffect"]
 script = ExtResource("4_effect")
 kind = 2
-target_id = &"fantasy"
+target_id = &"reverie"
 amount = 1
 
 [sub_resource type="Resource" id="Outcome"]

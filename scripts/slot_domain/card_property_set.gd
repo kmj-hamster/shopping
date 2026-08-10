@@ -3,20 +3,30 @@ extends Resource
 
 const ASPECT_LAMP := &"lamp"
 const ASPECT_MIRROR := &"mirror"
-const ASPECT_CANDLE := &"candle"
+const ASPECT_GAUZE := &"gauze"
 const ASPECT_PILLOW := &"pillow"
 const ASPECTS: Array[StringName] = [
 	ASPECT_LAMP,
 	ASPECT_MIRROR,
-	ASPECT_CANDLE,
+	ASPECT_GAUZE,
 	ASPECT_PILLOW,
 ]
+const PERSONA_EASE := &"ease"
+const PERSONA_REVERIE := &"reverie"
+const PERSONA_REMINISCENCE := &"reminiscence"
+const PERSONA_CLARITY := &"clarity"
 const PROTAGONIST_STATS: Array[StringName] = [
-	&"fantasy",
-	&"memory",
-	&"electric",
-	&"soft",
+	PERSONA_EASE,
+	PERSONA_REVERIE,
+	PERSONA_REMINISCENCE,
+	PERSONA_CLARITY,
 ]
+const PERSONA_ASPECTS := {
+	PERSONA_EASE: ASPECT_PILLOW,
+	PERSONA_REVERIE: ASPECT_GAUZE,
+	PERSONA_REMINISCENCE: ASPECT_MIRROR,
+	PERSONA_CLARITY: ASPECT_LAMP,
+}
 
 @export var values: Dictionary = {}
 @export var tags: Array[StringName] = []
@@ -53,6 +63,10 @@ func present_aspects() -> Array[StringName]:
 	return result
 
 
+static func aspect_for_persona(persona_id: StringName) -> StringName:
+	return StringName(PERSONA_ASPECTS.get(persona_id, &""))
+
+
 func validation_errors() -> PackedStringArray:
 	var errors := PackedStringArray()
 	var seen_tags: Dictionary = {}
@@ -71,6 +85,6 @@ func validation_errors() -> PackedStringArray:
 		var amount := int(values[raw_tag])
 		if tag.is_empty():
 			errors.append("Property tags cannot be empty.")
-		elif amount < 1 or amount > 8:
-			errors.append("Property %s must be between 1 and 8." % tag)
+		elif amount < 1 or amount > 20:
+			errors.append("Property %s must be between 1 and 20." % tag)
 	return errors

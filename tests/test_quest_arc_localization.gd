@@ -33,10 +33,12 @@ func test_all_quest_arc_content_keys_exist_in_chinese_and_english() -> void:
 	for raw_recipe in manifest.recipes:
 		var recipe := raw_recipe as SynthesisRecipeDefinition
 		keys.append(recipe.display_name_key)
-		for raw_rule in recipe.slot_rules:
-			keys.append((raw_rule as CardSlotRule).display_name_key)
-		for raw_preview_key in recipe.preview_text_by_output.values():
-			keys.append(StringName(raw_preview_key))
+		keys.append(recipe.base_rule.display_name_key)
+		for process_text_key in recipe.process_text_keys:
+			keys.append(process_text_key)
+	for persona_id in CardPropertySet.PROTAGONIST_STATS:
+		keys.append(StringName("demo.persona.%s.name" % persona_id))
+		keys.append(StringName("demo.persona.%s.description" % persona_id))
 	for raw_store in manifest.stores:
 		keys.append((raw_store as StoreDefinition).display_name_key)
 	for raw_unlock in manifest.store_unlocks:

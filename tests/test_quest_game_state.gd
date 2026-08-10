@@ -18,7 +18,7 @@ func test_arc_applies_ppt_girl_reward_and_advances_the_night() -> void:
 	assert_eq(state.task_history[&"girl_order"], &"salty")
 
 
-func test_self_care_updates_hidden_fantasy_stat() -> void:
+func test_self_care_updates_reverie_persona() -> void:
 	var state := QuestGameState.new()
 	var task := state.task_instance_for_definition(&"self_care")
 	var cola := state.grant_item(&"cola", &"test")
@@ -26,8 +26,8 @@ func test_self_care_updates_hidden_fantasy_stat() -> void:
 	assert_true(state.confirm_task(task.instance_id).ok)
 	assert_true(state.begin_next_day().ok)
 	assert_true(state.apply_arc_effects().ok)
-	assert_eq(state.protagonist_aspect_counts[&"fantasy"], 1)
-	assert_eq(state.protagonist_aspect_counts[&"memory"], 0)
+	assert_eq(state.protagonist_aspect_counts[&"reverie"], 4)
+	assert_eq(state.protagonist_aspect_counts[&"reminiscence"], 3)
 
 
 func test_owner_or_task_is_ready_with_exactly_one_branch() -> void:

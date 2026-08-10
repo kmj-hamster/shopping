@@ -1,6 +1,8 @@
 class_name QuestMain
 extends Control
 
+const UI_THEME: Theme = preload("res://resources/fonts/shancha_ui_theme.tres")
+
 var state: QuestGameState
 var current_screen: Control
 var screen_host: Control
@@ -38,8 +40,9 @@ var arc_continue_requested := false
 
 
 func _ready() -> void:
+	theme = UI_THEME
 	state = GameState.quest_state
-	state.clear_synthesis_assignments()
+	state.clear_synthesis_draft()
 	_configure_cursor()
 	_build_shell()
 	_build_global_interface()
@@ -228,6 +231,7 @@ func _show_shop(store_id: StringName) -> void:
 	shop.setup(state, store_id)
 	shop.leave_requested.connect(_show_map)
 	shop.item_inspected.connect(_show_item)
+	shop.checkout_completed.connect(_on_shop_checkout_completed)
 	screen_host.add_child(shop)
 	shop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	current_screen = shop
@@ -252,6 +256,7 @@ func _show_synthesis() -> void:
 	synthesis_interface.leave_requested.connect(_return_from_synthesis)
 	synthesis_interface.item_inspected.connect(_show_item)
 	synthesis_interface.card_staging_changed.connect(_on_card_staging_changed)
+	synthesis_interface.details_cleared.connect(_close_detail_popups)
 	screen_host.add_child(synthesis_interface)
 	synthesis_interface.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	current_screen = synthesis_interface
@@ -284,8 +289,20 @@ func _clear_screen() -> void:
 
 
 func _show_item(definition: CardItemDefinition) -> void:
+	if detail_popup.visible and detail_popup.current_definition == definition:
+		detail_popup.close()
+		return
 	rule_detail_popup.close()
 	detail_popup.show_item(definition)
+
+
+func _on_shop_checkout_completed() -> void:
+	_close_detail_popups()
+
+
+func _close_detail_popups() -> void:
+	detail_popup.close()
+	rule_detail_popup.close()
 
 
 func _on_card_staging_changed(card: CardItemState, staged: bool) -> void:

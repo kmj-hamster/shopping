@@ -1,8 +1,8 @@
 class_name QuestSaveRepository
 extends RefCounted
 
-const SAVE_VERSION := 4
-const CONTENT_VERSION := "shopping0807-demo-1"
+const SAVE_VERSION := 5
+const CONTENT_VERSION := "new-synthesis-demo-1"
 const DEFAULT_PATH := "user://save_shopping0807_v1.json"
 
 var save_path: String
@@ -57,7 +57,7 @@ func to_dictionary(state: QuestGameState) -> Dictionary:
 	for card in state.inventory:
 		var is_temporary_synthesis_card := (
 			card.location == CardItemState.Location.ACTIVITY_SLOT
-			and QuestArcCatalog.recipe_by_id(card.activity_id) != null
+			and card.activity_id == &"synthesis"
 		)
 		cards.append({
 			"instance_id": card.instance_id,
@@ -101,7 +101,6 @@ func to_dictionary(state: QuestGameState) -> Dictionary:
 		"owner_states": _string_dictionary(state.owner_states),
 		"pending_arc": _serialize_arc(state.pending_arc),
 		"commerce": state.commerce_snapshot(),
-		"synthesis_recipe_id": String(state.synthesis_recipe_id),
 	}
 
 
@@ -159,15 +158,13 @@ func _restore(state: QuestGameState, payload: Dictionary) -> bool:
 	state.discovered_recipe_ids = _name_set(payload.get("discovered_recipe_ids", []))
 	state.owner_states = _name_dictionary(payload.get("owner_states", {}))
 	state.pending_arc = _restore_arc(payload.get("pending_arc", {}))
-	state.synthesis_recipe_id = StringName(payload.get("synthesis_recipe_id", "recipe_scissors"))
-	if QuestArcCatalog.recipe_by_id(state.synthesis_recipe_id) == null:
-		return false
-	# shopping0807 treats synthesis placement as a screen-local draft.
-	# Older compatible saves may contain these fields; return their cards to hand.
-	state.synthesis_assignments = {}
-	state.active_synthesis = null
+	# Synthesis placement is a screen-local draft and never survives loading.
+	state.synthesis_base_instance_id = 0
+	state.synthesis_fuel_instance_id = 0
+	state.synthesis_persona_id = &""
+	state.synthesis_candidate_recipe_id = &""
 	for card in state.inventory:
-		if QuestArcCatalog.recipe_by_id(card.activity_id) != null:
+		if card.activity_id == &"synthesis":
 			card.return_to_hand()
 	state.next_card_instance_id = maxi(
 		int(payload.get("next_card_instance_id", 1)),

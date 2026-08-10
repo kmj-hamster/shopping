@@ -14,6 +14,7 @@ extends Resource
 @export var is_crafted := false
 @export_range(0, 999, 1) var fixed_resale_value := 0
 @export var can_recycle := true
+@export var can_be_synthesis_base := true
 @export var property_set: CardPropertySet
 
 
