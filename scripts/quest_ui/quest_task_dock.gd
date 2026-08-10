@@ -10,13 +10,15 @@ var current_store_id: StringName
 var bookmark_column: VBoxContainer
 var task_window: QuestTaskWindow
 var open_task_instance_id := 0
-var refresh_queued := false
+var bookmark_buttons: Dictionary = {}
 
 
 func setup(game_state: QuestGameState) -> void:
+	if state != null and state.state_delta.is_connected(_on_state_delta):
+		state.state_delta.disconnect(_on_state_delta)
 	state = game_state
-	if state != null and not state.state_changed.is_connected(_queue_refresh):
-		state.state_changed.connect(_queue_refresh)
+	if state != null and not state.state_delta.is_connected(_on_state_delta):
+		state.state_delta.connect(_on_state_delta)
 	if is_node_ready():
 		refresh()
 
@@ -48,29 +50,55 @@ func set_store_context(store_id: StringName) -> void:
 func refresh() -> void:
 	if state == null or bookmark_column == null:
 		return
-	for child in bookmark_column.get_children():
-		child.free()
-	for task in state.active_tasks():
-		var definition := QuestArcCatalog.task_by_id(task.definition_id)
-		var bookmark := Button.new()
-		bookmark.custom_minimum_size = Vector2(0, 48)
-		bookmark.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		bookmark.clip_text = true
-		bookmark.text = TranslationServer.translate(definition.display_name_key)
-		bookmark.tooltip_text = ""
-		bookmark.add_theme_font_size_override("font_size", 12)
-		bookmark.pressed.connect(_toggle_task.bind(task.instance_id))
-		var border := Color("83b6a6") if task.confirmed else Color("6d766d")
-		bookmark.add_theme_stylebox_override(
-			"normal", UiPalette.panel_style(Color("0b2528", 0.92), border)
-		)
-		bookmark_column.add_child(bookmark)
+	var active_tasks := state.active_tasks()
+	var desired_ids: Array[int] = []
+	for task in active_tasks:
+		desired_ids.append(task.instance_id)
+	for raw_instance_id in bookmark_buttons.keys().duplicate():
+		var instance_id := int(raw_instance_id)
+		if desired_ids.has(instance_id):
+			continue
+		var obsolete := bookmark_buttons[instance_id] as Button
+		bookmark_buttons.erase(instance_id)
+		if obsolete != null:
+			obsolete.visible = false
+			obsolete.queue_free()
+	for index in active_tasks.size():
+		var task := active_tasks[index]
+		var bookmark := bookmark_buttons.get(task.instance_id) as Button
+		if bookmark == null:
+			bookmark = _create_bookmark(task.instance_id)
+			bookmark_buttons[task.instance_id] = bookmark
+		_update_bookmark(bookmark, task)
+		if bookmark.get_index() != index:
+			bookmark_column.move_child(bookmark, index)
 	if open_task_instance_id > 0:
 		var open_task := state.task_instance(open_task_instance_id)
 		if open_task == null or open_task.settled:
 			_close_task()
 		elif task_window != null:
 			task_window.refresh()
+
+
+func _create_bookmark(instance_id: int) -> Button:
+	var bookmark := Button.new()
+	bookmark.custom_minimum_size = Vector2(0, 48)
+	bookmark.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bookmark.clip_text = true
+	bookmark.tooltip_text = ""
+	bookmark.add_theme_font_size_override("font_size", 12)
+	bookmark.pressed.connect(_toggle_task.bind(instance_id))
+	bookmark_column.add_child(bookmark)
+	return bookmark
+
+
+func _update_bookmark(bookmark: Button, task: TaskInstanceState) -> void:
+	var definition := QuestArcCatalog.task_by_id(task.definition_id)
+	bookmark.text = TranslationServer.translate(definition.display_name_key)
+	var border := Color("83b6a6") if task.confirmed else Color("6d766d")
+	bookmark.add_theme_stylebox_override(
+		"normal", UiPalette.panel_style(Color("0b2528", 0.92), border)
+	)
 
 
 func _toggle_task(instance_id: int) -> void:
@@ -96,16 +124,19 @@ func _close_task() -> void:
 	task_window = null
 
 
-func _queue_refresh() -> void:
-	if refresh_queued:
+func _on_state_delta(delta: QuestStateDelta) -> void:
+	if delta == null or not delta.affects_tasks():
 		return
-	refresh_queued = true
-	call_deferred("_flush_refresh")
-
-
-func _flush_refresh() -> void:
-	refresh_queued = false
-	refresh()
+	if delta.full_reconcile or delta.task_list_changed:
+		refresh()
+		return
+	for instance_id in delta.task_instance_ids:
+		var task := state.task_instance(instance_id)
+		var bookmark := bookmark_buttons.get(instance_id) as Button
+		if task != null and not task.settled and bookmark != null:
+			_update_bookmark(bookmark, task)
+	if open_task_instance_id in delta.task_instance_ids and task_window != null:
+		task_window.refresh()
 
 
 func _on_locale_changed(_locale: String) -> void:

@@ -30,11 +30,14 @@ var fuel_slot_host: CenterContainer
 var candidate_list: VBoxContainer
 var candidate_empty_label: Label
 var candidate_buttons: Dictionary = {}
+var candidate_views: Dictionary = {}
 var persona_row: HBoxContainer
 var persona_buttons: Dictionary = {}
 var persona_definitions: Dictionary = {}
 var action_button: Button
 var material_slots: Array[QuestSynthesisMaterialSlot] = []
+var total_chip_views: Dictionary = {}
+var totals_placeholder: Label
 var narrative_overlay: ColorRect
 var narrative_column: VBoxContainer
 var narrative_lines: Array[String] = []
@@ -47,13 +50,17 @@ var result_holder: CenterContainer
 var result_hint: Label
 var pending_output: CardItemState
 var result_revealed := false
-var refresh_queued := false
+var debug_update_counts: Dictionary = {}
+var last_delta_update_usec := 0
+var max_delta_update_usec := 0
 
 
 func setup(game_state: QuestGameState) -> void:
+	if state != null and state.state_delta.is_connected(_on_state_delta):
+		state.state_delta.disconnect(_on_state_delta)
 	state = game_state
-	if state != null and not state.state_changed.is_connected(_queue_refresh):
-		state.state_changed.connect(_queue_refresh)
+	if state != null and not state.state_delta.is_connected(_on_state_delta):
+		state.state_delta.connect(_on_state_delta)
 	if is_node_ready():
 		refresh()
 
@@ -70,10 +77,27 @@ func _ready() -> void:
 func refresh() -> void:
 	if state == null or draft_layer == null or phase != Phase.DRAFT:
 		return
-	_rebuild_totals()
-	_rebuild_material_slots()
-	_rebuild_candidates()
+	_record_update(&"full")
+	var snapshot := state.synthesis_evaluation_snapshot()
+	_rebuild_totals(snapshot)
+	_rebuild_material_slots(snapshot, true)
+	_rebuild_candidates(snapshot)
 	_rebuild_personas()
+	_update_action_button()
+
+
+func reset_debug_update_counts() -> void:
+	debug_update_counts.clear()
+	last_delta_update_usec = 0
+	max_delta_update_usec = 0
+
+
+func _record_update(section: StringName) -> void:
+	debug_update_counts[section] = int(debug_update_counts.get(section, 0)) + 1
+
+
+func _update_action_button() -> void:
+	_record_update(&"action")
 	action_button.text = TranslationServer.translate(&"quest.ui.synthesis.action")
 	action_button.visible = not state.synthesis_candidate_recipe_id.is_empty()
 	action_button.disabled = state.synthesis_candidate_recipe_id.is_empty()
@@ -190,11 +214,22 @@ func _build_totals_panel() -> void:
 	totals_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	totals_row.add_theme_constant_override("separation", 8)
 	column.add_child(totals_row)
+	totals_placeholder = Label.new()
+	totals_placeholder.text = "—"
+	totals_placeholder.add_theme_color_override("font_color", Color("62746f"))
+	totals_row.add_child(totals_placeholder)
+	_prebuild_total_chips()
 
 
 func _build_material_region() -> void:
 	base_slot_host = _make_slot_host(0.04, 0.28, 0.29, 0.67, &"demo.ui.synthesis.base")
 	fuel_slot_host = _make_slot_host(0.71, 0.28, 0.96, 0.67, &"demo.ui.synthesis.fuel")
+	for role_id in [&"base", &"fuel"]:
+		var slot := QuestSynthesisMaterialSlot.new()
+		slot.setup(self, role_id, null)
+		slot.item_inspected.connect(item_inspected.emit)
+		(base_slot_host if role_id == &"base" else fuel_slot_host).add_child(slot)
+		material_slots.append(slot)
 
 
 func _make_slot_host(
@@ -267,6 +302,7 @@ func _build_candidate_region() -> void:
 	candidate_empty_label.add_theme_color_override("font_color", Color("62746f"))
 	candidate_empty_label.text = TranslationServer.translate(&"demo.ui.synthesis.no_candidates")
 	candidate_list.add_child(candidate_empty_label)
+	_prebuild_candidate_views()
 	action_button = Button.new()
 	action_button.name = "SynthesisActionButton"
 	action_button.custom_minimum_size = Vector2(150, 38)
@@ -305,6 +341,7 @@ func _build_persona_region() -> void:
 	persona_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	persona_row.add_theme_constant_override("separation", 9)
 	column.add_child(persona_row)
+	_create_persona_buttons()
 
 
 func _build_narrative_overlay() -> void:
@@ -381,140 +418,198 @@ func _add_result_empty_slot(left: float, top: float, right: float, bottom: float
 	empty_slot.add_child(mark)
 
 
-func _rebuild_totals() -> void:
-	for child in totals_row.get_children():
-		child.free()
-	var base_card := state.synthesis_base_card()
-	if base_card != null:
-		var base := QuestArcCatalog.item_by_id(base_card.definition_id)
-		if base != null and base.property_set != null:
-			for tag in base.property_set.tags:
-				_add_property_chip(totals_row, tag, 0)
-	var totals := state.synthesis_aspect_totals()
+func _rebuild_totals(snapshot: Dictionary) -> void:
+	_record_update(&"totals")
+	var desired_tags: Array[StringName] = []
+	var desired_amounts: Dictionary = {}
+	var base := snapshot.get("base_item") as CardItemDefinition
+	if base != null and base.property_set != null:
+		for tag in base.property_set.tags:
+			if not desired_tags.has(tag):
+				desired_tags.append(tag)
+			desired_amounts[tag] = 0
+	var totals := snapshot.get("totals", {}) as Dictionary
 	for aspect in CardPropertySet.ASPECTS:
 		var amount := int(totals.get(aspect, 0))
 		if amount > 0:
-			_add_property_chip(totals_row, aspect, amount)
-	if totals_row.get_child_count() == 0:
-		var placeholder := Label.new()
-		placeholder.text = "—"
-		placeholder.add_theme_color_override("font_color", Color("62746f"))
-		totals_row.add_child(placeholder)
+			if not desired_tags.has(aspect):
+				desired_tags.append(aspect)
+			desired_amounts[aspect] = amount
+
+	for raw_tag in total_chip_views:
+		var tag := StringName(raw_tag)
+		var chip := total_chip_views[tag] as Dictionary
+		var root := chip.get("root") as Control
+		if root != null:
+			root.visible = desired_tags.has(tag)
+
+	for index in desired_tags.size():
+		var tag := desired_tags[index]
+		if not total_chip_views.has(tag):
+			total_chip_views[tag] = _create_total_chip(tag)
+		var chip := total_chip_views[tag] as Dictionary
+		var root := chip.root as Control
+		var value := chip.value as Label
+		var amount := int(desired_amounts[tag])
+		root.visible = true
+		value.text = str(amount)
+		value.visible = amount > 0
+		if root.get_index() != index:
+			totals_row.move_child(root, index)
+	totals_placeholder.visible = desired_tags.is_empty()
+	if totals_placeholder.visible:
+		totals_row.move_child(totals_placeholder, 0)
 
 
-func _add_property_chip(parent: Container, tag: StringName, amount: int) -> void:
+func _prebuild_total_chips() -> void:
+	var content := QuestArcCatalog.manifest()
+	if content == null:
+		return
+	for raw_property in content.properties:
+		var property := raw_property as PropertyDefinition
+		if property == null or total_chip_views.has(property.id):
+			continue
+		var chip := _create_total_chip(property.id)
+		(chip.root as Control).visible = false
+		total_chip_views[property.id] = chip
+
+
+func _create_total_chip(tag: StringName) -> Dictionary:
 	var chip := HBoxContainer.new()
 	chip.add_theme_constant_override("separation", 3)
-	parent.add_child(chip)
 	var icon := ItemDetailPopup.make_property_icon_button(tag, 28)
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	chip.add_child(icon)
-	if amount > 0:
-		var value := Label.new()
-		value.text = str(amount)
-		value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		value.add_theme_font_size_override("font_size", 13)
-		value.add_theme_color_override("font_color", Color("e8ddbf"))
-		chip.add_child(value)
+	var value := Label.new()
+	value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	value.add_theme_font_size_override("font_size", 13)
+	value.add_theme_color_override("font_color", Color("e8ddbf"))
+	chip.add_child(value)
+	totals_row.add_child(chip)
+	return {"root": chip, "value": value}
 
 
-func _rebuild_material_slots() -> void:
-	for host in [base_slot_host, fuel_slot_host]:
-		for child in host.get_children():
-			child.free()
-	material_slots.clear()
-	for role_id in [&"base", &"fuel"]:
-		var slot := QuestSynthesisMaterialSlot.new()
-		var assigned := (
-			state.synthesis_base_card() if role_id == &"base" else state.synthesis_fuel_card()
-		)
-		slot.setup(self, role_id, assigned)
-		slot.item_inspected.connect(item_inspected.emit)
-		(base_slot_host if role_id == &"base" else fuel_slot_host).add_child(slot)
-		material_slots.append(slot)
-
-
-func _rebuild_candidates() -> void:
-	for child in candidate_list.get_children():
-		child.free()
-	candidate_buttons.clear()
-	var candidates := state.synthesis_candidates()
-	if candidates.is_empty():
-		candidate_empty_label = Label.new()
-		candidate_empty_label.custom_minimum_size = Vector2(0, 96)
-		candidate_empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		candidate_empty_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		candidate_empty_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		candidate_empty_label.add_theme_color_override("font_color", Color("62746f"))
-		candidate_empty_label.text = TranslationServer.translate(&"demo.ui.synthesis.no_candidates")
-		candidate_list.add_child(candidate_empty_label)
+func _rebuild_material_slots(snapshot: Dictionary, force_refresh: bool = false) -> void:
+	_record_update(&"materials")
+	if material_slots.size() != 2:
 		return
-	var totals := state.synthesis_aspect_totals()
+	material_slots[0].setup(
+		self, &"base", snapshot.get("base_card") as CardItemState, force_refresh
+	)
+	material_slots[1].setup(
+		self, &"fuel", snapshot.get("fuel_card") as CardItemState, force_refresh
+	)
+
+
+func _rebuild_candidates(snapshot: Dictionary) -> void:
+	_record_update(&"candidates")
+	var candidates := snapshot.get("candidates", []) as Array
+	var desired_ids: Array[StringName] = []
 	for candidate in candidates:
+		desired_ids.append(StringName(candidate.recipe_id))
+
+	for raw_recipe_id in candidate_views:
+		var recipe_id := StringName(raw_recipe_id)
+		var view := candidate_views[recipe_id] as Dictionary
+		var button := view.get("button") as Button
+		if button != null:
+			button.visible = desired_ids.has(recipe_id)
+
+	var totals := snapshot.get("totals", {}) as Dictionary
+	for index in candidates.size():
+		var candidate := candidates[index] as Dictionary
 		var recipe_id := StringName(candidate.recipe_id)
 		var recipe := QuestArcCatalog.recipe_by_id(recipe_id)
-		var button := Button.new()
-		button.custom_minimum_size = Vector2(0, 58)
+		if not candidate_views.has(recipe_id):
+			candidate_views[recipe_id] = _create_candidate_view(recipe)
+		var view := candidate_views[recipe_id] as Dictionary
+		var button := view.button as Button
+		button.visible = true
 		button.disabled = not candidate.is_complete
-		button.toggle_mode = true
 		button.button_pressed = state.synthesis_candidate_recipe_id == recipe_id
-		if candidate.is_complete:
-			button.text = QuestArcCatalog.item_by_id(recipe.output_id).localized_name()
-		else:
-			button.text = TranslationServer.translate(&"demo.ui.synthesis.unknown_candidate")
-		button.add_theme_font_size_override("font_size", 15)
+		button.text = (
+			QuestArcCatalog.item_by_id(recipe.output_id).localized_name()
+			if candidate.is_complete
+			else TranslationServer.translate(&"demo.ui.synthesis.unknown_candidate")
+		)
 		button.add_theme_color_override(
 			"font_color", Color("dfd5b7") if candidate.is_complete else Color("707673")
 		)
-		button.pressed.connect(_on_candidate_pressed.bind(recipe_id))
-		candidate_list.add_child(button)
-		candidate_buttons[recipe_id] = button
-		var requirements := HBoxContainer.new()
-		requirements.alignment = BoxContainer.ALIGNMENT_CENTER
-		requirements.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var requirement_values := view.requirement_values as Dictionary
 		for raw_aspect in recipe.required_aspects:
 			var aspect := StringName(raw_aspect)
-			_add_requirement_chip(
-				requirements,
-				aspect,
-				int(totals.get(aspect, 0)),
-				int(recipe.required_aspects[raw_aspect]),
+			var value := requirement_values[aspect] as Label
+			var actual := int(totals.get(aspect, 0))
+			var required := int(recipe.required_aspects[raw_aspect])
+			value.text = "%d/%d" % [actual, required]
+			value.add_theme_color_override(
+				"font_color", Color("d9c98f") if actual >= required else Color("777c79")
 			)
-		button.add_child(requirements)
-		requirements.anchor_left = 0.58
-		requirements.anchor_top = 0.12
-		requirements.anchor_right = 0.96
-		requirements.anchor_bottom = 0.88
+		if button.get_index() != index:
+			candidate_list.move_child(button, index)
+	candidate_empty_label.text = TranslationServer.translate(&"demo.ui.synthesis.no_candidates")
+	candidate_empty_label.visible = candidates.is_empty()
+	if candidate_empty_label.visible:
+		candidate_list.move_child(candidate_empty_label, 0)
+
+
+func _prebuild_candidate_views() -> void:
+	if state == null:
+		return
+	for recipe_id in state.available_synthesis_recipe_ids():
+		var recipe := QuestArcCatalog.recipe_by_id(recipe_id)
+		if recipe == null or candidate_views.has(recipe_id):
+			continue
+		var view := _create_candidate_view(recipe)
+		(view.button as Button).visible = false
+		candidate_views[recipe_id] = view
+
+
+func _create_candidate_view(recipe: SynthesisRecipeDefinition) -> Dictionary:
+	var button := Button.new()
+	button.custom_minimum_size = Vector2(0, 58)
+	button.toggle_mode = true
+	button.add_theme_font_size_override("font_size", 15)
+	button.pressed.connect(_on_candidate_pressed.bind(recipe.id))
+	candidate_list.add_child(button)
+	candidate_buttons[recipe.id] = button
+	var requirements := HBoxContainer.new()
+	requirements.alignment = BoxContainer.ALIGNMENT_CENTER
+	requirements.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var requirement_values: Dictionary = {}
+	for raw_aspect in recipe.required_aspects:
+		var aspect := StringName(raw_aspect)
+		requirement_values[aspect] = _add_requirement_chip(requirements, aspect)
+	button.add_child(requirements)
+	requirements.anchor_left = 0.58
+	requirements.anchor_top = 0.12
+	requirements.anchor_right = 0.96
+	requirements.anchor_bottom = 0.88
+	return {
+		"button": button,
+		"requirement_values": requirement_values,
+	}
 
 
 func _add_requirement_chip(
 	parent: Container,
 	aspect: StringName,
-	actual: int,
-	required: int,
-) -> void:
+) -> Label:
 	var icon := ItemDetailPopup.make_property_icon_button(aspect, 26)
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(icon)
 	var value := Label.new()
-	value.text = "%d/%d" % [actual, required]
 	value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	value.add_theme_font_size_override("font_size", 12)
-	value.add_theme_color_override(
-		"font_color", Color("d9c98f") if actual >= required else Color("777c79")
-	)
 	parent.add_child(value)
+	return value
 
 
 func _rebuild_personas() -> void:
-	for child in persona_row.get_children():
-		child.free()
-	persona_buttons.clear()
+	_record_update(&"persona_text")
 	for persona_id in CardPropertySet.PROTAGONIST_STATS:
 		var definition := _persona_definition(persona_id)
-		var button := Button.new()
-		button.custom_minimum_size = Vector2(118, 82)
-		button.toggle_mode = true
+		var button := persona_buttons[persona_id] as Button
 		button.button_pressed = state.synthesis_persona_id == persona_id
 		button.text = "%s\n%s  %d" % [
 			definition.localized_name(),
@@ -523,6 +618,29 @@ func _rebuild_personas() -> void:
 			),
 			int(state.protagonist_aspect_counts.get(persona_id, 0)),
 		]
+
+
+func _update_persona_selection() -> void:
+	_record_update(&"persona_selection")
+	for persona_id in persona_buttons:
+		(persona_buttons[persona_id] as Button).button_pressed = (
+			state.synthesis_persona_id == persona_id
+		)
+
+
+func _update_candidate_selection() -> void:
+	_record_update(&"candidate_selection")
+	for recipe_id in candidate_buttons:
+		(candidate_buttons[recipe_id] as Button).button_pressed = (
+			state.synthesis_candidate_recipe_id == recipe_id
+		)
+
+
+func _create_persona_buttons() -> void:
+	for persona_id in CardPropertySet.PROTAGONIST_STATS:
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(118, 82)
+		button.toggle_mode = true
 		button.add_theme_font_size_override("font_size", 13)
 		button.pressed.connect(_on_persona_pressed.bind(persona_id))
 		persona_row.add_child(button)
@@ -559,10 +677,6 @@ func _on_persona_pressed(persona_id: StringName) -> void:
 func _on_candidate_pressed(recipe_id: StringName) -> void:
 	if not state.select_synthesis_candidate(recipe_id):
 		return
-	# State changes already queue a deferred refresh. Rebuilding here would free the
-	# pressed button while its signal is still being emitted.
-	action_button.visible = true
-	action_button.disabled = false
 	var recipe := QuestArcCatalog.recipe_by_id(recipe_id)
 	item_inspected.emit(QuestArcCatalog.item_by_id(recipe.output_id))
 
@@ -686,16 +800,34 @@ func _on_result_drag_finished(_card: CardItemState, succeeded: bool) -> void:
 	refresh()
 
 
-func _queue_refresh() -> void:
-	if refresh_queued:
+func _on_state_delta(delta: QuestStateDelta) -> void:
+	if (
+		delta == null
+		or not delta.affects_synthesis()
+		or phase != Phase.DRAFT
+		or draft_layer == null
+	):
 		return
-	refresh_queued = true
-	call_deferred("_flush_refresh")
-
-
-func _flush_refresh() -> void:
-	refresh_queued = false
-	refresh()
+	var started_usec := Time.get_ticks_usec()
+	if delta.full_reconcile:
+		refresh()
+	elif delta.synthesis_draft_changed:
+		var snapshot := state.synthesis_evaluation_snapshot()
+		_rebuild_material_slots(snapshot)
+		_rebuild_totals(snapshot)
+		_rebuild_candidates(snapshot)
+		_update_action_button()
+	elif delta.synthesis_persona_changed:
+		var snapshot := state.synthesis_evaluation_snapshot()
+		_update_persona_selection()
+		_rebuild_totals(snapshot)
+		_rebuild_candidates(snapshot)
+		_update_action_button()
+	elif delta.synthesis_candidate_changed:
+		_update_candidate_selection()
+		_update_action_button()
+	last_delta_update_usec = Time.get_ticks_usec() - started_usec
+	max_delta_update_usec = maxi(max_delta_update_usec, last_delta_update_usec)
 
 
 func _on_locale_changed(_locale: String) -> void:

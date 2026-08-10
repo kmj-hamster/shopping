@@ -4,14 +4,21 @@ extends Node
 signal state_changed
 
 const SAVE_PATH := "user://save_shopping0807_v1.json"
+const AUTOSAVE_DEBOUNCE_SECONDS := 0.4
 
 var quest_state: QuestGameState
 var save_repository := QuestSaveRepository.new(SAVE_PATH)
 var autosave_enabled := true
 var autosave_queued := false
+var autosave_timer: Timer
 
 
 func _ready() -> void:
+	autosave_timer = Timer.new()
+	autosave_timer.one_shot = true
+	autosave_timer.wait_time = AUTOSAVE_DEBOUNCE_SECONDS
+	autosave_timer.timeout.connect(_flush_autosave)
+	add_child(autosave_timer)
 	autosave_enabled = not _is_test_run()
 	if autosave_enabled:
 		load_or_reset_game()
@@ -50,6 +57,8 @@ func _set_state(next_state: QuestGameState) -> void:
 	quest_state = next_state
 	quest_state.state_changed.connect(_on_state_changed)
 	autosave_queued = false
+	if autosave_timer != null:
+		autosave_timer.stop()
 
 
 func _on_state_changed() -> void:
@@ -58,13 +67,18 @@ func _on_state_changed() -> void:
 
 
 func _queue_autosave() -> void:
-	if not autosave_enabled or autosave_queued:
+	if not autosave_enabled:
 		return
 	autosave_queued = true
-	call_deferred("_flush_autosave")
+	# Restarting the timer coalesces bursts and keeps JSON serialization plus
+	# file rotation out of the interaction frame.
+	if autosave_timer != null:
+		autosave_timer.start()
 
 
 func _flush_autosave() -> void:
+	if not autosave_queued:
+		return
 	autosave_queued = false
 	_save_now()
 

@@ -13,6 +13,8 @@ var rule: CardSlotRule
 var card_holder: CenterContainer
 var caption_label: Label
 var evaluation_label: Label
+var card_view: CardHandCard
+var empty_label: Label
 
 
 func setup(
@@ -46,6 +48,17 @@ func _ready() -> void:
 	card_holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	card_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	stack.add_child(card_holder)
+	empty_label = Label.new()
+	empty_label.text = "◇"
+	empty_label.add_theme_font_size_override("font_size", 34)
+	empty_label.add_theme_color_override("font_color", Color("657873"))
+	empty_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card_holder.add_child(empty_label)
+	card_view = CardHandCard.new()
+	card_view.inspect_requested.connect(item_inspected.emit)
+	card_holder.add_child(card_view)
+	card_view.visible = false
+	card_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	caption_label = Label.new()
 	caption_label.anchor_left = 0.0
 	caption_label.anchor_top = 0.0
@@ -82,24 +95,19 @@ func refresh() -> void:
 	if rule == null or card_holder == null:
 		return
 	caption_label.text = TranslationServer.translate(rule.display_name_key)
-	for child in card_holder.get_children():
-		child.free()
 	var card := state.card_by_instance_id(task.assigned_instance_id(rule.id))
 	var item := QuestArcCatalog.item_by_id(card.definition_id) if card != null else null
 	if card != null and item != null:
-		var view := CardHandCard.new()
-		view.setup(card, item, not task.confirmed)
-		view.inspect_requested.connect(item_inspected.emit)
-		card_holder.add_child(view)
+		card_view.setup(card, item, not task.confirmed)
+		card_view.visible = true
+		card_view.mouse_filter = Control.MOUSE_FILTER_PASS
+		empty_label.visible = false
 		caption_label.visible = false
 		evaluation_label.visible = false
 	else:
-		var empty := Label.new()
-		empty.text = "◇"
-		empty.add_theme_font_size_override("font_size", 34)
-		empty.add_theme_color_override("font_color", Color("657873"))
-		empty.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		card_holder.add_child(empty)
+		card_view.visible = false
+		card_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		empty_label.visible = true
 		caption_label.visible = not _is_owner_request()
 		evaluation_label.visible = false
 		evaluation_label.text = ""

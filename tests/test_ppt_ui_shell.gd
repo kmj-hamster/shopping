@@ -200,10 +200,13 @@ func test_locked_location_uses_confirmed_popup_then_enters_shop() -> void:
 	assert_true(main.rule_detail_popup.visible)
 	assert_eq(main.rule_detail_popup.required_row.get_child_count(), 1)
 	assert_true(main.task_dock.task_window == null or main.task_dock.task_window is PaperActivityPopup)
+	var preallocated_preview := map.location_popup.unlock_slot.preview
 	map.location_popup.unlock_slot._drop_data(
 		Vector2.ZERO,
 		{"kind": &"card_item", "card": sunflower},
 	)
+	assert_same(map.location_popup.unlock_slot.preview, preallocated_preview)
+	assert_true(preallocated_preview.visible)
 	assert_false(main.hand_bar.card_views.has(sunflower.instance_id))
 	assert_false(map.location_popup.action_button.disabled)
 	map.location_popup._on_action_pressed()
@@ -300,10 +303,11 @@ func test_task_popup_is_small_centered_and_uses_centered_copy() -> void:
 	var filled_slot := popup.slots_row.get_children().filter(
 		func(child: Node) -> bool: return child is QuestTaskSlot
 	)[0] as QuestTaskSlot
-	var filled_card := filled_slot.card_holder.get_child(0) as CardHandCard
+	var filled_card := filled_slot.card_view
 	assert_not_null(filled_card)
-	assert_eq(filled_slot.size, hand_card_size)
-	assert_eq(filled_card.size, hand_card_size)
+	assert_eq(hand_card_size, CardHandCard.CARD_SIZE)
+	assert_eq(filled_slot.size, CardHandCard.CARD_SIZE)
+	assert_eq(filled_card.size, CardHandCard.CARD_SIZE)
 	assert_true(filled_slot._has_point(Vector2(-QuestTaskSlot.DROP_MARGIN.x + 1.0, 70.0)))
 	assert_true(filled_slot._has_point(Vector2(
 		filled_slot.size.x + QuestTaskSlot.DROP_MARGIN.x - 1.0,
@@ -355,6 +359,44 @@ func test_clicking_task_slot_moves_matching_cards_left_and_lifts_them() -> void:
 	left_card = left_wrapper.get_child(0) as CardHandCard
 	assert_eq(left_card.definition.id, &"sunflower")
 	assert_almost_eq(left_card.position.y, 0.0, 0.01)
+
+
+func test_task_assignment_reuses_bookmark_popup_slot_and_card_view() -> void:
+	var main := await _spawn_main()
+	var task := main.state.task_instance_for_definition(&"girl_order")
+	main.task_dock._toggle_task(task.instance_id)
+	await get_tree().process_frame
+	var popup := main.task_dock.task_window
+	var slot := popup.slot_views[&"food"] as QuestTaskSlot
+	var bookmark := main.task_dock.bookmark_buttons[task.instance_id] as Button
+	var preallocated_card_view := slot.card_view
+	var fries := main.state.inventory.filter(
+		func(card: CardItemState) -> bool: return card.definition_id == &"fries"
+	)[0] as CardItemState
+
+	assert_true(main.state.assign_card(task.instance_id, &"food", fries).ok)
+	assert_same(main.task_dock.task_window, popup)
+	assert_same(main.task_dock.bookmark_buttons[task.instance_id], bookmark)
+	assert_same(popup.slot_views[&"food"], slot)
+	assert_same(slot.card_view, preallocated_card_view)
+	assert_same(slot.card_view.card, fries)
+	assert_true(slot.card_view.visible)
+
+
+func test_task_assignment_inside_shop_does_not_rebuild_shelf_views() -> void:
+	var main := await _spawn_main()
+	main._show_shop(&"flower")
+	await get_tree().process_frame
+	var shop := main.current_screen as QuestShopScreen
+	var original_shelf_buttons := shop.shelf_buttons.duplicate()
+	var task := main.state.task_instance_for_definition(&"girl_order")
+	var fries := main.state.inventory.filter(
+		func(card: CardItemState) -> bool: return card.definition_id == &"fries"
+	)[0] as CardItemState
+
+	assert_true(main.state.assign_card(task.instance_id, &"food", fries).ok)
+	for slot_id in original_shelf_buttons:
+		assert_same(shop.shelf_buttons[slot_id], original_shelf_buttons[slot_id])
 
 
 func test_self_and_owner_tasks_use_contextual_actions_and_owner_rule_titles() -> void:
@@ -511,7 +553,9 @@ func test_synthesis_is_a_material_first_dedicated_space() -> void:
 	var synthesis := main.current_screen as QuestSynthesisInterface
 	assert_not_null(synthesis)
 	assert_eq(synthesis.material_slots.size(), 2)
-	assert_true(synthesis.candidate_buttons.is_empty())
+	assert_true(synthesis.candidate_buttons.values().all(
+		func(button: Button) -> bool: return not button.visible
+	))
 	assert_true(synthesis.stage_card(&"base", sunflower))
 	var soft_gauze := main.state.inventory.filter(
 		func(card: CardItemState) -> bool: return card.definition_id == &"soft_gauze"

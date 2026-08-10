@@ -8,6 +8,8 @@ signal owner_result_presented(store_id: StringName, text_key: StringName)
 var state: QuestGameState
 var task_instance_id: int
 var current_store_id: StringName
+var slot_views: Dictionary = {}
+var or_labels: Array[Label] = []
 
 
 func setup(game_state: QuestGameState, instance_id: int, store_id: StringName = &"") -> void:
@@ -45,8 +47,22 @@ func refresh() -> void:
 	var definition := QuestArcCatalog.task_by_id(task.definition_id)
 	title_label.text = TranslationServer.translate(definition.display_name_key)
 	body_label.text = TranslationServer.translate(definition.body_text_key)
-	for child in slots_row.get_children():
-		child.free()
+	_ensure_slot_views(task, definition)
+	for label in or_labels:
+		label.text = TranslationServer.translate(&"demo.ui.or")
+	for raw_rule in definition.slot_rules:
+		var rule := raw_rule as CardSlotRule
+		var slot := slot_views.get(rule.id) as QuestTaskSlot
+		if slot != null:
+			slot.setup(state, task, rule)
+	var evaluation := state.task_evaluation(task.instance_id)
+	feedback_label.text = ""
+	_update_action_state(task, definition, evaluation)
+
+
+func _ensure_slot_views(task: TaskInstanceState, definition: TaskDefinition) -> void:
+	if not slot_views.is_empty():
+		return
 	for rule_index in definition.slot_rules.size():
 		if rule_index > 0 and definition.slot_mode == TaskDefinition.SlotMode.ANY:
 			var or_label := Label.new()
@@ -55,14 +71,22 @@ func refresh() -> void:
 			or_label.add_theme_font_size_override("font_size", 14)
 			or_label.add_theme_color_override("font_color", Color("6d5a3d"))
 			slots_row.add_child(or_label)
+			or_labels.append(or_label)
 		var raw_rule := definition.slot_rules[rule_index]
 		var slot := QuestTaskSlot.new()
-		slot.setup(state, task, raw_rule as CardSlotRule)
+		var rule := raw_rule as CardSlotRule
+		slot.setup(state, task, rule)
 		slot.rule_focused.connect(rule_focused.emit)
 		slot.item_inspected.connect(item_inspected.emit)
 		slots_row.add_child(slot)
-	var evaluation := state.task_evaluation(task.instance_id)
-	feedback_label.text = ""
+		slot_views[rule.id] = slot
+
+
+func _update_action_state(
+	task: TaskInstanceState,
+	definition: TaskDefinition,
+	evaluation: Dictionary,
+) -> void:
 	if definition.settlement_mode == TaskDefinition.SettlementMode.OWNER_IMMEDIATE:
 		action_button.text = TranslationServer.translate(&"quest.ui.task.deliver")
 		action_button.disabled = not evaluation.is_ready or current_store_id != definition.store_id

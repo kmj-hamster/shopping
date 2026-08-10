@@ -53,3 +53,54 @@ func test_checkout_rejects_cart_above_balance_without_mutating_stock() -> void:
 	assert_eq(result.reason, CardShopTransaction.RESULT_INSUFFICIENT_FUNDS)
 	assert_eq(agave_slot.item_id, &"agave")
 	assert_eq(state.wallet.money, 5)
+
+
+func test_synthesis_completion_emits_one_merged_hand_delta() -> void:
+	var state := QuestGameState.new()
+	var sunflower := _card_by_definition(state, &"sunflower")
+	var soft_gauze := _card_by_definition(state, &"soft_gauze")
+	assert_true(state.assign_synthesis_base(sunflower).ok)
+	assert_true(state.assign_synthesis_fuel(soft_gauze).ok)
+	assert_true(state.select_synthesis_persona(&"reverie"))
+	var evaluated_snapshot := state.synthesis_evaluation_snapshot()
+	assert_true(state.select_synthesis_candidate(&"recipe_midnight_rose"))
+	assert_same(state.synthesis_evaluation_snapshot(), evaluated_snapshot)
+	var deltas: Array[QuestStateDelta] = []
+	state.state_delta.connect(func(delta: QuestStateDelta) -> void: deltas.append(delta))
+
+	var result := state.begin_synthesis()
+	assert_true(result.ok)
+	assert_eq(deltas.size(), 1)
+	var delta := deltas[0]
+	assert_true(delta.hand_removed_instance_ids.has(sunflower.instance_id))
+	assert_true(delta.hand_removed_instance_ids.has(soft_gauze.instance_id))
+	assert_true(delta.hand_added_instance_ids.has(result.output.instance_id))
+
+
+func test_synthesis_draft_changes_do_not_emit_persistent_state_changed() -> void:
+	var state := QuestGameState.new()
+	var counts := {"persistent": 0, "synthesis_delta": 0}
+	state.state_changed.connect(func() -> void: counts.persistent += 1)
+	state.state_delta.connect(func(delta: QuestStateDelta) -> void:
+		if delta.affects_synthesis():
+			counts.synthesis_delta += 1
+	)
+	var sunflower := _card_by_definition(state, &"sunflower")
+	var soft_gauze := _card_by_definition(state, &"soft_gauze")
+
+	assert_true(state.assign_synthesis_base(sunflower).ok)
+	assert_true(state.assign_synthesis_fuel(soft_gauze).ok)
+	assert_true(state.select_synthesis_persona(&"reverie"))
+	assert_true(state.select_synthesis_candidate(&"recipe_midnight_rose"))
+	assert_eq(counts.persistent, 0)
+	assert_eq(counts.synthesis_delta, 4)
+
+	assert_true(state.begin_synthesis().ok)
+	assert_eq(counts.persistent, 1)
+
+
+func _card_by_definition(state: QuestGameState, definition_id: StringName) -> CardItemState:
+	for card in state.inventory:
+		if card.definition_id == definition_id:
+			return card
+	return null

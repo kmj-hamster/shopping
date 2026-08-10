@@ -10,6 +10,8 @@ var rule: CardSlotRule
 var pending_card: CardItemState
 var content: CenterContainer
 var remove_button: Button
+var empty_label: Label
+var preview: CardHandCard
 
 
 func setup(
@@ -33,6 +35,30 @@ func _ready() -> void:
 	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(content)
+	empty_label = Label.new()
+	empty_label.custom_minimum_size = Vector2(84, 142)
+	empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	empty_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	empty_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	empty_label.add_theme_color_override("font_color", Color("cbbd9b"))
+	content.add_child(empty_label)
+	preview = CardHandCard.new()
+	preview.name = "StagedCard"
+	preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.add_child(preview)
+	preview.visible = false
+	remove_button = Button.new()
+	remove_button.name = "RemoveStagedCardButton"
+	remove_button.text = "×"
+	remove_button.anchor_left = 1.0
+	remove_button.anchor_right = 1.0
+	remove_button.offset_left = -34
+	remove_button.offset_right = -4
+	remove_button.offset_top = 4
+	remove_button.offset_bottom = 34
+	remove_button.pressed.connect(release_card)
+	add_child(remove_button)
+	remove_button.visible = false
 	gui_input.connect(_on_gui_input)
 	_rebuild()
 
@@ -72,39 +98,19 @@ func _drop_data(_at_position: Vector2, data: Variant) -> void:
 func _rebuild() -> void:
 	if content == null:
 		return
-	if remove_button != null and is_instance_valid(remove_button):
-		remove_button.free()
-	remove_button = null
-	for child in content.get_children():
-		child.free()
+	empty_label.text = TranslationServer.translate(rule.display_name_key) if rule != null else ""
+	remove_button.tooltip_text = TranslationServer.translate(&"demo.ui.location.remove")
 	if pending_card == null:
-		var empty_label := Label.new()
-		empty_label.custom_minimum_size = Vector2(84, 142)
-		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		empty_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		empty_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		empty_label.add_theme_color_override("font_color", Color("cbbd9b"))
-		empty_label.text = TranslationServer.translate(rule.display_name_key) if rule != null else ""
-		content.add_child(empty_label)
+		empty_label.visible = true
+		preview.visible = false
+		remove_button.visible = false
 		return
 	var definition := QuestArcCatalog.item_by_id(pending_card.definition_id)
-	var preview := CardHandCard.new()
-	preview.name = "StagedCard"
 	preview.setup(pending_card, definition, false)
-	content.add_child(preview)
+	preview.visible = true
 	preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	remove_button = Button.new()
-	remove_button.name = "RemoveStagedCardButton"
-	remove_button.text = "×"
-	remove_button.tooltip_text = TranslationServer.translate(&"demo.ui.location.remove")
-	remove_button.anchor_left = 1.0
-	remove_button.anchor_right = 1.0
-	remove_button.offset_left = -34
-	remove_button.offset_right = -4
-	remove_button.offset_top = 4
-	remove_button.offset_bottom = 34
-	remove_button.pressed.connect(release_card)
-	add_child(remove_button)
+	empty_label.visible = false
+	remove_button.visible = true
 
 
 func _on_gui_input(event: InputEvent) -> void:

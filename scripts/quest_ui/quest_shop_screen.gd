@@ -29,7 +29,6 @@ var page_row: HBoxContainer
 var shelf_buttons: Dictionary = {}
 var page_buttons: Dictionary = {}
 var highlight_rule: CardSlotRule
-var refresh_queued := false
 var current_page := 1
 var owner_dialogue_override_key: StringName
 var owner_dialogue_item_name := ""
@@ -60,8 +59,6 @@ func _ready() -> void:
 
 
 func _bind_state() -> void:
-	if state != null and not state.state_changed.is_connected(_queue_refresh):
-		state.state_changed.connect(_queue_refresh)
 	if transaction != null and not transaction.selection_changed.is_connected(_on_selection_changed):
 		transaction.selection_changed.connect(_on_selection_changed)
 
@@ -495,6 +492,7 @@ func _on_checkout_pressed() -> void:
 	if result.ok:
 		shelf_popup.visible = false
 		checkout_completed.emit()
+		_refresh_shelf()
 	_refresh_checkout_state()
 
 
@@ -514,18 +512,6 @@ func _store_background_texture() -> Texture2D:
 	}
 	var path := String(paths.get(store_id, ""))
 	return load(path) as Texture2D if not path.is_empty() else null
-
-
-func _queue_refresh() -> void:
-	if refresh_queued:
-		return
-	refresh_queued = true
-	call_deferred("_flush_refresh")
-
-
-func _flush_refresh() -> void:
-	refresh_queued = false
-	refresh()
 
 
 func _on_locale_changed(_locale: String) -> void:

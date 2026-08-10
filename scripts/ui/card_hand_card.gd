@@ -42,6 +42,7 @@ func setup(
 
 func _ready() -> void:
 	custom_minimum_size = CARD_SIZE
+	clip_contents = true
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	mouse_default_cursor_shape = Control.CURSOR_DRAG
 	var margin := MarginContainer.new()
@@ -62,14 +63,28 @@ func _ready() -> void:
 	item_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	item_image.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(item_image)
+	# Keep localized names out of the VBox minimum-width calculation. The
+	# fixed host owns layout; the label can ellipsize inside it in either locale.
+	var title_host := Control.new()
+	title_host.custom_minimum_size = Vector2(72, 20)
+	title_host.clip_contents = true
+	column.add_child(title_host)
 	title_label = Label.new()
+	title_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	title_label.clip_text = true
 	title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title_label.add_theme_font_size_override("font_size", 13)
 	title_label.add_theme_color_override("font_color", Color("d9e7df"))
-	column.add_child(title_label)
+	title_host.add_child(title_label)
 	_refresh()
+
+
+func _get_minimum_size() -> Vector2:
+	# Item names must ellipsize inside the card instead of widening every
+	# hand wrapper and task slot that contains this reusable component.
+	return CARD_SIZE
 
 
 func _refresh() -> void:
@@ -113,6 +128,12 @@ func apply_rule_highlight(rule: CardSlotRule) -> void:
 
 func _apply_card_style() -> void:
 	var style := UiPalette.panel_style(Color("050708", 0.99), _border_color())
+	# CardHandCard owns its eight-pixel inner margin. UiPalette's generic panel
+	# margins would add another 24 px horizontally and defeat CARD_SIZE.
+	style.content_margin_left = 0.0
+	style.content_margin_right = 0.0
+	style.content_margin_top = 0.0
+	style.content_margin_bottom = 0.0
 	style.corner_radius_top_left = 4
 	style.corner_radius_top_right = 4
 	style.corner_radius_bottom_left = 4
@@ -197,7 +218,12 @@ func _begin_drag_visual(grab_position: Vector2 = size * 0.5) -> void:
 func _end_drag_visual(drag_succeeded: bool) -> void:
 	drag_in_progress = false
 	drag_finished.emit(card, drag_succeeded)
-	if not drag_succeeded:
+	if drag_succeeded and _card_remained_at_drag_origin():
+		# A successful drop can still keep the card in the same container, most
+		# notably when the hand reorders it. Keyed UI reconciliation deliberately
+		# preserves this node, so it must undo the temporary drag hiding itself.
+		_restore_after_drag()
+	elif not drag_succeeded:
 		_animate_return_to_origin()
 
 

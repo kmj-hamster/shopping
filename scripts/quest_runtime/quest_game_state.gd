@@ -2,6 +2,7 @@ class_name QuestGameState
 extends RefCounted
 
 signal state_changed
+signal state_delta(delta: QuestStateDelta)
 
 const RESULT_OK := &"ok"
 const RESULT_UNKNOWN_TASK := &"unknown_task"
@@ -41,6 +42,12 @@ var store_transactions: Dictionary = {}
 var recycle_transaction: CardRecycleTransaction
 var next_card_instance_id := 1
 var next_task_instance_id := 1
+var _change_batch_depth := 0
+var _state_change_pending := false
+var _pending_delta: QuestStateDelta
+var _synthesis_snapshot_revision := -1
+var _synthesis_input_revision := 0
+var _cached_synthesis_snapshot: Dictionary = {}
 
 
 func _init() -> void:
@@ -48,6 +55,7 @@ func _init() -> void:
 
 
 func reset() -> void:
+	_begin_change_batch()
 	var content := QuestArcCatalog.manifest()
 	day = 1
 	wallet = PlayerWallet.new(content.initial_money if content != null else 10)
@@ -81,7 +89,8 @@ func reset() -> void:
 		for item_id in content.starting_item_ids:
 			grant_item(item_id, &"demo_start")
 	activate_scheduled_tasks(day)
-	state_changed.emit()
+	_mark_state_changed(QuestStateDelta.new().mark_full_reconcile(&"reset"))
+	_end_change_batch()
 
 
 func activate_scheduled_tasks(for_day: int) -> Array[TaskInstanceState]:
@@ -110,7 +119,11 @@ func activate_task(definition_id: StringName) -> TaskInstanceState:
 	var instance := TaskInstanceState.new(next_task_instance_id, definition_id, day)
 	next_task_instance_id += 1
 	task_instances.append(instance)
-	state_changed.emit()
+	_mark_state_changed(
+		QuestStateDelta.new()
+			.mark_task_list(&"task_activated")
+			.mark_task_instance(instance.instance_id, &"task_activated")
+	)
 	return instance
 
 
@@ -162,6 +175,10 @@ func checkout_store(store_id: StringName) -> Dictionary:
 	var result := transaction.checkout(day)
 	if result.ok:
 		_sync_next_card_instance_id()
+		var delta := QuestStateDelta.new()
+		for purchased_card in result.purchased:
+			delta.mark_hand_added((purchased_card as CardItemState).instance_id, &"shop_checkout")
+		_mark_delta(delta)
 	return result
 
 
@@ -212,24 +229,44 @@ func interact_with_store_owner(store_id: StringName) -> Dictionary:
 	if task == null:
 		return _owner_result(owner, owner.idle_dialogue_key, false)
 	_stock_owner_event_item(owner)
-	state_changed.emit()
+	_mark_state_changed()
 	return _owner_result(owner, owner.request_dialogue_key, true, task.instance_id)
 
 
 func stage_recycle_card(card: CardItemState) -> Dictionary:
-	return recycle_transaction.stage(card)
+	var result := recycle_transaction.stage(card)
+	if result.ok:
+		_mark_delta(QuestStateDelta.new().mark_hand_location(card.instance_id, &"recycle_stage"))
+	return result
 
 
 func unstage_recycle_card(card: CardItemState) -> bool:
-	return recycle_transaction.unstage(card)
+	var changed := recycle_transaction.unstage(card)
+	if changed:
+		_mark_delta(QuestStateDelta.new().mark_hand_location(card.instance_id, &"recycle_unstage"))
+	return changed
 
 
 func checkout_recycle() -> Dictionary:
-	return recycle_transaction.checkout()
+	var removed_ids := recycle_transaction.staged_instance_ids.duplicate()
+	var result := recycle_transaction.checkout()
+	if result.ok:
+		var delta := QuestStateDelta.new()
+		for instance_id in removed_ids:
+			delta.mark_hand_removed(instance_id, &"recycle_checkout")
+		_mark_delta(delta)
+	return result
 
 
 func cancel_recycle() -> int:
-	return recycle_transaction.cancel()
+	var returned_ids := recycle_transaction.staged_instance_ids.duplicate()
+	var count := recycle_transaction.cancel()
+	if count > 0:
+		var delta := QuestStateDelta.new()
+		for instance_id in returned_ids:
+			delta.mark_hand_location(instance_id, &"recycle_cancel")
+		_mark_delta(delta)
+	return count
 
 
 func commerce_snapshot() -> Dictionary:
@@ -294,16 +331,40 @@ func reorder_hand_card(card: CardItemState, target_index: int) -> bool:
 		return false
 	var hand_cards: Array[CardItemState] = []
 	for owned in inventory:
-		if owned.location == CardItemState.Location.HAND and owned != card:
+		if owned.location == CardItemState.Location.HAND:
 			hand_cards.append(owned)
+	var original_index := hand_cards.find(card)
+	hand_cards.erase(card)
 	var normalized_index := clampi(target_index, 0, hand_cards.size())
-	var inventory_index := inventory.size()
-	if normalized_index < hand_cards.size():
-		inventory_index = inventory.find(hand_cards[normalized_index])
-	inventory.erase(card)
-	inventory.insert(clampi(inventory_index, 0, inventory.size()), card)
-	state_changed.emit()
+	if original_index == normalized_index:
+		return true
+	hand_cards.insert(normalized_index, card)
+	# Rewrite only the hand positions. This keeps assigned/recycled entries in
+	# place and avoids using an inventory index that becomes stale after erase().
+	var hand_index := 0
+	for inventory_index in inventory.size():
+		if inventory[inventory_index].location != CardItemState.Location.HAND:
+			continue
+		inventory[inventory_index] = hand_cards[hand_index]
+		hand_index += 1
+	_mark_state_changed(QuestStateDelta.new().mark_hand_order(&"hand_reorder"))
 	return true
+
+
+func move_card_to_hand(card: CardItemState, target_index: int) -> bool:
+	if card == null or not inventory.has(card):
+		return false
+	_begin_change_batch()
+	var returned := true
+	if card.location == CardItemState.Location.ACTIVITY_SLOT:
+		returned = return_card_to_hand(card)
+	elif card.location == CardItemState.Location.RECYCLE:
+		returned = unstage_recycle_card(card)
+	elif card.location != CardItemState.Location.HAND:
+		returned = false
+	var reordered := reorder_hand_card(card, target_index) if returned else false
+	_end_change_batch()
+	return returned and reordered
 
 
 func refill_daily_shelves() -> void:
@@ -325,7 +386,7 @@ func refill_daily_shelves() -> void:
 				and item.supply_mode == QuestItemDefinition.SupplyMode.DAILY_BASIC
 			):
 				slot.stock(item.id)
-	state_changed.emit()
+	_mark_state_changed()
 
 
 func grant_item(
@@ -344,7 +405,7 @@ func grant_item(
 	)
 	next_card_instance_id += 1
 	inventory.append(card)
-	state_changed.emit()
+	_mark_state_changed(QuestStateDelta.new().mark_hand_added(card.instance_id, &"item_granted"))
 	return card
 
 
@@ -375,13 +436,21 @@ func assign_card(task_instance_id: int, slot_id: StringName, card: CardItemState
 	_remove_card_assignment(card)
 	instance.assignments[slot_id] = card.instance_id
 	card.assign_to(StringName(str(instance.instance_id)), slot_id)
-	state_changed.emit()
+	var delta := (
+		QuestStateDelta.new()
+			.mark_hand_location(card.instance_id, &"task_assignment")
+			.mark_task_instance(instance.instance_id, &"task_assignment")
+	)
+	if previous_task != null and previous_task != instance:
+		delta.mark_task_instance(previous_task.instance_id, &"task_reassignment")
+	_mark_state_changed(delta)
 	return _result(true, RESULT_OK, evaluation)
 
 
 func return_card_to_hand(card: CardItemState) -> bool:
 	if card == null or not inventory.has(card) or card.location != CardItemState.Location.ACTIVITY_SLOT:
 		return false
+	var was_synthesis_material := card.activity_id == &"synthesis"
 	var instance := _task_containing_card(card.instance_id)
 	if instance != null:
 		if instance.confirmed:
@@ -390,23 +459,37 @@ func return_card_to_hand(card: CardItemState) -> bool:
 	elif not _clear_synthesis_assignment_for_card(card.instance_id):
 		return false
 	card.return_to_hand()
-	state_changed.emit()
+	var delta := QuestStateDelta.new().mark_hand_location(card.instance_id, &"return_to_hand")
+	if was_synthesis_material:
+		delta.mark_synthesis_draft(&"synthesis_material_returned")
+		_mark_transient_changed(delta, true)
+	else:
+		if instance != null:
+			delta.mark_task_instance(instance.instance_id, &"task_card_returned")
+		_mark_state_changed(delta)
 	return true
 
 
 func clear_synthesis_draft() -> bool:
-	var changed := false
+	var changed := (
+		synthesis_base_instance_id > 0
+		or synthesis_fuel_instance_id > 0
+		or not synthesis_persona_id.is_empty()
+		or not synthesis_candidate_recipe_id.is_empty()
+	)
+	var delta := QuestStateDelta.new().mark_synthesis_draft(&"synthesis_clear")
 	for card_id in [synthesis_base_instance_id, synthesis_fuel_instance_id]:
 		var card := card_by_instance_id(card_id)
 		if card != null:
 			card.return_to_hand()
 			changed = true
+			delta.mark_hand_location(card.instance_id, &"synthesis_clear")
 	synthesis_base_instance_id = 0
 	synthesis_fuel_instance_id = 0
 	synthesis_persona_id = &""
 	synthesis_candidate_recipe_id = &""
 	if changed:
-		state_changed.emit()
+		_mark_transient_changed(delta, true)
 	return true
 
 
@@ -461,7 +544,16 @@ func _assign_synthesis_card(role_id: StringName, card: CardItemState) -> Diction
 		synthesis_fuel_instance_id = card.instance_id
 	card.assign_to(&"synthesis", role_id)
 	synthesis_candidate_recipe_id = &""
-	state_changed.emit()
+	var delta := (
+		QuestStateDelta.new()
+			.mark_hand_location(card.instance_id, &"synthesis_assignment")
+			.mark_synthesis_draft(&"synthesis_assignment")
+	)
+	if previous_task != null:
+		delta.mark_task_instance(previous_task.instance_id, &"task_to_synthesis")
+		_mark_state_changed(delta)
+	else:
+		_mark_transient_changed(delta, true)
 	return _result(true, RESULT_OK)
 
 
@@ -470,7 +562,10 @@ func select_synthesis_persona(persona_id: StringName) -> bool:
 		return false
 	synthesis_persona_id = &"" if synthesis_persona_id == persona_id else persona_id
 	synthesis_candidate_recipe_id = &""
-	state_changed.emit()
+	_mark_transient_changed(
+		QuestStateDelta.new().mark_synthesis_persona(&"synthesis_persona"),
+		true,
+	)
 	return true
 
 
@@ -483,32 +578,46 @@ func synthesis_fuel_card() -> CardItemState:
 
 
 func synthesis_aspect_totals() -> Dictionary:
+	return (synthesis_evaluation_snapshot().totals as Dictionary).duplicate()
+
+
+func synthesis_evaluation_snapshot() -> Dictionary:
+	if _synthesis_snapshot_revision == _synthesis_input_revision:
+		return _cached_synthesis_snapshot
 	var base_card := synthesis_base_card()
 	var fuel_card := synthesis_fuel_card()
-	return SynthesisRules.aspect_totals(
-		QuestArcCatalog.item_by_id(base_card.definition_id) if base_card != null else null,
+	var base_item := (
+		QuestArcCatalog.item_by_id(base_card.definition_id) if base_card != null else null
+	)
+	var totals := SynthesisRules.aspect_totals(
+		base_item,
 		QuestArcCatalog.item_by_id(fuel_card.definition_id) if fuel_card != null else null,
 		synthesis_persona_id,
 		protagonist_aspect_counts,
 	)
+	var candidates: Array[Dictionary] = []
+	if base_item != null:
+		for recipe_id in available_synthesis_recipe_ids():
+			var recipe := QuestArcCatalog.recipe_by_id(recipe_id)
+			var evaluation := SynthesisRules.evaluate_candidate(recipe, base_item, totals)
+			if evaluation.is_visible:
+				evaluation["recipe_id"] = recipe.id
+				evaluation["required_aspects"] = recipe.required_aspects.duplicate()
+				candidates.append(evaluation)
+	_cached_synthesis_snapshot = {
+		"base_card": base_card,
+		"fuel_card": fuel_card,
+		"base_item": base_item,
+		"totals": totals,
+		"candidates": candidates,
+	}
+	_synthesis_snapshot_revision = _synthesis_input_revision
+	return _cached_synthesis_snapshot
 
 
 func synthesis_candidates() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	var base_card := synthesis_base_card()
-	var base_item := (
-		QuestArcCatalog.item_by_id(base_card.definition_id) if base_card != null else null
-	)
-	if base_item == null:
-		return result
-	var totals := synthesis_aspect_totals()
-	for recipe_id in available_synthesis_recipe_ids():
-		var recipe := QuestArcCatalog.recipe_by_id(recipe_id)
-		var evaluation := SynthesisRules.evaluate_candidate(recipe, base_item, totals)
-		if evaluation.is_visible:
-			evaluation["recipe_id"] = recipe.id
-			evaluation["required_aspects"] = recipe.required_aspects.duplicate()
-			result.append(evaluation)
+	result.assign(synthesis_evaluation_snapshot().candidates)
 	return result
 
 
@@ -516,7 +625,9 @@ func select_synthesis_candidate(recipe_id: StringName) -> bool:
 	for candidate in synthesis_candidates():
 		if StringName(candidate.recipe_id) == recipe_id and candidate.is_complete:
 			synthesis_candidate_recipe_id = recipe_id
-			state_changed.emit()
+			_mark_transient_changed(
+				QuestStateDelta.new().mark_synthesis_candidate(&"synthesis_candidate")
+			)
 			return true
 	return false
 
@@ -539,14 +650,18 @@ func begin_synthesis() -> Dictionary:
 		var card := card_by_instance_id(card_id)
 		if card == null or card.activity_id != &"synthesis":
 			return _result(false, RESULT_NOT_READY)
+	_begin_change_batch()
+	var delta := QuestStateDelta.new().mark_synthesis_draft(&"synthesis_complete")
 	for card_id in input_ids:
 		inventory.erase(card_by_instance_id(card_id))
+		delta.mark_hand_removed(card_id, &"synthesis_complete")
 	discovered_recipe_ids[recipe.id] = true
 	synthesis_base_instance_id = 0
 	synthesis_fuel_instance_id = 0
 	synthesis_candidate_recipe_id = &""
 	var output := grant_item(recipe.output_id, &"synthesis")
-	state_changed.emit()
+	_mark_state_changed(delta)
+	_end_change_batch()
 	return {
 		"ok": true,
 		"reason": RESULT_OK,
@@ -605,7 +720,9 @@ func confirm_task(task_instance_id: int) -> Dictionary:
 		return _result(false, RESULT_NOT_READY, evaluation)
 	instance.confirmed = true
 	instance.resolved_outcome_id = (evaluation.outcome as TaskOutcomeDefinition).id
-	state_changed.emit()
+	_mark_state_changed(
+		QuestStateDelta.new().mark_task_instance(instance.instance_id, &"task_confirmed")
+	)
 	return _result(true, RESULT_OK, evaluation)
 
 
@@ -656,7 +773,7 @@ func begin_next_day() -> Dictionary:
 			"reward_stats": reward_stats,
 		})
 	pending_arc = ArcTransitionState.new(day, entries)
-	state_changed.emit()
+	_mark_state_changed()
 	return {
 		"ok": true,
 		"reason": RESULT_OK,
@@ -698,7 +815,9 @@ func apply_arc_effects() -> Dictionary:
 			"cards": cards,
 			"items": items,
 		})
+	_begin_change_batch()
 	var consumed_count := 0
+	var hand_delta := QuestStateDelta.new()
 	var money_before := wallet.money
 	for resolved in resolved_entries:
 		var instance := resolved.instance as TaskInstanceState
@@ -709,14 +828,20 @@ func apply_arc_effects() -> Dictionary:
 		for raw_effect in outcome.effects:
 			_apply_story_effect(raw_effect as StoryEffect)
 		for raw_card in resolved.cards:
-			inventory.erase(raw_card as CardItemState)
+			var consumed_card := raw_card as CardItemState
+			inventory.erase(consumed_card)
+			hand_delta.mark_hand_removed(consumed_card.instance_id, &"arc_settlement")
 			consumed_count += 1
 		instance.assignments.clear()
 		instance.confirmed = false
 		instance.settled = true
+		hand_delta.mark_task_instance(instance.instance_id, &"arc_settlement")
 		task_history[definition.id] = outcome.id
 	pending_arc.effects_applied = true
-	state_changed.emit()
+	if not resolved_entries.is_empty():
+		hand_delta.mark_task_list(&"arc_settlement")
+	_mark_state_changed(hand_delta)
+	_end_change_batch()
 	return {
 		"ok": true,
 		"reason": RESULT_OK,
@@ -732,7 +857,7 @@ func mark_arc_entry_shown() -> bool:
 	if pending_arc.next_entry_index >= pending_arc.entries.size():
 		return false
 	pending_arc.next_entry_index += 1
-	state_changed.emit()
+	_mark_state_changed()
 	return true
 
 
@@ -741,11 +866,13 @@ func finish_arc() -> Dictionary:
 		return _result(false, RESULT_NO_TRANSITION)
 	if not pending_arc.is_complete():
 		return _result(false, RESULT_EFFECTS_PENDING)
+	_begin_change_batch()
 	day += 1
 	pending_arc = null
 	refill_daily_shelves()
 	var activated := activate_scheduled_tasks(day)
-	state_changed.emit()
+	_mark_state_changed()
+	_end_change_batch()
 	return {
 		"ok": true,
 		"reason": RESULT_OK,
@@ -770,12 +897,15 @@ func submit_owner_task(task_instance_id: int, store_id: StringName = &"") -> Dic
 	var evaluation := task_evaluation(task_instance_id)
 	if not evaluation.is_ready:
 		return _result(false, RESULT_NOT_READY, evaluation)
+	_begin_change_batch()
 	var outcome := evaluation.outcome as TaskOutcomeDefinition
 	var consumed_count := 0
+	var hand_delta := QuestStateDelta.new()
 	for card_id in instance.assigned_instance_ids():
 		var card := card_by_instance_id(card_id)
 		if card != null:
 			inventory.erase(card)
+			hand_delta.mark_hand_removed(card.instance_id, &"owner_task_settlement")
 			consumed_count += 1
 	for raw_effect in outcome.effects:
 		_apply_story_effect(raw_effect as StoryEffect)
@@ -783,7 +913,10 @@ func submit_owner_task(task_instance_id: int, store_id: StringName = &"") -> Dic
 	instance.resolved_outcome_id = outcome.id
 	instance.settled = true
 	task_history[definition.id] = outcome.id
-	state_changed.emit()
+	hand_delta.mark_task_instance(instance.instance_id, &"owner_task_settlement")
+	hand_delta.mark_task_list(&"owner_task_settlement")
+	_mark_state_changed(hand_delta)
+	_end_change_batch()
 	return {
 		"ok": true,
 		"reason": RESULT_OK,
@@ -811,7 +944,9 @@ func unlock_store(store_id: StringName, card: CardItemState) -> Dictionary:
 		return _result(false, RESULT_REJECTED)
 	inventory.erase(card)
 	unlocked_store_ids[store_id] = true
-	state_changed.emit()
+	_mark_state_changed(
+		QuestStateDelta.new().mark_hand_removed(card.instance_id, &"store_unlock")
+	)
 	return {
 		"ok": true,
 		"reason": RESULT_OK,
@@ -978,8 +1113,58 @@ func _build_commerce() -> void:
 	recycle_transaction.state_changed.connect(_on_transaction_state_changed)
 
 
+func _begin_change_batch() -> void:
+	_change_batch_depth += 1
+
+
+func _end_change_batch() -> void:
+	assert(_change_batch_depth > 0, "QuestGameState change batch underflow")
+	_change_batch_depth -= 1
+	if _change_batch_depth > 0:
+		return
+	var delta := _pending_delta
+	_pending_delta = null
+	if delta != null and not delta.is_empty():
+		state_delta.emit(delta)
+	if _state_change_pending:
+		_state_change_pending = false
+		state_changed.emit()
+
+
+func _mark_state_changed(delta: QuestStateDelta = null) -> void:
+	# Persistent changes may alter story gates or protagonist aspects used by
+	# synthesis, so invalidate its input cache conservatively. Transient draft
+	# changes use _mark_transient_changed() and never request autosave.
+	_synthesis_input_revision += 1
+	_mark_delta(delta)
+	if _change_batch_depth > 0:
+		_state_change_pending = true
+	else:
+		state_changed.emit()
+
+
+func _mark_transient_changed(
+	delta: QuestStateDelta,
+	invalidate_synthesis_inputs: bool = false,
+) -> void:
+	if invalidate_synthesis_inputs:
+		_synthesis_input_revision += 1
+	_mark_delta(delta)
+
+
+func _mark_delta(delta: QuestStateDelta) -> void:
+	if delta == null or delta.is_empty():
+		return
+	if _change_batch_depth > 0:
+		if _pending_delta == null:
+			_pending_delta = QuestStateDelta.new()
+		_pending_delta.merge(delta)
+	else:
+		state_delta.emit(delta)
+
+
 func _on_transaction_state_changed() -> void:
-	state_changed.emit()
+	_mark_state_changed()
 
 
 func _sync_next_card_instance_id() -> void:

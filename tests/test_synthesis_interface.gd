@@ -45,30 +45,66 @@ func test_narrative_click_finishes_then_advances_and_result_returns_to_hand() ->
 	assert_true(main.hand_bar.card_views.has(output.instance_id))
 
 
-func test_pressed_persona_and_candidate_buttons_refresh_after_signal_finishes() -> void:
+func test_synthesis_controls_update_without_recreating_fixed_views() -> void:
 	var main := await _spawn_main()
 	main._show_synthesis()
 	await get_tree().process_frame
 	var synthesis := main.current_screen as QuestSynthesisInterface
 
 	var persona_button := synthesis.persona_buttons[&"reverie"] as Button
+	var base_slot := synthesis.material_slots[0]
+	var fuel_slot := synthesis.material_slots[1]
+	var preallocated_base_card_view := base_slot.card_view
+	synthesis.reset_debug_update_counts()
 	persona_button.pressed.emit()
-	await get_tree().process_frame
 	assert_eq(main.state.synthesis_persona_id, &"reverie")
 	assert_true(is_instance_valid(synthesis))
+	assert_same(synthesis.persona_buttons[&"reverie"], persona_button)
+	assert_same(synthesis.material_slots[0], base_slot)
+	assert_same(synthesis.material_slots[1], fuel_slot)
+	assert_eq(int(synthesis.debug_update_counts.get(&"full", 0)), 0)
+	assert_eq(int(synthesis.debug_update_counts.get(&"materials", 0)), 0)
+	assert_eq(int(synthesis.debug_update_counts.get(&"persona_selection", 0)), 1)
+	assert_eq(int(synthesis.debug_update_counts.get(&"totals", 0)), 1)
+	assert_eq(int(synthesis.debug_update_counts.get(&"candidates", 0)), 1)
+	assert_lt(synthesis.last_delta_update_usec, 16_000)
 
 	var sunflower := _card_by_definition(main.state, &"sunflower")
 	var soft_gauze := _card_by_definition(main.state, &"soft_gauze")
+	synthesis.reset_debug_update_counts()
 	assert_true(synthesis.stage_card(&"base", sunflower))
+	var base_card_view := base_slot.card_view
+	assert_same(base_card_view, preallocated_base_card_view)
+	assert_eq(int(synthesis.debug_update_counts.get(&"materials", 0)), 1)
+	assert_eq(int(synthesis.debug_update_counts.get(&"persona_text", 0)), 0)
+	assert_lt(synthesis.last_delta_update_usec, 16_000)
 	assert_true(synthesis.stage_card(&"fuel", soft_gauze))
-	await get_tree().process_frame
+	assert_same(synthesis.material_slots[0], base_slot)
+	assert_same(synthesis.material_slots[1], fuel_slot)
+	assert_same(base_slot.card_view, base_card_view)
+	assert_same(synthesis.persona_buttons[&"reverie"], persona_button)
 
 	var candidate_button := synthesis.candidate_buttons[&"recipe_midnight_rose"] as Button
 	assert_false(candidate_button.disabled)
+	var total_roots: Dictionary = {}
+	for tag in synthesis.total_chip_views:
+		total_roots[tag] = (synthesis.total_chip_views[tag] as Dictionary).root
+	synthesis.reset_debug_update_counts()
 	candidate_button.pressed.emit()
-	await get_tree().process_frame
 	assert_eq(main.state.synthesis_candidate_recipe_id, &"recipe_midnight_rose")
 	assert_true(is_instance_valid(synthesis))
+	assert_same(synthesis.candidate_buttons[&"recipe_midnight_rose"], candidate_button)
+	assert_same(synthesis.material_slots[0], base_slot)
+	assert_same(synthesis.material_slots[1], fuel_slot)
+	assert_same(base_slot.card_view, base_card_view)
+	assert_eq(int(synthesis.debug_update_counts.get(&"candidate_selection", 0)), 1)
+	assert_eq(int(synthesis.debug_update_counts.get(&"action", 0)), 1)
+	assert_eq(int(synthesis.debug_update_counts.get(&"materials", 0)), 0)
+	assert_eq(int(synthesis.debug_update_counts.get(&"totals", 0)), 0)
+	assert_eq(int(synthesis.debug_update_counts.get(&"candidates", 0)), 0)
+	assert_lt(synthesis.last_delta_update_usec, 16_000)
+	for tag in total_roots:
+		assert_same((synthesis.total_chip_views[tag] as Dictionary).root, total_roots[tag])
 
 
 func _spawn_main() -> QuestMain:

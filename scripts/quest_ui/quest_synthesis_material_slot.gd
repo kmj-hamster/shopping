@@ -9,15 +9,23 @@ var controller: QuestSynthesisInterface
 var role_id: StringName
 var card: CardItemState
 var holder: CenterContainer
+var empty_label: Label
+var card_view: CardHandCard
+var remove_button: Button
 
 
 func setup(
 	screen: QuestSynthesisInterface,
 	selected_role_id: StringName,
 	assigned_card: CardItemState,
+	force_refresh: bool = false,
 ) -> void:
 	controller = screen
 	role_id = selected_role_id
+	if card == assigned_card and is_node_ready():
+		if force_refresh:
+			refresh()
+		return
 	card = assigned_card
 	if is_node_ready():
 		refresh()
@@ -43,32 +51,20 @@ func _ready() -> void:
 	holder.offset_right = -12
 	holder.offset_bottom = -12
 	add_child(holder)
-	refresh()
-
-
-func refresh() -> void:
-	if holder == null:
-		return
-	for child in get_children():
-		if child != holder:
-			child.free()
-	for child in holder.get_children():
-		child.free()
-	if card == null:
-		var empty := Label.new()
-		empty.text = "+"
-		empty.add_theme_font_size_override("font_size", 42)
-		empty.add_theme_color_override("font_color", Color("6f827d"))
-		holder.add_child(empty)
-		return
-	var definition := QuestArcCatalog.item_by_id(card.definition_id)
-	var view := CardHandCard.new()
-	view.setup(card, definition, true)
-	view.inspect_requested.connect(item_inspected.emit)
-	holder.add_child(view)
-	var remove_button := Button.new()
+	empty_label = Label.new()
+	empty_label.text = "+"
+	empty_label.add_theme_font_size_override("font_size", 42)
+	empty_label.add_theme_color_override("font_color", Color("6f827d"))
+	holder.add_child(empty_label)
+	# Build the reusable card presentation once. Placing/removing materials only
+	# rebinds and toggles this view; it never allocates nodes in the drop path.
+	card_view = CardHandCard.new()
+	card_view.inspect_requested.connect(item_inspected.emit)
+	holder.add_child(card_view)
+	card_view.visible = false
+	card_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	remove_button = Button.new()
 	remove_button.text = "×"
-	remove_button.tooltip_text = TranslationServer.translate(&"demo.ui.synthesis.take_back")
 	remove_button.anchor_left = 1.0
 	remove_button.anchor_right = 1.0
 	remove_button.offset_left = -38
@@ -76,8 +72,32 @@ func refresh() -> void:
 	remove_button.offset_top = 7
 	remove_button.offset_bottom = 38
 	remove_button.z_index = 4
-	remove_button.pressed.connect(controller.remove_material.bind(role_id, card))
+	remove_button.pressed.connect(_on_remove_pressed)
 	add_child(remove_button)
+	refresh()
+
+
+func refresh() -> void:
+	if holder == null:
+		return
+	remove_button.tooltip_text = TranslationServer.translate(&"demo.ui.synthesis.take_back")
+	if card == null:
+		empty_label.visible = true
+		remove_button.visible = false
+		card_view.visible = false
+		card_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		return
+	empty_label.visible = false
+	remove_button.visible = true
+	var definition := QuestArcCatalog.item_by_id(card.definition_id)
+	card_view.setup(card, definition, true)
+	card_view.visible = true
+	card_view.mouse_filter = Control.MOUSE_FILTER_PASS
+
+
+func _on_remove_pressed() -> void:
+	if controller != null and card != null:
+		controller.remove_material(role_id, card)
 
 
 func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
