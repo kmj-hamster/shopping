@@ -658,13 +658,13 @@ msgid "demo.item.soft_gauze.name"
 msgstr "柔软纱布"
 
 msgid "demo.item.soft_gauze.description"
-msgstr "一小块带着纱2与枕2的柔软布料，只适合在合成时提供临时性相。"
+msgstr "一小块带着纱2与枕2的柔软布料，可以作为燃料在合成时提供性相。"
 
 msgid "demo.item.mirror_shard.name"
 msgstr "旧镜片"
 
 msgid "demo.item.mirror_shard.description"
-msgstr "一枚带着镜2与灯2的旧镜片，只适合在合成时提供临时性相。"
+msgstr "一枚带着镜2与灯2的旧镜片，可以作为燃料在合成时提供性相。"
 
 msgid "demo.recipe.base.flower"
 msgstr "任意花"
@@ -732,8 +732,56 @@ msgstr "两片薄刃在想象中咬合。"
 msgid "demo.ui.synthesis.base"
 msgstr "原料"
 
+msgid "demo.ui.synthesis.base.description"
+msgstr "我需要一件确切的物品，以施加想象。[原料提供其全部属性]"
+
 msgid "demo.ui.synthesis.fuel"
-msgstr "临时性相"
+msgstr "燃料"
+
+msgid "demo.ui.synthesis.fuel.description"
+msgstr "让我的想象力烧得更旺，临时。[燃料仅提供性相，将被消耗]"
+
+msgid "demo.ui.synthesis.mask"
+msgstr "面具"
+
+msgid "demo.ui.synthesis.mask.description"
+msgstr "你是哪一种夜之居民？[提供性相，不会被消耗]"
+
+msgid "quest.ui.hand.items"
+msgstr "物品"
+
+msgid "quest.ui.hand.masks"
+msgstr "面具"
+
+msgid "demo.property.persona.name"
+msgstr "面具"
+
+msgid "demo.property.persona.description"
+msgstr "标记你在夜里成为何种模样的面具。"
+
+msgid "demo.mask.nightwalker.name"
+msgstr "夜行者"
+
+msgid "demo.mask.nightwalker.description"
+msgstr "循着灯火走过长夜的面具。"
+
+msgid "demo.mask.mourner.name"
+msgstr "悼念者"
+
+msgid "demo.mask.mourner.description"
+msgstr "在镜中守望失去之物的面具。"
+
+msgid "demo.mask.dreamwalker.name"
+msgstr "梦游者"
+
+msgid "demo.mask.dreamwalker.description"
+msgstr "沿着轻纱步入想象的面具。"
+
+msgid "demo.mask.homecomer.name"
+msgstr "倦归者"
+
+msgid "demo.mask.homecomer.description"
+msgstr "倦意引领归途时戴上的面具。"
 
 msgid "demo.ui.synthesis.candidates"
 msgstr "可能的形状"
@@ -754,7 +802,7 @@ msgid "demo.ui.synthesis.flip_result"
 msgstr "点击翻开"
 
 msgid "demo.ui.synthesis.drag_result"
-msgstr "拖入手牌，或直接离开"
+msgstr "拖入手牌"
 
 msgid "demo.task.girl.name"
 msgstr "小女孩的委托"

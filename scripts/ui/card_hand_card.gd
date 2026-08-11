@@ -10,7 +10,9 @@ const CARD_SIZE := Vector2(88, 146)
 var card: CardItemState
 var definition: CardItemDefinition
 var title_label: Label
+var title_host: Control
 var item_image: TextureRect
+var value_label: Label
 var drag_enabled := true
 var drag_in_progress := false
 var drag_origin_location: CardItemState.Location = CardItemState.Location.HAND
@@ -56,16 +58,37 @@ func _ready() -> void:
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_theme_constant_override("separation", 5)
 	margin.add_child(column)
+	var image_host := Control.new()
+	image_host.custom_minimum_size = Vector2(72, 88)
+	image_host.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	image_host.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(image_host)
 	item_image = TextureRect.new()
-	item_image.custom_minimum_size = Vector2(72, 88)
-	item_image.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	item_image.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	item_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	item_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	item_image.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_child(item_image)
+	image_host.add_child(item_image)
+	value_label = Label.new()
+	value_label.anchor_left = 1.0
+	value_label.anchor_top = 1.0
+	value_label.anchor_right = 1.0
+	value_label.anchor_bottom = 1.0
+	value_label.offset_left = -28.0
+	value_label.offset_top = -29.0
+	value_label.offset_right = -2.0
+	value_label.offset_bottom = -3.0
+	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	value_label.add_theme_font_size_override("font_size", 21)
+	value_label.add_theme_color_override("font_color", Color("f1e7c7"))
+	value_label.add_theme_color_override("font_outline_color", Color("050708"))
+	value_label.add_theme_constant_override("outline_size", 5)
+	value_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	image_host.add_child(value_label)
 	# Keep localized names out of the VBox minimum-width calculation. The
 	# fixed host owns layout; the label can ellipsize inside it in either locale.
-	var title_host := Control.new()
+	title_host = Control.new()
 	title_host.custom_minimum_size = Vector2(72, 20)
 	title_host.clip_contents = true
 	column.add_child(title_host)
@@ -74,6 +97,7 @@ func _ready() -> void:
 	title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title_label.clip_text = true
 	title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title_label.add_theme_font_size_override("font_size", 13)
 	title_label.add_theme_color_override("font_color", Color("d9e7df"))
@@ -92,6 +116,19 @@ func _refresh() -> void:
 		return
 	title_label.text = definition.localized_name()
 	item_image.texture = definition.image
+	var is_persona_mask := definition.has_property(CardPropertySet.PROPERTY_PERSONA)
+	value_label.visible = is_persona_mask
+	title_host.custom_minimum_size.y = 32.0 if is_persona_mask else 20.0
+	title_label.autowrap_mode = (
+		TextServer.AUTOWRAP_WORD_SMART if is_persona_mask else TextServer.AUTOWRAP_OFF
+	)
+	title_label.max_lines_visible = 2 if is_persona_mask else 1
+	title_label.add_theme_font_size_override("font_size", 11 if is_persona_mask else 13)
+	if is_persona_mask:
+		var amount := 0
+		for aspect in CardPropertySet.ASPECTS:
+			amount = maxi(amount, definition.property_value(aspect))
+		value_label.text = str(amount)
 	_apply_card_style()
 
 
@@ -109,7 +146,7 @@ func apply_rule_highlight(rule: CardSlotRule) -> void:
 	rule_match_highlighted = (
 		rule != null
 		and definition != null
-		and CardRuleEvaluator.evaluate(rule, definition).can_place
+		and CardRuleEvaluator.can_place(rule, definition)
 	)
 	if highlight_tween != null and highlight_tween.is_valid():
 		highlight_tween.kill()
@@ -156,13 +193,15 @@ func _get_drag_data(at_position: Vector2) -> Variant:
 	]:
 		return null
 	click_candidate = false
-	var preview := _build_drag_preview(at_position)
+	var grab_position := at_position if at_position.is_finite() else size * 0.5
+	var preview := _build_drag_preview(grab_position)
 	set_drag_preview(preview)
-	_begin_drag_visual(at_position)
+	_begin_drag_visual(grab_position)
 	return {
 		"kind": &"card_item",
 		"card": card,
 		"source": _drag_source(),
+		"grab_offset": grab_position,
 	}
 
 
@@ -183,17 +222,25 @@ func _notification(what: int) -> void:
 		_end_drag_visual(is_drag_successful())
 
 
-func _build_drag_preview(grab_position: Vector2) -> CardHandCard:
+func _build_drag_preview(grab_position: Vector2) -> Control:
+	# Viewport moves the preview root to the pointer on every mouse motion. Keep
+	# the grab offset on a child so the rendered card begins exactly over the
+	# source card instead of snapping its top-left corner to the pointer.
+	var carrier := Control.new()
+	carrier.name = "CardDragPreviewCarrier"
+	carrier.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	carrier.z_index = 4096
+	carrier.z_as_relative = false
 	var preview := CardHandCard.new()
+	preview.name = "CardDragPreview"
 	preview.setup(card, definition, false)
 	preview.custom_minimum_size = custom_minimum_size
 	preview.size = size
 	preview.position = -grab_position
 	preview.modulate = modulate
 	preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	preview.z_index = 4096
-	preview.z_as_relative = false
-	return preview
+	carrier.add_child(preview)
+	return carrier
 
 
 func _begin_drag_visual(grab_position: Vector2 = size * 0.5) -> void:
@@ -232,27 +279,26 @@ func _animate_return_to_origin() -> void:
 		_restore_after_drag()
 		return
 	return_animation_active = true
-	var overlay := CanvasLayer.new()
-	overlay.layer = 200
-	get_tree().root.add_child(overlay)
-	var returning_card := _build_drag_preview(Vector2.ZERO)
-	returning_card.position = get_viewport().get_mouse_position() - drag_grab_position
-	returning_card.modulate = Color.WHITE
-	overlay.add_child(returning_card)
-	var tween := returning_card.create_tween()
-	tween.tween_property(
-		returning_card,
-		"position",
+	var animation_host := _find_return_animation_host()
+	if animation_host == null:
+		_restore_after_drag()
+		return
+	animation_host.call(
+		"play_card_return_animation",
+		self,
+		get_viewport().get_mouse_position() - drag_grab_position,
 		drag_origin_global_position,
 		return_animation_seconds,
-	).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tween.finished.connect(_finish_return_animation.bind(overlay))
+	)
 
 
-func _finish_return_animation(overlay: CanvasLayer) -> void:
-	_restore_after_drag()
-	if is_instance_valid(overlay):
-		overlay.queue_free()
+func _find_return_animation_host() -> Node:
+	var candidate := get_parent()
+	while candidate != null:
+		if candidate.has_method("play_card_return_animation"):
+			return candidate
+		candidate = candidate.get_parent()
+	return null
 
 
 func _restore_after_drag() -> void:

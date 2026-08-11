@@ -70,7 +70,7 @@ static func store_unlock_accepts(
 ) -> bool:
 	return (
 		definition != null
-		and CardRuleEvaluator.evaluate(definition.slot_rule, item).can_execute
+		and CardRuleEvaluator.can_execute(definition.slot_rule, item)
 	)
 
 

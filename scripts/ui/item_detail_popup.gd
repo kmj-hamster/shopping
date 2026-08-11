@@ -1,21 +1,28 @@
 class_name ItemDetailPopup
 extends Control
 
-const DETAIL_LEFT := -520.0
+const DETAIL_LEFT := -680.0
 const DETAIL_TOP := 4.0
 const DETAIL_RIGHT := -4.0
-const DETAIL_BOTTOM := 150.0
+const DETAIL_BOTTOM := 166.0
 const PROPERTY_GAP := 10.0
 const PROPERTY_HEIGHT := 104.0
+const RIGHT_POPUP_SCALE := 0.61
+const TITLE_FONT_SIZE := 26
+const DESCRIPTION_FONT_SIZE := 22
+const DESCRIPTION_MIN_FONT_SIZE := 17
+const DESCRIPTION_MAX_LINES := 3
 const POPUP_BACKGROUND := Color("020304", 0.5)
-const PROPERTY_BAND_BACKGROUND := Color("080a0b", 0.5)
 
 var current_definition: CardItemDefinition
+var primary_property_id: StringName
 var selected_property_id: StringName
 var detail_panel: PanelContainer
+var item_frame: PanelContainer
 var item_image: TextureRect
 var title_label: Label
 var description_label: Label
+var property_band: MarginContainer
 var property_row: HBoxContainer
 var property_panel: PanelContainer
 var property_icon_image: TextureRect
@@ -25,6 +32,8 @@ var property_description: Label
 var close_button: Button
 var property_buttons: Dictionary = {}
 var property_views: Dictionary = {}
+var property_description_fit_queued := false
+var property_description_fit_width := -1.0
 
 
 func _ready() -> void:
@@ -41,6 +50,21 @@ func show_item(definition: CardItemDefinition) -> void:
 	if definition == null:
 		return
 	current_definition = definition
+	primary_property_id = &""
+	selected_property_id = &""
+	visible = true
+	detail_panel.visible = true
+	property_panel.visible = false
+	_refresh()
+	if get_parent() != null:
+		get_parent().move_child(self, get_parent().get_child_count() - 1)
+
+
+func show_primary_property(property_id: StringName) -> void:
+	if property_id.is_empty():
+		return
+	current_definition = null
+	primary_property_id = property_id
 	selected_property_id = &""
 	visible = true
 	detail_panel.visible = true
@@ -52,6 +76,7 @@ func show_item(definition: CardItemDefinition) -> void:
 
 func close() -> void:
 	visible = false
+	primary_property_id = &""
 	selected_property_id = &""
 	detail_panel.visible = false
 	property_panel.visible = false
@@ -84,6 +109,7 @@ func _build_detail_panel() -> void:
 		"panel", panel_style(POPUP_BACKGROUND, Color("a58d58", 0.94), 1)
 	)
 	add_child(detail_panel)
+	detail_panel.resized.connect(_position_property_panel)
 
 	var margin := MarginContainer.new()
 	for side in ["left", "right", "top", "bottom"]:
@@ -94,15 +120,21 @@ func _build_detail_panel() -> void:
 	margin.add_child(column)
 
 	var top_row := HBoxContainer.new()
-	top_row.custom_minimum_size = Vector2(0, 82)
+	top_row.custom_minimum_size = Vector2(0, 104)
 	top_row.add_theme_constant_override("separation", 9)
 	column.add_child(top_row)
-	var item_frame := PanelContainer.new()
+	item_frame = PanelContainer.new()
 	item_frame.custom_minimum_size = Vector2(82, 82)
+	item_frame.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	item_frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	item_frame.add_theme_stylebox_override(
-		"panel", panel_style(Color("090b0c", 0.995), Color("8c7a52", 0.86), 1)
+	var item_frame_style := panel_style(
+		Color("090b0c", 0.995), Color("8c7a52", 0.86), 1
 	)
+	item_frame_style.content_margin_left = 0.0
+	item_frame_style.content_margin_top = 0.0
+	item_frame_style.content_margin_right = 0.0
+	item_frame_style.content_margin_bottom = 0.0
+	item_frame.add_theme_stylebox_override("panel", item_frame_style)
 	top_row.add_child(item_frame)
 	item_image = TextureRect.new()
 	item_image.custom_minimum_size = Vector2(78, 78)
@@ -114,7 +146,7 @@ func _build_detail_panel() -> void:
 	item_frame.add_child(item_image)
 
 	var text_column := VBoxContainer.new()
-	text_column.custom_minimum_size = Vector2(0, 82)
+	text_column.custom_minimum_size = Vector2(0, 104)
 	text_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	text_column.add_theme_constant_override("separation", 4)
 	top_row.add_child(text_column)
@@ -124,7 +156,7 @@ func _build_detail_panel() -> void:
 	title_label = Label.new()
 	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	title_label.add_theme_font_size_override("font_size", 17)
+	title_label.add_theme_font_size_override("font_size", TITLE_FONT_SIZE)
 	title_label.add_theme_color_override("font_color", Color("e3c679"))
 	header.add_child(title_label)
 	close_button = Button.new()
@@ -144,29 +176,23 @@ func _build_detail_panel() -> void:
 	description_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	description_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	description_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	description_label.max_lines_visible = 3
-	description_label.add_theme_font_size_override("font_size", 12)
+	description_label.max_lines_visible = DESCRIPTION_MAX_LINES
+	description_label.add_theme_font_size_override("font_size", DESCRIPTION_FONT_SIZE)
 	description_label.add_theme_color_override("font_color", Color("d8ddd9"))
 	text_column.add_child(description_label)
 
-	var property_band := PanelContainer.new()
+	property_band = MarginContainer.new()
 	property_band.name = "PropertyBand"
-	property_band.custom_minimum_size = Vector2(0, 38)
-	property_band.add_theme_stylebox_override(
-		"panel", panel_style(PROPERTY_BAND_BACKGROUND, Color("9a834f", 0.90), 1)
-	)
+	property_band.custom_minimum_size = Vector2(0, 34)
 	column.add_child(property_band)
-	var band_margin := MarginContainer.new()
-	band_margin.add_theme_constant_override("margin_left", 8)
-	band_margin.add_theme_constant_override("margin_right", 8)
-	band_margin.add_theme_constant_override("margin_top", 3)
-	band_margin.add_theme_constant_override("margin_bottom", 3)
-	property_band.add_child(band_margin)
+	property_band.add_theme_constant_override("margin_left", 8)
+	property_band.add_theme_constant_override("margin_right", 8)
+	property_band.add_theme_constant_override("margin_top", 4)
 	var property_scroll := ScrollContainer.new()
 	property_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	property_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	property_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	band_margin.add_child(property_scroll)
+	property_band.add_child(property_scroll)
 	property_row = HBoxContainer.new()
 	property_row.custom_minimum_size = Vector2(0, 30)
 	property_row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -185,28 +211,35 @@ func _build_property_panel() -> void:
 	add_child(property_panel)
 	var margin := MarginContainer.new()
 	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_%s" % side, 9)
+		margin.add_theme_constant_override("margin_%s" % side, 7)
 	property_panel.add_child(margin)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 11)
+	row.custom_minimum_size = Vector2(0, 104)
+	row.add_theme_constant_override("separation", 9)
 	margin.add_child(row)
 	var icon_frame := PanelContainer.new()
-	icon_frame.custom_minimum_size = Vector2(78, 78)
+	icon_frame.custom_minimum_size = Vector2(82, 82)
+	icon_frame.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	icon_frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	icon_frame.add_theme_stylebox_override(
-		"panel", panel_style(Color("f1eee5"), Color("a58d58"), 1)
+	var icon_frame_style := panel_style(
+		Color("090b0c", 0.995), Color("8c7a52", 0.86), 1
 	)
+	icon_frame_style.content_margin_left = 0.0
+	icon_frame_style.content_margin_top = 0.0
+	icon_frame_style.content_margin_right = 0.0
+	icon_frame_style.content_margin_bottom = 0.0
+	icon_frame.add_theme_stylebox_override("panel", icon_frame_style)
 	row.add_child(icon_frame)
 	var icon_stack := Control.new()
-	icon_stack.custom_minimum_size = Vector2(76, 76)
+	icon_stack.custom_minimum_size = Vector2(82, 82)
 	icon_frame.add_child(icon_stack)
 	property_icon_image = TextureRect.new()
 	property_icon_image.anchor_right = 1.0
 	property_icon_image.anchor_bottom = 1.0
-	property_icon_image.offset_left = 9.0
-	property_icon_image.offset_top = 9.0
-	property_icon_image.offset_right = -9.0
-	property_icon_image.offset_bottom = -9.0
+	property_icon_image.offset_left = 2.0
+	property_icon_image.offset_top = 2.0
+	property_icon_image.offset_right = -2.0
+	property_icon_image.offset_bottom = -2.0
 	property_icon_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	property_icon_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	property_icon_image.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -216,16 +249,17 @@ func _build_property_panel() -> void:
 	property_icon_fallback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	property_icon_fallback.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	property_icon_fallback.add_theme_font_size_override("font_size", 32)
-	property_icon_fallback.add_theme_color_override("font_color", Color("141718"))
+	property_icon_fallback.add_theme_color_override("font_color", Color("d8ddd9"))
 	property_icon_fallback.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	icon_stack.add_child(property_icon_fallback)
 	var text_column := VBoxContainer.new()
+	text_column.custom_minimum_size = Vector2(0, 104)
 	text_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	text_column.add_theme_constant_override("separation", 4)
 	row.add_child(text_column)
 	property_name = Label.new()
 	property_name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	property_name.add_theme_font_size_override("font_size", 16)
+	property_name.add_theme_font_size_override("font_size", TITLE_FONT_SIZE)
 	property_name.add_theme_color_override("font_color", Color("e3c679"))
 	text_column.add_child(property_name)
 	var divider := ColorRect.new()
@@ -237,9 +271,10 @@ func _build_property_panel() -> void:
 	property_description.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	property_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	property_description.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	property_description.max_lines_visible = 3
-	property_description.add_theme_font_size_override("font_size", 11)
+	property_description.max_lines_visible = DESCRIPTION_MAX_LINES
+	property_description.add_theme_font_size_override("font_size", DESCRIPTION_FONT_SIZE)
 	property_description.add_theme_color_override("font_color", Color("d8ddd9"))
+	property_description.resized.connect(_on_property_description_resized)
 	text_column.add_child(property_description)
 	property_panel.visible = false
 	_position_property_panel()
@@ -264,25 +299,95 @@ func _apply_property_anchors(control: Control) -> void:
 func _position_property_panel() -> void:
 	if detail_panel == null or property_panel == null:
 		return
+	apply_right_popup_scale(detail_panel)
 	var detail_height := maxf(detail_panel.size.y, detail_panel.get_combined_minimum_size().y)
 	var property_height := maxf(PROPERTY_HEIGHT, property_panel.get_combined_minimum_size().y)
-	var property_top := detail_panel.offset_top + detail_height + PROPERTY_GAP
+	var property_top := (
+		detail_panel.offset_top
+		+ detail_height * RIGHT_POPUP_SCALE
+		+ PROPERTY_GAP * RIGHT_POPUP_SCALE
+	)
 	property_panel.offset_top = property_top
 	property_panel.offset_bottom = property_top + property_height
+	apply_right_popup_scale(property_panel)
+
+
+static func apply_right_popup_scale(control: Control) -> void:
+	if control == null:
+		return
+	control.scale = Vector2.ONE * RIGHT_POPUP_SCALE
+	# Keep the transformed rectangle attached to the screen's top-right corner.
+	control.pivot_offset = Vector2(control.size.x, 0.0)
 
 
 func _refresh() -> void:
-	if current_definition == null or title_label == null:
+	if title_label == null:
+		return
+	if not primary_property_id.is_empty():
+		_refresh_primary_property()
+		return
+	if current_definition == null:
 		return
 	title_label.text = current_definition.localized_name()
 	description_label.text = current_definition.localized_description()
+	description_label.add_theme_font_size_override("font_size", DESCRIPTION_FONT_SIZE)
 	close_button.tooltip_text = TranslationServer.translate(&"slot.item_detail.close")
 	item_image.texture = current_definition.image
+	item_frame.visible = current_definition.image != null
+	property_band.visible = (
+		current_definition.property_set != null
+		and current_definition.property_set.property_count() > 0
+	)
 	_rebuild_properties()
 	_position_property_panel()
-	call_deferred("_position_property_panel")
+	call_deferred("_fit_description_font")
 	if not selected_property_id.is_empty():
 		_update_property_panel(selected_property_id)
+
+
+func _refresh_primary_property() -> void:
+	title_label.text = TranslationServer.translate(property_name_key(primary_property_id))
+	description_label.text = TranslationServer.translate(
+		property_description_key(primary_property_id)
+	)
+	description_label.add_theme_font_size_override("font_size", DESCRIPTION_FONT_SIZE)
+	close_button.tooltip_text = TranslationServer.translate(&"slot.item_detail.close")
+	item_image.texture = property_icon_texture(primary_property_id)
+	item_frame.visible = item_image.texture != null
+	property_band.visible = false
+	property_panel.visible = false
+	_position_property_panel()
+	call_deferred("_fit_description_font")
+
+
+func _fit_description_font() -> void:
+	if description_label == null or not is_instance_valid(description_label):
+		return
+	fit_label_font(
+		description_label,
+		DESCRIPTION_FONT_SIZE,
+		DESCRIPTION_MIN_FONT_SIZE,
+		DESCRIPTION_MAX_LINES,
+	)
+	_position_property_panel()
+	call_deferred("_position_property_panel")
+
+
+static func fit_label_font(
+	label: Label,
+	default_font_size: int,
+	minimum_font_size: int,
+	maximum_lines: int,
+) -> void:
+	if label == null or not is_instance_valid(label):
+		return
+	var font_size := default_font_size
+	label.add_theme_font_size_override("font_size", font_size)
+	if label.size.x <= 1.0:
+		return
+	while font_size > minimum_font_size and label.get_line_count() > maximum_lines:
+		font_size -= 1
+		label.add_theme_font_size_override("font_size", font_size)
 
 
 func _rebuild_properties() -> void:
@@ -370,6 +475,9 @@ func _show_property(tag: StringName) -> void:
 	_update_property_panel(tag)
 	detail_panel.visible = true
 	property_panel.visible = true
+	_queue_property_description_font_fit()
+	_position_property_panel()
+	call_deferred("_position_property_panel")
 	_update_property_button_states()
 
 
@@ -381,6 +489,46 @@ func _update_property_panel(tag: StringName) -> void:
 	property_icon_fallback.visible = texture == null
 	property_name.text = TranslationServer.translate(property_name_key(tag))
 	property_description.text = TranslationServer.translate(property_description_key(tag))
+	property_description.add_theme_font_size_override("font_size", DESCRIPTION_FONT_SIZE)
+	property_description_fit_width = -1.0
+	_queue_property_description_font_fit()
+
+
+func _queue_property_description_font_fit() -> void:
+	if property_description_fit_queued:
+		return
+	property_description_fit_queued = true
+	_fit_property_description_after_layout()
+
+
+func _fit_property_description_after_layout() -> void:
+	await get_tree().process_frame
+	property_description_fit_queued = false
+	_fit_property_description_font()
+
+
+func _on_property_description_resized() -> void:
+	if (
+		property_panel == null
+		or not property_panel.visible
+		or is_equal_approx(property_description.size.x, property_description_fit_width)
+	):
+		return
+	_queue_property_description_font_fit()
+
+
+func _fit_property_description_font() -> void:
+	if property_panel == null or not property_panel.visible or property_description.size.x <= 1.0:
+		return
+	property_description_fit_width = property_description.size.x
+	fit_label_font(
+		property_description,
+		DESCRIPTION_FONT_SIZE,
+		DESCRIPTION_MIN_FONT_SIZE,
+		DESCRIPTION_MAX_LINES,
+	)
+	_position_property_panel()
+	call_deferred("_position_property_panel")
 
 
 func _return_to_item() -> void:
@@ -460,6 +608,7 @@ static func property_icon_texture(tag: StringName) -> Texture2D:
 		&"teddy_bear": "res://resources/item-worn-teddy.svg",
 		&"drink": "res://resources/ui/property-drink.png",
 		&"tool": "res://resources/ui/property-tool.png",
+		&"persona": "res://resources/ui/property-persona.svg",
 	}
 	var path := String(paths.get(tag, ""))
 	return load(path) as Texture2D if not path.is_empty() and ResourceLoader.exists(path) else null
@@ -481,6 +630,7 @@ static func property_symbol(tag: StringName) -> String:
 		&"drink": "∪",
 		&"metal": "◆",
 		&"tool": "×",
+		&"persona": "◐",
 	}
 	return String(symbols.get(tag, "·"))
 

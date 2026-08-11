@@ -133,6 +133,11 @@ func _close_task() -> void:
 	task_window = null
 
 
+func close_open_task() -> void:
+	if open_task_instance_id > 0 or task_window != null:
+		_close_task()
+
+
 func _reconcile_task_windows(desired_ids: Array[int]) -> void:
 	for raw_instance_id in task_windows.keys().duplicate():
 		var instance_id := int(raw_instance_id)

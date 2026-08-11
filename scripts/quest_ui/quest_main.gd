@@ -1,6 +1,9 @@
 class_name QuestMain
 extends Control
 
+signal arc_text_revealed
+signal arc_text_advanced
+
 const UI_THEME: Theme = preload("res://resources/fonts/shancha_ui_theme.tres")
 
 var state: QuestGameState
@@ -36,9 +39,15 @@ var synthesis_return_store_id: StringName
 var arc_fade_seconds := 0.35
 var arc_typewriter_char_seconds := 0.028
 var arc_typing := false
-var arc_skip_typing := false
 var arc_waiting_for_click := false
-var arc_continue_requested := false
+var arc_typewriter_timer: Timer
+var arc_typewriter_full_text := ""
+var arc_typewriter_index := 0
+var debug_hud_refresh_count := 0
+var drag_return_layer: CanvasLayer
+var drag_return_card: CardHandCard
+var drag_return_tween: Tween
+var drag_return_source: CardHandCard
 
 
 func _ready() -> void:
@@ -190,7 +199,7 @@ func _build_global_interface() -> void:
 	hand_bar = QuestHandBar.new()
 	hand_bar.name = "QuestHandBar"
 	hand_bar.anchor_left = 0.235
-	hand_bar.anchor_top = 0.775
+	hand_bar.anchor_top = 0.74
 	hand_bar.anchor_right = 0.79
 	hand_bar.anchor_bottom = 0.985
 	hand_bar.setup(state)
@@ -202,12 +211,28 @@ func _build_global_interface() -> void:
 	rule_detail_popup = QuestRuleDetailPopup.new()
 	rule_detail_popup.name = "QuestRuleDetailPopup"
 	add_child(rule_detail_popup)
+	_build_drag_return_layer()
 	_build_arc_overlay()
 
 
+func _build_drag_return_layer() -> void:
+	drag_return_layer = CanvasLayer.new()
+	drag_return_layer.name = "CardDragReturnLayer"
+	drag_return_layer.layer = 200
+	add_child(drag_return_layer)
+	drag_return_card = CardHandCard.new()
+	drag_return_card.name = "CardDragReturnPreview"
+	drag_return_card.drag_enabled = false
+	drag_return_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	drag_return_card.z_index = 4096
+	drag_return_card.z_as_relative = false
+	drag_return_card.visible = false
+	drag_return_layer.add_child(drag_return_card)
+
+
 func _bind_state() -> void:
-	if state != null and not state.state_changed.is_connected(_refresh_global_text):
-		state.state_changed.connect(_refresh_global_text)
+	if state != null and not state.state_delta.is_connected(_on_state_delta):
+		state.state_delta.connect(_on_state_delta)
 
 
 func _show_map() -> void:
@@ -219,6 +244,8 @@ func _show_map() -> void:
 		map_screen.shop_requested.connect(_show_shop)
 		map_screen.card_staging_changed.connect(_on_card_staging_changed)
 		map_screen.rule_focused.connect(_on_rule_focused)
+		map_screen.item_inspected.connect(_show_item)
+		map_screen.background_pressed.connect(_on_activity_background_pressed)
 		screen_host.add_child(map_screen)
 		map_screen.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_activate_screen(map_screen)
@@ -238,6 +265,7 @@ func _show_shop(store_id: StringName) -> void:
 		shop.leave_requested.connect(_show_map)
 		shop.item_inspected.connect(_show_item)
 		shop.checkout_completed.connect(_on_shop_checkout_completed)
+		shop.background_pressed.connect(_on_activity_background_pressed)
 		screen_host.add_child(shop)
 		shop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		shop_screens[store_id] = shop
@@ -264,8 +292,11 @@ func _show_synthesis() -> void:
 		synthesis_interface.setup(state)
 		synthesis_interface.leave_requested.connect(_return_from_synthesis)
 		synthesis_interface.item_inspected.connect(_show_item)
+		synthesis_interface.property_inspected.connect(_show_primary_property)
+		synthesis_interface.hand_tab_requested.connect(hand_bar.show_tab)
 		synthesis_interface.card_staging_changed.connect(_on_card_staging_changed)
 		synthesis_interface.details_cleared.connect(_close_detail_popups)
+		synthesis_interface.background_pressed.connect(_on_activity_background_pressed)
 		screen_host.add_child(synthesis_interface)
 		synthesis_interface.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_activate_screen(synthesis_interface)
@@ -313,6 +344,14 @@ func _show_item(definition: CardItemDefinition) -> void:
 	detail_popup.show_item(definition)
 
 
+func _show_primary_property(property_id: StringName) -> void:
+	if detail_popup.visible and detail_popup.primary_property_id == property_id:
+		detail_popup.close()
+		return
+	rule_detail_popup.close()
+	detail_popup.show_primary_property(property_id)
+
+
 func _on_shop_checkout_completed() -> void:
 	_close_detail_popups()
 
@@ -322,12 +361,62 @@ func _close_detail_popups() -> void:
 	rule_detail_popup.close()
 
 
+func _on_activity_background_pressed() -> void:
+	if task_dock != null:
+		task_dock.close_open_task()
+
+
 func _on_card_staging_changed(card: CardItemState, staged: bool) -> void:
 	hand_bar.set_card_temporarily_hidden(card, staged)
 
 
+func play_card_return_animation(
+	source: CardHandCard,
+	start_position: Vector2,
+	end_position: Vector2,
+	duration: float,
+) -> void:
+	_cancel_card_return_animation()
+	if source == null or source.card == null or source.definition == null:
+		return
+	drag_return_source = source
+	drag_return_card.setup(source.card, source.definition, false)
+	drag_return_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	drag_return_card.position = start_position
+	drag_return_card.modulate = Color.WHITE
+	drag_return_card.visible = true
+	drag_return_tween = drag_return_card.create_tween()
+	drag_return_tween.tween_property(
+		drag_return_card,
+		"position",
+		end_position,
+		duration,
+	).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	drag_return_tween.finished.connect(_on_card_return_finished)
+
+
+func _cancel_card_return_animation() -> void:
+	if drag_return_tween != null and drag_return_tween.is_valid():
+		drag_return_tween.kill()
+	drag_return_tween = null
+	if drag_return_source != null and is_instance_valid(drag_return_source):
+		drag_return_source._restore_after_drag()
+	drag_return_source = null
+	if drag_return_card != null:
+		drag_return_card.visible = false
+
+
+func _on_card_return_finished() -> void:
+	drag_return_tween = null
+	if drag_return_source != null and is_instance_valid(drag_return_source):
+		drag_return_source._restore_after_drag()
+	drag_return_source = null
+	drag_return_card.visible = false
+
+
 func _on_rule_focused(rule: CardSlotRule) -> void:
 	focused_rule = rule
+	hand_bar.show_tab_for_rule(rule)
 	hand_bar.set_highlight_rule(rule)
 	if rule == null:
 		rule_detail_popup.close()
@@ -442,6 +531,10 @@ func _build_arc_overlay() -> void:
 	arc_overlay.visible = false
 	arc_overlay.gui_input.connect(_on_arc_gui_input)
 	add_child(arc_overlay)
+	arc_typewriter_timer = Timer.new()
+	arc_typewriter_timer.one_shot = true
+	arc_typewriter_timer.timeout.connect(_advance_arc_typewriter_character)
+	arc_overlay.add_child(arc_typewriter_timer)
 	arc_money_label = Label.new()
 	arc_money_label.anchor_left = 0.035
 	arc_money_label.anchor_top = 0.035
@@ -534,26 +627,44 @@ func _prepare_arc_entry(entry: Dictionary) -> void:
 
 
 func _present_arc_text(full_text: String) -> void:
-	arc_result_label.text = ""
-	arc_typing = true
-	arc_skip_typing = false
-	arc_waiting_for_click = false
-	arc_continue_requested = false
-	for index in full_text.length():
-		if arc_skip_typing:
-			break
-		arc_result_label.text = full_text.substr(0, index + 1)
-		if arc_typewriter_char_seconds > 0.0:
-			await get_tree().create_timer(arc_typewriter_char_seconds).timeout
+	arc_typewriter_timer.stop()
+	arc_typewriter_full_text = full_text
+	arc_typewriter_index = 0
 	arc_result_label.text = full_text
-	arc_typing = false
+	arc_result_label.visible_characters = 0
+	arc_typing = true
+	arc_waiting_for_click = false
+	_advance_arc_typewriter_character()
+	if arc_typing:
+		await arc_text_revealed
 	arc_waiting_for_click = true
 	_start_arc_cursor()
-	while not arc_continue_requested:
-		await get_tree().process_frame
+	await arc_text_advanced
 	arc_waiting_for_click = false
-	arc_continue_requested = false
 	_stop_arc_cursor()
+
+
+func _advance_arc_typewriter_character() -> void:
+	if not arc_typing:
+		return
+	if arc_typewriter_char_seconds <= 0.0:
+		_finish_arc_typewriter()
+		return
+	arc_typewriter_index += 1
+	arc_result_label.visible_characters = arc_typewriter_index
+	if arc_typewriter_index >= arc_typewriter_full_text.length():
+		_finish_arc_typewriter()
+	else:
+		arc_typewriter_timer.start(arc_typewriter_char_seconds)
+
+
+func _finish_arc_typewriter() -> void:
+	if not arc_typing:
+		return
+	arc_typewriter_timer.stop()
+	arc_result_label.visible_characters = -1
+	arc_typing = false
+	arc_text_revealed.emit()
 
 
 func _on_arc_gui_input(event: InputEvent) -> void:
@@ -568,9 +679,9 @@ func _on_arc_gui_input(event: InputEvent) -> void:
 
 func _on_arc_advance_requested() -> void:
 	if arc_typing:
-		arc_skip_typing = true
+		_finish_arc_typewriter()
 	elif arc_waiting_for_click:
-		arc_continue_requested = true
+		arc_text_advanced.emit()
 
 
 func _start_arc_cursor() -> void:
@@ -594,8 +705,7 @@ func _stop_arc_cursor() -> void:
 func _refresh_global_text() -> void:
 	if state == null or money_label == null:
 		return
-	money_label.text = TranslationServer.translate(&"demo.ui.money") % state.wallet.money
-	day_label.text = TranslationServer.translate(&"demo.ui.night") % state.day
+	_refresh_hud_state()
 	next_day_button.text = TranslationServer.translate(&"demo.ui.next_day")
 	language_button.text = LocaleManager.switch_button_text()
 	clear_save_button.text = TranslationServer.translate(&"demo.ui.clear_save")
@@ -605,6 +715,19 @@ func _refresh_global_text() -> void:
 	next_day_dialog.dialog_text = TranslationServer.translate(&"demo.ui.next_day.question")
 	next_day_dialog.ok_button_text = TranslationServer.translate(&"demo.ui.confirm")
 	next_day_dialog.cancel_button_text = TranslationServer.translate(&"demo.ui.cancel")
+
+
+func _refresh_hud_state() -> void:
+	if state == null or money_label == null:
+		return
+	debug_hud_refresh_count += 1
+	money_label.text = TranslationServer.translate(&"demo.ui.money") % state.wallet.money
+	day_label.text = TranslationServer.translate(&"demo.ui.night") % state.day
+
+
+func _on_state_delta(delta: QuestStateDelta) -> void:
+	if delta != null and delta.affects_hud():
+		_refresh_hud_state()
 
 
 func _configure_cursor() -> void:

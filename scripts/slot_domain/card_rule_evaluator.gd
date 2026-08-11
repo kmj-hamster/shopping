@@ -2,6 +2,36 @@ class_name CardRuleEvaluator
 extends RefCounted
 
 
+static func can_place(rule: CardSlotRule, item: CardItemDefinition) -> bool:
+	if rule == null or item == null:
+		return false
+	for tag in rule.required_all:
+		if not item.has_property(tag):
+			return false
+	if not rule.allowed_any.is_empty():
+		var matched_allowed := false
+		for tag in rule.allowed_any:
+			if item.has_property(tag):
+				matched_allowed = true
+				break
+		if not matched_allowed:
+			return false
+	for tag in rule.forbidden_any:
+		if item.has_property(tag):
+			return false
+	return rule.accepted_item_ids.is_empty() or item.id in rule.accepted_item_ids
+
+
+static func can_execute(rule: CardSlotRule, item: CardItemDefinition) -> bool:
+	if not can_place(rule, item):
+		return false
+	for raw_requirement in rule.value_requirements:
+		var requirement := raw_requirement as SlotValueRequirement
+		if requirement == null or requirement.actual_value(item) < requirement.minimum:
+			return false
+	return true
+
+
 static func evaluate(rule: CardSlotRule, item: CardItemDefinition) -> Dictionary:
 	var missing_required: Array[StringName] = []
 	var allowed_matches: Array[StringName] = []

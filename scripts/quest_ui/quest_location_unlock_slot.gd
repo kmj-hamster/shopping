@@ -1,20 +1,13 @@
 class_name QuestLocationUnlockSlot
-extends PanelContainer
+extends QuestTaskSlot
 
 signal staging_changed(card: CardItemState, staged: bool)
-signal rule_focused(rule: CardSlotRule)
 
-var state: QuestGameState
 var store_id: StringName
-var rule: CardSlotRule
 var pending_card: CardItemState
-var content: CenterContainer
-var remove_button: Button
-var empty_label: Label
-var preview: CardHandCard
 
 
-func setup(
+func setup_unlock(
 	game_state: QuestGameState,
 	selected_store_id: StringName,
 	selected_rule: CardSlotRule,
@@ -23,44 +16,30 @@ func setup(
 	store_id = selected_store_id
 	rule = selected_rule
 	if is_node_ready():
-		_rebuild()
+		refresh()
 
 
 func _ready() -> void:
-	custom_minimum_size = Vector2(100, 166)
-	add_theme_stylebox_override(
-		"panel", UiPalette.panel_style(Color("17140f", 0.96), Color("8b7754"))
+	super._ready()
+	card_view.drag_finished.connect(_on_pending_card_drag_finished)
+	refresh()
+
+
+func refresh() -> void:
+	if rule == null or card_holder == null:
+		return
+	var definition := (
+		QuestArcCatalog.item_by_id(pending_card.definition_id)
+		if pending_card != null
+		else null
 	)
-	content = CenterContainer.new()
-	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(content)
-	empty_label = Label.new()
-	empty_label.custom_minimum_size = Vector2(84, 142)
-	empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	empty_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	empty_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	empty_label.add_theme_color_override("font_color", Color("cbbd9b"))
-	content.add_child(empty_label)
-	preview = CardHandCard.new()
-	preview.name = "StagedCard"
-	preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	content.add_child(preview)
-	preview.visible = false
-	remove_button = Button.new()
-	remove_button.name = "RemoveStagedCardButton"
-	remove_button.text = "×"
-	remove_button.anchor_left = 1.0
-	remove_button.anchor_right = 1.0
-	remove_button.offset_left = -34
-	remove_button.offset_right = -4
-	remove_button.offset_top = 4
-	remove_button.offset_bottom = 34
-	remove_button.pressed.connect(release_card)
-	add_child(remove_button)
-	remove_button.visible = false
-	gui_input.connect(_on_gui_input)
-	_rebuild()
+	if pending_card != null and definition != null:
+		card_view.setup(pending_card, definition, true)
+		card_view.visible = true
+		card_view.mouse_filter = Control.MOUSE_FILTER_PASS
+	else:
+		card_view.visible = false
+		card_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
 func release_card() -> void:
@@ -69,51 +48,39 @@ func release_card() -> void:
 	var released := pending_card
 	pending_card = null
 	staging_changed.emit(released, false)
-	_rebuild()
+	refresh()
 
 
 func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 	if state == null or rule == null or typeof(data) != TYPE_DICTIONARY:
 		return false
 	var card := data.get("card") as CardItemState
-	if data.get("kind") != &"card_item" or card == null:
+	if data.get("kind") != &"card_item" or card == null or card == pending_card:
 		return false
 	if card not in state.inventory or card.location != CardItemState.Location.HAND:
 		return false
 	var definition := QuestArcCatalog.item_by_id(card.definition_id)
-	return CardRuleEvaluator.evaluate(rule, definition).can_execute
+	return CardRuleEvaluator.can_execute(rule, definition)
 
 
 func _drop_data(_at_position: Vector2, data: Variant) -> void:
 	var card := data.get("card") as CardItemState
 	if card == null or card == pending_card:
 		return
-	if pending_card != null:
-		staging_changed.emit(pending_card, false)
+	var replaced := pending_card
 	pending_card = card
-	staging_changed.emit(pending_card, true)
-	_rebuild()
+	if replaced != null:
+		staging_changed.emit(replaced, false)
+	staging_changed.emit(card, true)
+	refresh()
 
 
-func _rebuild() -> void:
-	if content == null:
+func _on_pending_card_drag_finished(card: CardItemState, succeeded: bool) -> void:
+	if not succeeded or card == null or card != pending_card:
 		return
-	empty_label.text = TranslationServer.translate(rule.display_name_key) if rule != null else ""
-	remove_button.tooltip_text = TranslationServer.translate(&"demo.ui.location.remove")
-	if pending_card == null:
-		empty_label.visible = true
-		preview.visible = false
-		remove_button.visible = false
-		return
-	var definition := QuestArcCatalog.item_by_id(pending_card.definition_id)
-	preview.setup(pending_card, definition, false)
-	preview.visible = true
-	preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	empty_label.visible = false
-	remove_button.visible = true
-
-
-func _on_gui_input(event: InputEvent) -> void:
-	var click := event as InputEventMouseButton
-	if click != null and click.button_index == MOUSE_BUTTON_LEFT and click.pressed:
-		rule_focused.emit(rule)
+	# Unlock staging deliberately leaves the model card in HAND. Prevent the
+	# generic drag lifecycle from restoring this slot view after the hand accepts
+	# the drop, then release the temporary staging ownership.
+	card_view.drag_origin_visible = false
+	card_view.drag_origin_mouse_filter = Control.MOUSE_FILTER_IGNORE
+	release_card()

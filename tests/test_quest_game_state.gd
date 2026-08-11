@@ -41,6 +41,35 @@ func test_owner_or_task_is_ready_with_exactly_one_branch() -> void:
 	assert_eq((evaluation.outcome as TaskOutcomeDefinition).id, &"blooming")
 
 
+func test_assigning_over_an_occupied_task_slot_returns_the_previous_card_to_hand() -> void:
+	var state := QuestGameState.new()
+	var task := state.task_instance_for_definition(&"girl_order")
+	var first := _card_by_definition(state, &"fries")
+	var replacement := state.grant_item(&"fries", &"test")
+	assert_true(state.assign_card(task.instance_id, &"food", first).ok)
+
+	var result := state.assign_card(task.instance_id, &"food", replacement)
+	assert_true(result.ok)
+	assert_eq(task.assigned_instance_id(&"food"), replacement.instance_id)
+	assert_eq(first.location, CardItemState.Location.HAND)
+	assert_eq(replacement.location, CardItemState.Location.ACTIVITY_SLOT)
+
+
+func test_assigning_over_an_occupied_synthesis_slot_returns_previous_card_to_hand() -> void:
+	var state := QuestGameState.new()
+	var first := _card_by_definition(state, &"sunflower")
+	var replacement := _card_by_definition(state, &"toy_block")
+	assert_true(state.assign_synthesis_base(first).ok)
+
+	var result := state.assign_synthesis_base(replacement)
+	assert_true(result.ok)
+	assert_eq(state.synthesis_base_instance_id, replacement.instance_id)
+	assert_eq(first.location, CardItemState.Location.HAND)
+	assert_eq(replacement.location, CardItemState.Location.ACTIVITY_SLOT)
+	assert_eq(replacement.activity_id, &"synthesis")
+	assert_eq(replacement.slot_id, &"base")
+
+
 func test_checkout_rejects_cart_above_balance_without_mutating_stock() -> void:
 	var state := QuestGameState.new()
 	state.wallet.money = 5
@@ -70,6 +99,7 @@ func test_synthesis_completion_emits_one_merged_hand_delta() -> void:
 
 	var result := state.begin_synthesis()
 	assert_true(result.ok)
+	assert_true(state.synthesis_persona_id.is_empty())
 	assert_eq(deltas.size(), 1)
 	var delta := deltas[0]
 	assert_true(delta.hand_removed_instance_ids.has(sunflower.instance_id))
@@ -97,6 +127,27 @@ func test_synthesis_draft_changes_do_not_emit_persistent_state_changed() -> void
 
 	assert_true(state.begin_synthesis().ok)
 	assert_eq(counts.persistent, 1)
+
+
+func test_commerce_unlock_and_day_changes_emit_scoped_deltas() -> void:
+	var state := QuestGameState.new()
+	var deltas: Array[QuestStateDelta] = []
+	state.state_delta.connect(func(delta: QuestStateDelta) -> void: deltas.append(delta))
+	var transaction := state.transaction_for_store(&"flower")
+	assert_true(transaction.toggle_shelf_slot(transaction.shelf_slots[0].slot_id).ok)
+	assert_true(state.checkout_store(&"flower").ok)
+	var checkout_delta: QuestStateDelta = deltas.back()
+	assert_true(checkout_delta.wallet_changed)
+	assert_true(checkout_delta.shelf_store_ids.has(&"flower"))
+
+	deltas.clear()
+	var sunflower := _card_by_definition(state, &"sunflower")
+	assert_true(state.unlock_store(&"record", sunflower).ok)
+	assert_true(deltas.back().store_state_ids.has(&"record"))
+
+	var day_delta := QuestStateDelta.new().mark_day(&"test")
+	assert_true(day_delta.affects_hud())
+	assert_false(day_delta.affects_map())
 
 
 func _card_by_definition(state: QuestGameState, definition_id: StringName) -> CardItemState:

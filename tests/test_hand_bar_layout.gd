@@ -25,12 +25,66 @@ func test_item_cards_and_slots_keep_height_while_becoming_narrower() -> void:
 	var location_slot := QuestLocationUnlockSlot.new()
 	add_child_autoqfree(location_slot)
 	await get_tree().process_frame
-	assert_eq(location_slot.custom_minimum_size, Vector2(100, 166))
+	assert_eq(location_slot.custom_minimum_size, CardHandCard.CARD_SIZE)
+	assert_eq(location_slot.card_view.size, CardHandCard.CARD_SIZE)
 
 	var synthesis_slot := QuestSynthesisMaterialSlot.new()
 	add_child_autoqfree(synthesis_slot)
 	await get_tree().process_frame
-	assert_eq(synthesis_slot.custom_minimum_size, Vector2(117, 176))
+	assert_eq(synthesis_slot.custom_minimum_size, QuestTaskSlot.CARD_SIZE)
+	assert_eq(synthesis_slot.size, QuestTaskSlot.CARD_SIZE)
+
+
+func test_mask_tab_presents_four_live_persona_cards_without_entering_inventory() -> void:
+	var main := await _spawn_main()
+	var hand := main.hand_bar
+	var inventory_count := main.state.inventory.size()
+	assert_eq(hand.active_tab, QuestHandBar.TAB_ITEMS)
+	assert_not_null(hand.item_tab_button)
+	assert_not_null(hand.mask_tab_button)
+
+	hand.show_tab(QuestHandBar.TAB_MASKS)
+	assert_eq(hand.active_tab, QuestHandBar.TAB_MASKS)
+	assert_eq(hand.card_views.size(), 4)
+	for persona_id in PersonaMaskCatalog.MASK_PERSONAS:
+		var card := PersonaMaskCatalog.card_for_persona(persona_id)
+		var view := hand.card_views[card.instance_id] as CardHandCard
+		var aspect := CardPropertySet.aspect_for_persona(persona_id)
+		assert_true(view.definition.has_property(CardPropertySet.PROPERTY_PERSONA))
+		assert_eq(
+			view.definition.property_value(aspect),
+			int(main.state.protagonist_aspect_counts[persona_id]),
+		)
+		assert_true(view.value_label.visible)
+		assert_eq(view.value_label.text, str(main.state.protagonist_aspect_counts[persona_id]))
+	assert_eq(main.state.inventory.size(), inventory_count)
+	var first_persona := hand.mask_persona_order[0]
+	var first_mask_card := PersonaMaskCatalog.card_for_persona(first_persona)
+	var first_mask_view := hand.card_views[first_mask_card.instance_id] as CardHandCard
+	first_mask_view._begin_drag_visual()
+	hand._drop_data(
+		Vector2(hand.size.x - 1.0, hand.size.y * 0.5),
+		{
+			"kind": &"card_item",
+			"card": first_mask_card,
+			"grab_offset": CardHandCard.CARD_SIZE * 0.5,
+		},
+	)
+	first_mask_view._end_drag_visual(true)
+	assert_eq(hand.mask_persona_order.back(), first_persona)
+	assert_same(hand.card_views[first_mask_card.instance_id], first_mask_view)
+	assert_true(first_mask_view.visible)
+
+	var mask_rule := CardSlotRule.new()
+	mask_rule.id = &"mask_test"
+	mask_rule.required_all = [CardPropertySet.PROPERTY_PERSONA]
+	main._on_rule_focused(mask_rule)
+	assert_eq(hand.active_tab, QuestHandBar.TAB_MASKS)
+	var item_rule := CardSlotRule.new()
+	item_rule.id = &"item_test"
+	item_rule.required_all = [&"food"]
+	main._on_rule_focused(item_rule)
+	assert_eq(hand.active_tab, QuestHandBar.TAB_ITEMS)
 
 
 func test_overflowing_hand_overlaps_and_hovered_card_receives_full_space() -> void:
@@ -123,6 +177,49 @@ func test_reordering_hand_cards_is_correct_in_both_directions() -> void:
 	)
 	assert_same(reordered[0], last)
 	assert_same(reordered[-1], first)
+
+
+func test_reordering_uses_the_dragged_card_overlap_instead_of_the_cursor_edge() -> void:
+	var main := await _spawn_main()
+	var hand := main.hand_bar
+	await get_tree().process_frame
+	var hand_cards := main.state.inventory.filter(
+		func(card: CardItemState) -> bool: return card.location == CardItemState.Location.HAND
+	)
+	var dragged := hand_cards[0] as CardItemState
+	var second := hand_cards[1] as CardItemState
+	var third := hand_cards[2] as CardItemState
+	var second_view := hand.card_views[second.instance_id] as CardHandCard
+	var third_view := hand.card_views[third.instance_id] as CardHandCard
+	assert_eq(hand.card_row.mouse_filter, Control.MOUSE_FILTER_PASS)
+	assert_eq(hand.card_scroll.mouse_filter, Control.MOUSE_FILTER_PASS)
+	assert_ne(hand.card_row.get_parent().mouse_filter, Control.MOUSE_FILTER_STOP)
+	assert_ne(hand.card_scroll.get_parent().mouse_filter, Control.MOUSE_FILTER_STOP)
+	assert_ne(hand.card_scroll.get_parent().get_parent().mouse_filter, Control.MOUSE_FILTER_STOP)
+	var desired_center := third_view.get_global_rect().get_center().x - 20.0
+	var dragged_left := desired_center - CardHandCard.CARD_SIZE.x * 0.5
+	assert_lt(dragged_left, second_view.get_global_rect().end.x)
+	assert_gt(dragged_left + CardHandCard.CARD_SIZE.x, third_view.get_global_rect().position.x)
+	var grab_offset := Vector2(80.0, CardHandCard.CARD_SIZE.y * 0.5)
+	var pointer_global_x := dragged_left + grab_offset.x
+	var drop_position := Vector2(
+		pointer_global_x - hand.get_global_rect().position.x,
+		hand.size.y * 0.5,
+	)
+
+	hand._drop_data(drop_position, {
+		"kind": &"card_item",
+		"card": dragged,
+		"grab_offset": grab_offset,
+	})
+	var reordered := main.state.inventory.filter(
+		func(card: CardItemState) -> bool: return card.location == CardItemState.Location.HAND
+	)
+	assert_same(reordered[0], second)
+	assert_same(reordered[1], dragged)
+	assert_same(reordered[2], third)
+	assert_true(hand._has_point(Vector2(-QuestHandBar.REORDER_DROP_MARGIN.x + 1.0, 70.0)))
+	assert_false(hand._has_point(Vector2(-QuestHandBar.REORDER_DROP_MARGIN.x - 1.0, 70.0)))
 
 
 func test_assigning_one_card_only_removes_that_card_view() -> void:

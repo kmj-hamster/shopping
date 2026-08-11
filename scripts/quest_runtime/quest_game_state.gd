@@ -175,7 +175,9 @@ func checkout_store(store_id: StringName) -> Dictionary:
 	var result := transaction.checkout(day)
 	if result.ok:
 		_sync_next_card_instance_id()
-		var delta := QuestStateDelta.new()
+		var delta := QuestStateDelta.new().mark_wallet(&"shop_checkout").mark_shelf(
+			store_id, &"shop_checkout"
+		)
 		for purchased_card in result.purchased:
 			delta.mark_hand_added((purchased_card as CardItemState).instance_id, &"shop_checkout")
 		_mark_delta(delta)
@@ -228,8 +230,12 @@ func interact_with_store_owner(store_id: StringName) -> Dictionary:
 	var task := activate_task(owner.request_task_id)
 	if task == null:
 		return _owner_result(owner, owner.idle_dialogue_key, false)
-	_stock_owner_event_item(owner)
-	_mark_state_changed()
+	var stocked_event_item := _stock_owner_event_item(owner)
+	_mark_state_changed(
+		QuestStateDelta.new().mark_shelf(owner.event_item_store_id, &"owner_event_stock")
+		if stocked_event_item
+		else null
+	)
 	return _owner_result(owner, owner.request_dialogue_key, true, task.instance_id)
 
 
@@ -251,7 +257,7 @@ func checkout_recycle() -> Dictionary:
 	var removed_ids := recycle_transaction.staged_instance_ids.duplicate()
 	var result := recycle_transaction.checkout()
 	if result.ok:
-		var delta := QuestStateDelta.new()
+		var delta := QuestStateDelta.new().mark_wallet(&"recycle_checkout")
 		for instance_id in removed_ids:
 			delta.mark_hand_removed(instance_id, &"recycle_checkout")
 		_mark_delta(delta)
@@ -431,9 +437,17 @@ func assign_card(task_instance_id: int, slot_id: StringName, card: CardItemState
 	if not evaluation.can_place:
 		return _result(false, RESULT_REJECTED, evaluation)
 	var occupied_id := instance.assigned_instance_id(slot_id)
-	if occupied_id > 0 and occupied_id != card.instance_id:
+	var replaced_card: CardItemState = (
+		card_by_instance_id(occupied_id)
+		if occupied_id > 0 and occupied_id != card.instance_id
+		else null
+	)
+	if occupied_id > 0 and occupied_id != card.instance_id and replaced_card == null:
 		return _result(false, RESULT_OCCUPIED, evaluation)
 	_remove_card_assignment(card)
+	if replaced_card != null:
+		instance.clear_assignment_for_card(replaced_card.instance_id)
+		replaced_card.return_to_hand()
 	instance.assignments[slot_id] = card.instance_id
 	card.assign_to(StringName(str(instance.instance_id)), slot_id)
 	var delta := (
@@ -441,6 +455,8 @@ func assign_card(task_instance_id: int, slot_id: StringName, card: CardItemState
 			.mark_hand_location(card.instance_id, &"task_assignment")
 			.mark_task_instance(instance.instance_id, &"task_assignment")
 	)
+	if replaced_card != null:
+		delta.mark_hand_location(replaced_card.instance_id, &"task_card_replaced")
 	if previous_task != null and previous_task != instance:
 		delta.mark_task_instance(previous_task.instance_id, &"task_reassignment")
 	_mark_state_changed(delta)
@@ -533,11 +549,17 @@ func _assign_synthesis_card(role_id: StringName, card: CardItemState) -> Diction
 	var occupied_id := (
 		synthesis_base_instance_id if role_id == &"base" else synthesis_fuel_instance_id
 	)
-	if occupied_id > 0 and occupied_id != card.instance_id:
-		return _result(false, RESULT_OCCUPIED)
+	var replaced_card := (
+		card_by_instance_id(occupied_id)
+		if occupied_id > 0 and occupied_id != card.instance_id
+		else null
+	)
 	if previous_task != null:
 		previous_task.clear_assignment_for_card(card.instance_id)
 	_clear_synthesis_assignment_for_card(card.instance_id)
+	if replaced_card != null:
+		_clear_synthesis_assignment_for_card(replaced_card.instance_id)
+		replaced_card.return_to_hand()
 	if role_id == &"base":
 		synthesis_base_instance_id = card.instance_id
 	else:
@@ -549,6 +571,8 @@ func _assign_synthesis_card(role_id: StringName, card: CardItemState) -> Diction
 			.mark_hand_location(card.instance_id, &"synthesis_assignment")
 			.mark_synthesis_draft(&"synthesis_assignment")
 	)
+	if replaced_card != null:
+		delta.mark_hand_location(replaced_card.instance_id, &"synthesis_card_replaced")
 	if previous_task != null:
 		delta.mark_task_instance(previous_task.instance_id, &"task_to_synthesis")
 		_mark_state_changed(delta)
@@ -651,13 +675,18 @@ func begin_synthesis() -> Dictionary:
 		if card == null or card.activity_id != &"synthesis":
 			return _result(false, RESULT_NOT_READY)
 	_begin_change_batch()
-	var delta := QuestStateDelta.new().mark_synthesis_draft(&"synthesis_complete")
+	var delta := (
+		QuestStateDelta.new()
+		.mark_synthesis_draft(&"synthesis_complete")
+		.mark_synthesis_persona(&"synthesis_persona_returned")
+	)
 	for card_id in input_ids:
 		inventory.erase(card_by_instance_id(card_id))
 		delta.mark_hand_removed(card_id, &"synthesis_complete")
 	discovered_recipe_ids[recipe.id] = true
 	synthesis_base_instance_id = 0
 	synthesis_fuel_instance_id = 0
+	synthesis_persona_id = &""
 	synthesis_candidate_recipe_id = &""
 	var output := grant_item(recipe.output_id, &"synthesis")
 	_mark_state_changed(delta)
@@ -826,7 +855,7 @@ func apply_arc_effects() -> Dictionary:
 		var consumed_items: Array[QuestItemDefinition] = []
 		consumed_items.assign(resolved.items)
 		for raw_effect in outcome.effects:
-			_apply_story_effect(raw_effect as StoryEffect)
+			_apply_story_effect(raw_effect as StoryEffect, hand_delta)
 		for raw_card in resolved.cards:
 			var consumed_card := raw_card as CardItemState
 			inventory.erase(consumed_card)
@@ -871,7 +900,10 @@ func finish_arc() -> Dictionary:
 	pending_arc = null
 	refill_daily_shelves()
 	var activated := activate_scheduled_tasks(day)
-	_mark_state_changed()
+	var finish_delta := QuestStateDelta.new().mark_day(&"arc_finished")
+	for store_id in store_transactions:
+		finish_delta.mark_shelf(StringName(store_id), &"daily_shelf_refill")
+	_mark_state_changed(finish_delta)
 	_end_change_batch()
 	return {
 		"ok": true,
@@ -908,7 +940,7 @@ func submit_owner_task(task_instance_id: int, store_id: StringName = &"") -> Dic
 			hand_delta.mark_hand_removed(card.instance_id, &"owner_task_settlement")
 			consumed_count += 1
 	for raw_effect in outcome.effects:
-		_apply_story_effect(raw_effect as StoryEffect)
+		_apply_story_effect(raw_effect as StoryEffect, hand_delta)
 	instance.assignments.clear()
 	instance.resolved_outcome_id = outcome.id
 	instance.settled = true
@@ -945,7 +977,9 @@ func unlock_store(store_id: StringName, card: CardItemState) -> Dictionary:
 	inventory.erase(card)
 	unlocked_store_ids[store_id] = true
 	_mark_state_changed(
-		QuestStateDelta.new().mark_hand_removed(card.instance_id, &"store_unlock")
+		QuestStateDelta.new()
+			.mark_hand_removed(card.instance_id, &"store_unlock")
+			.mark_store_state(store_id, &"store_unlock")
 	)
 	return {
 		"ok": true,
@@ -956,12 +990,14 @@ func unlock_store(store_id: StringName, card: CardItemState) -> Dictionary:
 	}
 
 
-func _apply_story_effect(effect: StoryEffect) -> void:
+func _apply_story_effect(effect: StoryEffect, delta: QuestStateDelta = null) -> void:
 	if effect == null:
 		return
 	match effect.kind:
 		StoryEffect.Kind.ADD_MONEY:
 			wallet.money += effect.amount
+			if delta != null:
+				delta.mark_wallet(&"story_effect")
 		StoryEffect.Kind.SET_FLAG:
 			story_flags[effect.target_id] = effect.text_value
 		StoryEffect.Kind.ADD_PROTAGONIST_ASPECT:
@@ -976,6 +1012,8 @@ func _apply_story_effect(effect: StoryEffect) -> void:
 			owner_states[effect.target_id] = effect.text_value
 		StoryEffect.Kind.UNLOCK_STORE:
 			unlocked_store_ids[effect.target_id] = true
+			if delta != null:
+				delta.mark_store_state(effect.target_id, &"story_effect")
 		StoryEffect.Kind.GIVE_ITEM:
 			grant_item(effect.target_id, &"story")
 

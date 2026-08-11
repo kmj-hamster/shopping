@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="GameContentManifest" load_steps=42 format=3]
+[gd_resource type="Resource" script_class="GameContentManifest" load_steps=43 format=3]
 
 [ext_resource type="Script" path="res://scripts/quest_domain/game_content_manifest.gd" id="1_manifest"]
 [ext_resource type="Script" path="res://scripts/quest_domain/property_definition.gd" id="2_property"]
@@ -88,6 +88,12 @@ id = &"tool"
 display_name_key = &"demo.property.tool.name"
 description_key = &"demo.property.tool.description"
 
+[sub_resource type="Resource" id="PropertyPersona"]
+script = ExtResource("2_property")
+id = &"persona"
+display_name_key = &"demo.property.persona.name"
+description_key = &"demo.property.persona.description"
+
 [sub_resource type="Resource" id="PropertyLamp"]
 script = ExtResource("2_property")
 id = &"lamp"
@@ -128,7 +134,7 @@ maximum_properties_per_item = 4
 maximum_aspects_per_item = 2
 initial_protagonist_stats = {&"clarity": 3, &"ease": 3, &"reminiscence": 3, &"reverie": 3}
 starting_item_ids = Array[StringName]([&"fries", &"sunflower", &"toy_block", &"soft_gauze", &"soft_gauze", &"mirror_shard"])
-properties = Array[Resource]([SubResource("PropertyFood"), SubResource("PropertySalty"), SubResource("PropertyPlant"), SubResource("PropertyFlower"), SubResource("PropertyToy"), SubResource("PropertyRose"), SubResource("PropertyTeddyBear"), SubResource("PropertyDrink"), SubResource("PropertyMetal"), SubResource("PropertyTool"), SubResource("PropertyLamp"), SubResource("PropertyMirror"), SubResource("PropertyGauze"), SubResource("PropertyPillow")])
+properties = Array[Resource]([SubResource("PropertyFood"), SubResource("PropertySalty"), SubResource("PropertyPlant"), SubResource("PropertyFlower"), SubResource("PropertyToy"), SubResource("PropertyRose"), SubResource("PropertyTeddyBear"), SubResource("PropertyDrink"), SubResource("PropertyMetal"), SubResource("PropertyTool"), SubResource("PropertyPersona"), SubResource("PropertyLamp"), SubResource("PropertyMirror"), SubResource("PropertyGauze"), SubResource("PropertyPillow")])
 items = Array[Resource]([ExtResource("3_item"), ExtResource("4_item"), ExtResource("5_item"), ExtResource("6_item"), ExtResource("7_item"), ExtResource("18_item"), ExtResource("19_item"), ExtResource("20_item"), ExtResource("21_item"), ExtResource("22_item"), ExtResource("26_item"), ExtResource("27_item")])
 tasks = Array[Resource]([ExtResource("8_task"), ExtResource("9_task"), ExtResource("10_task"), ExtResource("11_task")])
 recipes = Array[Resource]([ExtResource("12_recipe"), ExtResource("23_recipe"), ExtResource("24_recipe"), ExtResource("25_recipe")])

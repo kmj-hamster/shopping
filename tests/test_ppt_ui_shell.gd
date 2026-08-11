@@ -8,6 +8,9 @@ func before_each() -> void:
 func test_main_uses_responsive_ppt_regions_and_demo_content() -> void:
 	var main := await _spawn_main()
 	assert_eq(main.theme, load("res://resources/fonts/shancha_ui_theme.tres"))
+	var ui_font := main.theme.default_font as FontVariation
+	assert_not_null(ui_font)
+	assert_eq(ui_font.base_font, load("res://resources/fonts/VT323-Regular.ttf"))
 	assert_true(main.theme.default_font.has_char("A".unicode_at(0)))
 	assert_true(main.theme.default_font.has_char("中".unicode_at(0)))
 	assert_not_null(main.get_node_or_null("PersistentSidebar"))
@@ -81,6 +84,44 @@ func test_shop_dialogue_click_finishes_then_starts_the_next_line() -> void:
 	shop._on_dialogue_panel_gui_input(click)
 	assert_true(shop.owner_dialogue_is_typing)
 	assert_gt(shop.owner_dialogue_generation, completed_generation)
+
+
+func test_shop_dialogue_uses_fixed_two_line_pages() -> void:
+	var main := await _spawn_main()
+	main._show_shop(&"flower")
+	await get_tree().process_frame
+	var shop := main.current_screen as QuestShopScreen
+	var panel_height := shop.dialogue_panel.size.y
+	shop.owner_dialogue_char_seconds = 10.0
+	shop._present_owner_dialogue(
+		"这是一段用于验证店主对白固定为两行并在内容过长时等待玩家点击后翻页的长文本。".repeat(5),
+		true,
+	)
+	assert_eq(
+		shop.owner_dialogue_label.max_lines_visible,
+		QuestShopScreen.DIALOGUE_MAX_VISIBLE_LINES,
+	)
+	assert_true(shop.dialogue_panel.clip_contents)
+	assert_gt(shop.owner_dialogue_pages.size(), 1)
+	assert_lte(
+		shop.owner_dialogue_label.get_line_count(),
+		QuestShopScreen.DIALOGUE_MAX_VISIBLE_LINES,
+	)
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	shop._on_dialogue_panel_gui_input(click)
+	assert_false(shop.owner_dialogue_is_typing)
+	assert_eq(shop.owner_dialogue_page_index, 0)
+	shop._on_dialogue_panel_gui_input(click)
+	assert_true(shop.owner_dialogue_is_typing)
+	assert_eq(shop.owner_dialogue_page_index, 1)
+	assert_eq(shop.owner_dialogue_label.text, shop.owner_dialogue_pages[1])
+	assert_lte(
+		shop.owner_dialogue_label.get_line_count(),
+		QuestShopScreen.DIALOGUE_MAX_VISIBLE_LINES,
+	)
+	assert_almost_eq(shop.dialogue_panel.size.y, panel_height, 0.01)
 
 
 func test_each_shop_owner_can_configure_dialogue_voice_assets() -> void:
@@ -222,16 +263,41 @@ func test_locked_location_uses_confirmed_popup_then_enters_shop() -> void:
 	await get_tree().process_frame
 	assert_not_null(map.location_popup)
 	assert_true(map.location_popup is PaperActivityPopup)
+	assert_null(main.focused_rule)
+	assert_false(main.rule_detail_popup.visible)
+	var hand_order_before: Array[int] = []
+	for child in main.hand_bar.card_row.get_children():
+		if child is Control and child.get_child_count() > 0:
+			var view := child.get_child(0) as CardHandCard
+			if view != null:
+				hand_order_before.append(view.card.instance_id)
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	map.location_popup.unlock_slot._on_gui_input(click)
+	assert_same(main.focused_rule, map.location_popup.unlock_definition.slot_rule)
 	assert_true(main.rule_detail_popup.visible)
 	assert_eq(main.rule_detail_popup.required_row.get_child_count(), 1)
+	var sunflower_view := main.hand_bar.card_views[sunflower.instance_id] as CardHandCard
+	assert_true(sunflower_view.rule_match_highlighted)
+	assert_almost_eq(sunflower_view.position.y, -QuestHandBar.RULE_MATCH_LIFT, 0.01)
+	var hand_order_after: Array[int] = []
+	for child in main.hand_bar.card_row.get_children():
+		if child is Control and child.get_child_count() > 0:
+			var view := child.get_child(0) as CardHandCard
+			if view != null:
+				hand_order_after.append(view.card.instance_id)
+	assert_eq(hand_order_after, hand_order_before)
 	assert_true(main.task_dock.task_window == null or main.task_dock.task_window is PaperActivityPopup)
-	var preallocated_preview := map.location_popup.unlock_slot.preview
+	var preallocated_card_view := map.location_popup.unlock_slot.card_view
 	map.location_popup.unlock_slot._drop_data(
 		Vector2.ZERO,
 		{"kind": &"card_item", "card": sunflower},
 	)
-	assert_same(map.location_popup.unlock_slot.preview, preallocated_preview)
-	assert_true(preallocated_preview.visible)
+	assert_same(map.location_popup.unlock_slot.card_view, preallocated_card_view)
+	assert_true(preallocated_card_view.visible)
+	assert_eq(map.location_popup.unlock_slot.size, QuestTaskSlot.CARD_SIZE)
+	assert_null(map.location_popup.unlock_slot.find_child("RemoveStagedCardButton"))
 	assert_false(main.hand_bar.card_views.has(sunflower.instance_id))
 	assert_false(map.location_popup.action_button.disabled)
 	map.location_popup._on_action_pressed()
@@ -258,6 +324,24 @@ func test_task_rule_panel_shows_written_bonus_only() -> void:
 	assert_eq(main.rule_detail_popup.panel.offset_top, ItemDetailPopup.DETAIL_TOP)
 	assert_eq(main.rule_detail_popup.panel.offset_right, ItemDetailPopup.DETAIL_RIGHT)
 	assert_eq(main.rule_detail_popup.panel.offset_bottom, ItemDetailPopup.DETAIL_BOTTOM)
+	assert_eq(ItemDetailPopup.DETAIL_LEFT, -680.0)
+	assert_eq(
+		main.rule_detail_popup.property_description.get_theme_font_size("font_size"),
+		ItemDetailPopup.DESCRIPTION_FONT_SIZE,
+	)
+	assert_eq(
+		main.rule_detail_popup.panel.scale,
+		Vector2.ONE * ItemDetailPopup.RIGHT_POPUP_SCALE,
+	)
+	assert_almost_eq(
+		main.rule_detail_popup.panel.pivot_offset.x,
+		main.rule_detail_popup.panel.size.x,
+		0.01,
+	)
+	assert_eq(
+		main.rule_detail_popup.property_panel.scale,
+		Vector2.ONE * ItemDetailPopup.RIGHT_POPUP_SCALE,
+	)
 	var rule_style := main.rule_detail_popup.panel.get_theme_stylebox("panel") as StyleBoxFlat
 	assert_almost_eq(rule_style.bg_color.a, 0.5, 0.001)
 	var rule_property_style := (
@@ -286,11 +370,33 @@ func test_task_rule_panel_shows_written_bonus_only() -> void:
 		load("res://resources/ui/property-salty.png"),
 	)
 	main.rule_detail_popup._show_property(&"food")
+	await get_tree().process_frame
+	await get_tree().process_frame
 	assert_true(main.rule_detail_popup.property_panel.visible)
 	assert_not_null(main.rule_detail_popup.property_icon_image.texture)
+	var first_rule_property_font_size := (
+		main.rule_detail_popup.property_description.get_theme_font_size("font_size")
+	)
+	assert_eq(first_rule_property_font_size, ItemDetailPopup.DESCRIPTION_FONT_SIZE)
+	assert_eq(
+		main.rule_detail_popup.property_name.get_theme_font_size("font_size"),
+		ItemDetailPopup.TITLE_FONT_SIZE,
+	)
+	var rule_property_icon_frame := (
+		main.rule_detail_popup.property_icon_image.get_parent().get_parent()
+		as PanelContainer
+	)
+	assert_eq(rule_property_icon_frame.custom_minimum_size, Vector2(82, 82))
+	assert_eq(rule_property_icon_frame.custom_minimum_size.x, rule_property_icon_frame.custom_minimum_size.y)
 	main.rule_detail_popup._show_property(&"food")
 	assert_false(main.rule_detail_popup.property_panel.visible)
 	main.rule_detail_popup._show_property(&"food")
+	await get_tree().process_frame
+	await get_tree().process_frame
+	assert_eq(
+		main.rule_detail_popup.property_description.get_theme_font_size("font_size"),
+		first_rule_property_font_size,
+	)
 	var outside_click := InputEventMouseButton.new()
 	outside_click.button_index = MOUSE_BUTTON_LEFT
 	outside_click.pressed = true
@@ -324,6 +430,7 @@ func test_task_popup_is_small_centered_and_uses_centered_copy() -> void:
 	var slot := popup.slots_row.get_children().filter(
 		func(child: Node) -> bool: return child is QuestTaskSlot
 	)[0] as QuestTaskSlot
+	_assert_slot_contains_no_instruction_copy(slot)
 	var fries := main.state.inventory[0] as CardItemState
 	var hand_card_size := (main.hand_bar.card_views[fries.instance_id] as CardHandCard).size
 	var definition := QuestArcCatalog.task_by_id(task.definition_id)
@@ -360,7 +467,7 @@ func test_task_popup_is_small_centered_and_uses_centered_copy() -> void:
 	assert_eq(popup.feedback_label.text, "")
 
 
-func test_clicking_task_slot_moves_matching_cards_left_and_lifts_them() -> void:
+func test_clicking_task_slot_highlights_and_lifts_without_reordering() -> void:
 	var main := await _spawn_main()
 	var sunflower := main.state.grant_item(&"sunflower") as CardItemState
 	main.state.reorder_hand_card(sunflower, 0)
@@ -375,12 +482,30 @@ func test_clicking_task_slot_moves_matching_cards_left_and_lifts_them() -> void:
 	var click := InputEventMouseButton.new()
 	click.button_index = MOUSE_BUTTON_LEFT
 	click.pressed = true
+	var order_before: Array[int] = []
+	for child in main.hand_bar.card_row.get_children():
+		if child is Control and child.get_child_count() > 0:
+			var view := child.get_child(0) as CardHandCard
+			if view != null:
+				order_before.append(view.card.instance_id)
 	slot._on_gui_input(click)
+	var order_after: Array[int] = []
+	for child in main.hand_bar.card_row.get_children():
+		if child is Control and child.get_child_count() > 0:
+			var view := child.get_child(0) as CardHandCard
+			if view != null:
+				order_after.append(view.card.instance_id)
+	assert_eq(order_after, order_before)
 	var left_wrapper := main.hand_bar.card_row.get_child(0) as Control
 	var left_card := left_wrapper.get_child(0) as CardHandCard
-	assert_eq(left_card.definition.id, &"fries")
-	assert_true(left_card.rule_match_highlighted)
-	assert_almost_eq(left_card.position.y, -QuestHandBar.RULE_MATCH_LIFT, 0.01)
+	assert_eq(left_card.definition.id, &"sunflower")
+	assert_false(left_card.rule_match_highlighted)
+	var fries := main.state.inventory.filter(
+		func(card: CardItemState) -> bool: return card.definition_id == &"fries"
+	)[0] as CardItemState
+	var fries_view := main.hand_bar.card_views[fries.instance_id] as CardHandCard
+	assert_true(fries_view.rule_match_highlighted)
+	assert_almost_eq(fries_view.position.y, -QuestHandBar.RULE_MATCH_LIFT, 0.01)
 	var sunflower_view := main.hand_bar.card_views[sunflower.instance_id] as CardHandCard
 	assert_false(sunflower_view.rule_match_highlighted)
 	assert_almost_eq(sunflower_view.position.y, 0.0, 0.01)
@@ -389,6 +514,30 @@ func test_clicking_task_slot_moves_matching_cards_left_and_lifts_them() -> void:
 	left_card = left_wrapper.get_child(0) as CardHandCard
 	assert_eq(left_card.definition.id, &"sunflower")
 	assert_almost_eq(left_card.position.y, 0.0, 0.01)
+	assert_almost_eq(fries_view.position.y, 0.0, 0.01)
+
+
+func test_task_and_location_popups_close_on_background_click() -> void:
+	var main := await _spawn_main()
+	var task := main.state.task_instance_for_definition(&"girl_order")
+	main.task_dock._toggle_task(task.instance_id)
+	await get_tree().process_frame
+	var task_popup := main.task_dock.task_window
+	var background_click := InputEventMouseButton.new()
+	background_click.button_index = MOUSE_BUTTON_LEFT
+	background_click.pressed = true
+	background_click.position = Vector2(1.0, 1.0)
+	assert_false(task_popup.get_global_rect().has_point(background_click.position))
+	var map := main.current_screen as QuestMapScreen
+	map.background_input.gui_input.emit(background_click)
+	assert_null(main.task_dock.task_window)
+
+	map._on_store_pressed(&"record")
+	await get_tree().process_frame
+	var location_popup := map.location_popup
+	assert_false(location_popup.get_global_rect().has_point(background_click.position))
+	map.background_input.gui_input.emit(background_click)
+	assert_null(map.location_popup)
 
 
 func test_task_assignment_reuses_bookmark_popup_slot_and_card_view() -> void:
@@ -411,6 +560,14 @@ func test_task_assignment_reuses_bookmark_popup_slot_and_card_view() -> void:
 	assert_same(slot.card_view, preallocated_card_view)
 	assert_same(slot.card_view.card, fries)
 	assert_true(slot.card_view.visible)
+	var replacement := main.state.grant_item(&"fries", &"test")
+	var replacement_data := {"kind": &"card_item", "card": replacement}
+	assert_true(slot._can_drop_data(Vector2.ZERO, replacement_data))
+	slot._drop_data(Vector2.ZERO, replacement_data)
+	assert_same(slot.card_view, preallocated_card_view)
+	assert_same(slot.card_view.card, replacement)
+	assert_eq(fries.location, CardItemState.Location.HAND)
+	assert_true(main.hand_bar.card_views.has(fries.instance_id))
 	main.task_dock._toggle_task(task.instance_id)
 	assert_null(main.task_dock.task_window)
 	main.task_dock._toggle_task(task.instance_id)
@@ -459,7 +616,7 @@ func test_self_and_owner_tasks_use_contextual_actions_and_owner_rule_titles() ->
 		func(child: Node) -> bool: return child is QuestTaskSlot
 	)
 	for raw_slot in owner_slots:
-		assert_false((raw_slot as QuestTaskSlot).caption_label.visible)
+		_assert_slot_contains_no_instruction_copy(raw_slot as QuestTaskSlot)
 	var owner_definition := QuestArcCatalog.task_by_id(owner_task.definition_id)
 	var owner_rule := owner_definition.slot_rules[0] as CardSlotRule
 	(owner_slots[0] as QuestTaskSlot).rule_focused.emit(owner_rule)
@@ -467,7 +624,10 @@ func test_self_and_owner_tasks_use_contextual_actions_and_owner_rule_titles() ->
 		main.rule_detail_popup.title_label.text,
 		TranslationServer.translate(owner_rule.display_name_key),
 	)
-	assert_eq(main.rule_detail_popup.title_label.get_theme_font_size("font_size"), 12)
+	assert_eq(
+		main.rule_detail_popup.title_label.get_theme_font_size("font_size"),
+		QuestRuleDetailPopup.OWNER_RULE_TITLE_FONT_SIZE,
+	)
 	assert_eq(
 		main.rule_detail_popup.title_label.text_overrun_behavior,
 		TextServer.OVERRUN_TRIM_ELLIPSIS,
@@ -504,15 +664,44 @@ func test_clicking_the_same_item_card_toggles_its_popup() -> void:
 func test_drag_source_disappears_and_preview_is_above_popups() -> void:
 	var main := await _spawn_main()
 	var view := main.hand_bar.card_views.values()[0] as CardHandCard
-	var preview := view._build_drag_preview(Vector2.ZERO)
-	assert_eq(preview.z_index, 4096)
-	assert_false(preview.z_as_relative)
+	var grab_position := Vector2(17, 63)
+	var preview_carrier := view._build_drag_preview(grab_position)
+	var preview := preview_carrier.get_child(0) as CardHandCard
+	assert_eq(preview_carrier.z_index, 4096)
+	assert_false(preview_carrier.z_as_relative)
+	assert_eq(preview.position, -grab_position)
+	preview_carrier.position = Vector2(400, 300)
+	assert_eq(preview_carrier.position + preview.position, Vector2(400, 300) - grab_position)
 	view.return_animation_seconds = 0.0
 	view._begin_drag_visual()
 	assert_false(view.visible)
 	view._end_drag_visual(false)
 	assert_true(view.visible)
-	preview.free()
+	preview_carrier.free()
+
+
+func test_failed_drag_reuses_the_global_return_preview() -> void:
+	var main := await _spawn_main()
+	var view := main.hand_bar.card_views.values()[0] as CardHandCard
+	var return_layer := main.drag_return_layer
+	var return_card := main.drag_return_card
+	view.return_animation_seconds = 1.0
+	view._begin_drag_visual()
+	view._end_drag_visual(false)
+	assert_true(view.return_animation_active)
+	assert_false(view.visible)
+	assert_true(return_card.visible)
+	assert_same(main.drag_return_layer, return_layer)
+	assert_same(main.drag_return_card, return_card)
+	main._cancel_card_return_animation()
+	assert_true(view.visible)
+	assert_false(return_card.visible)
+	view._begin_drag_visual()
+	view._end_drag_visual(false)
+	assert_same(main.drag_return_layer, return_layer)
+	assert_same(main.drag_return_card, return_card)
+	assert_eq(return_layer.get_child_count(), 1)
+	main._cancel_card_return_animation()
 
 
 func test_item_detail_icons_append_without_overlap_and_close_outside() -> void:
@@ -523,19 +712,59 @@ func test_item_detail_icons_append_without_overlap_and_close_outside() -> void:
 	assert_eq(main.detail_popup.detail_panel.offset_top, ItemDetailPopup.DETAIL_TOP)
 	assert_eq(main.detail_popup.detail_panel.offset_right, ItemDetailPopup.DETAIL_RIGHT)
 	assert_eq(main.detail_popup.detail_panel.offset_bottom, ItemDetailPopup.DETAIL_BOTTOM)
-	assert_not_null(main.detail_popup.item_image.texture)
-	assert_almost_eq(
-		main.detail_popup.item_image.get_parent().size.y,
-		main.detail_popup.description_label.get_parent().size.y,
-		1.0,
+	assert_eq(
+		main.detail_popup.title_label.get_theme_font_size("font_size"),
+		ItemDetailPopup.TITLE_FONT_SIZE,
 	)
-	var property_band := main.detail_popup.detail_panel.find_child("PropertyBand", true, false) as PanelContainer
+	assert_eq(
+		main.detail_popup.description_label.get_theme_font_size("font_size"),
+		ItemDetailPopup.DESCRIPTION_FONT_SIZE,
+	)
+	var original_description := main.detail_popup.description_label.text
+	main.detail_popup.description_label.text = "响应式说明文字".repeat(12)
+	await get_tree().process_frame
+	main.detail_popup._fit_description_font()
+	var fitted_description_size := main.detail_popup.description_label.get_theme_font_size(
+		"font_size"
+	)
+	assert_lt(fitted_description_size, ItemDetailPopup.DESCRIPTION_FONT_SIZE)
+	assert_gte(fitted_description_size, ItemDetailPopup.DESCRIPTION_MIN_FONT_SIZE)
+	assert_lte(
+		main.detail_popup.description_label.get_line_count(),
+		ItemDetailPopup.DESCRIPTION_MAX_LINES,
+	)
+	main.detail_popup.description_label.text = original_description
+	main.detail_popup._fit_description_font()
+	assert_eq(
+		main.detail_popup.property_description.get_theme_font_size("font_size"),
+		ItemDetailPopup.DESCRIPTION_FONT_SIZE,
+	)
+	assert_eq(
+		main.detail_popup.detail_panel.scale,
+		Vector2.ONE * ItemDetailPopup.RIGHT_POPUP_SCALE,
+	)
+	assert_almost_eq(
+		main.detail_popup.detail_panel.pivot_offset.x,
+		main.detail_popup.detail_panel.size.x,
+		0.01,
+	)
+	assert_eq(
+		main.detail_popup.property_panel.scale,
+		Vector2.ONE * ItemDetailPopup.RIGHT_POPUP_SCALE,
+	)
+	assert_not_null(main.detail_popup.item_image.texture)
+	var item_frame := main.detail_popup.item_image.get_parent() as PanelContainer
+	assert_eq(item_frame.size, Vector2(82, 82))
+	assert_eq(item_frame.size.x, item_frame.size.y)
+	assert_gt(main.detail_popup.description_label.get_parent().size.y, item_frame.size.y)
+	var property_band := main.detail_popup.detail_panel.find_child(
+		"PropertyBand", true, false
+	) as MarginContainer
 	assert_not_null(property_band)
 	assert_gt(property_band.size.x, main.detail_popup.description_label.size.x)
 	var panel_style := main.detail_popup.detail_panel.get_theme_stylebox("panel") as StyleBoxFlat
 	assert_almost_eq(panel_style.bg_color.a, 0.5, 0.001)
-	var band_style := property_band.get_theme_stylebox("panel") as StyleBoxFlat
-	assert_almost_eq(band_style.bg_color.a, 0.5, 0.001)
+	assert_false(property_band.has_theme_stylebox_override("panel"))
 	var property_panel_style := (
 		main.detail_popup.property_panel.get_theme_stylebox("panel") as StyleBoxFlat
 	)
@@ -551,16 +780,36 @@ func test_item_detail_icons_append_without_overlap_and_close_outside() -> void:
 	assert_not_null(base_icon.texture)
 	main.detail_popup._show_property(&"lamp")
 	await get_tree().process_frame
+	await get_tree().process_frame
 	assert_true(main.detail_popup.detail_panel.visible)
 	assert_true(main.detail_popup.property_panel.visible)
-	var actual_detail_bottom := (
+	var first_item_property_font_size := (
+		main.detail_popup.property_description.get_theme_font_size("font_size")
+	)
+	assert_eq(first_item_property_font_size, ItemDetailPopup.DESCRIPTION_FONT_SIZE)
+	assert_eq(
+		main.detail_popup.property_name.get_theme_font_size("font_size"),
+		ItemDetailPopup.TITLE_FONT_SIZE,
+	)
+	var property_icon_frame := (
+		main.detail_popup.property_icon_image.get_parent().get_parent() as PanelContainer
+	)
+	assert_eq(property_icon_frame.size, Vector2(82, 82))
+	var property_icon_style := property_icon_frame.get_theme_stylebox("panel") as StyleBoxFlat
+	assert_eq(property_icon_style.bg_color, Color("090b0c", 0.995))
+	var actual_detail_visual_bottom := (
 		main.detail_popup.detail_panel.offset_top
 		+ maxf(
 			main.detail_popup.detail_panel.size.y,
 			main.detail_popup.detail_panel.get_combined_minimum_size().y,
-		)
+		) * ItemDetailPopup.RIGHT_POPUP_SCALE
 	)
-	assert_true(main.detail_popup.property_panel.offset_top >= actual_detail_bottom + 10.0)
+	assert_almost_eq(
+		main.detail_popup.property_panel.offset_top,
+		actual_detail_visual_bottom
+		+ ItemDetailPopup.PROPERTY_GAP * ItemDetailPopup.RIGHT_POPUP_SCALE,
+		0.1,
+	)
 	var property_click := InputEventMouseButton.new()
 	property_click.button_index = MOUSE_BUTTON_LEFT
 	property_click.pressed = true
@@ -570,7 +819,13 @@ func test_item_detail_icons_append_without_overlap_and_close_outside() -> void:
 	main.detail_popup._show_property(&"lamp")
 	assert_false(main.detail_popup.property_panel.visible)
 	main.detail_popup._show_property(&"lamp")
+	await get_tree().process_frame
+	await get_tree().process_frame
 	assert_true(main.detail_popup.property_panel.visible)
+	assert_eq(
+		main.detail_popup.property_description.get_theme_font_size("font_size"),
+		first_item_property_font_size,
+	)
 	var outside_click := InputEventMouseButton.new()
 	outside_click.button_index = MOUSE_BUTTON_LEFT
 	outside_click.pressed = true
@@ -584,6 +839,41 @@ func test_item_detail_icons_append_without_overlap_and_close_outside() -> void:
 	assert_same((main.detail_popup.property_views[&"lamp"] as Dictionary).button, property_button)
 
 
+func test_synthesis_bag_property_opens_primary_top_right_popup() -> void:
+	var main := await _spawn_main()
+	var sunflower := main.state.grant_item(&"sunflower") as CardItemState
+	await get_tree().process_frame
+	main.protagonist_button.pressed.emit()
+	await get_tree().process_frame
+	var synthesis := main.current_screen as QuestSynthesisInterface
+	assert_true(synthesis.stage_card(&"base", sunflower))
+	await get_tree().process_frame
+	var lamp_chip := synthesis.total_chip_views[&"lamp"] as Dictionary
+	var lamp_button := lamp_chip.button as Button
+	assert_true((lamp_chip.root as Control).visible)
+	assert_eq(lamp_button.mouse_filter, Control.MOUSE_FILTER_STOP)
+	assert_false(lamp_button.toggle_mode)
+	lamp_button.pressed.emit()
+	await get_tree().process_frame
+	assert_true(main.detail_popup.visible)
+	assert_true(main.detail_popup.detail_panel.visible)
+	assert_false(main.detail_popup.property_panel.visible)
+	assert_false(main.rule_detail_popup.visible)
+	assert_eq(main.detail_popup.primary_property_id, &"lamp")
+	assert_null(main.detail_popup.current_definition)
+	assert_eq(main.detail_popup.detail_panel.offset_top, ItemDetailPopup.DETAIL_TOP)
+	assert_eq(
+		main.detail_popup.title_label.text,
+		TranslationServer.translate(ItemDetailPopup.property_name_key(&"lamp")),
+	)
+	assert_eq(
+		main.detail_popup.description_label.text,
+		TranslationServer.translate(ItemDetailPopup.property_description_key(&"lamp")),
+	)
+	lamp_button.pressed.emit()
+	assert_false(main.detail_popup.visible)
+
+
 func test_synthesis_is_a_material_first_dedicated_space() -> void:
 	var main := await _spawn_main()
 	var cola := main.state.grant_item(&"cola") as CardItemState
@@ -593,7 +883,7 @@ func test_synthesis_is_a_material_first_dedicated_space() -> void:
 	await get_tree().process_frame
 	var synthesis := main.current_screen as QuestSynthesisInterface
 	assert_not_null(synthesis)
-	assert_eq(synthesis.material_slots.size(), 2)
+	assert_eq(synthesis.material_slots.size(), 3)
 	assert_true(synthesis.candidate_buttons.values().all(
 		func(button: Button) -> bool: return not button.visible
 	))
@@ -602,7 +892,9 @@ func test_synthesis_is_a_material_first_dedicated_space() -> void:
 		func(card: CardItemState) -> bool: return card.definition_id == &"soft_gauze"
 	)[0] as CardItemState
 	assert_true(synthesis.stage_card(&"fuel", soft_gauze))
-	assert_true(main.state.select_synthesis_persona(&"reverie"))
+	assert_true(synthesis.stage_card(
+		&"mask", PersonaMaskCatalog.card_for_persona(&"reverie")
+	))
 	await get_tree().process_frame
 	assert_true(synthesis.candidate_buttons.has(&"recipe_midnight_rose"))
 	assert_true(synthesis.action_button.disabled)
@@ -616,6 +908,38 @@ func test_synthesis_is_a_material_first_dedicated_space() -> void:
 	))
 	assert_eq(synthesis.phase, QuestSynthesisInterface.Phase.NARRATIVE)
 	assert_eq(main.state.synthesis_base_instance_id, 0)
+
+
+func test_synthesis_result_flip_reuses_views_without_freeing_signal_emitter() -> void:
+	var main := await _spawn_main()
+	var sunflower := main.state.grant_item(&"sunflower") as CardItemState
+	await get_tree().process_frame
+	main.protagonist_button.pressed.emit()
+	await get_tree().process_frame
+	var synthesis := main.current_screen as QuestSynthesisInterface
+	assert_true(synthesis.stage_card(&"base", sunflower))
+	var soft_gauze := main.state.inventory.filter(
+		func(card: CardItemState) -> bool: return card.definition_id == &"soft_gauze"
+	)[0] as CardItemState
+	assert_true(synthesis.stage_card(&"fuel", soft_gauze))
+	assert_true(main.state.select_synthesis_persona(&"reverie"))
+	synthesis._on_candidate_pressed(&"recipe_midnight_rose")
+	synthesis._on_action_pressed()
+	assert_not_null(synthesis.pending_output)
+	synthesis._show_result()
+	var back := synthesis.result_back_button
+	var card_view := synthesis.result_card_view
+	assert_eq(synthesis.result_holder.get_child_count(), 2)
+	assert_true(back.visible)
+	assert_false(card_view.visible)
+	back.pressed.emit()
+	assert_true(is_instance_valid(back))
+	assert_same(synthesis.result_back_button, back)
+	assert_same(synthesis.result_card_view, card_view)
+	assert_eq(synthesis.result_holder.get_child_count(), 2)
+	assert_false(back.visible)
+	assert_true(card_view.visible)
+	assert_same(card_view.card, synthesis.pending_output)
 
 
 func test_leaving_synthesis_discards_unconfirmed_placement() -> void:
@@ -673,6 +997,35 @@ func test_primary_screens_are_reused_across_navigation() -> void:
 	assert_false(synthesis.result_layer.visible)
 
 
+func test_hud_and_map_ignore_unrelated_state_deltas() -> void:
+	var main := await _spawn_main()
+	var map := main.current_screen as QuestMapScreen
+	var initial_hud_refreshes := main.debug_hud_refresh_count
+	var initial_map_refreshes := map.debug_refresh_count
+	var task := main.state.task_instance_for_definition(&"girl_order")
+	var fries := main.state.inventory.filter(
+		func(card: CardItemState) -> bool: return card.definition_id == &"fries"
+	)[0] as CardItemState
+	assert_true(main.state.assign_card(task.instance_id, &"food", fries).ok)
+	assert_eq(main.debug_hud_refresh_count, initial_hud_refreshes)
+	assert_eq(map.debug_refresh_count, initial_map_refreshes)
+
+	var sunflower := main.state.inventory.filter(
+		func(card: CardItemState) -> bool: return card.definition_id == &"sunflower"
+	)[0] as CardItemState
+	assert_true(main.state.unlock_store(&"record", sunflower).ok)
+	assert_eq(main.debug_hud_refresh_count, initial_hud_refreshes)
+	assert_eq(map.debug_refresh_count, initial_map_refreshes + 1)
+
+	var transaction := main.state.transaction_for_store(&"flower")
+	assert_true(transaction.toggle_shelf_slot(transaction.shelf_slots[0].slot_id).ok)
+	var money_before := main.state.wallet.money
+	assert_true(main.state.checkout_store(&"flower").ok)
+	assert_lt(main.state.wallet.money, money_before)
+	assert_eq(main.debug_hud_refresh_count, initial_hud_refreshes + 1)
+	assert_eq(map.debug_refresh_count, initial_map_refreshes + 1)
+
+
 func test_arc_uses_item_strip_reward_summary_and_click_advance() -> void:
 	var main := await _spawn_main()
 	var task := main.state.task_instance_for_definition(&"girl_order")
@@ -722,6 +1075,47 @@ func test_closing_location_popup_returns_unconfirmed_card() -> void:
 	assert_true(map.location_popup.visible)
 
 
+func test_location_slot_replaces_draft_and_dragging_to_hand_clears_it() -> void:
+	var main := await _spawn_main()
+	var first := main.state.grant_item(&"sunflower", &"test") as CardItemState
+	var second := main.state.grant_item(&"sunflower", &"test") as CardItemState
+	await get_tree().process_frame
+	var map := main.current_screen as QuestMapScreen
+	map._on_store_pressed(&"record")
+	await get_tree().process_frame
+	var slot := map.location_popup.unlock_slot
+	_assert_slot_contains_no_instruction_copy(slot)
+	var card_view := slot.card_view
+	slot._drop_data(Vector2.ZERO, {"kind": &"card_item", "card": first})
+	assert_true(main.hand_bar.temporarily_hidden_card_ids.has(first.instance_id))
+
+	var replacement_data := {"kind": &"card_item", "card": second}
+	assert_true(slot._can_drop_data(Vector2.ZERO, replacement_data))
+	slot._drop_data(Vector2.ZERO, replacement_data)
+	assert_same(slot.card_view, card_view)
+	assert_same(slot.pending_card, second)
+	assert_false(main.hand_bar.temporarily_hidden_card_ids.has(first.instance_id))
+	assert_true(main.hand_bar.card_views.has(first.instance_id))
+	assert_true(main.hand_bar.temporarily_hidden_card_ids.has(second.instance_id))
+
+	slot.card_view.inspect_requested.emit(QuestArcCatalog.item_by_id(second.definition_id))
+	assert_same(main.detail_popup.current_definition, QuestArcCatalog.item_by_id(&"sunflower"))
+	assert_true(main.detail_popup.visible)
+	assert_false(main.rule_detail_popup.visible)
+
+	slot.card_view._begin_drag_visual()
+	main.hand_bar._drop_data(
+		Vector2.ZERO,
+		{"kind": &"card_item", "card": second},
+	)
+	slot.card_view._end_drag_visual(true)
+	await get_tree().process_frame
+	assert_null(slot.pending_card)
+	assert_false(slot.card_view.visible)
+	assert_false(main.hand_bar.temporarily_hidden_card_ids.has(second.instance_id))
+	assert_true(main.hand_bar.card_views.has(second.instance_id))
+
+
 func test_switching_spaces_clears_location_popup_draft() -> void:
 	var main := await _spawn_main()
 	var sunflower := main.state.grant_item(&"sunflower") as CardItemState
@@ -747,3 +1141,11 @@ func _spawn_main() -> QuestMain:
 	add_child_autoqfree(main)
 	await get_tree().process_frame
 	return main
+
+
+func _assert_slot_contains_no_instruction_copy(slot: QuestTaskSlot) -> void:
+	var stack := slot.get_child(0) as Control
+	assert_eq(stack.get_child_count(), 1)
+	assert_same(stack.get_child(0), slot.card_holder)
+	assert_eq(slot.card_holder.get_child_count(), 1)
+	assert_same(slot.card_holder.get_child(0), slot.card_view)

@@ -1,10 +1,10 @@
 [gd_resource type="Theme" load_steps=4 format=3]
 
-[ext_resource type="FontFile" path="res://resources/fonts/BreeSerif-Regular.ttf" id="1_bree_serif"]
+[ext_resource type="FontFile" path="res://resources/fonts/VT323-Regular.ttf" id="1_vt323"]
 [ext_resource type="FontFile" path="res://resources/fonts/zpix.woff2" id="2_zpix"]
 
 [sub_resource type="FontVariation" id="FontVariation_ui"]
-base_font = ExtResource("1_bree_serif")
+base_font = ExtResource("1_vt323")
 fallbacks = Array[Font]([ExtResource("2_zpix")])
 
 [resource]

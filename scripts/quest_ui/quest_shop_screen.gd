@@ -4,9 +4,11 @@ extends Control
 signal leave_requested
 signal item_inspected(definition: CardItemDefinition)
 signal checkout_completed
+signal background_pressed
 
 const DIALOGUE_SILENT_CHARACTERS := " \t\r\n，。！？、；：,.!?;:…—-（）()“”\"'"
 const DIALOGUE_VOICE_PLAYER_COUNT := 3
+const DIALOGUE_MAX_VISIBLE_LINES := 2
 
 var state: QuestGameState
 var store_id: StringName
@@ -36,10 +38,19 @@ var owner_dialogue_override_key: StringName
 var owner_dialogue_item_name := ""
 var owner_dialogue_char_seconds := 0.055
 var owner_dialogue_full_text := ""
+var owner_dialogue_page_text := ""
+var owner_dialogue_pages: Array[String] = []
+var owner_dialogue_page_index := 0
+var owner_dialogue_layout_width := -1.0
+var owner_dialogue_repagination_queued := false
 var owner_dialogue_is_typing := false
 var owner_dialogue_generation := 0
 var owner_dialogue_voice_index := 0
 var owner_dialogue_voice_players: Array[AudioStreamPlayer] = []
+var owner_dialogue_timer: Timer
+var owner_dialogue_character_index := 0
+var owner_dialogue_voiced_character_count := 0
+var background_input: Control
 
 
 func setup(game_state: QuestGameState, selected_store_id: StringName) -> void:
@@ -54,9 +65,23 @@ func setup(game_state: QuestGameState, selected_store_id: StringName) -> void:
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build_interface()
+	_build_owner_dialogue_timer()
 	_bind_state()
 	LocaleManager.locale_changed.connect(_on_locale_changed)
 	refresh()
+
+
+func _build_owner_dialogue_timer() -> void:
+	owner_dialogue_timer = Timer.new()
+	owner_dialogue_timer.one_shot = true
+	owner_dialogue_timer.timeout.connect(_advance_owner_dialogue_character)
+	add_child(owner_dialogue_timer)
+
+
+func _on_background_gui_input(event: InputEvent) -> void:
+	var click := event as InputEventMouseButton
+	if click != null and click.button_index == MOUSE_BUTTON_LEFT and click.pressed:
+		background_pressed.emit()
 
 
 func _bind_state() -> void:
@@ -77,6 +102,12 @@ func _build_interface() -> void:
 	night_filter.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	night_filter.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(night_filter)
+	background_input = Control.new()
+	background_input.name = "ShopBackgroundInput"
+	background_input.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	background_input.mouse_filter = Control.MOUSE_FILTER_STOP
+	background_input.gui_input.connect(_on_background_gui_input)
+	add_child(background_input)
 
 	owner_portrait = TextureRect.new()
 	owner_portrait.name = "StoreOwnerPortrait"
@@ -123,6 +154,7 @@ func _build_interface() -> void:
 	dialogue_panel.add_theme_stylebox_override(
 		"panel", UiPalette.panel_style(Color("050b0e", 0.92), Color("837659", 0.86))
 	)
+	dialogue_panel.clip_contents = true
 	dialogue_panel.gui_input.connect(_on_dialogue_panel_gui_input)
 	add_child(dialogue_panel)
 	var dialogue_margin := MarginContainer.new()
@@ -148,7 +180,10 @@ func _build_interface() -> void:
 	owner_dialogue_label.mouse_filter = Control.MOUSE_FILTER_PASS
 	owner_dialogue_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	owner_dialogue_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	owner_dialogue_label.max_lines_visible = DIALOGUE_MAX_VISIBLE_LINES
+	owner_dialogue_label.clip_text = true
 	owner_dialogue_label.add_theme_color_override("font_color", Color("c8d0ca"))
+	owner_dialogue_label.resized.connect(_on_owner_dialogue_label_resized)
 	dialogue_text.add_child(owner_dialogue_label)
 	feedback_label = Label.new()
 	feedback_label.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -359,6 +394,8 @@ func _on_owner_pressed() -> void:
 	if owner_dialogue_is_typing:
 		_finish_owner_dialogue_line()
 		return
+	if _advance_owner_dialogue_page():
+		return
 	var result := state.interact_with_store_owner(store_id)
 	if not result.ok:
 		return
@@ -404,50 +441,163 @@ func _present_owner_dialogue(dialogue_text: String, force_restart := false) -> v
 		return
 	owner_dialogue_generation += 1
 	owner_dialogue_full_text = dialogue_text
+	owner_dialogue_pages = _paginate_owner_dialogue(dialogue_text)
+	owner_dialogue_page_index = 0
 	owner_dialogue_voice_index = 0
+	owner_dialogue_voiced_character_count = 0
+	if owner_dialogue_timer != null:
+		owner_dialogue_timer.stop()
 	_stop_owner_dialogue_voice()
-	owner_dialogue_label.text = dialogue_text
 	if dialogue_text.is_empty():
+		owner_dialogue_page_text = ""
+		owner_dialogue_label.text = ""
 		owner_dialogue_label.visible_characters = -1
 		owner_dialogue_is_typing = false
 		return
+	_start_owner_dialogue_page(0)
+
+
+func _start_owner_dialogue_page(page_index: int) -> void:
+	if page_index < 0 or page_index >= owner_dialogue_pages.size():
+		owner_dialogue_is_typing = false
+		return
+	owner_dialogue_page_index = page_index
+	owner_dialogue_page_text = owner_dialogue_pages[page_index]
+	owner_dialogue_character_index = 0
+	owner_dialogue_label.text = owner_dialogue_page_text
 	owner_dialogue_label.visible_characters = 0
 	owner_dialogue_is_typing = true
-	_run_owner_dialogue_typewriter(owner_dialogue_generation)
+	_advance_owner_dialogue_character()
 
 
-func _run_owner_dialogue_typewriter(generation: int) -> void:
-	var voiced_character_count := 0
-	for index in range(owner_dialogue_full_text.length()):
-		if generation != owner_dialogue_generation:
-			return
-		var character := owner_dialogue_full_text.substr(index, 1)
-		owner_dialogue_label.visible_characters = index + 1
-		if _is_dialogue_voice_character(character):
-			if voiced_character_count % 2 == 0:
-				_play_owner_dialogue_voice()
-			voiced_character_count += 1
-		if owner_dialogue_char_seconds > 0.0:
-			var delay := owner_dialogue_char_seconds
-			if not _is_dialogue_voice_character(character):
-				delay *= 1.8
-			await get_tree().create_timer(delay).timeout
-	if generation == owner_dialogue_generation:
+func _advance_owner_dialogue_page() -> bool:
+	var next_page := owner_dialogue_page_index + 1
+	if next_page >= owner_dialogue_pages.size():
+		return false
+	owner_dialogue_generation += 1
+	if owner_dialogue_timer != null:
+		owner_dialogue_timer.stop()
+	_stop_owner_dialogue_voice()
+	_start_owner_dialogue_page(next_page)
+	return true
+
+
+func _advance_owner_dialogue_character() -> void:
+	if not owner_dialogue_is_typing:
+		return
+	if owner_dialogue_char_seconds <= 0.0:
+		_finish_owner_dialogue_line()
+		return
+	if owner_dialogue_character_index >= owner_dialogue_page_text.length():
 		owner_dialogue_label.visible_characters = -1
 		owner_dialogue_is_typing = false
+		return
+	var character := owner_dialogue_page_text.substr(owner_dialogue_character_index, 1)
+	owner_dialogue_character_index += 1
+	owner_dialogue_label.visible_characters = owner_dialogue_character_index
+	if _is_dialogue_voice_character(character):
+		if owner_dialogue_voiced_character_count % 2 == 0:
+			_play_owner_dialogue_voice()
+		owner_dialogue_voiced_character_count += 1
+	if owner_dialogue_character_index >= owner_dialogue_page_text.length():
+		owner_dialogue_label.visible_characters = -1
+		owner_dialogue_is_typing = false
+		return
+	var delay := owner_dialogue_char_seconds
+	if not _is_dialogue_voice_character(character):
+		delay *= 1.8
+	owner_dialogue_timer.start(delay)
 
 
 func _finish_owner_dialogue_line() -> void:
 	owner_dialogue_generation += 1
 	owner_dialogue_is_typing = false
 	owner_dialogue_label.visible_characters = -1
+	if owner_dialogue_timer != null:
+		owner_dialogue_timer.stop()
 	_stop_owner_dialogue_voice()
 
 
 func _cancel_owner_dialogue_playback() -> void:
 	owner_dialogue_generation += 1
 	owner_dialogue_is_typing = false
+	if owner_dialogue_timer != null:
+		owner_dialogue_timer.stop()
 	_stop_owner_dialogue_voice()
+
+
+func _paginate_owner_dialogue(dialogue_text: String) -> Array[String]:
+	var pages: Array[String] = []
+	if dialogue_text.is_empty():
+		return pages
+	owner_dialogue_layout_width = owner_dialogue_label.size.x
+	if owner_dialogue_layout_width <= 1.0:
+		pages.append(dialogue_text)
+		return pages
+	var remaining := dialogue_text.strip_edges()
+	while not remaining.is_empty():
+		var page_length := _longest_fitting_dialogue_prefix(remaining)
+		if page_length <= 0:
+			page_length = 1
+		page_length = _prefer_dialogue_word_break(remaining, page_length)
+		var page_text := remaining.substr(0, page_length).strip_edges()
+		if page_text.is_empty():
+			page_text = remaining.substr(0, page_length)
+		pages.append(page_text)
+		remaining = remaining.substr(page_length).strip_edges()
+	return pages
+
+
+func _longest_fitting_dialogue_prefix(text: String) -> int:
+	var previous_text := owner_dialogue_label.text
+	var previous_visible_characters := owner_dialogue_label.visible_characters
+	var previous_max_lines := owner_dialogue_label.max_lines_visible
+	owner_dialogue_label.max_lines_visible = -1
+	var low := 1
+	var high := text.length()
+	var best := 0
+	while low <= high:
+		var midpoint := int((low + high) * 0.5)
+		owner_dialogue_label.text = text.substr(0, midpoint)
+		owner_dialogue_label.visible_characters = -1
+		if owner_dialogue_label.get_line_count() <= DIALOGUE_MAX_VISIBLE_LINES:
+			best = midpoint
+			low = midpoint + 1
+		else:
+			high = midpoint - 1
+	owner_dialogue_label.text = previous_text
+	owner_dialogue_label.visible_characters = previous_visible_characters
+	owner_dialogue_label.max_lines_visible = previous_max_lines
+	return best
+
+
+func _prefer_dialogue_word_break(text: String, fitting_length: int) -> int:
+	if fitting_length >= text.length():
+		return fitting_length
+	var earliest_break := int(fitting_length * 0.5)
+	for index in range(fitting_length - 1, earliest_break - 1, -1):
+		if " \t\r\n".contains(text.substr(index, 1)):
+			return index + 1
+	return fitting_length
+
+
+func _on_owner_dialogue_label_resized() -> void:
+	if (
+		owner_dialogue_full_text.is_empty()
+		or owner_dialogue_label.size.x <= 1.0
+		or is_equal_approx(owner_dialogue_label.size.x, owner_dialogue_layout_width)
+		or owner_dialogue_repagination_queued
+	):
+		return
+	owner_dialogue_repagination_queued = true
+	call_deferred("_repaginate_owner_dialogue_after_resize", owner_dialogue_generation)
+
+
+func _repaginate_owner_dialogue_after_resize(expected_generation: int) -> void:
+	owner_dialogue_repagination_queued = false
+	if expected_generation != owner_dialogue_generation or owner_dialogue_full_text.is_empty():
+		return
+	_present_owner_dialogue(owner_dialogue_full_text, true)
 
 
 func _play_owner_dialogue_voice() -> void:
@@ -506,7 +656,7 @@ func _apply_shelf_highlight(button: Button, slot: ShelfSlotState) -> void:
 	var matches: bool = (
 		highlight_rule != null
 		and definition != null
-		and CardRuleEvaluator.evaluate(highlight_rule, definition).can_place
+		and CardRuleEvaluator.can_place(highlight_rule, definition)
 	)
 	button.add_theme_stylebox_override(
 		"normal",

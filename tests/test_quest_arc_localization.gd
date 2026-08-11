@@ -36,9 +36,16 @@ func test_all_quest_arc_content_keys_exist_in_chinese_and_english() -> void:
 		keys.append(recipe.base_rule.display_name_key)
 		for process_text_key in recipe.process_text_keys:
 			keys.append(process_text_key)
-	for persona_id in CardPropertySet.PROTAGONIST_STATS:
-		keys.append(StringName("demo.persona.%s.name" % persona_id))
-		keys.append(StringName("demo.persona.%s.description" % persona_id))
+	for persona_id in PersonaMaskCatalog.MASK_PERSONAS:
+		var mask := PersonaMaskCatalog.definition_for_persona(persona_id, 1)
+		keys.append(mask.display_name_key)
+		keys.append(mask.description_key)
+	for role_id in [&"base", &"fuel", &"mask"]:
+		keys.append(StringName("demo.ui.synthesis.%s" % role_id))
+		keys.append(StringName("demo.ui.synthesis.%s.description" % role_id))
+	keys.append(&"quest.ui.hand.items")
+	keys.append(&"quest.ui.hand.masks")
+	keys.append(&"demo.ui.synthesis.drag_result")
 	for raw_store in manifest.stores:
 		keys.append((raw_store as StoreDefinition).display_name_key)
 	for raw_unlock in manifest.store_unlocks:

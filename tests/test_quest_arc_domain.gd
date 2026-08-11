@@ -39,6 +39,14 @@ func test_tag_presence_and_scaled_threshold_are_evaluated_separately() -> void:
 	assert_true(result.can_place)
 	assert_false(result.value_satisfied)
 	assert_false(result.can_execute)
+	assert_true(CardRuleEvaluator.can_place(rule, item))
+	assert_false(CardRuleEvaluator.can_execute(rule, item))
+	requirement.minimum = 3
+	assert_true(CardRuleEvaluator.can_execute(rule, item))
+	assert_eq(
+		CardRuleEvaluator.can_execute(rule, item),
+		bool(CardRuleEvaluator.evaluate(rule, item).can_execute),
+	)
 
 
 func test_exact_item_rule_is_suitable_for_map_unlocks() -> void:

@@ -4,6 +4,7 @@ extends PaperActivityPopup
 signal unlock_confirmed(store_id: StringName, card: CardItemState)
 signal staging_changed(card: CardItemState, staged: bool)
 signal rule_focused(rule: CardSlotRule)
+signal item_inspected(definition: CardItemDefinition)
 
 var state: QuestGameState
 var store_id: StringName
@@ -25,12 +26,16 @@ func _ready() -> void:
 	LocaleManager.locale_changed.connect(_on_locale_changed)
 	unlock_slot = QuestLocationUnlockSlot.new()
 	unlock_slot.name = "LocationUnlockSlot"
-	unlock_slot.setup(state, store_id, unlock_definition.slot_rule if unlock_definition != null else null)
+	unlock_slot.setup_unlock(
+		state,
+		store_id,
+		unlock_definition.slot_rule if unlock_definition != null else null,
+	)
 	unlock_slot.staging_changed.connect(_on_staging_changed)
 	unlock_slot.rule_focused.connect(rule_focused.emit)
+	unlock_slot.item_inspected.connect(item_inspected.emit)
 	slots_row.add_child(unlock_slot)
 	refresh()
-	call_deferred("_focus_rule")
 
 
 func refresh() -> void:
@@ -70,12 +75,7 @@ func _on_action_pressed() -> void:
 		unlock_confirmed.emit(store_id, unlock_slot.pending_card)
 
 
-func _focus_rule() -> void:
-	if unlock_definition != null:
-		rule_focused.emit(unlock_definition.slot_rule)
-
-
 func _on_locale_changed(_locale: String) -> void:
 	if unlock_slot != null:
-		unlock_slot._rebuild()
+		unlock_slot.refresh()
 	refresh()

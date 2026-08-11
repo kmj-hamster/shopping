@@ -5,6 +5,7 @@ const ASPECT_LAMP := &"lamp"
 const ASPECT_MIRROR := &"mirror"
 const ASPECT_GAUZE := &"gauze"
 const ASPECT_PILLOW := &"pillow"
+const PROPERTY_PERSONA := &"persona"
 const ASPECTS: Array[StringName] = [
 	ASPECT_LAMP,
 	ASPECT_MIRROR,

@@ -8,7 +8,8 @@ func test_manifest_is_the_shopping0807_demo_whitelist() -> void:
 	assert_eq(manifest.starting_item_ids, [
 		&"fries", &"sunflower", &"toy_block", &"soft_gauze", &"soft_gauze", &"mirror_shard",
 	])
-	assert_eq(manifest.properties.size(), 14)
+	assert_eq(manifest.properties.size(), 15)
+	assert_not_null(QuestArcCatalog.property_by_id(CardPropertySet.PROPERTY_PERSONA))
 	assert_eq(manifest.items.size(), 12)
 	assert_eq(manifest.tasks.size(), 4)
 	assert_eq(manifest.recipes.size(), 4)

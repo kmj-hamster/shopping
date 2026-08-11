@@ -658,13 +658,13 @@ msgid "demo.item.soft_gauze.name"
 msgstr "Soft Gauze"
 
 msgid "demo.item.soft_gauze.description"
-msgstr "A soft scrap carrying Gauze 2 and Pillow 2, useful only as a temporary aspect in synthesis."
+msgstr "A soft scrap carrying Gauze 2 and Pillow 2, useful as fuel that provides aspects in synthesis."
 
 msgid "demo.item.mirror_shard.name"
 msgstr "Old Mirror Shard"
 
 msgid "demo.item.mirror_shard.description"
-msgstr "An old shard carrying Mirror 2 and Lamp 2, useful only as a temporary aspect in synthesis."
+msgstr "An old shard carrying Mirror 2 and Lamp 2, useful as fuel that provides aspects in synthesis."
 
 msgid "demo.recipe.base.flower"
 msgstr "Any flower"
@@ -732,8 +732,56 @@ msgstr "Two thin blades bite together in your imagination."
 msgid "demo.ui.synthesis.base"
 msgstr "Material"
 
+msgid "demo.ui.synthesis.base.description"
+msgstr "I need one definite object on which to impose imagination. [The material provides all of its properties.]"
+
 msgid "demo.ui.synthesis.fuel"
-msgstr "Temporary Aspect"
+msgstr "Fuel"
+
+msgid "demo.ui.synthesis.fuel.description"
+msgstr "Something to make my imagination burn brighter, temporarily. [Fuel provides aspects only and will be consumed.]"
+
+msgid "demo.ui.synthesis.mask"
+msgstr "Mask"
+
+msgid "demo.ui.synthesis.mask.description"
+msgstr "What kind of resident of the night are you? [Provides an aspect and will not be consumed.]"
+
+msgid "quest.ui.hand.items"
+msgstr "Items"
+
+msgid "quest.ui.hand.masks"
+msgstr "Masks"
+
+msgid "demo.property.persona.name"
+msgstr "Persona"
+
+msgid "demo.property.persona.description"
+msgstr "A mask that names the shape you take in the night."
+
+msgid "demo.mask.nightwalker.name"
+msgstr "The Nightwalker"
+
+msgid "demo.mask.nightwalker.description"
+msgstr "A mask for one who follows lamplight through the long night."
+
+msgid "demo.mask.mourner.name"
+msgstr "The Mourner"
+
+msgid "demo.mask.mourner.description"
+msgstr "A mask for one who keeps watch over what was lost in the mirror."
+
+msgid "demo.mask.dreamwalker.name"
+msgstr "The Dreamwalker"
+
+msgid "demo.mask.dreamwalker.description"
+msgstr "A mask for one who walks into imagination through gauze."
+
+msgid "demo.mask.homecomer.name"
+msgstr "The Homecomer"
+
+msgid "demo.mask.homecomer.description"
+msgstr "A mask for one whom weariness guides home."
 
 msgid "demo.ui.synthesis.candidates"
 msgstr "Possible Shapes"
@@ -754,7 +802,7 @@ msgid "demo.ui.synthesis.flip_result"
 msgstr "Click to reveal"
 
 msgid "demo.ui.synthesis.drag_result"
-msgstr "Drag it to your hand, or simply leave"
+msgstr "Drag into hand"
 
 msgid "demo.task.girl.name"
 msgstr "The Little Girl's Request"

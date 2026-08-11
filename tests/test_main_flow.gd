@@ -118,10 +118,12 @@ func test_worn_teddy_can_be_used_for_both_second_step_recipes() -> void:
 	assert_true(state.select_synthesis_candidate(&"recipe_worn_teddy"))
 	var first_step := state.begin_synthesis()
 	assert_true(first_step.ok)
+	assert_true(state.synthesis_persona_id.is_empty())
 	var worn := first_step.output as CardItemState
 	assert_not_null(worn)
 	assert_true(state.assign_synthesis_base(worn).ok)
 	assert_true(state.assign_synthesis_fuel(soft_gauze_cards[1]).ok)
+	assert_true(state.select_synthesis_persona(&"ease"))
 	assert_true(state.select_synthesis_candidate(&"recipe_baby_teddy"))
 	assert_true(state.begin_synthesis().ok)
 	assert_not_null(_card_by_definition(state, &"baby_teddy"))

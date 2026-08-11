@@ -8,6 +8,10 @@ const NORMAL_CARD_GAP := 8.0
 const HOVER_CARD_GAP := 6.0
 const HOVER_Z_INDEX := 1000
 const CARD_REFLOW_SECONDS := 0.12
+const REORDER_DROP_MARGIN := Vector2(32, 38)
+const REORDER_OVERLAP_SLOP := 12.0
+const TAB_ITEMS := &"items"
+const TAB_MASKS := &"masks"
 
 var state: QuestGameState
 var highlight_rule: CardSlotRule
@@ -15,6 +19,10 @@ var card_scroll: ScrollContainer
 var card_row: Control
 var empty_label: Label
 var title_label: Label
+var item_tab_button: Button
+var mask_tab_button: Button
+var active_tab: StringName = TAB_ITEMS
+var mask_persona_order: Array[StringName] = PersonaMaskCatalog.MASK_PERSONAS.duplicate()
 var card_views: Dictionary = {}
 var card_wrappers: Dictionary = {}
 var temporarily_hidden_card_ids: Dictionary = {}
@@ -38,26 +46,43 @@ func setup(game_state: QuestGameState) -> void:
 
 
 func _ready() -> void:
-	custom_minimum_size = Vector2(0, 150)
+	custom_minimum_size = Vector2(0, 174)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	add_theme_stylebox_override(
 		"panel", UiPalette.panel_style(Color("020609", 0.94), Color("4f6968", 0.76))
 	)
 	var margin := MarginContainer.new()
+	margin.mouse_filter = Control.MOUSE_FILTER_PASS
 	margin.add_theme_constant_override("margin_left", 20)
 	margin.add_theme_constant_override("margin_right", 20)
 	margin.add_theme_constant_override("margin_top", 7)
 	margin.add_theme_constant_override("margin_bottom", 7)
 	add_child(margin)
 	var column := VBoxContainer.new()
+	column.mouse_filter = Control.MOUSE_FILTER_PASS
 	column.add_theme_constant_override("separation", 4)
 	margin.add_child(column)
+	var tab_row := HBoxContainer.new()
+	tab_row.custom_minimum_size = Vector2(0, 22)
+	tab_row.add_theme_constant_override("separation", 3)
+	column.add_child(tab_row)
 	title_label = Label.new()
+	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_label.add_theme_font_size_override("font_size", 12)
 	title_label.add_theme_color_override("font_color", Color("8ca49f"))
 	title_label.visible = false
-	column.add_child(title_label)
+	tab_row.add_child(title_label)
+	var tab_spacer := Control.new()
+	tab_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tab_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tab_row.add_child(tab_spacer)
+	var tab_group := ButtonGroup.new()
+	item_tab_button = _make_tab_button(&"quest.ui.hand.items", TAB_ITEMS, tab_group)
+	mask_tab_button = _make_tab_button(&"quest.ui.hand.masks", TAB_MASKS, tab_group)
+	tab_row.add_child(item_tab_button)
+	tab_row.add_child(mask_tab_button)
 	card_scroll = ScrollContainer.new()
+	card_scroll.mouse_filter = Control.MOUSE_FILTER_PASS
 	card_scroll.custom_minimum_size = Vector2(0, 132)
 	card_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	card_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -65,16 +90,86 @@ func _ready() -> void:
 	card_scroll.resized.connect(_queue_card_layout)
 	column.add_child(card_scroll)
 	card_row = Control.new()
+	card_row.mouse_filter = Control.MOUSE_FILTER_PASS
 	card_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	card_row.custom_minimum_size = Vector2(0, CardHandCard.CARD_SIZE.y)
 	card_scroll.add_child(card_row)
 	LocaleManager.locale_changed.connect(_on_locale_changed)
 	_refresh_locale()
+	_update_tab_buttons()
 	refresh()
+
+
+func _make_tab_button(
+	text_key: StringName,
+	tab_id: StringName,
+	group: ButtonGroup,
+) -> Button:
+	var button := Button.new()
+	button.custom_minimum_size = Vector2(58, 22)
+	button.toggle_mode = true
+	button.button_group = group
+	button.focus_mode = Control.FOCUS_NONE
+	button.add_theme_font_size_override("font_size", 11)
+	button.text = TranslationServer.translate(text_key)
+	button.pressed.connect(show_tab.bind(tab_id))
+	return button
 
 
 func refresh() -> void:
 	_reconcile_cards(true)
+
+
+func show_tab(tab_id: StringName) -> void:
+	if tab_id not in [TAB_ITEMS, TAB_MASKS]:
+		return
+	if active_tab == tab_id:
+		_update_tab_buttons()
+		return
+	active_tab = tab_id
+	hovered_card_id = -1
+	_update_tab_buttons()
+	_reconcile_cards(true)
+
+
+func show_tab_for_rule(rule: CardSlotRule) -> void:
+	show_tab(TAB_MASKS if PersonaMaskCatalog.rule_uses_masks(rule) else TAB_ITEMS)
+
+
+func _update_tab_buttons() -> void:
+	if item_tab_button != null:
+		item_tab_button.button_pressed = active_tab == TAB_ITEMS
+	if mask_tab_button != null:
+		mask_tab_button.button_pressed = active_tab == TAB_MASKS
+
+
+func _visible_card_entries() -> Array:
+	var entries: Array = []
+	if state == null:
+		return entries
+	if active_tab == TAB_MASKS:
+		PersonaMaskCatalog.sync_selection(state.synthesis_persona_id)
+		for persona_id in mask_persona_order:
+			var mask_card := PersonaMaskCatalog.card_for_persona(persona_id)
+			if mask_card.location != CardItemState.Location.HAND:
+				continue
+			entries.append([
+				mask_card,
+				PersonaMaskCatalog.definition_for_persona(
+					persona_id,
+					int(state.protagonist_aspect_counts.get(persona_id, 0)),
+				),
+			])
+		return entries
+	for card in state.inventory:
+		if card.location != CardItemState.Location.HAND:
+			continue
+		if temporarily_hidden_card_ids.has(card.instance_id):
+			continue
+		var definition := QuestArcCatalog.item_by_id(card.definition_id)
+		if definition != null:
+			entries.append([card, definition])
+	return entries
 
 
 func _reconcile_cards(refresh_existing: bool = false) -> void:
@@ -82,34 +177,23 @@ func _reconcile_cards(refresh_existing: bool = false) -> void:
 		return
 	rebuilding_cards = true
 	var desired_cards: Dictionary = {}
-	if state != null:
-		for card in state.inventory:
-			if card.location != CardItemState.Location.HAND:
-				continue
-			if temporarily_hidden_card_ids.has(card.instance_id):
-				continue
-			var definition := QuestArcCatalog.item_by_id(card.definition_id)
-			if definition != null:
-				desired_cards[card.instance_id] = [card, definition]
+	var entries := _visible_card_entries()
+	for entry in entries:
+		var card := entry[0] as CardItemState
+		desired_cards[card.instance_id] = entry
 
 	for raw_instance_id in card_views.keys().duplicate():
 		var instance_id := int(raw_instance_id)
 		if not desired_cards.has(instance_id):
 			_remove_card_view(instance_id)
 
-	if state != null:
-		for card in state.inventory:
-			if card.location != CardItemState.Location.HAND:
-				continue
-			if temporarily_hidden_card_ids.has(card.instance_id):
-				continue
-			var definition := QuestArcCatalog.item_by_id(card.definition_id)
-			if definition == null:
-				continue
-			if not card_views.has(card.instance_id):
-				_create_card_view(card, definition)
-			elif refresh_existing:
-				(card_views[card.instance_id] as CardHandCard).setup(card, definition)
+	for entry in entries:
+		var card := entry[0] as CardItemState
+		var definition := entry[1] as CardItemDefinition
+		if not card_views.has(card.instance_id):
+			_create_card_view(card, definition)
+		elif refresh_existing:
+			(card_views[card.instance_id] as CardHandCard).setup(card, definition)
 	rebuilding_cards = false
 	_layout_cards_for_rule()
 	_sync_empty_label()
@@ -169,6 +253,7 @@ func _sync_empty_label() -> void:
 		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		empty_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		empty_label.add_theme_color_override("font_color", Color("60736f"))
+		empty_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		card_row.add_child(empty_label)
 	empty_label.text = TranslationServer.translate(&"quest.ui.hand.empty")
 
@@ -183,17 +268,11 @@ func set_highlight_rule(rule: CardSlotRule) -> void:
 func _layout_cards_for_rule() -> void:
 	if state == null or card_row == null:
 		return
-	var matching_ids: Array[int] = []
-	var remaining_ids: Array[int] = []
-	for card in state.inventory:
-		if not card_views.has(card.instance_id):
-			continue
-		var view := card_views[card.instance_id] as CardHandCard
-		if view.rule_match_highlighted:
-			matching_ids.append(card.instance_id)
-		else:
-			remaining_ids.append(card.instance_id)
-	var ordered_ids := matching_ids + remaining_ids
+	var ordered_ids: Array[int] = []
+	for entry in _visible_card_entries():
+		var card := entry[0] as CardItemState
+		if card_views.has(card.instance_id):
+			ordered_ids.append(card.instance_id)
 	for index in range(ordered_ids.size()):
 		var instance_id := ordered_ids[index]
 		var wrapper := card_wrappers[instance_id] as Control
@@ -349,30 +428,110 @@ func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 	if state == null or typeof(data) != TYPE_DICTIONARY:
 		return false
 	var card := data.get("card") as CardItemState
-	return data.get("kind") == &"card_item" and card != null and card in state.inventory
+	if data.get("kind") != &"card_item" or card == null:
+		return false
+	var persona_id := PersonaMaskCatalog.persona_for_card(card)
+	if not persona_id.is_empty():
+		return (
+			active_tab == TAB_MASKS
+			and (
+				card.location == CardItemState.Location.HAND
+				or state.synthesis_persona_id == persona_id
+			)
+		)
+	return card in state.inventory
+
+
+func _has_point(point: Vector2) -> bool:
+	return Rect2(-REORDER_DROP_MARGIN, size + REORDER_DROP_MARGIN * 2.0).has_point(point)
 
 
 func _drop_data(at_position: Vector2, data: Variant) -> void:
 	var card := data.get("card") as CardItemState
 	if card == null:
 		return
-	var target_index := _hand_insertion_index(at_position, card)
+	var persona_id := PersonaMaskCatalog.persona_for_card(card)
+	if not persona_id.is_empty():
+		if state.synthesis_persona_id == persona_id:
+			state.select_synthesis_persona(persona_id)
+			show_tab(TAB_MASKS)
+			return
+		var mask_grab_offset: Vector2 = data.get(
+			"grab_offset", CardHandCard.CARD_SIZE * 0.5
+		)
+		var mask_target_index := _hand_insertion_index(
+			at_position,
+			card,
+			mask_grab_offset,
+		)
+		_reorder_mask_card(persona_id, mask_target_index)
+		return
+	var grab_offset: Vector2 = data.get("grab_offset", CardHandCard.CARD_SIZE * 0.5)
+	var target_index := _hand_insertion_index(at_position, card, grab_offset)
 	state.move_card_to_hand(card, target_index)
 
 
-func _hand_insertion_index(at_position: Vector2, dragged_card: CardItemState) -> int:
+func _hand_insertion_index(
+	at_position: Vector2,
+	dragged_card: CardItemState,
+	grab_offset: Vector2 = CardHandCard.CARD_SIZE * 0.5,
+) -> int:
 	var pointer_global_x := get_global_rect().position.x + at_position.x
-	var pointer_x := pointer_global_x - card_row.get_global_rect().position.x
-	var insertion_index := 0
-	for child in card_row.get_children():
-		var view := _card_view_for_row_child(child)
-		if view == null or view.card == dragged_card:
+	var dragged_left := pointer_global_x - grab_offset.x
+	var dragged_right := dragged_left + CardHandCard.CARD_SIZE.x
+	var dragged_center := (dragged_left + dragged_right) * 0.5
+	var candidate_centers: Array[float] = []
+	var overlapping_indices: Array[int] = []
+	for entry in _visible_card_entries():
+		var card := entry[0] as CardItemState
+		if card == dragged_card or not card_views.has(card.instance_id):
 			continue
-		var target_x := float(card_target_positions.get(view.card.instance_id, child.position.x))
-		if pointer_x < target_x + CardHandCard.CARD_SIZE.x * 0.5:
-			return insertion_index
-		insertion_index += 1
-	return insertion_index
+		var view := card_views[card.instance_id] as CardHandCard
+		var rect := view.get_global_rect()
+		var candidate_index := candidate_centers.size()
+		candidate_centers.append(rect.get_center().x)
+		if (
+			dragged_right >= rect.position.x - REORDER_OVERLAP_SLOP
+			and dragged_left <= rect.end.x + REORDER_OVERLAP_SLOP
+		):
+			overlapping_indices.append(candidate_index)
+
+	if overlapping_indices.size() >= 2:
+		var best_insertion_index := overlapping_indices[0] + 1
+		var best_distance := INF
+		for overlap_index in range(overlapping_indices.size() - 1):
+			var left_index := overlapping_indices[overlap_index]
+			var right_index := overlapping_indices[overlap_index + 1]
+			if right_index != left_index + 1:
+				continue
+			var gap_center := (
+				candidate_centers[left_index] + candidate_centers[right_index]
+			) * 0.5
+			var distance := absf(dragged_center - gap_center)
+			if distance < best_distance:
+				best_distance = distance
+				best_insertion_index = right_index
+		return best_insertion_index
+	if overlapping_indices.size() == 1:
+		var overlapped_index := overlapping_indices[0]
+		return (
+			overlapped_index
+			if dragged_center <= candidate_centers[overlapped_index]
+			else overlapped_index + 1
+		)
+	for candidate_index in candidate_centers.size():
+		if dragged_center < candidate_centers[candidate_index]:
+			return candidate_index
+	return candidate_centers.size()
+
+
+func _reorder_mask_card(persona_id: StringName, target_index: int) -> void:
+	var current_index := mask_persona_order.find(persona_id)
+	if current_index < 0:
+		return
+	mask_persona_order.remove_at(current_index)
+	mask_persona_order.insert(clampi(target_index, 0, mask_persona_order.size()), persona_id)
+	_layout_cards_for_rule()
 
 
 func _card_view_for_row_child(child: Node) -> CardHandCard:
@@ -384,7 +543,11 @@ func _card_view_for_row_child(child: Node) -> CardHandCard:
 
 
 func _on_state_delta(delta: QuestStateDelta) -> void:
-	if delta != null and delta.affects_hand():
+	if delta == null:
+		return
+	if active_tab == TAB_MASKS:
+		_reconcile_cards(true)
+	elif delta.affects_hand():
 		_reconcile_cards()
 
 
@@ -396,3 +559,7 @@ func _on_locale_changed(_locale: String) -> void:
 func _refresh_locale() -> void:
 	if title_label != null:
 		title_label.text = TranslationServer.translate(&"quest.ui.hand.title")
+	if item_tab_button != null:
+		item_tab_button.text = TranslationServer.translate(&"quest.ui.hand.items")
+	if mask_tab_button != null:
+		mask_tab_button.text = TranslationServer.translate(&"quest.ui.hand.masks")

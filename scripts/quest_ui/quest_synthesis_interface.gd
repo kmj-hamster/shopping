@@ -3,8 +3,11 @@ extends Control
 
 signal leave_requested
 signal item_inspected(definition: CardItemDefinition)
+signal property_inspected(property_id: StringName)
+signal hand_tab_requested(tab_id: StringName)
 signal card_staging_changed(card: CardItemState, staged: bool)
 signal details_cleared
+signal background_pressed
 
 enum Phase {
 	DRAFT,
@@ -26,14 +29,13 @@ var phase := Phase.DRAFT
 var draft_layer: Control
 var totals_row: HBoxContainer
 var base_slot_host: CenterContainer
+var mask_slot_host: CenterContainer
 var fuel_slot_host: CenterContainer
 var candidate_list: VBoxContainer
 var candidate_empty_label: Label
 var candidate_buttons: Dictionary = {}
 var candidate_views: Dictionary = {}
-var persona_row: HBoxContainer
-var persona_buttons: Dictionary = {}
-var persona_definitions: Dictionary = {}
+var material_help_definitions: Dictionary = {}
 var action_button: Button
 var material_slots: Array[QuestSynthesisMaterialSlot] = []
 var total_chip_views: Dictionary = {}
@@ -48,11 +50,14 @@ var current_narrative_label: Label
 var result_layer: Control
 var result_holder: CenterContainer
 var result_hint: Label
+var result_back_button: Button
+var result_card_view: CardHandCard
 var pending_output: CardItemState
 var result_revealed := false
 var debug_update_counts: Dictionary = {}
 var last_delta_update_usec := 0
 var max_delta_update_usec := 0
+var background_input: Control
 
 
 func setup(game_state: QuestGameState) -> void:
@@ -82,7 +87,6 @@ func refresh() -> void:
 	_rebuild_totals(snapshot)
 	_rebuild_material_slots(snapshot, true)
 	_rebuild_candidates(snapshot)
-	_rebuild_personas()
 	_update_action_button()
 
 
@@ -90,6 +94,12 @@ func reset_debug_update_counts() -> void:
 	debug_update_counts.clear()
 	last_delta_update_usec = 0
 	max_delta_update_usec = 0
+
+
+func _on_background_gui_input(event: InputEvent) -> void:
+	var click := event as InputEventMouseButton
+	if click != null and click.button_index == MOUSE_BUTTON_LEFT and click.pressed:
+		background_pressed.emit()
 
 
 func _record_update(section: StringName) -> void:
@@ -104,14 +114,37 @@ func _update_action_button() -> void:
 
 
 func can_stage_card(role_id: StringName, card: CardItemState) -> bool:
-	if state == null or card == null or card not in state.inventory:
+	if state == null or card == null:
 		return false
-	if card.location != CardItemState.Location.HAND:
+	if role_id == &"mask":
+		var persona_id := PersonaMaskCatalog.persona_for_card(card)
+		return (
+			not persona_id.is_empty()
+			and card.location == CardItemState.Location.HAND
+			and state.synthesis_persona_id != persona_id
+		)
+	if card not in state.inventory:
+		return false
+	if card.location not in [
+		CardItemState.Location.HAND,
+		CardItemState.Location.ACTIVITY_SLOT,
+	]:
+		return false
+	if (
+		card.location == CardItemState.Location.ACTIVITY_SLOT
+		and card.activity_id == &"synthesis"
+		and card.slot_id == role_id
+	):
 		return false
 	return role_id in [&"base", &"fuel"]
 
 
 func stage_card(role_id: StringName, card: CardItemState) -> bool:
+	if role_id == &"mask":
+		var persona_id := PersonaMaskCatalog.persona_for_card(card)
+		return not persona_id.is_empty() and state.select_synthesis_persona(persona_id)
+	if role_id not in [&"base", &"fuel"]:
+		return false
 	var result := (
 		state.assign_synthesis_base(card)
 		if role_id == &"base"
@@ -120,9 +153,20 @@ func stage_card(role_id: StringName, card: CardItemState) -> bool:
 	return bool(result.ok)
 
 
-func remove_material(_role_id: StringName, card: CardItemState) -> void:
-	if state != null:
-		state.return_card_to_hand(card)
+func definition_for_card(card: CardItemState) -> CardItemDefinition:
+	var mask_definition := PersonaMaskCatalog.definition_for_card(
+		card,
+		state.protagonist_aspect_counts if state != null else {},
+	)
+	if mask_definition != null:
+		return mask_definition
+	return QuestArcCatalog.item_by_id(card.definition_id) if card != null else null
+
+
+func request_hand_tab_for_role(role_id: StringName) -> void:
+	hand_tab_requested.emit(
+		QuestHandBar.TAB_MASKS if role_id == &"mask" else QuestHandBar.TAB_ITEMS
+	)
 
 
 func cancel_pending_inputs() -> void:
@@ -157,6 +201,12 @@ func _build_interface() -> void:
 	distant_glow.anchor_bottom = 0.94
 	distant_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(distant_glow)
+	background_input = Control.new()
+	background_input.name = "SynthesisBackgroundInput"
+	background_input.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	background_input.mouse_filter = Control.MOUSE_FILTER_STOP
+	background_input.gui_input.connect(_on_background_gui_input)
+	add_child(background_input)
 
 	var title := Label.new()
 	title.name = "SynthesisTitle"
@@ -169,35 +219,24 @@ func _build_interface() -> void:
 	title.text = TranslationServer.translate(&"quest.ui.synthesis.title")
 	add_child(title)
 
-	var close_button := Button.new()
-	close_button.name = "LeaveSynthesisButton"
-	close_button.anchor_left = 0.935
-	close_button.anchor_top = 0.025
-	close_button.anchor_right = 0.985
-	close_button.anchor_bottom = 0.105
-	close_button.text = "×"
-	close_button.tooltip_text = TranslationServer.translate(&"demo.ui.synthesis.leave")
-	close_button.pressed.connect(leave_requested.emit)
-	add_child(close_button)
-
 	draft_layer = Control.new()
 	draft_layer.name = "SynthesisDraft"
 	draft_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	draft_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(draft_layer)
 	_build_totals_panel()
 	_build_material_region()
 	_build_candidate_region()
-	_build_persona_region()
 	_build_narrative_overlay()
 	_build_result_layer()
 
 
 func _build_totals_panel() -> void:
 	var panel := PanelContainer.new()
-	panel.anchor_left = 0.25
-	panel.anchor_top = 0.035
-	panel.anchor_right = 0.75
-	panel.anchor_bottom = 0.16
+	panel.anchor_left = 0.315
+	panel.anchor_top = 0.09
+	panel.anchor_right = 0.685
+	panel.anchor_bottom = 0.215
 	panel.add_theme_stylebox_override(
 		"panel", UiPalette.panel_style(Color("061216", 0.78), Color("607a73", 0.62))
 	)
@@ -230,13 +269,20 @@ func _build_totals_panel() -> void:
 
 
 func _build_material_region() -> void:
-	base_slot_host = _make_slot_host(0.04, 0.28, 0.29, 0.67, &"demo.ui.synthesis.base")
-	fuel_slot_host = _make_slot_host(0.71, 0.28, 0.96, 0.67, &"demo.ui.synthesis.fuel")
-	for role_id in [&"base", &"fuel"]:
+	base_slot_host = _make_slot_host(0.0625, 0.33, 0.2525, 0.74, &"demo.ui.synthesis.base")
+	mask_slot_host = _make_slot_host(0.700, 0.33, 0.825, 0.74, &"demo.ui.synthesis.mask")
+	fuel_slot_host = _make_slot_host(0.835, 0.33, 0.960, 0.74, &"demo.ui.synthesis.fuel")
+	for role_id in [&"base", &"fuel", &"mask"]:
 		var slot := QuestSynthesisMaterialSlot.new()
 		slot.setup(self, role_id, null)
 		slot.item_inspected.connect(item_inspected.emit)
-		(base_slot_host if role_id == &"base" else fuel_slot_host).add_child(slot)
+		slot.help_requested.connect(_on_material_help_requested)
+		var host := base_slot_host
+		if role_id == &"fuel":
+			host = fuel_slot_host
+		elif role_id == &"mask":
+			host = mask_slot_host
+		host.add_child(slot)
 		material_slots.append(slot)
 
 
@@ -252,7 +298,7 @@ func _make_slot_host(
 	panel.anchor_top = top
 	panel.anchor_right = right
 	panel.anchor_bottom = bottom
-	panel.add_theme_stylebox_override("panel", UiPalette.panel_style(Color("031014", 0.36)))
+	panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	draft_layer.add_child(panel)
 	var column := VBoxContainer.new()
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -272,10 +318,10 @@ func _make_slot_host(
 
 func _build_candidate_region() -> void:
 	var panel := PanelContainer.new()
-	panel.anchor_left = 0.30
-	panel.anchor_top = 0.19
-	panel.anchor_right = 0.70
-	panel.anchor_bottom = 0.68
+	panel.anchor_left = 0.315
+	panel.anchor_top = 0.25
+	panel.anchor_right = 0.685
+	panel.anchor_bottom = 0.75
 	panel.add_theme_stylebox_override(
 		"panel", UiPalette.panel_style(Color("040b0e", 0.84), Color("836f48", 0.72))
 	)
@@ -319,39 +365,6 @@ func _build_candidate_region() -> void:
 	column.add_child(action_button)
 
 
-func _build_persona_region() -> void:
-	var panel := PanelContainer.new()
-	panel.anchor_left = 0.15
-	panel.anchor_top = 0.70
-	panel.anchor_right = 0.85
-	panel.anchor_bottom = 0.985
-	panel.add_theme_stylebox_override(
-		"panel", UiPalette.panel_style(Color("031014", 0.56), Color("506b66", 0.54))
-	)
-	draft_layer.add_child(panel)
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 10)
-	margin.add_theme_constant_override("margin_right", 10)
-	margin.add_theme_constant_override("margin_top", 7)
-	margin.add_theme_constant_override("margin_bottom", 7)
-	panel.add_child(margin)
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 5)
-	margin.add_child(column)
-	var heading := Label.new()
-	heading.name = "PersonaHeading"
-	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	heading.add_theme_font_size_override("font_size", 12)
-	heading.add_theme_color_override("font_color", Color("8ea59f"))
-	heading.text = TranslationServer.translate(&"demo.ui.synthesis.personas")
-	column.add_child(heading)
-	persona_row = HBoxContainer.new()
-	persona_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	persona_row.add_theme_constant_override("separation", 9)
-	column.add_child(persona_row)
-	_create_persona_buttons()
-
-
 func _build_narrative_overlay() -> void:
 	narrative_overlay = ColorRect.new()
 	narrative_overlay.name = "SynthesisNarrative"
@@ -375,13 +388,12 @@ func _build_result_layer() -> void:
 	result_layer = Control.new()
 	result_layer.name = "SynthesisResult"
 	result_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	result_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(result_layer)
-	_add_result_empty_slot(0.08, 0.30, 0.28, 0.66)
-	_add_result_empty_slot(0.72, 0.30, 0.92, 0.66)
 	var center := CenterContainer.new()
-	center.anchor_left = 0.28
+	center.anchor_left = 0.315
 	center.anchor_top = 0.18
-	center.anchor_right = 0.72
+	center.anchor_right = 0.685
 	center.anchor_bottom = 0.76
 	result_layer.add_child(center)
 	var column := VBoxContainer.new()
@@ -391,39 +403,26 @@ func _build_result_layer() -> void:
 	result_holder = CenterContainer.new()
 	result_holder.custom_minimum_size = Vector2(190, 190)
 	column.add_child(result_holder)
+	result_back_button = Button.new()
+	result_back_button.name = "SynthesisResultBack"
+	result_back_button.custom_minimum_size = CardHandCard.CARD_SIZE
+	result_back_button.text = "◇\n◇\n◇"
+	result_back_button.add_theme_font_size_override("font_size", 24)
+	result_back_button.pressed.connect(_reveal_result)
+	result_holder.add_child(result_back_button)
+	result_card_view = CardHandCard.new()
+	result_card_view.name = "SynthesisResultCard"
+	result_card_view.inspect_requested.connect(item_inspected.emit)
+	result_card_view.drag_finished.connect(_on_result_drag_finished)
+	result_holder.add_child(result_card_view)
+	result_back_button.visible = false
+	result_card_view.visible = false
 	result_hint = Label.new()
 	result_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	result_hint.add_theme_font_size_override("font_size", 13)
 	result_hint.add_theme_color_override("font_color", Color("c8bea0"))
 	column.add_child(result_hint)
 	result_layer.visible = false
-
-
-func _add_result_empty_slot(left: float, top: float, right: float, bottom: float) -> void:
-	var host := CenterContainer.new()
-	host.anchor_left = left
-	host.anchor_top = top
-	host.anchor_right = right
-	host.anchor_bottom = bottom
-	result_layer.add_child(host)
-	var empty_slot := PanelContainer.new()
-	empty_slot.custom_minimum_size = QuestSynthesisMaterialSlot.SLOT_SIZE
-	var style := UiPalette.panel_style(Color("050708", 0.54), Color("6e6958", 0.50))
-	style.corner_radius_top_left = 58
-	style.corner_radius_top_right = 58
-	style.corner_radius_bottom_left = 58
-	style.corner_radius_bottom_right = 58
-	style.set_border_width_all(2)
-	empty_slot.add_theme_stylebox_override("panel", style)
-	host.add_child(empty_slot)
-	var mark := Label.new()
-	mark.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	mark.text = "+"
-	mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	mark.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	mark.add_theme_font_size_override("font_size", 40)
-	mark.add_theme_color_override("font_color", Color("65716d", 0.64))
-	empty_slot.add_child(mark)
 
 
 func _rebuild_totals(snapshot: Dictionary) -> void:
@@ -486,7 +485,9 @@ func _create_total_chip(tag: StringName) -> Dictionary:
 	var chip := HBoxContainer.new()
 	chip.add_theme_constant_override("separation", 3)
 	var icon := ItemDetailPopup.make_property_icon_button(tag, 28)
-	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.toggle_mode = false
+	icon.mouse_filter = Control.MOUSE_FILTER_STOP
+	icon.pressed.connect(_on_total_property_pressed.bind(tag))
 	chip.add_child(icon)
 	var value := Label.new()
 	value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -494,18 +495,31 @@ func _create_total_chip(tag: StringName) -> Dictionary:
 	value.add_theme_color_override("font_color", Color("e8ddbf"))
 	chip.add_child(value)
 	totals_row.add_child(chip)
-	return {"root": chip, "value": value}
+	return {"root": chip, "button": icon, "value": value}
+
+
+func _on_total_property_pressed(property_id: StringName) -> void:
+	property_inspected.emit(property_id)
 
 
 func _rebuild_material_slots(snapshot: Dictionary, force_refresh: bool = false) -> void:
 	_record_update(&"materials")
-	if material_slots.size() != 2:
+	if material_slots.size() != 3:
 		return
+	PersonaMaskCatalog.sync_selection(state.synthesis_persona_id)
 	material_slots[0].setup(
 		self, &"base", snapshot.get("base_card") as CardItemState, force_refresh
 	)
 	material_slots[1].setup(
 		self, &"fuel", snapshot.get("fuel_card") as CardItemState, force_refresh
+	)
+	material_slots[2].setup(
+		self,
+		&"mask",
+		PersonaMaskCatalog.card_for_persona(state.synthesis_persona_id)
+		if not state.synthesis_persona_id.is_empty()
+		else null,
+		force_refresh,
 	)
 
 
@@ -613,29 +627,6 @@ func _add_requirement_chip(
 	return value
 
 
-func _rebuild_personas() -> void:
-	_record_update(&"persona_text")
-	for persona_id in CardPropertySet.PROTAGONIST_STATS:
-		var definition := _persona_definition(persona_id)
-		var button := persona_buttons[persona_id] as Button
-		button.button_pressed = state.synthesis_persona_id == persona_id
-		button.text = "%s\n%s  %d" % [
-			definition.localized_name(),
-			TranslationServer.translate(
-				QuestArcCatalog.property_by_id(CardPropertySet.aspect_for_persona(persona_id)).display_name_key
-			),
-			int(state.protagonist_aspect_counts.get(persona_id, 0)),
-		]
-
-
-func _update_persona_selection() -> void:
-	_record_update(&"persona_selection")
-	for persona_id in persona_buttons:
-		(persona_buttons[persona_id] as Button).button_pressed = (
-			state.synthesis_persona_id == persona_id
-		)
-
-
 func _update_candidate_selection() -> void:
 	_record_update(&"candidate_selection")
 	for recipe_id in candidate_buttons:
@@ -644,42 +635,28 @@ func _update_candidate_selection() -> void:
 		)
 
 
-func _create_persona_buttons() -> void:
-	for persona_id in CardPropertySet.PROTAGONIST_STATS:
-		var button := Button.new()
-		button.custom_minimum_size = Vector2(118, 82)
-		button.toggle_mode = true
-		button.add_theme_font_size_override("font_size", 13)
-		button.pressed.connect(_on_persona_pressed.bind(persona_id))
-		persona_row.add_child(button)
-		persona_buttons[persona_id] = button
+func _on_material_help_requested(role_id: StringName) -> void:
+	var definition := _material_help_definition(role_id)
+	if definition != null:
+		item_inspected.emit(definition)
 
 
-func _persona_definition(persona_id: StringName) -> CardItemDefinition:
-	var definition := persona_definitions.get(persona_id) as CardItemDefinition
+func _material_help_definition(role_id: StringName) -> CardItemDefinition:
+	if role_id not in [&"base", &"fuel", &"mask"]:
+		return null
+	var definition := material_help_definitions.get(role_id) as CardItemDefinition
 	if definition == null:
 		definition = CardItemDefinition.new()
-		definition.id = StringName("persona_%s" % persona_id)
-		definition.display_name_key = StringName("demo.persona.%s.name" % persona_id)
-		definition.description_key = StringName("demo.persona.%s.description" % persona_id)
+		definition.id = StringName("synthesis_%s_help" % role_id)
+		definition.display_name_key = StringName("demo.ui.synthesis.%s" % role_id)
+		definition.description_key = StringName(
+			"demo.ui.synthesis.%s.description" % role_id
+		)
 		definition.can_recycle = false
 		definition.can_be_synthesis_base = false
 		definition.property_set = CardPropertySet.new()
-		definition.image = ItemDetailPopup.property_icon_texture(
-			CardPropertySet.aspect_for_persona(persona_id)
-		)
-		persona_definitions[persona_id] = definition
-	definition.property_set.values = {
-		CardPropertySet.aspect_for_persona(persona_id): int(
-			state.protagonist_aspect_counts.get(persona_id, 0)
-		),
-	}
+		material_help_definitions[role_id] = definition
 	return definition
-
-
-func _on_persona_pressed(persona_id: StringName) -> void:
-	if state.select_synthesis_persona(persona_id):
-		item_inspected.emit(_persona_definition(persona_id))
 
 
 func _on_candidate_pressed(recipe_id: StringName) -> void:
@@ -770,25 +747,17 @@ func _show_result() -> void:
 
 
 func _rebuild_result() -> void:
-	for child in result_holder.get_children():
-		child.free()
+	result_back_button.visible = false
+	result_card_view.visible = false
 	if pending_output == null:
 		return
 	if not result_revealed:
-		var back := Button.new()
-		back.custom_minimum_size = CardHandCard.CARD_SIZE
-		back.text = "◇\n◇\n◇"
-		back.add_theme_font_size_override("font_size", 24)
-		back.pressed.connect(_reveal_result)
-		result_holder.add_child(back)
+		result_back_button.visible = true
 		result_hint.text = TranslationServer.translate(&"demo.ui.synthesis.flip_result")
 		return
 	var definition := QuestArcCatalog.item_by_id(pending_output.definition_id)
-	var card_view := CardHandCard.new()
-	card_view.setup(pending_output, definition, true)
-	card_view.inspect_requested.connect(item_inspected.emit)
-	card_view.drag_finished.connect(_on_result_drag_finished)
-	result_holder.add_child(card_view)
+	result_card_view.setup(pending_output, definition, true)
+	result_card_view.visible = true
 	result_hint.text = TranslationServer.translate(&"demo.ui.synthesis.drag_result")
 
 
@@ -827,7 +796,7 @@ func _on_state_delta(delta: QuestStateDelta) -> void:
 		_update_action_button()
 	elif delta.synthesis_persona_changed:
 		var snapshot := state.synthesis_evaluation_snapshot()
-		_update_persona_selection()
+		_rebuild_material_slots(snapshot)
 		_rebuild_totals(snapshot)
 		_rebuild_candidates(snapshot)
 		_update_action_button()
@@ -840,18 +809,12 @@ func _on_state_delta(delta: QuestStateDelta) -> void:
 
 func _on_locale_changed(_locale: String) -> void:
 	var title := find_child("SynthesisTitle", true, false) as Label
-	var leave_button := find_child("LeaveSynthesisButton", true, false) as Button
 	var totals_heading := find_child("TotalsHeading", true, false) as Label
 	var candidate_heading := find_child("CandidateHeading", true, false) as Label
-	var persona_heading := find_child("PersonaHeading", true, false) as Label
 	if title != null:
 		title.text = TranslationServer.translate(&"quest.ui.synthesis.title")
-	if leave_button != null:
-		leave_button.tooltip_text = TranslationServer.translate(&"demo.ui.synthesis.leave")
 	if totals_heading != null:
 		totals_heading.text = TranslationServer.translate(&"demo.ui.synthesis.totals")
 	if candidate_heading != null:
 		candidate_heading.text = TranslationServer.translate(&"demo.ui.synthesis.candidates")
-	if persona_heading != null:
-		persona_heading.text = TranslationServer.translate(&"demo.ui.synthesis.personas")
 	refresh()

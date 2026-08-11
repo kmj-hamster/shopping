@@ -4,6 +4,8 @@ extends Control
 signal shop_requested(store_id: StringName)
 signal card_staging_changed(card: CardItemState, staged: bool)
 signal rule_focused(rule: CardSlotRule)
+signal item_inspected(definition: CardItemDefinition)
+signal background_pressed
 
 var state: QuestGameState
 var store_hotspots: Dictionary = {}
@@ -11,6 +13,8 @@ var notice_label: Label
 var notice_panel: PanelContainer
 var location_popup: QuestLocationPopup
 var location_popups: Dictionary = {}
+var background_input: Control
+var debug_refresh_count := 0
 
 
 func setup(game_state: QuestGameState) -> void:
@@ -29,13 +33,14 @@ func _ready() -> void:
 
 
 func _bind_state() -> void:
-	if state != null and not state.state_changed.is_connected(refresh):
-		state.state_changed.connect(refresh)
+	if state != null and not state.state_delta.is_connected(_on_state_delta):
+		state.state_delta.connect(_on_state_delta)
 
 
 func refresh() -> void:
 	if state == null:
 		return
+	debug_refresh_count += 1
 	for store_id in store_hotspots:
 		var hotspot := store_hotspots[store_id] as QuestStoreHotspot
 		var store := QuestArcCatalog.store_by_id(store_id)
@@ -71,6 +76,12 @@ func _build_interface() -> void:
 	night_filter.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	night_filter.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(night_filter)
+	background_input = Control.new()
+	background_input.name = "MapBackgroundInput"
+	background_input.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	background_input.mouse_filter = Control.MOUSE_FILTER_STOP
+	background_input.gui_input.connect(_on_background_gui_input)
+	add_child(background_input)
 
 	var layout := {
 		&"flower": Vector2(0.40, 0.61),
@@ -140,12 +151,12 @@ func _open_location_popup(store_id: StringName) -> void:
 		location_popup.closed.connect(_close_location_popup)
 		location_popup.staging_changed.connect(card_staging_changed.emit)
 		location_popup.rule_focused.connect(rule_focused.emit)
+		location_popup.item_inspected.connect(item_inspected.emit)
 		location_popup.unlock_confirmed.connect(_on_unlock_confirmed)
 		add_child(location_popup)
 		location_popups[store_id] = location_popup
 	else:
 		location_popup.refresh()
-		location_popup._focus_rule()
 	location_popup.visible = true
 
 
@@ -169,3 +180,17 @@ func _on_unlock_confirmed(store_id: StringName, card: CardItemState) -> void:
 
 func _on_locale_changed(_locale: String) -> void:
 	refresh()
+
+
+func _on_background_gui_input(event: InputEvent) -> void:
+	var click := event as InputEventMouseButton
+	if click == null or click.button_index != MOUSE_BUTTON_LEFT or not click.pressed:
+		return
+	if location_popup != null:
+		_close_location_popup()
+	background_pressed.emit()
+
+
+func _on_state_delta(delta: QuestStateDelta) -> void:
+	if delta != null and delta.affects_map():
+		refresh()
