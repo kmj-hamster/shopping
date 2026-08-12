@@ -5,11 +5,13 @@ enum Category {
 	ORDER,
 	SELF_CARE,
 	OWNER_REQUEST,
+	GIFT,
 }
 
 enum SettlementMode {
 	ARC,
 	OWNER_IMMEDIATE,
+	GIFT_PICKUP,
 }
 
 enum SlotMode {
@@ -26,6 +28,7 @@ enum SlotMode {
 @export_range(1, 999, 1) var activation_day := 1
 @export var owner_id: StringName
 @export var store_id: StringName
+@export var gift_item_id: StringName
 @export var slot_rules: Array[Resource] = []
 @export var outcomes: Array[Resource] = []
 @export var tie_priority: Array[StringName] = []
@@ -43,7 +46,10 @@ func validation_errors() -> PackedStringArray:
 	var errors := PackedStringArray()
 	if id.is_empty() or display_name_key.is_empty() or body_text_key.is_empty():
 		errors.append("Task needs id, display name, and body text: %s." % id)
-	if slot_rules.is_empty() or slot_rules.size() > 4:
+	var is_gift := category == Category.GIFT
+	if is_gift and not slot_rules.is_empty():
+		errors.append("Gift task %s cannot contain submission slots." % id)
+	elif not is_gift and (slot_rules.is_empty() or slot_rules.size() > 4):
 		errors.append("Task %s needs one to four slots." % id)
 	for raw_rule in slot_rules:
 		var rule := raw_rule as CardSlotRule
@@ -51,7 +57,9 @@ func validation_errors() -> PackedStringArray:
 			errors.append("Task %s contains an invalid slot rule." % id)
 		else:
 			errors.append_array(rule.validation_errors())
-	if outcomes.is_empty():
+	if is_gift and not outcomes.is_empty():
+		errors.append("Gift task %s cannot contain settlement outcomes." % id)
+	elif not is_gift and outcomes.is_empty():
 		errors.append("Task %s needs at least one outcome." % id)
 	var fallback_count := 0
 	for raw_outcome in outcomes:
@@ -61,9 +69,14 @@ func validation_errors() -> PackedStringArray:
 		else:
 			errors.append_array(outcome.validation_errors())
 			fallback_count += int(outcome.is_fallback)
-	if fallback_count != 1:
+	if not is_gift and fallback_count != 1:
 		errors.append("Task %s needs exactly one fallback outcome." % id)
-	if category == Category.OWNER_REQUEST:
+	if is_gift:
+		if settlement_mode != SettlementMode.GIFT_PICKUP:
+			errors.append("Gift task %s must use gift-pickup settlement." % id)
+		if gift_item_id.is_empty():
+			errors.append("Gift task %s needs a gift item." % id)
+	elif category == Category.OWNER_REQUEST:
 		if settlement_mode != SettlementMode.OWNER_IMMEDIATE:
 			errors.append("Owner task %s must settle immediately." % id)
 		if owner_id.is_empty() or store_id.is_empty():

@@ -842,3 +842,15 @@ msgid "demo.task.flower_owner.result.trimmed"
 msgstr "The scissors close, and the tiny white flowers fall into an apron pocket."
 msgid "demo.task.flower_owner.result.blooming"
 msgstr "The white flowers drink deeply and keep growing in the nighttime shop."
+
+msgid "demo.task.tin_boy.name"
+msgstr "The Tin Boy's Request"
+
+msgid "demo.task.tin_boy.body"
+msgstr "Dear Shopping Bag:\nThank you for helping me buy a toy!\nI'm still scared, so I sent you instead.\nThe place is called Xinxin Toy Shop. The owner's beard is very prickly.\nThis is the tin frog I bought before. If he doesn't know you, show it to him."
+
+msgid "demo.item.tin_frog.name"
+msgstr "Tin Frog"
+
+msgid "demo.item.tin_frog.description"
+msgstr "A wind-up frog with a hollow tin belly. Its eyes hold a small, steady lamplight."

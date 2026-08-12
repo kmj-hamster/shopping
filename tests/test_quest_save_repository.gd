@@ -80,6 +80,31 @@ func test_synthesis_placement_is_not_persisted() -> void:
 	assert_eq(_card_by_definition(restored, &"sunflower").location, CardItemState.Location.HAND)
 
 
+func test_gift_flip_and_claim_state_survive_round_trip() -> void:
+	var source := QuestGameState.new()
+	var gift := source.task_instance_for_definition(&"tin_boy_gift")
+	assert_true(source.reveal_task_gift(gift.instance_id).ok)
+	assert_true(repository.save(source))
+
+	var revealed := QuestGameState.new()
+	assert_true(repository.load_into(revealed).ok)
+	var revealed_gift := revealed.task_instance_for_definition(&"tin_boy_gift")
+	assert_true(revealed_gift.gift_revealed)
+	assert_false(revealed_gift.gift_claimed)
+	assert_null(_card_by_definition(revealed, &"tin_frog"))
+
+	assert_true(revealed.claim_task_gift(revealed_gift.instance_id).ok)
+	assert_true(repository.save(revealed))
+	var claimed := QuestGameState.new()
+	assert_true(repository.load_into(claimed).ok)
+	var claimed_gift := claimed.task_instance_for_definition(&"tin_boy_gift")
+	assert_true(claimed_gift.gift_revealed)
+	assert_true(claimed_gift.gift_claimed)
+	assert_not_null(_card_by_definition(claimed, &"tin_frog"))
+	assert_true(claimed.dismiss_claimed_gift_task(claimed_gift.instance_id))
+	assert_null(claimed.task_instance_for_definition(&"tin_boy_gift"))
+
+
 func test_pre_ppt_save_is_rejected_instead_of_migrated() -> void:
 	var file := FileAccess.open(TEST_PATH, FileAccess.WRITE)
 	file.store_string(JSON.stringify({"save_version": 3, "content_version": "quest-arc-1"}))

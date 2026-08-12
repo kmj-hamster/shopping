@@ -1,9 +1,10 @@
 class_name QuestRuleDetailPopup
 extends Control
 
-const RULE_TITLE_FONT_SIZE := 21
-const OWNER_RULE_TITLE_FONT_SIZE := 16
-const RULE_SECTION_FONT_SIZE := 15
+const RULE_TITLE_FONT_SIZE := 26
+const OWNER_RULE_TITLE_FONT_SIZE := 20
+const RULE_CONDITION_FONT_SIZE := 22
+const RULE_LINE_HEIGHT := 36
 
 var current_rule: CardSlotRule
 var current_task_definition: TaskDefinition
@@ -77,48 +78,33 @@ func _ready() -> void:
 	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(divider)
 
-	var must_label := Label.new()
-	must_label.name = "RequiredHeading"
-	must_label.custom_minimum_size = Vector2(0, 13)
-	must_label.add_theme_font_size_override("font_size", RULE_SECTION_FONT_SIZE)
-	must_label.add_theme_color_override("font_color", Color("9eb0aa"))
-	column.add_child(must_label)
 	var required_scroll := ScrollContainer.new()
-	required_scroll.custom_minimum_size = Vector2(0, 30)
+	required_scroll.custom_minimum_size = Vector2(0, RULE_LINE_HEIGHT)
 	required_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	required_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	column.add_child(required_scroll)
 	required_row = HBoxContainer.new()
 	required_row.name = "RequiredItems"
-	required_row.custom_minimum_size = Vector2(0, 30)
+	required_row.custom_minimum_size = Vector2(0, RULE_LINE_HEIGHT)
 	required_row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	required_row.add_theme_constant_override("separation", 9)
 	required_scroll.add_child(required_row)
 
 	bonus_section = VBoxContainer.new()
-	bonus_section.add_theme_constant_override("separation", 3)
 	column.add_child(bonus_section)
-	var bonus_label := Label.new()
-	bonus_label.name = "BonusHeading"
-	bonus_label.custom_minimum_size = Vector2(0, 13)
-	bonus_label.add_theme_font_size_override("font_size", RULE_SECTION_FONT_SIZE)
-	bonus_label.add_theme_color_override("font_color", Color("9eb0aa"))
-	bonus_section.add_child(bonus_label)
 	var bonus_scroll := ScrollContainer.new()
-	bonus_scroll.custom_minimum_size = Vector2(0, 30)
+	bonus_scroll.custom_minimum_size = Vector2(0, RULE_LINE_HEIGHT)
 	bonus_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	bonus_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	bonus_section.add_child(bonus_scroll)
 	bonus_row = HBoxContainer.new()
 	bonus_row.name = "BonusItems"
-	bonus_row.custom_minimum_size = Vector2(0, 30)
+	bonus_row.custom_minimum_size = Vector2(0, RULE_LINE_HEIGHT)
 	bonus_row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	bonus_row.add_theme_constant_override("separation", 9)
 	bonus_scroll.add_child(bonus_row)
 
 	_build_property_panel()
-	must_label.text = TranslationServer.translate(&"demo.ui.rule.must")
-	bonus_label.text = TranslationServer.translate(&"demo.ui.rule.bonus")
 	LocaleManager.locale_changed.connect(_on_locale_changed)
 	visible = false
 
@@ -172,10 +158,6 @@ func _refresh() -> void:
 		"font_size", OWNER_RULE_TITLE_FONT_SIZE if owner_request else RULE_TITLE_FONT_SIZE
 	)
 	title_label.tooltip_text = title_label.text if owner_request else ""
-	var required_heading := find_child("RequiredHeading", true, false) as Label
-	var bonus_heading := find_child("BonusHeading", true, false) as Label
-	required_heading.text = TranslationServer.translate(&"demo.ui.rule.must")
-	bonus_heading.text = TranslationServer.translate(&"demo.ui.rule.bonus")
 	_hide_requirement_views()
 	property_buttons.clear()
 	requirement_occurrences.clear()
@@ -203,10 +185,10 @@ func _add_item_requirement(item_id: StringName) -> void:
 	var view: Dictionary = requirement_views.get(key, {})
 	if view.is_empty():
 		var chip := HBoxContainer.new()
-		chip.custom_minimum_size = Vector2(0, 30)
+		chip.custom_minimum_size = Vector2(0, RULE_LINE_HEIGHT)
 		chip.add_theme_constant_override("separation", 6)
 		var frame := PanelContainer.new()
-		frame.custom_minimum_size = Vector2(30, 30)
+		frame.custom_minimum_size = Vector2(RULE_LINE_HEIGHT, RULE_LINE_HEIGHT)
 		frame.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		frame.add_theme_stylebox_override(
@@ -214,37 +196,38 @@ func _add_item_requirement(item_id: StringName) -> void:
 		)
 		chip.add_child(frame)
 		var image := TextureRect.new()
-		image.custom_minimum_size = Vector2(26, 26)
+		image.custom_minimum_size = Vector2(RULE_LINE_HEIGHT - 4, RULE_LINE_HEIGHT - 4)
 		image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		image.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		frame.add_child(image)
 		var label := Label.new()
 		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		label.add_theme_font_size_override("font_size", RULE_CONDITION_FONT_SIZE)
 		label.add_theme_color_override("font_color", Color("d9d0b4"))
 		chip.add_child(label)
 		required_row.add_child(chip)
 		view = {"root": chip, "image": image, "label": label}
 		requirement_views[key] = view
 	(view.image as TextureRect).texture = definition.image
-	(view.label as Label).text = definition.localized_name()
+	(view.label as Label).text = TranslationServer.translate(&"demo.ui.rule.must")
 	_show_requirement_view(key, required_row)
 
 
 func _add_property_requirement(row: HBoxContainer, property_id: StringName) -> StringName:
-	var property := QuestArcCatalog.property_by_id(property_id)
 	var section := &"bonus" if row == bonus_row else &"required"
 	var key := _next_requirement_key(section, &"property", property_id)
 	var view: Dictionary = requirement_views.get(key, {})
 	if view.is_empty():
 		var chip := HBoxContainer.new()
-		chip.custom_minimum_size = Vector2(0, 30)
+		chip.custom_minimum_size = Vector2(0, RULE_LINE_HEIGHT)
 		chip.add_theme_constant_override("separation", 6)
-		var icon := ItemDetailPopup.make_property_icon_button(property_id, 30)
+		var icon := ItemDetailPopup.make_property_icon_button(property_id, RULE_LINE_HEIGHT)
 		icon.pressed.connect(_show_property.bind(property_id))
 		chip.add_child(icon)
 		var label := Label.new()
 		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		label.add_theme_font_size_override("font_size", RULE_CONDITION_FONT_SIZE)
 		label.add_theme_color_override("font_color", Color("d9d0b4"))
 		chip.add_child(label)
 		row.add_child(chip)
@@ -254,9 +237,7 @@ func _add_property_requirement(row: HBoxContainer, property_id: StringName) -> S
 	icon.tooltip_text = TranslationServer.translate(ItemDetailPopup.property_name_key(property_id))
 	_register_property_button(property_id, icon)
 	(view.label as Label).text = TranslationServer.translate(
-		property.display_name_key
-		if property != null
-		else ItemDetailPopup.property_name_key(property_id)
+		&"demo.ui.rule.bonus" if row == bonus_row else &"demo.ui.rule.must"
 	)
 	_show_requirement_view(key, row)
 	return key
@@ -515,8 +496,9 @@ func _add_bonus_requirements() -> void:
 			var reward_view: Dictionary = requirement_views.get(reward_key, {})
 			if reward_view.is_empty():
 				var reward := Label.new()
-				reward.custom_minimum_size = Vector2(0, 30)
+				reward.custom_minimum_size = Vector2(0, RULE_LINE_HEIGHT)
 				reward.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+				reward.add_theme_font_size_override("font_size", RULE_CONDITION_FONT_SIZE)
 				reward.add_theme_color_override("font_color", Color("e3c679"))
 				bonus_row.add_child(reward)
 				reward_view = {"root": reward, "label": reward}

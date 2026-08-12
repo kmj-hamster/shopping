@@ -8,6 +8,8 @@ var assignments: Dictionary = {}
 var confirmed := false
 var resolved_outcome_id: StringName
 var settled := false
+var gift_revealed := false
+var gift_claimed := false
 
 
 func _init(

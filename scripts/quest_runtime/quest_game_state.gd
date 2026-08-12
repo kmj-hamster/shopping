@@ -157,6 +157,79 @@ func task_instance_for_definition(definition_id: StringName) -> TaskInstanceStat
 	return null
 
 
+func reveal_task_gift(task_instance_id: int) -> Dictionary:
+	var instance := task_instance(task_instance_id)
+	var definition := (
+		QuestArcCatalog.task_by_id(instance.definition_id) if instance != null else null
+	)
+	if instance == null or instance.settled:
+		return _result(false, RESULT_UNKNOWN_TASK)
+	if (
+		definition == null
+		or definition.settlement_mode != TaskDefinition.SettlementMode.GIFT_PICKUP
+	):
+		return _result(false, RESULT_WRONG_SETTLEMENT)
+	if instance.gift_revealed:
+		return _result(true, RESULT_OK)
+	instance.gift_revealed = true
+	_mark_state_changed(
+		QuestStateDelta.new().mark_task_instance(instance.instance_id, &"task_gift_revealed")
+	)
+	return _result(true, RESULT_OK)
+
+
+func can_claim_task_gift(task_instance_id: int) -> bool:
+	var instance := task_instance(task_instance_id)
+	if (
+		instance == null
+		or instance.settled
+		or not instance.gift_revealed
+		or instance.gift_claimed
+	):
+		return false
+	var definition := QuestArcCatalog.task_by_id(instance.definition_id)
+	return (
+		definition != null
+		and definition.settlement_mode == TaskDefinition.SettlementMode.GIFT_PICKUP
+		and QuestArcCatalog.item_by_id(definition.gift_item_id) != null
+	)
+
+
+func claim_task_gift(task_instance_id: int) -> Dictionary:
+	if not can_claim_task_gift(task_instance_id):
+		return _result(false, RESULT_NOT_READY)
+	var instance := task_instance(task_instance_id)
+	var definition := QuestArcCatalog.task_by_id(instance.definition_id)
+	_begin_change_batch()
+	var card := grant_item(definition.gift_item_id, &"task_gift")
+	instance.gift_claimed = true
+	_mark_state_changed(
+		QuestStateDelta.new().mark_task_instance(instance.instance_id, &"task_gift_claimed")
+	)
+	_end_change_batch()
+	return _result(true, RESULT_OK, {"card": card})
+
+
+func dismiss_claimed_gift_task(task_instance_id: int) -> bool:
+	var instance := task_instance(task_instance_id)
+	if instance == null or instance.settled or not instance.gift_claimed:
+		return false
+	var definition := QuestArcCatalog.task_by_id(instance.definition_id)
+	if (
+		definition == null
+		or definition.settlement_mode != TaskDefinition.SettlementMode.GIFT_PICKUP
+	):
+		return false
+	instance.settled = true
+	task_history[definition.id] = &"gift_collected"
+	_mark_state_changed(
+		QuestStateDelta.new()
+			.mark_task_instance(instance.instance_id, &"task_gift_dismissed")
+			.mark_task_list(&"task_gift_dismissed")
+	)
+	return true
+
+
 func card_by_instance_id(instance_id: int) -> CardItemState:
 	for card in inventory:
 		if card.instance_id == instance_id:

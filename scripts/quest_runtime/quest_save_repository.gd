@@ -1,8 +1,8 @@
 class_name QuestSaveRepository
 extends RefCounted
 
-const SAVE_VERSION := 5
-const CONTENT_VERSION := "new-synthesis-demo-1"
+const SAVE_VERSION := 6
+const CONTENT_VERSION := "gift-task-demo-1"
 const DEFAULT_PATH := "user://save_shopping0807_v1.json"
 
 var save_path: String
@@ -82,6 +82,8 @@ func to_dictionary(state: QuestGameState) -> Dictionary:
 			"confirmed": instance.confirmed,
 			"resolved_outcome_id": String(instance.resolved_outcome_id),
 			"settled": instance.settled,
+			"gift_revealed": instance.gift_revealed,
+			"gift_claimed": instance.gift_claimed,
 		})
 	return {
 		"save_version": SAVE_VERSION,
@@ -144,6 +146,8 @@ func _restore(state: QuestGameState, payload: Dictionary) -> bool:
 		instance.confirmed = bool(data.get("confirmed", false))
 		instance.resolved_outcome_id = StringName(data.get("resolved_outcome_id", ""))
 		instance.settled = bool(data.get("settled", false))
+		instance.gift_revealed = bool(data.get("gift_revealed", false))
+		instance.gift_claimed = bool(data.get("gift_claimed", false))
 		state.task_instances.append(instance)
 	state.task_history = _name_dictionary(payload.get("task_history", {}))
 	state.story_flags = _name_dictionary(payload.get("story_flags", {}))

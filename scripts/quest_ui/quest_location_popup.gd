@@ -46,7 +46,11 @@ func refresh() -> void:
 		closed.emit()
 		return
 	title_label.text = TranslationServer.translate(store.display_name_key)
-	body_label.text = TranslationServer.translate(unlock_definition.prompt_text_key)
+	set_body_copy(
+		TranslationServer.translate(unlock_definition.prompt_text_key),
+		BODY_HEIGHT,
+		BODY_MAX_LINES,
+	)
 	action_button.text = TranslationServer.translate(&"demo.ui.confirm")
 	action_button.disabled = unlock_slot == null or unlock_slot.pending_card == null
 	feedback_label.text = (

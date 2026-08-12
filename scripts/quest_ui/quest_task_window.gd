@@ -10,6 +10,7 @@ var task_instance_id: int
 var current_store_id: StringName
 var slot_views: Dictionary = {}
 var or_labels: Array[Label] = []
+var gift_slot: QuestTaskGiftSlot
 
 
 func setup(game_state: QuestGameState, instance_id: int, store_id: StringName = &"") -> void:
@@ -22,16 +23,13 @@ func setup(game_state: QuestGameState, instance_id: int, store_id: StringName = 
 
 func _ready() -> void:
 	super._ready()
-	# Center this global popup over the content viewport rather than the full HUD.
-	anchor_left = 0.32
-	anchor_top = 0.10
-	anchor_right = 0.83
-	anchor_bottom = 0.70
-	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	body_margin.add_theme_constant_override("margin_left", 36)
-	body_margin.add_theme_constant_override("margin_right", 36)
-	body_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	body_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	# The content viewport begins at 19% of the full HUD; this maps its shelf's
+	# 3.5% left edge into global coordinates. QuestLocationPopup uses the
+	# equivalent viewport-local rectangle.
+	anchor_left = 0.217
+	anchor_top = 0.08
+	anchor_right = 0.517
+	anchor_bottom = 0.68
 	action_button.pressed.connect(_on_action_pressed)
 	LocaleManager.locale_changed.connect(_on_locale_changed)
 	refresh()
@@ -46,7 +44,31 @@ func refresh() -> void:
 		return
 	var definition := QuestArcCatalog.task_by_id(task.definition_id)
 	title_label.text = TranslationServer.translate(definition.display_name_key)
-	body_label.text = TranslationServer.translate(definition.body_text_key)
+	if definition.settlement_mode == TaskDefinition.SettlementMode.GIFT_PICKUP:
+		set_body_copy(
+			TranslationServer.translate(definition.body_text_key),
+			LETTER_BODY_HEIGHT,
+			LETTER_BODY_MAX_LINES,
+		)
+		_ensure_gift_slot()
+		gift_slot.setup(state, task.instance_id)
+		feedback_label.text = (
+			""
+			if task.gift_claimed
+			else TranslationServer.translate(
+				&"demo.ui.synthesis.drag_result"
+				if task.gift_revealed
+				else &"demo.ui.synthesis.flip_result"
+			)
+		)
+		action_button.visible = false
+		return
+	set_body_copy(
+		TranslationServer.translate(definition.body_text_key),
+		BODY_HEIGHT,
+		BODY_MAX_LINES,
+	)
+	action_button.visible = true
 	_ensure_slot_views(task, definition)
 	for label in or_labels:
 		label.text = TranslationServer.translate(&"demo.ui.or")
@@ -58,6 +80,14 @@ func refresh() -> void:
 	var evaluation := state.task_evaluation(task.instance_id)
 	feedback_label.text = ""
 	_update_action_state(task, definition, evaluation)
+
+
+func _ensure_gift_slot() -> void:
+	if gift_slot != null:
+		return
+	gift_slot = QuestTaskGiftSlot.new()
+	gift_slot.item_inspected.connect(item_inspected.emit)
+	slots_row.add_child(gift_slot)
 
 
 func _ensure_slot_views(task: TaskInstanceState, definition: TaskDefinition) -> void:
@@ -111,6 +141,8 @@ func _on_action_pressed() -> void:
 	if task == null:
 		return
 	var definition := QuestArcCatalog.task_by_id(task.definition_id)
+	if definition.settlement_mode == TaskDefinition.SettlementMode.GIFT_PICKUP:
+		return
 	if definition.settlement_mode == TaskDefinition.SettlementMode.OWNER_IMMEDIATE:
 		var result := state.submit_owner_task(task.instance_id, current_store_id)
 		if result.ok:

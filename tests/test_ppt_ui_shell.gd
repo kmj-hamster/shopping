@@ -29,7 +29,7 @@ func test_main_uses_responsive_ppt_regions_and_demo_content() -> void:
 	assert_not_null(main.forbidden_cursor_texture)
 	assert_true(main.current_screen is QuestMapScreen)
 	assert_eq((main.current_screen as QuestMapScreen).store_hotspots.size(), 2)
-	assert_eq(main.task_dock.bookmark_column.get_child_count(), 3)
+	assert_eq(main.task_dock.bookmark_column.get_child_count(), 4)
 	assert_true(main.task_dock.bookmark_column.clip_contents)
 	for bookmark in main.task_dock.bookmark_column.get_children():
 		var bookmark_button := bookmark as Button
@@ -263,6 +263,28 @@ func test_locked_location_uses_confirmed_popup_then_enters_shop() -> void:
 	await get_tree().process_frame
 	assert_not_null(map.location_popup)
 	assert_true(map.location_popup is PaperActivityPopup)
+	assert_almost_eq(map.location_popup.anchor_left, 0.035, 0.001)
+	assert_almost_eq(map.location_popup.anchor_right, 0.425, 0.001)
+	assert_almost_eq(map.location_popup.anchor_top, 0.05, 0.001)
+	assert_almost_eq(map.location_popup.anchor_bottom, 0.895, 0.001)
+	assert_almost_eq(
+		map.location_popup.size.y,
+		map.size.y * (0.895 - 0.05),
+		0.5,
+	)
+	assert_eq(
+		map.location_popup.title_label.horizontal_alignment,
+		HORIZONTAL_ALIGNMENT_CENTER,
+	)
+	assert_eq(
+		map.location_popup.body_label.horizontal_alignment,
+		HORIZONTAL_ALIGNMENT_LEFT,
+	)
+	assert_eq(map.location_popup.slots_row.alignment, BoxContainer.ALIGNMENT_CENTER)
+	assert_eq(
+		map.location_popup.slots_row.size_flags_vertical,
+		Control.SIZE_SHRINK_END,
+	)
 	assert_null(main.focused_rule)
 	assert_false(main.rule_detail_popup.visible)
 	var hand_order_before: Array[int] = []
@@ -355,8 +377,22 @@ func test_task_rule_panel_shows_written_bonus_only() -> void:
 	var bonus_property_view := main.rule_detail_popup.bonus_row.get_child(0) as Control
 	var bonus_reward_view := main.rule_detail_popup.bonus_row.get_child(1) as Control
 	var required_icon := required_chip.get_child(0) as Button
+	var required_copy := required_chip.get_child(1) as Label
 	assert_not_null(required_icon)
 	assert_eq(required_icon.custom_minimum_size.x, required_icon.custom_minimum_size.y)
+	assert_almost_eq(
+		required_icon.custom_minimum_size.x,
+		float(QuestRuleDetailPopup.RULE_LINE_HEIGHT),
+		0.01,
+	)
+	assert_eq(
+		required_copy.text,
+		TranslationServer.translate(&"demo.ui.rule.must"),
+	)
+	assert_eq(
+		required_copy.get_theme_font_size("font_size"),
+		QuestRuleDetailPopup.RULE_CONDITION_FONT_SIZE,
+	)
 	assert_true(required_icon.get_child(0) is TextureRect)
 	assert_eq(
 		(required_icon.get_child(0) as TextureRect).texture,
@@ -364,7 +400,22 @@ func test_task_rule_panel_shows_written_bonus_only() -> void:
 	)
 	var bonus_chip := main.rule_detail_popup.bonus_row.get_child(0) as HBoxContainer
 	var bonus_icon := bonus_chip.get_child(0) as Button
+	var bonus_copy := bonus_chip.get_child(1) as Label
 	assert_true(bonus_icon.get_child(0) is TextureRect)
+	assert_eq(
+		bonus_copy.text,
+		TranslationServer.translate(&"demo.ui.rule.bonus"),
+	)
+	assert_eq(
+		bonus_copy.get_theme_font_size("font_size"),
+		QuestRuleDetailPopup.RULE_CONDITION_FONT_SIZE,
+	)
+	assert_eq(
+		(bonus_reward_view as Label).get_theme_font_size("font_size"),
+		QuestRuleDetailPopup.RULE_CONDITION_FONT_SIZE,
+	)
+	assert_null(main.rule_detail_popup.find_child("RequiredHeading", true, false))
+	assert_null(main.rule_detail_popup.find_child("BonusHeading", true, false))
 	assert_eq(
 		(bonus_icon.get_child(0) as TextureRect).texture,
 		load("res://resources/ui/property-salty.png"),
@@ -412,21 +463,36 @@ func test_task_rule_panel_shows_written_bonus_only() -> void:
 	assert_false(main.rule_detail_popup.visible)
 
 
-func test_task_popup_is_small_centered_and_uses_centered_copy() -> void:
+func test_task_popup_is_narrow_with_centered_title_and_left_aligned_copy() -> void:
 	var main := await _spawn_main()
 	var task := main.state.task_instance_for_definition(&"girl_order")
 	main.task_dock._toggle_task(task.instance_id)
 	await get_tree().process_frame
 	var popup := main.task_dock.task_window
 	assert_not_null(popup)
-	assert_almost_eq(popup.anchor_left, 0.32, 0.001)
-	assert_almost_eq(popup.anchor_right, 0.83, 0.001)
-	assert_almost_eq(popup.anchor_top, 0.10, 0.001)
-	assert_almost_eq(popup.anchor_bottom, 0.70, 0.001)
+	assert_almost_eq(popup.anchor_left, 0.217, 0.001)
+	assert_almost_eq(popup.anchor_right, 0.517, 0.001)
+	assert_almost_eq(popup.anchor_top, 0.08, 0.001)
+	assert_almost_eq(popup.anchor_bottom, 0.68, 0.001)
+	assert_almost_eq(
+		popup.size.y,
+		main.task_dock.size.y * (0.68 - 0.08),
+		0.5,
+	)
 	assert_eq(popup.title_label.horizontal_alignment, HORIZONTAL_ALIGNMENT_CENTER)
-	assert_eq(popup.body_label.horizontal_alignment, HORIZONTAL_ALIGNMENT_CENTER)
-	assert_eq(popup.body_margin.get_theme_constant("margin_left"), 36)
-	assert_eq(popup.body_margin.get_theme_constant("margin_right"), 36)
+	assert_eq(popup.body_label.horizontal_alignment, HORIZONTAL_ALIGNMENT_LEFT)
+	assert_eq(popup.body_label.vertical_alignment, VERTICAL_ALIGNMENT_TOP)
+	assert_eq(popup.body_margin.get_theme_constant("margin_left"), 12)
+	assert_eq(popup.body_margin.get_theme_constant("margin_right"), 12)
+	assert_true(popup.body_viewport.clip_contents)
+	assert_almost_eq(
+		popup.body_viewport.custom_minimum_size.y,
+		PaperActivityPopup.BODY_HEIGHT,
+		0.01,
+	)
+	assert_eq(popup.lower_spacer.size_flags_vertical, Control.SIZE_EXPAND_FILL)
+	assert_eq(popup.slots_row.alignment, BoxContainer.ALIGNMENT_CENTER)
+	assert_eq(popup.slots_row.size_flags_vertical, Control.SIZE_SHRINK_END)
 	var slot := popup.slots_row.get_children().filter(
 		func(child: Node) -> bool: return child is QuestTaskSlot
 	)[0] as QuestTaskSlot
@@ -465,6 +531,35 @@ func test_task_popup_is_small_centered_and_uses_centered_copy() -> void:
 		TranslationServer.translate(&"quest.ui.task.deliver_tomorrow"),
 	)
 	assert_eq(popup.feedback_label.text, "")
+
+
+func test_task_popup_drags_from_its_header_and_stays_inside_parent() -> void:
+	var main := await _spawn_main()
+	var task := main.state.task_instance_for_definition(&"girl_order")
+	main.task_dock._toggle_task(task.instance_id)
+	await get_tree().process_frame
+	var popup := main.task_dock.task_window
+	var start := popup.position
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	popup._on_drag_handle_gui_input(press)
+	assert_true(popup.dragging)
+
+	var motion := InputEventMouseMotion.new()
+	motion.relative = Vector2(48, -24)
+	popup._input(motion)
+	assert_eq(popup.position, start + motion.relative)
+
+	motion.relative = Vector2(-10_000, -10_000)
+	popup._input(motion)
+	assert_eq(popup.position, Vector2.ZERO)
+
+	var release := InputEventMouseButton.new()
+	release.button_index = MOUSE_BUTTON_LEFT
+	release.pressed = false
+	popup._input(release)
+	assert_false(popup.dragging)
 
 
 func test_clicking_task_slot_highlights_and_lifts_without_reordering() -> void:

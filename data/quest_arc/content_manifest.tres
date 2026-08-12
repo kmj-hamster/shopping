@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="GameContentManifest" load_steps=43 format=3]
+[gd_resource type="Resource" script_class="GameContentManifest" load_steps=45 format=3]
 
 [ext_resource type="Script" path="res://scripts/quest_domain/game_content_manifest.gd" id="1_manifest"]
 [ext_resource type="Script" path="res://scripts/quest_domain/property_definition.gd" id="2_property"]
@@ -27,6 +27,8 @@
 [ext_resource type="Resource" path="res://data/quest_arc/recipes/demo_recipe_pale_teddy.tres" id="25_recipe"]
 [ext_resource type="Resource" path="res://data/quest_arc/items/demo_soft_gauze.tres" id="26_item"]
 [ext_resource type="Resource" path="res://data/quest_arc/items/demo_mirror_shard.tres" id="27_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/demo_tin_frog.tres" id="28_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/demo_tin_boy_gift.tres" id="29_task"]
 
 [sub_resource type="Resource" id="PropertyFood"]
 script = ExtResource("2_property")
@@ -135,8 +137,8 @@ maximum_aspects_per_item = 2
 initial_protagonist_stats = {&"clarity": 3, &"ease": 3, &"reminiscence": 3, &"reverie": 3}
 starting_item_ids = Array[StringName]([&"fries", &"sunflower", &"toy_block", &"soft_gauze", &"soft_gauze", &"mirror_shard"])
 properties = Array[Resource]([SubResource("PropertyFood"), SubResource("PropertySalty"), SubResource("PropertyPlant"), SubResource("PropertyFlower"), SubResource("PropertyToy"), SubResource("PropertyRose"), SubResource("PropertyTeddyBear"), SubResource("PropertyDrink"), SubResource("PropertyMetal"), SubResource("PropertyTool"), SubResource("PropertyPersona"), SubResource("PropertyLamp"), SubResource("PropertyMirror"), SubResource("PropertyGauze"), SubResource("PropertyPillow")])
-items = Array[Resource]([ExtResource("3_item"), ExtResource("4_item"), ExtResource("5_item"), ExtResource("6_item"), ExtResource("7_item"), ExtResource("18_item"), ExtResource("19_item"), ExtResource("20_item"), ExtResource("21_item"), ExtResource("22_item"), ExtResource("26_item"), ExtResource("27_item")])
-tasks = Array[Resource]([ExtResource("8_task"), ExtResource("9_task"), ExtResource("10_task"), ExtResource("11_task")])
+items = Array[Resource]([ExtResource("3_item"), ExtResource("4_item"), ExtResource("5_item"), ExtResource("6_item"), ExtResource("7_item"), ExtResource("18_item"), ExtResource("19_item"), ExtResource("20_item"), ExtResource("21_item"), ExtResource("22_item"), ExtResource("26_item"), ExtResource("27_item"), ExtResource("28_item")])
+tasks = Array[Resource]([ExtResource("29_task"), ExtResource("8_task"), ExtResource("9_task"), ExtResource("10_task"), ExtResource("11_task")])
 recipes = Array[Resource]([ExtResource("12_recipe"), ExtResource("23_recipe"), ExtResource("24_recipe"), ExtResource("25_recipe")])
 stores = Array[Resource]([ExtResource("13_store"), ExtResource("14_store")])
 store_unlocks = Array[Resource]([ExtResource("15_unlock")])

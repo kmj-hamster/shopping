@@ -31,6 +31,7 @@ var totals_row: HBoxContainer
 var base_slot_host: CenterContainer
 var mask_slot_host: CenterContainer
 var fuel_slot_host: CenterContainer
+var material_role_labels: Dictionary = {}
 var candidate_list: VBoxContainer
 var candidate_empty_label: Label
 var candidate_buttons: Dictionary = {}
@@ -310,6 +311,7 @@ func _make_slot_host(
 	label.add_theme_color_override("font_color", Color("c8b67f"))
 	label.text = TranslationServer.translate(label_key)
 	column.add_child(label)
+	material_role_labels[label_key] = label
 	var host := CenterContainer.new()
 	host.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_child(host)
@@ -817,4 +819,8 @@ func _on_locale_changed(_locale: String) -> void:
 		totals_heading.text = TranslationServer.translate(&"demo.ui.synthesis.totals")
 	if candidate_heading != null:
 		candidate_heading.text = TranslationServer.translate(&"demo.ui.synthesis.candidates")
+	for raw_key in material_role_labels:
+		var label := material_role_labels[raw_key] as Label
+		if label != null:
+			label.text = TranslationServer.translate(StringName(raw_key))
 	refresh()

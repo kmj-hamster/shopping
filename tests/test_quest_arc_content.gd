@@ -10,8 +10,8 @@ func test_manifest_is_the_shopping0807_demo_whitelist() -> void:
 	])
 	assert_eq(manifest.properties.size(), 15)
 	assert_not_null(QuestArcCatalog.property_by_id(CardPropertySet.PROPERTY_PERSONA))
-	assert_eq(manifest.items.size(), 12)
-	assert_eq(manifest.tasks.size(), 4)
+	assert_eq(manifest.items.size(), 13)
+	assert_eq(manifest.tasks.size(), 5)
 	assert_eq(manifest.recipes.size(), 4)
 	assert_eq(manifest.stores.size(), 2)
 	assert_eq(manifest.store_unlocks.size(), 1)
@@ -24,6 +24,7 @@ func test_only_ppt_items_are_runtime_visible_and_have_images() -> void:
 		&"fries", &"sunflower", &"agave", &"cola", &"scissors",
 		&"toy_block", &"midnight_rose", &"worn_teddy", &"baby_teddy", &"pale_teddy",
 		&"soft_gauze", &"mirror_shard",
+		&"tin_frog",
 	]
 	var actual_ids: Array[StringName] = []
 	for raw_item in QuestArcCatalog.manifest().items:
@@ -65,6 +66,7 @@ func test_new_game_uses_ppt_money_tasks_and_starting_hand() -> void:
 	assert_not_null(state.task_instance_for_definition(&"girl_order"))
 	assert_not_null(state.task_instance_for_definition(&"self_care"))
 	assert_not_null(state.task_instance_for_definition(&"mouse_order"))
+	assert_not_null(state.task_instance_for_definition(&"tin_boy_gift"))
 	assert_null(state.task_instance_for_definition(&"flower_owner_request"))
 
 

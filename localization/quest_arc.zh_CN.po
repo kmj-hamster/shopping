@@ -842,3 +842,15 @@ msgid "demo.task.flower_owner.result.trimmed"
 msgstr "剪刀合拢，细小的白花落进围裙口袋。"
 msgid "demo.task.flower_owner.result.blooming"
 msgstr "白花喝饱了水，在夜里的花店继续生长。"
+
+msgid "demo.task.tin_boy.name"
+msgstr "铁皮男孩的委托"
+
+msgid "demo.task.tin_boy.body"
+msgstr "亲爱的购物袋：\n谢谢你帮我买玩具！\n我还是hai怕所以就让你来了。\n那家店叫欣欣玩具店，老板的胡子很zha。\n这是我之前买的铁皮青蛙，要是他跟你不熟，就给他看。"
+
+msgid "demo.item.tin_frog.name"
+msgstr "铁皮青蛙"
+
+msgid "demo.item.tin_frog.description"
+msgstr "一只肚子空响的发条青蛙，眼睛里留着一小点稳定的灯光。"

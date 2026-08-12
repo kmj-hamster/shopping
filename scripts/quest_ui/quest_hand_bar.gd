@@ -430,6 +430,8 @@ func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 	var card := data.get("card") as CardItemState
 	if data.get("kind") != &"card_item" or card == null:
 		return false
+	if card.activity_id == &"task_gift":
+		return state.can_claim_task_gift(int(String(card.slot_id)))
 	var persona_id := PersonaMaskCatalog.persona_for_card(card)
 	if not persona_id.is_empty():
 		return (
@@ -449,6 +451,10 @@ func _has_point(point: Vector2) -> bool:
 func _drop_data(at_position: Vector2, data: Variant) -> void:
 	var card := data.get("card") as CardItemState
 	if card == null:
+		return
+	if card.activity_id == &"task_gift":
+		show_tab(TAB_ITEMS)
+		state.claim_task_gift(int(String(card.slot_id)))
 		return
 	var persona_id := PersonaMaskCatalog.persona_for_card(card)
 	if not persona_id.is_empty():

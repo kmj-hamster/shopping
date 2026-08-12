@@ -126,11 +126,15 @@ func _toggle_task(instance_id: int) -> void:
 
 
 func _close_task() -> void:
+	var closing_instance_id := open_task_instance_id
+	var closing_window := task_window
 	open_task_instance_id = 0
 	rule_focused.emit(null)
-	if task_window != null and is_instance_valid(task_window):
-		task_window.visible = false
 	task_window = null
+	if closing_window != null and is_instance_valid(closing_window):
+		closing_window.visible = false
+	if state != null and closing_instance_id > 0:
+		state.dismiss_claimed_gift_task(closing_instance_id)
 
 
 func close_open_task() -> void:

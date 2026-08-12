@@ -55,6 +55,13 @@ func validation_errors() -> PackedStringArray:
 		var task := raw_task as TaskDefinition
 		if task != null:
 			_validate_slot_rules(task.slot_rules, properties_by_id, items_by_id, errors)
+			if (
+				task.category == TaskDefinition.Category.GIFT
+				and not items_by_id.has(task.gift_item_id)
+			):
+				errors.append(
+					"Gift task %s references missing item %s." % [task.id, task.gift_item_id]
+				)
 	for raw_recipe in recipes:
 		var recipe := raw_recipe as SynthesisRecipeDefinition
 		if recipe != null:

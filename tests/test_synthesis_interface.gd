@@ -222,6 +222,43 @@ func test_empty_material_slots_show_text_only_role_help() -> void:
 	assert_false(main.detail_popup.property_band.visible)
 
 
+func test_material_role_names_switch_between_chinese_and_english() -> void:
+	var original_locale := LocaleManager.current_locale
+	var main := await _spawn_main()
+	main._show_synthesis()
+	await get_tree().process_frame
+	var synthesis := main.current_screen as QuestSynthesisInterface
+
+	LocaleManager.set_locale(LocaleManager.LOCALE_EN, false)
+	assert_eq(
+		(synthesis.material_role_labels[&"demo.ui.synthesis.base"] as Label).text,
+		"Material",
+	)
+	assert_eq(
+		(synthesis.material_role_labels[&"demo.ui.synthesis.mask"] as Label).text,
+		"Mask",
+	)
+	assert_eq(
+		(synthesis.material_role_labels[&"demo.ui.synthesis.fuel"] as Label).text,
+		"Fuel",
+	)
+
+	LocaleManager.set_locale(LocaleManager.LOCALE_ZH, false)
+	assert_eq(
+		(synthesis.material_role_labels[&"demo.ui.synthesis.base"] as Label).text,
+		"原料",
+	)
+	assert_eq(
+		(synthesis.material_role_labels[&"demo.ui.synthesis.mask"] as Label).text,
+		"面具",
+	)
+	assert_eq(
+		(synthesis.material_role_labels[&"demo.ui.synthesis.fuel"] as Label).text,
+		"燃料",
+	)
+	LocaleManager.set_locale(original_locale, false)
+
+
 func test_synthesis_slot_matches_task_slot_and_uses_drag_replace_contract() -> void:
 	var main := await _spawn_main()
 	main._show_synthesis()
