@@ -85,3 +85,6 @@ msgstr "点击翻开"
 
 msgid "opening.ui.persona.continue"
 msgstr "点击继续"
+
+msgid "quest.ui.todo.title"
+msgstr "待办清单"

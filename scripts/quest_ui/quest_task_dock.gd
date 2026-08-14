@@ -4,13 +4,23 @@ extends Control
 signal rule_focused(rule: CardSlotRule)
 signal item_inspected(definition: CardItemDefinition)
 
+const RECEIPT_WIDTH := 264.0
+const RECEIPT_COLLAPSED_HEIGHT := 186.0
+const RECEIPT_EXPANDED_HEIGHT := 477.0
+
 var state: QuestGameState
+var receipt_host: Control
+var receipt_background: TextureRect
+var receipt_title: Label
+var task_scroll: ScrollContainer
+var receipt_toggle: Button
 var bookmark_column: VBoxContainer
 var popup_host: Control
 var task_window: QuestTaskWindow
 var open_task_instance_id := 0
 var bookmark_buttons: Dictionary = {}
 var task_windows: Dictionary = {}
+var is_expanded := false
 
 
 func setup(game_state: QuestGameState, task_popup_host: Control = null) -> void:
@@ -27,17 +37,65 @@ func setup(game_state: QuestGameState, task_popup_host: Control = null) -> void:
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	z_index = 20
+	z_index = 40
+	receipt_host = Control.new()
+	receipt_host.name = "TodoReceipt"
+	receipt_host.position = Vector2.ZERO
+	receipt_host.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	receipt_host.clip_contents = false
+	add_child(receipt_host)
+
+	receipt_background = TextureRect.new()
+	receipt_background.name = "TodoReceiptBackground"
+	receipt_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	receipt_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	receipt_background.stretch_mode = TextureRect.STRETCH_SCALE
+	receipt_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	receipt_host.add_child(receipt_background)
+
+	receipt_title = Label.new()
+	receipt_title.name = "TodoReceiptTitle"
+	receipt_title.position = Vector2(46, 48)
+	receipt_title.size = Vector2(160, 44)
+	receipt_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	receipt_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	receipt_title.add_theme_font_size_override("font_size", 22)
+	receipt_title.add_theme_color_override("font_color", Color("16272a"))
+	receipt_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	receipt_host.add_child(receipt_title)
+
+	task_scroll = ScrollContainer.new()
+	task_scroll.name = "TodoTaskScroll"
+	task_scroll.position = Vector2(22, 104)
+	task_scroll.size = Vector2(174, 306)
+	task_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	task_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	task_scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+	task_scroll.clip_contents = true
+	receipt_host.add_child(task_scroll)
 	bookmark_column = VBoxContainer.new()
-	bookmark_column.anchor_left = 0.026
-	bookmark_column.anchor_top = 0.17
-	bookmark_column.anchor_right = 0.172
-	bookmark_column.anchor_bottom = 0.68
-	bookmark_column.add_theme_constant_override("separation", 7)
-	bookmark_column.clip_contents = true
+	bookmark_column.name = "TodoTaskColumn"
+	bookmark_column.custom_minimum_size = Vector2(174, 0)
+	bookmark_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bookmark_column.add_theme_constant_override("separation", 5)
+	bookmark_column.clip_contents = false
 	bookmark_column.mouse_filter = Control.MOUSE_FILTER_PASS
-	add_child(bookmark_column)
+	task_scroll.add_child(bookmark_column)
+
+	receipt_toggle = Button.new()
+	receipt_toggle.name = "TodoReceiptToggle"
+	receipt_toggle.flat = true
+	receipt_toggle.focus_mode = Control.FOCUS_NONE
+	receipt_toggle.tooltip_text = ""
+	receipt_toggle.pressed.connect(_toggle_receipt)
+	for state_name in ["normal", "hover", "pressed", "focus", "disabled"]:
+		receipt_toggle.add_theme_stylebox_override(state_name, StyleBoxEmpty.new())
+	receipt_host.add_child(receipt_toggle)
+
 	LocaleManager.locale_changed.connect(_on_locale_changed)
+	receipt_title.text = TranslationServer.translate(&"quest.ui.todo.title")
+	_set_expanded(false)
+	call_deferred("_hide_scrollbar_art")
 	refresh()
 
 
@@ -77,11 +135,14 @@ func refresh() -> void:
 
 func _create_bookmark(instance_id: int) -> Button:
 	var bookmark := Button.new()
-	bookmark.custom_minimum_size = Vector2(0, 48)
+	bookmark.custom_minimum_size = Vector2(0, 43)
 	bookmark.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bookmark.clip_text = true
 	bookmark.tooltip_text = ""
-	bookmark.add_theme_font_size_override("font_size", 12)
+	bookmark.focus_mode = Control.FOCUS_NONE
+	bookmark.add_theme_font_size_override("font_size", 11)
+	bookmark.add_theme_color_override("font_color", Color("243236"))
+	bookmark.add_theme_color_override("font_hover_color", Color("071013"))
 	bookmark.pressed.connect(_toggle_task.bind(instance_id))
 	bookmark_column.add_child(bookmark)
 	return bookmark
@@ -90,10 +151,57 @@ func _create_bookmark(instance_id: int) -> Button:
 func _update_bookmark(bookmark: Button, task: TaskInstanceState) -> void:
 	var definition := QuestArcCatalog.task_by_id(task.definition_id)
 	bookmark.text = TranslationServer.translate(definition.display_name_key)
-	var border := Color("83b6a6") if task.confirmed else Color("6d766d")
+	var border := Color("647a72", 0.84) if task.confirmed else Color("686d68", 0.64)
 	bookmark.add_theme_stylebox_override(
-		"normal", UiPalette.panel_style(Color("0b2528", 0.92), border)
+		"normal", UiPalette.panel_style(Color("d7d9ce", 0.32), border)
 	)
+	bookmark.add_theme_stylebox_override(
+		"hover", UiPalette.panel_style(Color("e9e8dc", 0.68), Color("405d58", 0.9))
+	)
+	bookmark.add_theme_stylebox_override(
+		"pressed", UiPalette.panel_style(Color("c9cdc3", 0.72), Color("314b47", 0.95))
+	)
+
+
+func _toggle_receipt() -> void:
+	_set_expanded(not is_expanded)
+
+
+func _set_expanded(expanded: bool) -> void:
+	is_expanded = expanded
+	if receipt_host == null:
+		return
+	var receipt_height := (
+		RECEIPT_EXPANDED_HEIGHT if is_expanded else RECEIPT_COLLAPSED_HEIGHT
+	)
+	receipt_host.size = Vector2(RECEIPT_WIDTH, receipt_height)
+	receipt_background.texture = load(
+		"res://resources/ui/shell/todo-expanded.png"
+		if is_expanded
+		else "res://resources/ui/shell/todo-collapsed.png"
+	) as Texture2D
+	task_scroll.visible = is_expanded
+	receipt_toggle.position = (
+		Vector2(62, receipt_height - 65)
+		if is_expanded
+		else Vector2(32, 42)
+	)
+	receipt_toggle.size = (
+		Vector2(132, 56)
+		if is_expanded
+		else Vector2(196, 126)
+	)
+	call_deferred("_hide_scrollbar_art")
+
+
+func _hide_scrollbar_art() -> void:
+	if task_scroll == null:
+		return
+	var scroll_bar := task_scroll.get_v_scroll_bar()
+	if scroll_bar == null:
+		return
+	scroll_bar.self_modulate = Color(1, 1, 1, 0)
+	scroll_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
 func _toggle_task(instance_id: int) -> void:
@@ -167,4 +275,6 @@ func _on_state_delta(delta: QuestStateDelta) -> void:
 
 
 func _on_locale_changed(_locale: String) -> void:
+	if receipt_title != null:
+		receipt_title.text = TranslationServer.translate(&"quest.ui.todo.title")
 	refresh()

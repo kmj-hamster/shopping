@@ -85,3 +85,6 @@ msgstr "Click to reveal"
 
 msgid "opening.ui.persona.continue"
 msgstr "Click to continue"
+
+msgid "quest.ui.todo.title"
+msgstr "To Do List"

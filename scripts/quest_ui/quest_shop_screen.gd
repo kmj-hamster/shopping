@@ -9,6 +9,12 @@ signal background_pressed
 const DIALOGUE_SILENT_CHARACTERS := " \t\r\n，。！？、；：,.!?;:…—-（）()“”\"'"
 const DIALOGUE_VOICE_PLAYER_COUNT := 3
 const DIALOGUE_MAX_VISIBLE_LINES := 2
+const SHOP_BACK_TEXTURE: Texture2D = preload("res://resources/ui/shell/shop-back.png")
+const SHOP_SHELF_TEXTURE: Texture2D = preload("res://resources/ui/shell/shop-shelf.png")
+const SHOP_TALK_TEXTURE: Texture2D = preload("res://resources/ui/shell/shop-talk.png")
+const TOY_DIALOGUE_TEXTURE: Texture2D = preload(
+	"res://resources/ui/shell/shop-dialogue-toy.png"
+)
 
 var state: QuestGameState
 var store_id: StringName
@@ -93,6 +99,7 @@ func _bind_state() -> void:
 
 func _build_interface() -> void:
 	var background := TextureRect.new()
+	background.name = "StoreBackground"
 	background.texture = _store_background_texture()
 	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
@@ -125,25 +132,25 @@ func _build_interface() -> void:
 
 	navigation_column = VBoxContainer.new()
 	navigation_column.name = "ShopNavigation"
-	navigation_column.anchor_left = 0.835
+	navigation_column.anchor_left = 0.86
 	navigation_column.anchor_top = 0.34
-	navigation_column.anchor_right = 0.975
+	navigation_column.anchor_right = 0.965
 	navigation_column.anchor_bottom = 0.76
 	navigation_column.add_theme_constant_override("separation", 10)
 	add_child(navigation_column)
 	shelf_nav_button = Button.new()
 	shelf_nav_button.name = "ShelfButton"
-	shelf_nav_button.custom_minimum_size = Vector2(0, 54)
+	_configure_navigation_button(shelf_nav_button, SHOP_SHELF_TEXTURE)
 	shelf_nav_button.pressed.connect(_toggle_shelf_popup)
 	navigation_column.add_child(shelf_nav_button)
 	talk_nav_button = Button.new()
 	talk_nav_button.name = "TalkButton"
-	talk_nav_button.custom_minimum_size = Vector2(0, 54)
+	_configure_navigation_button(talk_nav_button, SHOP_TALK_TEXTURE)
 	talk_nav_button.pressed.connect(_on_owner_pressed)
 	navigation_column.add_child(talk_nav_button)
 	leave_nav_button = Button.new()
 	leave_nav_button.name = "LeaveButton"
-	leave_nav_button.custom_minimum_size = Vector2(0, 54)
+	_configure_navigation_button(leave_nav_button, SHOP_BACK_TEXTURE)
 	leave_nav_button.pressed.connect(leave_requested.emit)
 	navigation_column.add_child(leave_nav_button)
 
@@ -156,6 +163,10 @@ func _build_interface() -> void:
 	dialogue_panel.add_theme_stylebox_override(
 		"panel", UiPalette.panel_style(Color("050b0e", 0.92), Color("837659", 0.86))
 	)
+	if store_id == &"toy":
+		var dialogue_style := StyleBoxTexture.new()
+		dialogue_style.texture = TOY_DIALOGUE_TEXTURE
+		dialogue_panel.add_theme_stylebox_override("panel", dialogue_style)
 	dialogue_panel.clip_contents = true
 	dialogue_panel.gui_input.connect(_on_dialogue_panel_gui_input)
 	add_child(dialogue_panel)
@@ -199,6 +210,16 @@ func _build_interface() -> void:
 
 	_build_dialogue_voice_players()
 	_build_shelf_popup()
+
+
+func _configure_navigation_button(button: Button, texture: Texture2D) -> void:
+	button.custom_minimum_size = Vector2(115, 54)
+	button.focus_mode = Control.FOCUS_NONE
+	button.icon = texture
+	button.expand_icon = true
+	button.text = ""
+	for state_name in ["normal", "hover", "pressed", "focus", "disabled"]:
+		button.add_theme_stylebox_override(state_name, StyleBoxEmpty.new())
 
 
 func _build_dialogue_voice_players() -> void:
@@ -301,9 +322,9 @@ func refresh() -> void:
 	owner_portrait.visible = owner != null and owner_portrait.texture != null
 	talk_nav_button.visible = owner != null
 	dialogue_panel.visible = owner != null
-	shelf_nav_button.text = TranslationServer.translate(&"quest.ui.shop.shelf")
-	talk_nav_button.text = TranslationServer.translate(&"quest.ui.owner.talk")
-	leave_nav_button.text = TranslationServer.translate(&"quest.ui.back")
+	shelf_nav_button.text = ""
+	talk_nav_button.text = ""
+	leave_nav_button.text = ""
 	shelf_caption.text = TranslationServer.translate(&"quest.ui.shop.shelf")
 	restock_label.text = TranslationServer.translate(&"opening.ui.shop.restock") % state.restock_nights_remaining(store_id)
 	_refresh_owner_dialogue()
@@ -698,6 +719,7 @@ func _on_checkout_pressed() -> void:
 
 func _owner_texture() -> Texture2D:
 	var paths := {
+		&"toy": "res://resources/character/balloon-head.png",
 		&"flower": "res://resources/character/flower-head.png",
 		&"record": "res://resources/character/phonograph-head.png",
 	}
@@ -707,8 +729,11 @@ func _owner_texture() -> Texture2D:
 
 func _store_background_texture() -> Texture2D:
 	var paths := {
+		&"toy": "res://resources/background/toystore.png",
+		&"fast_food": "res://resources/background/food.png",
 		&"flower": "res://resources/background/flowerstore.png",
 		&"record": "res://resources/background/musicstore.png",
+		&"bookstore": "res://resources/background/bookstore.png",
 	}
 	var path := String(paths.get(store_id, ""))
 	return load(path) as Texture2D if not path.is_empty() else null

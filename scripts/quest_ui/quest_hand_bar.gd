@@ -20,9 +20,6 @@ var highlight_rule: CardSlotRule
 var card_scroll: ScrollContainer
 var card_row: Control
 var empty_label: Label
-var title_label: Label
-var item_tab_button: Button
-var mask_tab_button: Button
 var active_tab: StringName = TAB_ITEMS
 var mask_persona_order: Array[StringName] = PersonaMaskCatalog.MASK_PERSONAS.duplicate()
 var card_views: Dictionary = {}
@@ -48,74 +45,24 @@ func setup(game_state: QuestGameState) -> void:
 
 
 func _ready() -> void:
-	custom_minimum_size = Vector2(0, 174)
-	mouse_filter = Control.MOUSE_FILTER_STOP
-	add_theme_stylebox_override(
-		"panel", UiPalette.panel_style(Color("020609", 0.94), Color("4f6968", 0.76))
-	)
-	var margin := MarginContainer.new()
-	margin.mouse_filter = Control.MOUSE_FILTER_PASS
-	margin.add_theme_constant_override("margin_left", 20)
-	margin.add_theme_constant_override("margin_right", 20)
-	margin.add_theme_constant_override("margin_top", 7)
-	margin.add_theme_constant_override("margin_bottom", 7)
-	add_child(margin)
-	var column := VBoxContainer.new()
-	column.mouse_filter = Control.MOUSE_FILTER_PASS
-	column.add_theme_constant_override("separation", 4)
-	margin.add_child(column)
-	var tab_row := HBoxContainer.new()
-	tab_row.custom_minimum_size = Vector2(0, 22)
-	tab_row.add_theme_constant_override("separation", 3)
-	column.add_child(tab_row)
-	title_label = Label.new()
-	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title_label.add_theme_font_size_override("font_size", 12)
-	title_label.add_theme_color_override("font_color", Color("8ca49f"))
-	title_label.visible = false
-	tab_row.add_child(title_label)
-	var tab_spacer := Control.new()
-	tab_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	tab_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	tab_row.add_child(tab_spacer)
-	var tab_group := ButtonGroup.new()
-	item_tab_button = _make_tab_button(&"quest.ui.hand.items", TAB_ITEMS, tab_group)
-	mask_tab_button = _make_tab_button(&"quest.ui.hand.masks", TAB_MASKS, tab_group)
-	tab_row.add_child(item_tab_button)
-	tab_row.add_child(mask_tab_button)
+	custom_minimum_size = Vector2(0, 154)
+	mouse_filter = Control.MOUSE_FILTER_PASS
+	add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	card_scroll = ScrollContainer.new()
 	card_scroll.mouse_filter = Control.MOUSE_FILTER_PASS
-	card_scroll.custom_minimum_size = Vector2(0, 132)
+	card_scroll.custom_minimum_size = Vector2(0, 154)
 	card_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	card_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	card_scroll.clip_contents = false
 	card_scroll.resized.connect(_queue_card_layout)
-	column.add_child(card_scroll)
+	add_child(card_scroll)
 	card_row = Control.new()
 	card_row.mouse_filter = Control.MOUSE_FILTER_PASS
 	card_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	card_row.custom_minimum_size = Vector2(0, CardHandCard.CARD_SIZE.y)
 	card_scroll.add_child(card_row)
 	LocaleManager.locale_changed.connect(_on_locale_changed)
-	_refresh_locale()
-	_update_tab_buttons()
 	refresh()
-
-
-func _make_tab_button(
-	text_key: StringName,
-	tab_id: StringName,
-	group: ButtonGroup,
-) -> Button:
-	var button := Button.new()
-	button.custom_minimum_size = Vector2(58, 22)
-	button.toggle_mode = true
-	button.button_group = group
-	button.focus_mode = Control.FOCUS_NONE
-	button.add_theme_font_size_override("font_size", 11)
-	button.text = TranslationServer.translate(text_key)
-	button.pressed.connect(show_tab.bind(tab_id))
-	return button
 
 
 func refresh() -> void:
@@ -126,45 +73,18 @@ func show_tab(tab_id: StringName) -> void:
 	if tab_id not in [TAB_ITEMS, TAB_MASKS]:
 		return
 	if active_tab == tab_id:
-		_update_tab_buttons()
 		return
 	active_tab = tab_id
 	hovered_card_id = -1
-	_update_tab_buttons()
-	_reconcile_cards(true)
 
 
 func show_tab_for_rule(rule: CardSlotRule) -> void:
 	show_tab(TAB_MASKS if PersonaMaskCatalog.rule_uses_masks(rule) else TAB_ITEMS)
 
 
-func _update_tab_buttons() -> void:
-	if item_tab_button != null:
-		item_tab_button.button_pressed = active_tab == TAB_ITEMS
-	if mask_tab_button != null:
-		mask_tab_button.button_pressed = active_tab == TAB_MASKS
-
-
 func _visible_card_entries() -> Array:
 	var entries: Array = []
 	if state == null:
-		return entries
-	if active_tab == TAB_MASKS:
-		PersonaMaskCatalog.sync_selection(state.synthesis_persona_id)
-		for persona_id in mask_persona_order:
-			var amount := int(state.protagonist_aspect_counts.get(persona_id, 0))
-			if amount <= 0:
-				continue
-			var mask_card := PersonaMaskCatalog.card_for_persona(persona_id)
-			if mask_card.location != CardItemState.Location.HAND:
-				continue
-			entries.append([
-				mask_card,
-				PersonaMaskCatalog.definition_for_persona(
-					persona_id,
-					amount,
-				),
-			])
 		return entries
 	for card in state.inventory:
 		if card.location != CardItemState.Location.HAND:
@@ -174,6 +94,21 @@ func _visible_card_entries() -> Array:
 		var definition := QuestArcCatalog.item_by_id(card.definition_id)
 		if definition != null:
 			entries.append([card, definition])
+	PersonaMaskCatalog.sync_selection(state.synthesis_persona_id)
+	for persona_id in mask_persona_order:
+		var amount := int(state.protagonist_aspect_counts.get(persona_id, 0))
+		if amount <= 0:
+			continue
+		var mask_card := PersonaMaskCatalog.card_for_persona(persona_id)
+		if mask_card.location != CardItemState.Location.HAND:
+			continue
+		entries.append([
+			mask_card,
+			PersonaMaskCatalog.definition_for_persona(
+				persona_id,
+				amount,
+			),
+		])
 	return entries
 
 
@@ -442,11 +377,8 @@ func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 	var persona_id := PersonaMaskCatalog.persona_for_card(card)
 	if not persona_id.is_empty():
 		return (
-			active_tab == TAB_MASKS
-			and (
-				card.location == CardItemState.Location.HAND
-				or state.synthesis_persona_id == persona_id
-			)
+			card.location == CardItemState.Location.HAND
+			or state.synthesis_persona_id == persona_id
 		)
 	return card in state.inventory
 
@@ -558,21 +490,11 @@ func _card_view_for_row_child(child: Node) -> CardHandCard:
 func _on_state_delta(delta: QuestStateDelta) -> void:
 	if delta == null:
 		return
-	if active_tab == TAB_MASKS:
+	if delta.affects_hand() or delta.synthesis_persona_changed:
+		# Persona levels can change without a physical inventory mutation. The
+		# unified hand must still add or update the corresponding mask cards.
 		_reconcile_cards(true)
-	elif delta.affects_hand():
-		_reconcile_cards()
 
 
 func _on_locale_changed(_locale: String) -> void:
-	_refresh_locale()
 	refresh()
-
-
-func _refresh_locale() -> void:
-	if title_label != null:
-		title_label.text = TranslationServer.translate(&"quest.ui.hand.title")
-	if item_tab_button != null:
-		item_tab_button.text = TranslationServer.translate(&"quest.ui.hand.items")
-	if mask_tab_button != null:
-		mask_tab_button.text = TranslationServer.translate(&"quest.ui.hand.masks")

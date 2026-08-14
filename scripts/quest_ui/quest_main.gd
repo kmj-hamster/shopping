@@ -5,12 +5,19 @@ signal arc_text_revealed
 signal arc_text_advanced
 
 const UI_THEME: Theme = preload("res://resources/fonts/shancha_ui_theme.tres")
+const CONTENT_LEFT := 136.0 / 1920.0
+const CONTENT_TOP := 97.0 / 1080.0
+const CONTENT_RIGHT := 1780.0 / 1920.0
+const CONTENT_BOTTOM := 920.0 / 1080.0
 
 var state: QuestGameState
 var current_screen: Control
+var art_canvas: Control
 var content_viewport_region: Control
 var screen_host: Control
 var task_popup_layer: Control
+var global_frame: TextureRect
+var global_shadow: TextureRect
 var map_screen: QuestMapScreen
 var shop_screens: Dictionary = {}
 var task_dock: QuestTaskDock
@@ -81,117 +88,83 @@ func _ready() -> void:
 func _build_shell() -> void:
 	var background := ColorRect.new()
 	background.name = "NightMallBackground"
-	background.color = Color("031216")
+	background.color = Color("071923")
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(background)
 
-	var left_glow := ColorRect.new()
-	left_glow.color = Color("163b3b", 0.2)
-	left_glow.anchor_right = 0.19
-	left_glow.anchor_bottom = 1.0
-	left_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(left_glow)
-
-	var sidebar := PanelContainer.new()
-	sidebar.name = "PersistentSidebar"
-	sidebar.anchor_left = 0.018
-	sidebar.anchor_top = 0.035
-	sidebar.anchor_right = 0.18
-	sidebar.anchor_bottom = 0.94
-	sidebar.add_theme_stylebox_override(
-		"panel",
-		UiPalette.panel_style(Color("061b20", 0.88), Color("63867d", 0.72)),
-	)
-	add_child(sidebar)
-	var sidebar_margin := MarginContainer.new()
-	sidebar_margin.add_theme_constant_override("margin_left", 16)
-	sidebar_margin.add_theme_constant_override("margin_right", 16)
-	sidebar_margin.add_theme_constant_override("margin_top", 14)
-	sidebar_margin.add_theme_constant_override("margin_bottom", 16)
-	sidebar.add_child(sidebar_margin)
-	var sidebar_column := VBoxContainer.new()
-	sidebar_column.add_theme_constant_override("separation", 3)
-	sidebar_margin.add_child(sidebar_column)
-	money_label = Label.new()
-	money_label.add_theme_font_size_override("font_size", 24)
-	money_label.add_theme_color_override("font_color", Color("efd38a"))
-	sidebar_column.add_child(money_label)
-	day_label = Label.new()
-	day_label.add_theme_font_size_override("font_size", 12)
-	day_label.add_theme_color_override("font_color", Color("7f9c95"))
-	sidebar_column.add_child(day_label)
-	var sidebar_spacer := Control.new()
-	sidebar_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	sidebar_column.add_child(sidebar_spacer)
-	next_day_button = Button.new()
-	next_day_button.name = "NextDayButton"
-	next_day_button.custom_minimum_size = Vector2(126, 126)
-	next_day_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	next_day_button.add_theme_font_size_override("font_size", 18)
-	next_day_button.add_theme_stylebox_override(
-		"normal", UiPalette.round_button_style(Color("b69255"), Color("f0d69c"), 64)
-	)
-	next_day_button.add_theme_stylebox_override(
-		"hover", UiPalette.round_button_style(Color("d0aa63"), Color("fff0c4"), 64)
-	)
-	next_day_button.pressed.connect(_on_next_day_pressed)
-	sidebar_column.add_child(next_day_button)
+	art_canvas = Control.new()
+	art_canvas.name = "ArtCanvas"
+	art_canvas.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	art_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(art_canvas)
 
 	content_viewport_region = Control.new()
 	content_viewport_region.name = "ContentViewportRegion"
-	content_viewport_region.anchor_left = 0.19
-	content_viewport_region.anchor_top = 0.045
-	content_viewport_region.anchor_right = 0.96
-	content_viewport_region.anchor_bottom = 0.755
+	content_viewport_region.anchor_left = CONTENT_LEFT
+	content_viewport_region.anchor_top = CONTENT_TOP
+	content_viewport_region.anchor_right = CONTENT_RIGHT
+	content_viewport_region.anchor_bottom = CONTENT_BOTTOM
 	content_viewport_region.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(content_viewport_region)
+	content_viewport_region.clip_contents = true
+	art_canvas.add_child(content_viewport_region)
 
-	var screen_frame := PanelContainer.new()
-	screen_frame.name = "ContentViewportFrame"
-	screen_frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	screen_frame.add_theme_stylebox_override(
-		"panel",
-		UiPalette.panel_style(Color("061015", 0.98), Color("77958c", 0.78)),
-	)
-	content_viewport_region.add_child(screen_frame)
-	var screen_margin := MarginContainer.new()
-	for side in ["left", "right", "top", "bottom"]:
-		screen_margin.add_theme_constant_override("margin_%s" % side, 6)
-	screen_frame.add_child(screen_margin)
 	screen_host = Control.new()
 	screen_host.name = "ContentViewport"
 	screen_host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	screen_host.clip_contents = true
-	screen_margin.add_child(screen_host)
+	content_viewport_region.add_child(screen_host)
 	task_popup_layer = Control.new()
 	task_popup_layer.name = "TaskPopupLayer"
 	task_popup_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	task_popup_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	task_popup_layer.clip_contents = true
-	task_popup_layer.z_index = 20
+	task_popup_layer.z_index = 80
 	content_viewport_region.add_child(task_popup_layer)
 
+	global_frame = TextureRect.new()
+	global_frame.name = "ContentViewportFrame"
+	global_frame.texture = load("res://resources/ui/shell/frame-global.png") as Texture2D
+	global_frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	global_frame.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	global_frame.stretch_mode = TextureRect.STRETCH_SCALE
+	global_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	global_frame.z_index = 30
+	art_canvas.add_child(global_frame)
+
 	protagonist_button = TextureButton.new()
-	protagonist_button.name = "ProtagonistPortrait"
-	protagonist_button.texture_normal = load("res://resources/character/bag-head.png") as Texture2D
-	protagonist_button.texture_hover = load("res://resources/character/bag-light.png") as Texture2D
+	protagonist_button.name = "SynthesisBagButton"
+	protagonist_button.texture_normal = load(
+		"res://resources/ui/shell/bag-synthesis.png"
+	) as Texture2D
+	protagonist_button.texture_hover = protagonist_button.texture_normal
 	protagonist_button.anchor_left = 0.79
-	protagonist_button.anchor_top = 0.70
-	protagonist_button.anchor_right = 0.99
+	protagonist_button.anchor_top = 0.62
+	protagonist_button.anchor_right = 0.985
 	protagonist_button.anchor_bottom = 1.0
 	protagonist_button.ignore_texture_size = true
 	protagonist_button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
 	protagonist_button.tooltip_text = TranslationServer.translate(&"quest.ui.synthesis.open")
 	protagonist_button.pressed.connect(_show_synthesis)
-	add_child(protagonist_button)
+	protagonist_button.z_index = 45
+	art_canvas.add_child(protagonist_button)
+
+	global_shadow = TextureRect.new()
+	global_shadow.name = "GlobalShellShadow"
+	global_shadow.texture = load("res://resources/ui/shell/shadow-global.png") as Texture2D
+	global_shadow.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	global_shadow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	global_shadow.stretch_mode = TextureRect.STRETCH_SCALE
+	global_shadow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	global_shadow.z_index = 60
+	art_canvas.add_child(global_shadow)
 
 	debug_button_row = HBoxContainer.new()
 	debug_button_row.name = "DebugButtonRow"
-	debug_button_row.anchor_left = 0.004
-	debug_button_row.anchor_top = 0.945
-	debug_button_row.anchor_right = 0.17
-	debug_button_row.anchor_bottom = 0.992
+	debug_button_row.anchor_left = 0.84
+	debug_button_row.anchor_top = 0.008
+	debug_button_row.anchor_right = 0.995
+	debug_button_row.anchor_bottom = 0.052
 	debug_button_row.add_theme_constant_override("separation", 5)
 	debug_button_row.z_index = 60
 	add_child(debug_button_row)
@@ -222,19 +195,20 @@ func _build_global_interface() -> void:
 	task_dock.setup(state, task_popup_layer)
 	task_dock.rule_focused.connect(_on_rule_focused)
 	task_dock.item_inspected.connect(_show_item)
-	add_child(task_dock)
+	art_canvas.add_child(task_dock)
 
 	hand_bar = QuestHandBar.new()
 	hand_bar.name = "QuestHandBar"
-	hand_bar.anchor_left = 0.235
-	hand_bar.anchor_top = 0.74
-	hand_bar.anchor_right = 0.79
-	hand_bar.anchor_bottom = 0.985
+	hand_bar.anchor_left = 0.15
+	hand_bar.anchor_top = 0.775
+	hand_bar.anchor_right = 0.82
+	hand_bar.anchor_bottom = 0.998
+	hand_bar.z_index = 45
 	hand_bar.setup(state)
 	hand_bar.item_inspected.connect(_show_item)
 	hand_bar.card_drag_started.connect(_on_hand_card_drag_started)
 	hand_bar.card_drag_finished.connect(_on_hand_card_drag_finished)
-	add_child(hand_bar)
+	art_canvas.add_child(hand_bar)
 
 	detail_popup = ItemDetailPopup.new()
 	add_child(detail_popup)
@@ -916,14 +890,18 @@ func _stop_arc_cursor() -> void:
 
 
 func _refresh_global_text() -> void:
-	if state == null or money_label == null:
+	if state == null:
 		return
 	_refresh_hud_state()
-	next_day_button.text = TranslationServer.translate(&"demo.ui.next_day")
-	language_button.text = LocaleManager.switch_button_text()
-	clear_save_button.text = TranslationServer.translate(&"demo.ui.clear_save")
-	clear_save_button.tooltip_text = TranslationServer.translate(&"demo.ui.clear_save.tooltip")
-	protagonist_button.tooltip_text = TranslationServer.translate(&"quest.ui.synthesis.open")
+	if next_day_button != null:
+		next_day_button.text = TranslationServer.translate(&"demo.ui.next_day")
+	if language_button != null:
+		language_button.text = LocaleManager.switch_button_text()
+	if clear_save_button != null:
+		clear_save_button.text = TranslationServer.translate(&"demo.ui.clear_save")
+		clear_save_button.tooltip_text = TranslationServer.translate(&"demo.ui.clear_save.tooltip")
+	if protagonist_button != null:
+		protagonist_button.tooltip_text = TranslationServer.translate(&"quest.ui.synthesis.open")
 	next_day_dialog.title = TranslationServer.translate(&"demo.ui.next_day")
 	next_day_dialog.dialog_text = TranslationServer.translate(&"demo.ui.next_day.question")
 	next_day_dialog.ok_button_text = TranslationServer.translate(&"demo.ui.confirm")
@@ -932,11 +910,13 @@ func _refresh_global_text() -> void:
 
 
 func _refresh_hud_state() -> void:
-	if state == null or money_label == null:
+	if state == null:
 		return
 	debug_hud_refresh_count += 1
-	money_label.text = TranslationServer.translate(&"demo.ui.money") % state.wallet.money
-	day_label.text = TranslationServer.translate(&"demo.ui.night") % state.day
+	if money_label != null:
+		money_label.text = TranslationServer.translate(&"demo.ui.money") % state.wallet.money
+	if day_label != null:
+		day_label.text = TranslationServer.translate(&"demo.ui.night") % state.day
 
 
 func _on_state_delta(delta: QuestStateDelta) -> void:

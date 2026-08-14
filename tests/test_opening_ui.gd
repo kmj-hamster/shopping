@@ -62,7 +62,10 @@ func test_opening_task_popups_stay_inside_content_frame() -> void:
 
 func test_opening_task_popups_fit_the_720p_content_region() -> void:
 	var popup_bounds := Control.new()
-	popup_bounds.size = Vector2(1280.0 * (0.96 - 0.19), 720.0 * (0.755 - 0.045))
+	popup_bounds.size = Vector2(
+		1280.0 * (QuestMain.CONTENT_RIGHT - QuestMain.CONTENT_LEFT),
+		720.0 * (QuestMain.CONTENT_BOTTOM - QuestMain.CONTENT_TOP),
+	)
 	add_child_autoqfree(popup_bounds)
 	for task in GameState.quest_state.active_tasks():
 		var popup := QuestTaskWindow.new()
@@ -80,23 +83,56 @@ func test_opening_task_popups_fit_the_720p_content_region() -> void:
 		popup.free()
 
 
+func test_todo_receipt_stays_open_above_a_scrollable_task_list() -> void:
+	var main := await _spawn_main()
+	var dock := main.task_dock
+	assert_false(dock.is_expanded)
+	assert_false(dock.task_scroll.visible)
+	dock._toggle_receipt()
+	assert_true(dock.is_expanded)
+	assert_true(dock.task_scroll.visible)
+	assert_eq(dock.receipt_host.size, Vector2(264, 477))
+	assert_almost_eq(dock.task_scroll.get_v_scroll_bar().self_modulate.a, 0.0, 0.001)
+	var task := main.state.active_tasks()[0] as TaskInstanceState
+	dock._toggle_task(task.instance_id)
+	await get_tree().process_frame
+	assert_true(dock.is_expanded)
+	assert_true(dock.task_window.visible)
+	assert_gt(main.task_popup_layer.z_index, dock.z_index)
+
+
 func test_toy_unlock_enters_shop_activates_three_tasks_and_shows_restock_timer() -> void:
 	var main := await _spawn_main()
 	var frog := main.state.grant_item(&"tin_frog", &"test")
 	main.map_screen._on_unlock_confirmed(&"toy", frog)
 	await get_tree().process_frame
 	assert_true(main.current_screen is QuestShopScreen)
-	assert_eq((main.current_screen as QuestShopScreen).store_id, &"toy")
+	var shop := main.current_screen as QuestShopScreen
+	assert_eq(shop.store_id, &"toy")
+	assert_eq(
+		(shop.get_node("StoreBackground") as TextureRect).texture.resource_path,
+		"res://resources/background/toystore.png",
+	)
+	assert_eq(
+		shop.owner_portrait.texture.resource_path,
+		"res://resources/character/balloon-head.png",
+	)
+	assert_eq(shop.shelf_nav_button.icon.resource_path, "res://resources/ui/shell/shop-shelf.png")
+	assert_eq(shop.talk_nav_button.icon.resource_path, "res://resources/ui/shell/shop-talk.png")
+	assert_eq(shop.leave_nav_button.icon.resource_path, "res://resources/ui/shell/shop-back.png")
+	var dialogue_style := shop.dialogue_panel.get_theme_stylebox("panel") as StyleBoxTexture
+	assert_not_null(dialogue_style)
+	assert_eq(dialogue_style.texture.resource_path, "res://resources/ui/shell/shop-dialogue-toy.png")
 	assert_true(main.state.has_visited_store(&"toy"))
 	assert_not_null(main.state.task_instance_for_definition(&"tin_boy_toy"))
 	assert_not_null(main.state.task_instance_for_definition(&"self_care"))
 	assert_not_null(main.state.task_instance_for_definition(&"girl_order"))
 	assert_eq(
-		(main.current_screen as QuestShopScreen).restock_label.text,
+		shop.restock_label.text,
 		TranslationServer.translate(&"opening.ui.shop.restock") % 3,
 	)
 	assert_not_null(main.screen_transition_overlay)
-	for shelf_button in (main.current_screen as QuestShopScreen).shelf_buttons.values():
+	for shelf_button in shop.shelf_buttons.values():
 		assert_eq((shelf_button as Button).tooltip_text, "")
 
 

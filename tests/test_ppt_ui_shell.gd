@@ -13,7 +13,7 @@ func before_each() -> void:
 	GameState.reset_game()
 
 
-func test_main_uses_responsive_ppt_regions_and_demo_content() -> void:
+func test_main_uses_the_centered_art_shell_and_unified_hand() -> void:
 	var main := await _spawn_main()
 	assert_eq(main.theme, load("res://resources/fonts/shancha_ui_theme.tres"))
 	var ui_font := main.theme.default_font as FontVariation
@@ -21,32 +21,49 @@ func test_main_uses_responsive_ppt_regions_and_demo_content() -> void:
 	assert_eq(ui_font.base_font, load("res://resources/fonts/VT323-Regular.ttf"))
 	assert_true(main.theme.default_font.has_char("A".unicode_at(0)))
 	assert_true(main.theme.default_font.has_char("中".unicode_at(0)))
-	assert_not_null(main.get_node_or_null("PersistentSidebar"))
-	assert_not_null(main.get_node_or_null("ContentViewportRegion"))
+	assert_null(main.get_node_or_null("PersistentSidebar"))
+	assert_not_null(main.art_canvas)
+	assert_same(main.art_canvas.get_parent(), main)
+	assert_same(main.content_viewport_region.get_parent(), main.art_canvas)
 	assert_not_null(main.find_child("ContentViewportFrame", true, false))
 	assert_same(main.task_popup_layer.get_parent(), main.content_viewport_region)
 	assert_not_null(main.find_child("ContentViewport", true, false))
-	assert_not_null(main.get_node_or_null("ProtagonistPortrait"))
+	assert_not_null(main.find_child("SynthesisBagButton", true, false))
+	assert_eq(main.protagonist_button.texture_normal.resource_path, "res://resources/ui/shell/bag-synthesis.png")
+	assert_null(main.money_label)
+	assert_null(main.day_label)
+	assert_null(main.next_day_button)
 	assert_not_null(main.find_child("LanguageButton", true, false))
 	assert_not_null(main.find_child("ClearSaveButton", true, false))
 	assert_not_null(main.get_node_or_null("DebugButtonRow"))
 	assert_eq(main.language_button.get_parent(), main.debug_button_row)
 	assert_eq(main.clear_save_button.get_parent(), main.debug_button_row)
-	assert_gt(main.debug_button_row.anchor_top, 0.90)
+	assert_lt(main.debug_button_row.anchor_top, 0.10)
 	assert_true(main.clear_save_button.pressed.is_connected(
 		Callable(main, "_on_clear_save_pressed")
 	))
 	assert_not_null(main.forbidden_cursor_texture)
+	assert_eq(main.global_frame.texture.resource_path, "res://resources/ui/shell/frame-global.png")
+	assert_eq(main.global_shadow.texture.resource_path, "res://resources/ui/shell/shadow-global.png")
+	assert_eq(main.global_shadow.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+	assert_gt(main.task_popup_layer.z_index, main.global_shadow.z_index)
+	assert_almost_eq(main.content_viewport_region.anchor_left, QuestMain.CONTENT_LEFT, 0.001)
+	assert_almost_eq(main.content_viewport_region.anchor_top, QuestMain.CONTENT_TOP, 0.001)
+	assert_almost_eq(main.content_viewport_region.anchor_right, QuestMain.CONTENT_RIGHT, 0.001)
+	assert_almost_eq(main.content_viewport_region.anchor_bottom, QuestMain.CONTENT_BOTTOM, 0.001)
 	assert_true(main.current_screen is QuestMapScreen)
 	assert_eq((main.current_screen as QuestMapScreen).store_hotspots.size(), 2)
 	assert_eq(main.task_dock.bookmark_column.get_child_count(), 4)
-	assert_true(main.task_dock.bookmark_column.clip_contents)
+	assert_false(main.task_dock.is_expanded)
+	assert_false(main.task_dock.task_scroll.visible)
+	assert_true(main.task_dock.task_scroll.clip_contents)
+	assert_almost_eq(main.task_dock.task_scroll.get_v_scroll_bar().self_modulate.a, 0.0, 0.001)
 	for bookmark in main.task_dock.bookmark_column.get_children():
 		var bookmark_button := bookmark as Button
 		assert_eq(bookmark_button.tooltip_text, "")
 		assert_true(bookmark_button.clip_text)
-		assert_eq(bookmark_button.get_theme_font_size("font_size"), 12)
-	assert_eq(main.hand_bar.card_views.size(), 6)
+		assert_eq(bookmark_button.get_theme_font_size("font_size"), 11)
+	assert_eq(main.hand_bar.card_views.size(), 10)
 	var fries_card := main.hand_bar.card_views.values()[0] as CardHandCard
 	assert_eq(fries_card.definition.id, &"fries")
 	assert_not_null(fries_card.item_image.texture)
@@ -494,13 +511,11 @@ func test_task_popup_uses_horizontal_letter_and_slot_columns() -> void:
 	assert_almost_eq(popup.anchor_right, PaperActivityPopup.PAPER_ANCHOR_RIGHT, 0.001)
 	assert_almost_eq(popup.anchor_top, PaperActivityPopup.PAPER_ANCHOR_TOP, 0.001)
 	assert_almost_eq(popup.anchor_bottom, PaperActivityPopup.PAPER_ANCHOR_BOTTOM, 0.001)
-	assert_almost_eq(
-		popup.size.y,
-		main.task_popup_layer.size.y * (
-			PaperActivityPopup.PAPER_ANCHOR_BOTTOM - PaperActivityPopup.PAPER_ANCHOR_TOP
-		),
-		0.5,
+	var anchored_height := main.task_popup_layer.size.y * (
+		PaperActivityPopup.PAPER_ANCHOR_BOTTOM - PaperActivityPopup.PAPER_ANCHOR_TOP
 	)
+	assert_gte(popup.size.y, anchored_height)
+	assert_lte(popup.size.y, main.task_popup_layer.size.y)
 	assert_eq(popup.title_label.horizontal_alignment, HORIZONTAL_ALIGNMENT_CENTER)
 	assert_eq(popup.body_label.horizontal_alignment, HORIZONTAL_ALIGNMENT_LEFT)
 	assert_eq(popup.body_label.vertical_alignment, VERTICAL_ALIGNMENT_TOP)

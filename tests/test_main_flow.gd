@@ -29,8 +29,13 @@ func test_flower_shop_purchase_moves_jasmine_into_center_hand() -> void:
 	await get_tree().process_frame
 	assert_eq(GameState.quest_state.wallet.money, 20)
 	assert_eq(GameState.quest_state.inventory.size(), 7)
-	assert_not_null(_card_by_definition(GameState.quest_state, &"jasmine"))
-	assert_eq(main.hand_bar.card_views.size(), 7)
+	var jasmine := _card_by_definition(GameState.quest_state, &"jasmine")
+	assert_not_null(jasmine)
+	assert_true(main.hand_bar.card_views.has(jasmine.instance_id))
+	assert_eq(
+		main.hand_bar.card_views.size(),
+		GameState.quest_state.inventory.size() + PersonaMaskCatalog.MASK_PERSONAS.size(),
+	)
 
 
 func test_shop_replaces_the_single_checkout_selection() -> void:

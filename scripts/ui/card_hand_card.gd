@@ -5,12 +5,15 @@ signal inspect_requested(definition: CardItemDefinition)
 signal drag_started(card: CardItemState)
 signal drag_finished(card: CardItemState, succeeded: bool)
 
-const CARD_SIZE := Vector2(88, 146)
+const CARD_SIZE := Vector2(120, 146)
+const CARD_BACKGROUND: Texture2D = preload("res://resources/ui/shell/hand-card.png")
 
 var card: CardItemState
 var definition: CardItemDefinition
 var title_label: Label
 var title_host: Control
+var card_background: TextureRect
+var highlight_outline: Panel
 var item_image: TextureRect
 var value_label: Label
 var drag_enabled := true
@@ -47,19 +50,28 @@ func _ready() -> void:
 	clip_contents = true
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	mouse_default_cursor_shape = Control.CURSOR_DRAG
+	add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	card_background = TextureRect.new()
+	card_background.name = "CardPaperBackground"
+	card_background.texture = CARD_BACKGROUND
+	card_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	card_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	card_background.stretch_mode = TextureRect.STRETCH_SCALE
+	card_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(card_background)
 	var margin := MarginContainer.new()
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	margin.add_theme_constant_override("margin_left", 8)
-	margin.add_theme_constant_override("margin_right", 8)
-	margin.add_theme_constant_override("margin_top", 8)
-	margin.add_theme_constant_override("margin_bottom", 7)
+	margin.add_theme_constant_override("margin_left", 10)
+	margin.add_theme_constant_override("margin_right", 10)
+	margin.add_theme_constant_override("margin_top", 9)
+	margin.add_theme_constant_override("margin_bottom", 8)
 	add_child(margin)
 	var column := VBoxContainer.new()
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_theme_constant_override("separation", 5)
+	column.add_theme_constant_override("separation", 3)
 	margin.add_child(column)
 	var image_host := Control.new()
-	image_host.custom_minimum_size = Vector2(72, 88)
+	image_host.custom_minimum_size = Vector2(100, 94)
 	image_host.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	image_host.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(image_host)
@@ -74,22 +86,22 @@ func _ready() -> void:
 	value_label.anchor_top = 1.0
 	value_label.anchor_right = 1.0
 	value_label.anchor_bottom = 1.0
-	value_label.offset_left = -28.0
-	value_label.offset_top = -29.0
+	value_label.offset_left = -34.0
+	value_label.offset_top = -34.0
 	value_label.offset_right = -2.0
 	value_label.offset_bottom = -3.0
 	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	value_label.add_theme_font_size_override("font_size", 21)
-	value_label.add_theme_color_override("font_color", Color("f1e7c7"))
-	value_label.add_theme_color_override("font_outline_color", Color("050708"))
-	value_label.add_theme_constant_override("outline_size", 5)
+	value_label.add_theme_font_size_override("font_size", 23)
+	value_label.add_theme_color_override("font_color", Color("f4ead1"))
+	value_label.add_theme_color_override("font_outline_color", Color("102126"))
+	value_label.add_theme_constant_override("outline_size", 4)
 	value_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	image_host.add_child(value_label)
 	# Keep localized names out of the VBox minimum-width calculation. The
 	# fixed host owns layout; the label can ellipsize inside it in either locale.
 	title_host = Control.new()
-	title_host.custom_minimum_size = Vector2(72, 20)
+	title_host.custom_minimum_size = Vector2(100, 20)
 	title_host.clip_contents = true
 	column.add_child(title_host)
 	title_label = Label.new()
@@ -100,8 +112,14 @@ func _ready() -> void:
 	title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title_label.add_theme_font_size_override("font_size", 13)
-	title_label.add_theme_color_override("font_color", Color("d9e7df"))
+	title_label.add_theme_color_override("font_color", Color("172629"))
 	title_host.add_child(title_label)
+	highlight_outline = Panel.new()
+	highlight_outline.name = "CardRuleHighlight"
+	highlight_outline.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	highlight_outline.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	highlight_outline.z_index = 2
+	add_child(highlight_outline)
 	_refresh()
 
 
@@ -164,23 +182,20 @@ func apply_rule_highlight(rule: CardSlotRule) -> void:
 
 
 func _apply_card_style() -> void:
-	var style := UiPalette.panel_style(Color("050708", 0.99), _border_color())
-	# CardHandCard owns its eight-pixel inner margin. UiPalette's generic panel
-	# margins would add another 24 px horizontally and defeat CARD_SIZE.
-	style.content_margin_left = 0.0
-	style.content_margin_right = 0.0
-	style.content_margin_top = 0.0
-	style.content_margin_bottom = 0.0
-	style.corner_radius_top_left = 4
-	style.corner_radius_top_right = 4
-	style.corner_radius_bottom_left = 4
-	style.corner_radius_bottom_right = 4
+	if highlight_outline == null:
+		return
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color.TRANSPARENT
+	style.corner_radius_top_left = 8
+	style.corner_radius_top_right = 8
+	style.corner_radius_bottom_left = 8
+	style.corner_radius_bottom_right = 8
 	if rule_match_highlighted:
 		style.border_color = _border_color().lerp(Color.WHITE, 0.78)
 		style.set_border_width_all(2)
 		style.shadow_color = Color(0.9, 1.0, 0.97, 0.32)
 		style.shadow_size = 6
-	add_theme_stylebox_override("panel", style)
+	highlight_outline.add_theme_stylebox_override("panel", style)
 
 
 func _get_drag_data(at_position: Vector2) -> Variant:

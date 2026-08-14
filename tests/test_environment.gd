@@ -25,6 +25,20 @@ func test_runtime_art_assets_exist() -> void:
 	assert_true(FileAccess.file_exists("res://resources/character/rat-head.png"))
 	assert_true(FileAccess.file_exists("res://resources/character/phonograph-head.png"))
 	assert_true(FileAccess.file_exists("res://resources/character/manga-head.png"))
+	for shell_asset in [
+		"frame-global.png",
+		"todo-collapsed.png",
+		"todo-expanded.png",
+		"shadow-global.png",
+		"bag-synthesis.png",
+		"hand-card.png",
+		"shop-dialogue-toy.png",
+		"shop-back.png",
+		"shop-shelf.png",
+		"shop-talk.png",
+	]:
+		assert_true(FileAccess.file_exists("res://resources/ui/shell/%s" % shell_asset))
+	assert_eq(ProjectSettings.get_setting("display/window/stretch/aspect"), "keep")
 
 
 func test_player_facing_shop_scene_is_the_main_scene() -> void:

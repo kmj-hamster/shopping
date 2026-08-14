@@ -13,12 +13,17 @@ func before_each() -> void:
 	GameState.reset_game()
 
 
-func test_item_cards_and_slots_keep_height_while_becoming_narrower() -> void:
-	assert_eq(CardHandCard.CARD_SIZE, Vector2(88, 146))
+func test_all_cards_and_slots_use_the_new_paper_proportion() -> void:
+	assert_eq(CardHandCard.CARD_SIZE, Vector2(120, 146))
 	assert_eq(QuestTaskSlot.CARD_SIZE, CardHandCard.CARD_SIZE)
 	var main := await _spawn_main()
 	for view in main.hand_bar.card_views.values():
-		assert_eq((view as CardHandCard).size, CardHandCard.CARD_SIZE)
+		var card_view := view as CardHandCard
+		assert_eq(card_view.size, CardHandCard.CARD_SIZE)
+		assert_eq(
+			card_view.card_background.texture.resource_path,
+			"res://resources/ui/shell/hand-card.png",
+		)
 	var task := main.state.task_instance_for_definition(&"girl_order")
 	var rule := QuestArcCatalog.task_by_id(task.definition_id).slot_rules[0] as CardSlotRule
 	var fries := main.state.inventory[0] as CardItemState
@@ -43,17 +48,18 @@ func test_item_cards_and_slots_keep_height_while_becoming_narrower() -> void:
 	assert_eq(synthesis_slot.size, QuestTaskSlot.CARD_SIZE)
 
 
-func test_mask_tab_presents_four_live_persona_cards_without_entering_inventory() -> void:
+func test_items_and_live_persona_cards_share_one_hand_without_entering_inventory() -> void:
 	var main := await _spawn_main()
 	var hand := main.hand_bar
 	var inventory_count := main.state.inventory.size()
 	assert_eq(hand.active_tab, QuestHandBar.TAB_ITEMS)
-	assert_not_null(hand.item_tab_button)
-	assert_not_null(hand.mask_tab_button)
+	assert_null(hand.find_child("ItemTabButton", true, false))
+	assert_null(hand.find_child("MaskTabButton", true, false))
+	assert_eq(hand.card_views.size(), inventory_count + 4)
 
 	hand.show_tab(QuestHandBar.TAB_MASKS)
 	assert_eq(hand.active_tab, QuestHandBar.TAB_MASKS)
-	assert_eq(hand.card_views.size(), 4)
+	assert_eq(hand.card_views.size(), inventory_count + 4)
 	for persona_id in PersonaMaskCatalog.MASK_PERSONAS:
 		var card := PersonaMaskCatalog.card_for_persona(persona_id)
 		var view := hand.card_views[card.instance_id] as CardHandCard

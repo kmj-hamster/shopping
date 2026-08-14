@@ -445,7 +445,7 @@ func test_synthesis_slot_matches_task_slot_and_uses_drag_replace_contract() -> v
 	assert_true(main.hand_bar.card_views.has(replacement.instance_id))
 
 
-func test_mask_slot_replaces_and_returns_persistent_persona_cards_to_mask_tab() -> void:
+func test_mask_slot_replaces_and_returns_persistent_persona_cards_to_unified_hand() -> void:
 	var main := await _spawn_main()
 	main._show_synthesis()
 	await get_tree().process_frame
@@ -462,7 +462,11 @@ func test_mask_slot_replaces_and_returns_persistent_persona_cards_to_mask_tab() 
 	assert_true(synthesis.stage_card(&"mask", dreamwalker))
 	assert_same(mask_slot.card, dreamwalker)
 	assert_eq(dreamwalker.location, CardItemState.Location.ACTIVITY_SLOT)
-	assert_eq(main.hand_bar.card_views.size(), 3)
+	assert_false(main.hand_bar.card_views.has(dreamwalker.instance_id))
+	assert_eq(
+		main.hand_bar.card_views.size(),
+		main.state.inventory.size() + PersonaMaskCatalog.MASK_PERSONAS.size() - 1,
+	)
 
 	assert_true(synthesis.stage_card(&"mask", nightwalker))
 	assert_same(mask_slot.card, nightwalker)
@@ -480,7 +484,11 @@ func test_mask_slot_replaces_and_returns_persistent_persona_cards_to_mask_tab() 
 	assert_true(main.state.synthesis_persona_id.is_empty())
 	assert_null(mask_slot.card)
 	assert_eq(nightwalker.location, CardItemState.Location.HAND)
-	assert_eq(main.hand_bar.card_views.size(), 4)
+	assert_true(main.hand_bar.card_views.has(nightwalker.instance_id))
+	assert_eq(
+		main.hand_bar.card_views.size(),
+		main.state.inventory.size() + PersonaMaskCatalog.MASK_PERSONAS.size(),
+	)
 
 
 func _assert_drop_highlights(
