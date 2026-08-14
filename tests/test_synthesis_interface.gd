@@ -355,6 +355,35 @@ func test_unknown_gray_candidate_opens_possibility_with_types_and_requirements()
 	assert_eq(main.detail_popup.current_definition.property_value(&"dreamwalker"), 5)
 
 
+func test_candidate_selection_clears_on_repeat_or_blank_background_click() -> void:
+	var main := await _spawn_synthesis_main()
+	var synthesis := main.current_screen as QuestSynthesisInterface
+	assert_true(synthesis.stage_card(&"base", _card_by_definition(main.state, &"jasmine")))
+	var button := synthesis.candidate_buttons[&"recipe_midnight_rose"] as Button
+
+	button.pressed.emit()
+	assert_eq(main.state.synthesis_candidate_recipe_id, &"recipe_midnight_rose")
+	assert_true(button.button_pressed)
+	assert_true(main.detail_popup.visible)
+
+	button.pressed.emit()
+	assert_true(main.state.synthesis_candidate_recipe_id.is_empty())
+	assert_false(button.button_pressed)
+	assert_false(synthesis.action_button.visible)
+	assert_false(main.detail_popup.visible)
+
+	button.pressed.emit()
+	assert_eq(main.state.synthesis_candidate_recipe_id, &"recipe_midnight_rose")
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	synthesis.background_input.gui_input.emit(click)
+	assert_true(main.state.synthesis_candidate_recipe_id.is_empty())
+	assert_false(button.button_pressed)
+	assert_false(synthesis.action_button.visible)
+	assert_false(main.detail_popup.visible)
+
+
 func test_complete_click_discovers_recipe_and_discovered_gray_click_reveals_output() -> void:
 	var main := await _spawn_synthesis_main()
 	var synthesis := main.current_screen as QuestSynthesisInterface

@@ -832,6 +832,16 @@ func select_synthesis_candidate(recipe_id: StringName) -> bool:
 	return false
 
 
+func clear_synthesis_candidate() -> bool:
+	if synthesis_candidate_recipe_id.is_empty():
+		return false
+	synthesis_candidate_recipe_id = &""
+	_mark_transient_changed(
+		QuestStateDelta.new().mark_synthesis_candidate(&"synthesis_candidate_cleared")
+	)
+	return true
+
+
 func begin_synthesis() -> Dictionary:
 	var recipe := QuestArcCatalog.recipe_by_id(synthesis_candidate_recipe_id)
 	if recipe == null or not recipe_is_available(recipe.id):

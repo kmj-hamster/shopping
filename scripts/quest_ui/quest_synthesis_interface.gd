@@ -717,6 +717,8 @@ func _on_background_gui_input(event: InputEvent) -> void:
 	var click := event as InputEventMouseButton
 	if click == null or click.button_index != MOUSE_BUTTON_LEFT or not click.pressed:
 		return
+	if state != null:
+		state.clear_synthesis_candidate()
 	details_cleared.emit()
 	hand_highlight_cleared.emit()
 
@@ -728,6 +730,10 @@ func _on_reinforcement_label_gui_input(event: InputEvent, role_id: StringName) -
 
 
 func _on_candidate_pressed(recipe_id: StringName) -> void:
+	if state.synthesis_candidate_recipe_id == recipe_id:
+		state.clear_synthesis_candidate()
+		details_cleared.emit()
+		return
 	if not state.select_synthesis_candidate(recipe_id):
 		return
 	var recipe := QuestArcCatalog.recipe_by_id(recipe_id)
