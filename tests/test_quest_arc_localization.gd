@@ -204,3 +204,32 @@ func test_store_and_owner_names_match_confirmed_copy() -> void:
 				expected_names[locale][key],
 				"%s should match in %s" % [key, locale],
 			)
+
+
+func test_shop_owner_copy_is_spoken_dialogue_in_both_locales() -> void:
+	var expected_dialogue := {
+		&"zh_CN": {
+			&"opening.owner.toy.idle": "欢迎光临。今晚的玩具都在货架上，发条和轮子暂时还算听话。",
+			&"opening.owner.fast_food.idle": "炸锅正热着。想吃什么就说，别让它们等凉了。",
+			&"opening.owner.flower.idle": "嘘……花已经睡了。挑选的时候轻一点。",
+			&"demo.owner.flower.reminder": "再看看我的茎……那些小白花还在。",
+			&"demo.owner.flower.state.trimmed": "轻多了……那些小白花已经不见了。",
+			&"demo.owner.flower.state.blooming": "就让它们继续开吧……水已经喝饱了。",
+		},
+		&"en": {
+			&"opening.owner.toy.idle": "Welcome. Tonight's toys are all on the shelf, and their springs and wheels are behaving—for now.",
+			&"opening.owner.fast_food.idle": "The fryer is hot. Tell me what you want before it gets cold.",
+			&"opening.owner.flower.idle": "Shh... The flowers are asleep. Choose gently.",
+			&"demo.owner.flower.reminder": "Look at my stem again... Those tiny white flowers are still there.",
+			&"demo.owner.flower.state.trimmed": "I feel lighter... Those tiny white flowers are gone.",
+			&"demo.owner.flower.state.blooming": "Let them keep blooming... They have had plenty to drink.",
+		},
+	}
+	for locale in expected_dialogue:
+		TranslationServer.set_locale(locale)
+		for key in expected_dialogue[locale]:
+			assert_eq(
+				TranslationServer.translate(key),
+				expected_dialogue[locale][key],
+				"%s should be direct dialogue in %s" % [key, locale],
+			)
