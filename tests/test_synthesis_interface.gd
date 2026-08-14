@@ -158,6 +158,38 @@ func test_empty_material_slots_open_localized_help_in_the_item_popup() -> void:
 	LocaleManager.set_locale(original_locale, false)
 
 
+func test_material_type_icons_appear_above_the_base_and_open_property_details() -> void:
+	var main := await _spawn_synthesis_main()
+	var synthesis := main.current_screen as QuestSynthesisInterface
+	assert_false(synthesis.base_type_host.visible)
+	assert_true(synthesis.displayed_base_type_ids.is_empty())
+
+	assert_true(synthesis.stage_card(&"base", _card_by_definition(main.state, &"jasmine")))
+	assert_true(synthesis.base_type_host.visible)
+	assert_eq(synthesis.displayed_base_type_ids, [&"flower"])
+	assert_eq(synthesis.base_type_row.get_child_count(), 1)
+	assert_lt(
+		synthesis.base_type_host.position.y + synthesis.base_type_host.size.y,
+		synthesis.base_slot_host.position.y,
+	)
+	var flower_icon := synthesis.base_type_row.get_child(0) as Button
+	assert_eq(flower_icon.name, "FlowerBaseType")
+	flower_icon.pressed.emit()
+	assert_true(main.detail_popup.visible)
+	assert_eq(main.detail_popup.primary_property_id, &"flower")
+
+	var multi_type_item := CardItemDefinition.new()
+	multi_type_item.property_set = CardPropertySet.new()
+	multi_type_item.property_set.tags = [&"flower", &"toy", &"metal"]
+	synthesis._update_base_type_icons({"base_item": multi_type_item}, true)
+	assert_eq(synthesis.displayed_base_type_ids, [&"flower", &"toy"])
+	assert_eq(synthesis.base_type_row.get_child_count(), 2)
+
+	assert_true(main.state.return_card_to_hand(main.state.synthesis_base_card()))
+	assert_false(synthesis.base_type_host.visible)
+	assert_true(synthesis.displayed_base_type_ids.is_empty())
+
+
 func test_persona_rays_clear_the_card_and_reach_distant_icons_at_level_ten() -> void:
 	var main := await _spawn_synthesis_main()
 	var synthesis := main.current_screen as QuestSynthesisInterface

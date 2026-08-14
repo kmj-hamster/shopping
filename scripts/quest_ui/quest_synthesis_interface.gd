@@ -33,6 +33,9 @@ const PERSONA_ICON_POSITIONS := PersonaStarChart.PERSONA_ICON_POSITIONS
 const REINFORCEMENT_SLOT_GAP := 14.0
 const REINFORCEMENT_TOP_GAP := 12.0
 const REINFORCEMENT_LABEL_HEIGHT := 20.0
+const BASE_TYPE_ICON_SIDE := 30
+const BASE_TYPE_ROW_WIDTH := 210.0
+const BASE_TYPE_BOTTOM_GAP := 8.0
 
 var state: QuestGameState
 var phase := Phase.DRAFT
@@ -42,6 +45,9 @@ var star_chart: PersonaStarChart
 var candidate_layer: Control
 var base_slot_host: CenterContainer
 var base_slot: QuestSynthesisMaterialSlot
+var base_type_host: CenterContainer
+var base_type_row: HBoxContainer
+var displayed_base_type_ids: Array[StringName] = []
 var persona_slot: QuestSynthesisMaterialSlot
 var helper_slot: QuestSynthesisMaterialSlot
 var material_slots: Array[QuestSynthesisMaterialSlot] = []
@@ -307,6 +313,15 @@ func _build_base_slot() -> void:
 	base_slot.help_requested.connect(_on_material_help_requested)
 	base_slot_host.add_child(base_slot)
 	material_slots.append(base_slot)
+	base_type_host = CenterContainer.new()
+	base_type_host.name = "SynthesisBaseTypes"
+	base_type_host.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	draft_layer.add_child(base_type_host)
+	base_type_row = HBoxContainer.new()
+	base_type_row.add_theme_constant_override("separation", 6)
+	base_type_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	base_type_host.add_child(base_type_row)
+	base_type_host.visible = false
 
 
 func _build_candidate_layer() -> void:
@@ -430,6 +445,11 @@ func _layout_draft() -> void:
 	if draft_layer == null:
 		return
 	base_slot_host.position = FIELD_CENTER - QuestTaskSlot.CARD_SIZE * 0.5
+	base_type_host.position = Vector2(
+		FIELD_CENTER.x - BASE_TYPE_ROW_WIDTH * 0.5,
+		base_slot_host.position.y - BASE_TYPE_ICON_SIDE - BASE_TYPE_BOTTOM_GAP,
+	)
+	base_type_host.size = Vector2(BASE_TYPE_ROW_WIDTH, BASE_TYPE_ICON_SIDE)
 	var total_width := QuestTaskSlot.CARD_SIZE.x * 2.0 + REINFORCEMENT_SLOT_GAP
 	var first_x := FIELD_CENTER.x - total_width * 0.5
 	var slots_y := (
@@ -453,6 +473,7 @@ func _rebuild_material_slots(snapshot: Dictionary, force_refresh: bool = false) 
 	_record_update(&"materials")
 	PersonaMaskCatalog.sync_selection(state.synthesis_persona_id)
 	base_slot.setup(self, &"base", snapshot.get("base_card") as CardItemState, force_refresh)
+	_update_base_type_icons(snapshot, force_refresh)
 	persona_slot.setup(
 		self,
 		&"persona",
@@ -464,6 +485,32 @@ func _rebuild_material_slots(snapshot: Dictionary, force_refresh: bool = false) 
 	helper_slot.setup(
 		self, &"helper", snapshot.get("helper_card") as CardItemState, force_refresh
 	)
+
+
+func _update_base_type_icons(snapshot: Dictionary, _force_refresh: bool = false) -> void:
+	var base_item := snapshot.get("base_item") as CardItemDefinition
+	var type_ids: Array[StringName] = []
+	if state != null and base_item != null:
+		type_ids = state.item_category_ids(base_item)
+	if type_ids == displayed_base_type_ids:
+		for index in range(type_ids.size()):
+			var icon := base_type_row.get_child(index) as Button
+			icon.tooltip_text = TranslationServer.translate(
+				ItemDetailPopup.property_name_key(type_ids[index])
+			)
+		base_type_host.visible = not type_ids.is_empty()
+		return
+	displayed_base_type_ids = type_ids
+	for child in base_type_row.get_children():
+		base_type_row.remove_child(child)
+		child.queue_free()
+	for type_id in type_ids:
+		var icon := ItemDetailPopup.make_property_icon_button(type_id, BASE_TYPE_ICON_SIDE)
+		icon.name = "%sBaseType" % String(type_id).to_pascal_case()
+		icon.toggle_mode = false
+		icon.pressed.connect(property_inspected.emit.bind(type_id))
+		base_type_row.add_child(icon)
+	base_type_host.visible = not type_ids.is_empty()
 
 
 func _update_reinforcement_visibility(snapshot: Dictionary) -> void:
