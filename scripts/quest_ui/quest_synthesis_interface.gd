@@ -23,9 +23,13 @@ enum NarrativeState {
 const BACKGROUND_TEXTURE := preload("res://resources/ui/synthesis/bg-inbag.png")
 const NARRATIVE_FADE_SECONDS := 0.55
 const NARRATIVE_HOLD_SECONDS := 1.25
-const FIELD_CENTER := Vector2(640, 292)
+const FIELD_CENTER := Vector2(640, 308)
 const CANDIDATE_NODE_SIZE := Vector2(44, 44)
 const PERSONA_ICON_SIZE := Vector2(150, 84)
+const PERSONA_RAY_LEVEL_ONE_LENGTH := 48.0
+const PERSONA_RAY_FULL_LEVEL := 10
+const PERSONA_RAY_CARD_CLEARANCE := 2.0
+const PERSONA_RAY_ICON_OVERLAP := 2.0
 const PERSONA_DIRECTIONS := {
 	CardPropertySet.PERSONA_NIGHTWALKER: Vector2(-0.72, -0.69),
 	CardPropertySet.PERSONA_MOURNER: Vector2(-0.72, 0.69),
@@ -33,10 +37,10 @@ const PERSONA_DIRECTIONS := {
 	CardPropertySet.PERSONA_HOMECOMER: Vector2(0.72, 0.69),
 }
 const PERSONA_ICON_POSITIONS := {
-	CardPropertySet.PERSONA_NIGHTWALKER: Vector2(244, 70),
-	CardPropertySet.PERSONA_MOURNER: Vector2(244, 394),
-	CardPropertySet.PERSONA_DREAMWALKER: Vector2(886, 70),
-	CardPropertySet.PERSONA_HOMECOMER: Vector2(886, 394),
+	CardPropertySet.PERSONA_NIGHTWALKER: Vector2(82, 55),
+	CardPropertySet.PERSONA_MOURNER: Vector2(82, 376),
+	CardPropertySet.PERSONA_DREAMWALKER: Vector2(1116, 55),
+	CardPropertySet.PERSONA_HOMECOMER: Vector2(1116, 376),
 }
 
 var state: QuestGameState
@@ -490,13 +494,56 @@ func _rebuild_persona_field(snapshot: Dictionary) -> void:
 	for persona_id in CardPropertySet.PERSONAS:
 		var amount := int(totals.get(persona_id, 0))
 		(persona_value_labels[persona_id] as Label).text = str(amount)
-		var direction := PERSONA_DIRECTIONS[persona_id] as Vector2
-		var length := minf(44.0 + amount * 19.0, 250.0)
 		var ray := persona_rays[persona_id] as Line2D
-		ray.points = PackedVector2Array([FIELD_CENTER, FIELD_CENTER + direction * length])
+		ray.points = _persona_ray_points(persona_id, amount)
 		ray.default_color = (
 			Color("f0f1e8", 0.76) if amount > 0 else Color("9aabb0", 0.22)
 		)
+
+
+func _persona_ray_points(persona_id: StringName, amount: int) -> PackedVector2Array:
+	var button := persona_buttons.get(persona_id) as Button
+	if button == null:
+		return PackedVector2Array([FIELD_CENTER, FIELD_CENTER])
+	var icon_center := button.position + button.size * 0.5
+	var center_offset := icon_center - FIELD_CENTER
+	if center_offset.is_zero_approx():
+		return PackedVector2Array([FIELD_CENTER, FIELD_CENTER])
+	var direction := center_offset.normalized()
+	var card_edge_distance := _center_to_rect_edge_distance(
+		QuestTaskSlot.CARD_SIZE,
+		direction,
+	)
+	var icon_edge_distance := _center_to_rect_edge_distance(PERSONA_ICON_SIZE, direction)
+	var start_distance := card_edge_distance + PERSONA_RAY_CARD_CLEARANCE
+	var full_end_distance := (
+		center_offset.length() - icon_edge_distance + PERSONA_RAY_ICON_OVERLAP
+	)
+	var available_length := maxf(full_end_distance - start_distance, 0.0)
+	var visible_length := 0.0
+	if amount > 0:
+		var growth := clampf(
+			float(amount - 1) / float(PERSONA_RAY_FULL_LEVEL - 1),
+			0.0,
+			1.0,
+		)
+		visible_length = lerpf(
+			minf(PERSONA_RAY_LEVEL_ONE_LENGTH, available_length),
+			available_length,
+			growth,
+		)
+	var start := FIELD_CENTER + direction * start_distance
+	return PackedVector2Array([start, start + direction * visible_length])
+
+
+func _center_to_rect_edge_distance(rect_size: Vector2, direction: Vector2) -> float:
+	var distance_x := (
+		INF if is_zero_approx(direction.x) else rect_size.x * 0.5 / absf(direction.x)
+	)
+	var distance_y := (
+		INF if is_zero_approx(direction.y) else rect_size.y * 0.5 / absf(direction.y)
+	)
+	return minf(distance_x, distance_y)
 
 
 func _rebuild_candidates(snapshot: Dictionary) -> void:

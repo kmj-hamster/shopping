@@ -60,6 +60,51 @@ func test_synthesis_shell_does_not_block_hand_cards_or_bag_button() -> void:
 	assert_true(main.current_screen is QuestMapScreen)
 
 
+func test_persona_rays_clear_the_card_and_reach_distant_icons_at_level_ten() -> void:
+	var main := await _spawn_synthesis_main()
+	var synthesis := main.current_screen as QuestSynthesisInterface
+	var card_rect := Rect2(
+		synthesis.base_slot_host.position,
+		synthesis.base_slot_host.size,
+	)
+	for persona_id in CardPropertySet.PERSONAS:
+		var button := synthesis.persona_buttons[persona_id] as Button
+		var button_rect := Rect2(button.position, button.size)
+		var level_zero := synthesis._persona_ray_points(persona_id, 0)
+		var level_one := synthesis._persona_ray_points(persona_id, 1)
+		var level_two := synthesis._persona_ray_points(persona_id, 2)
+		var level_nine := synthesis._persona_ray_points(persona_id, 9)
+		var level_ten := synthesis._persona_ray_points(persona_id, 10)
+		assert_eq(level_zero[0], level_zero[1])
+		assert_false(card_rect.has_point(level_one[0]))
+		assert_almost_eq(
+			level_one[0].distance_to(level_one[1]),
+			QuestSynthesisInterface.PERSONA_RAY_LEVEL_ONE_LENGTH,
+			0.01,
+		)
+		assert_almost_eq(
+			level_two[0].distance_to(level_two[1])
+				- level_one[0].distance_to(level_one[1]),
+			level_ten[0].distance_to(level_ten[1])
+				- level_nine[0].distance_to(level_nine[1]),
+			0.01,
+		)
+		assert_true(button_rect.has_point(level_ten[1]))
+
+	var nightwalker := synthesis.persona_buttons[&"nightwalker"] as Button
+	var mourner := synthesis.persona_buttons[&"mourner"] as Button
+	var dreamwalker := synthesis.persona_buttons[&"dreamwalker"] as Button
+	var homecomer := synthesis.persona_buttons[&"homecomer"] as Button
+	assert_lt(nightwalker.get_rect().get_center().x + nightwalker.position.x, 240.0)
+	assert_lt(mourner.get_rect().get_center().x + mourner.position.x, 240.0)
+	assert_gt(dreamwalker.get_rect().get_center().x + dreamwalker.position.x, 1040.0)
+	assert_gt(homecomer.get_rect().get_center().x + homecomer.position.x, 1040.0)
+	assert_lt(nightwalker.get_rect().get_center().y + nightwalker.position.y, 180.0)
+	assert_lt(dreamwalker.get_rect().get_center().y + dreamwalker.position.y, 180.0)
+	assert_gt(mourner.get_rect().get_center().y + mourner.position.y, 340.0)
+	assert_gt(homecomer.get_rect().get_center().y + homecomer.position.y, 340.0)
+
+
 func test_base_type_alone_reveals_gray_candidate_and_helper_type_does_not_add_recipes() -> void:
 	var main := await _spawn_synthesis_main()
 	var synthesis := main.current_screen as QuestSynthesisInterface
