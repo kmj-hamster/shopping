@@ -23,6 +23,8 @@ func test_synthesis_uses_full_screen_in_bag_shell() -> void:
 	assert_false(main.task_dock.visible)
 	assert_true(main.hand_bar.visible)
 	assert_true(main.protagonist_button.visible)
+	assert_eq(synthesis.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+	assert_null(synthesis.find_child("SynthesisBackgroundInput", true, false))
 	var background := synthesis.find_child("InBagBackground", true, false) as TextureRect
 	assert_not_null(background)
 	assert_eq(background.stretch_mode, TextureRect.STRETCH_KEEP_ASPECT_COVERED)
@@ -31,6 +33,31 @@ func test_synthesis_uses_full_screen_in_bag_shell() -> void:
 	main._show_map_immediate()
 	assert_true(main.global_frame.visible)
 	assert_true(main.task_dock.visible)
+
+
+func test_synthesis_shell_does_not_block_hand_cards_or_bag_button() -> void:
+	var main := await _spawn_synthesis_main()
+	var first_wrapper := main.hand_bar.card_row.get_child(0) as Control
+	var first_card := first_wrapper.get_child(0) as CardHandCard
+	var exposed_card_point := first_card.get_global_rect().position + Vector2(8, 52)
+	await _click_viewport_at(exposed_card_point)
+	assert_true(main.detail_popup.visible)
+	assert_eq(main.detail_popup.current_definition.id, first_card.definition.id)
+	main._close_detail_popups()
+	await get_tree().process_frame
+
+	# GUT's own TestOutput control covers the runtime button's lower-right position.
+	# Move the button into an uncovered area while preserving the same canvas layer.
+	main.protagonist_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	main.protagonist_button.position = Vector2(28, 510)
+	main.protagonist_button.size = Vector2(128, 150)
+	await get_tree().process_frame
+	var bag_point := main.protagonist_button.get_global_rect().get_center()
+	await _move_viewport_to(bag_point)
+	assert_same(get_viewport().gui_get_hovered_control(), main.protagonist_button)
+	await _click_viewport_at(bag_point)
+	await get_tree().create_timer(0.4).timeout
+	assert_true(main.current_screen is QuestMapScreen)
 
 
 func test_base_type_alone_reveals_gray_candidate_and_helper_type_does_not_add_recipes() -> void:
@@ -250,6 +277,31 @@ func _spawn_synthesis_main() -> QuestMain:
 	main._show_synthesis_immediate()
 	await get_tree().process_frame
 	return main
+
+
+func _click_viewport_at(position: Vector2) -> void:
+	await _move_viewport_to(position)
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.button_mask = MOUSE_BUTTON_MASK_LEFT
+	click.position = position
+	click.global_position = position
+	click.pressed = true
+	get_viewport().push_input(click, true)
+	await get_tree().process_frame
+	click = click.duplicate() as InputEventMouseButton
+	click.button_mask = 0
+	click.pressed = false
+	get_viewport().push_input(click, true)
+	await get_tree().process_frame
+
+
+func _move_viewport_to(position: Vector2) -> void:
+	var motion := InputEventMouseMotion.new()
+	motion.position = position
+	motion.global_position = position
+	get_viewport().push_input(motion, true)
+	await get_tree().process_frame
 
 
 func _card_by_definition(state: QuestGameState, definition_id: StringName) -> CardItemState:

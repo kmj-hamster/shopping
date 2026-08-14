@@ -511,7 +511,6 @@ func _show_synthesis_immediate() -> void:
 		synthesis_interface.hand_tab_requested.connect(hand_bar.show_tab)
 		synthesis_interface.card_staging_changed.connect(_on_card_staging_changed)
 		synthesis_interface.details_cleared.connect(_close_detail_popups)
-		synthesis_interface.background_pressed.connect(_on_activity_background_pressed)
 		synthesis_interface.z_index = 1
 		art_canvas.add_child(synthesis_interface)
 		synthesis_interface.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

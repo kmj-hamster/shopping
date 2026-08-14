@@ -7,7 +7,6 @@ signal property_inspected(property_id: StringName)
 signal hand_tab_requested(tab_id: StringName)
 signal card_staging_changed(card: CardItemState, staged: bool)
 signal details_cleared
-signal background_pressed
 
 enum Phase {
 	DRAFT,
@@ -79,7 +78,6 @@ var result_revealed := false
 var debug_update_counts: Dictionary = {}
 var last_delta_update_usec := 0
 var max_delta_update_usec := 0
-var background_input: Control
 
 
 func setup(game_state: QuestGameState) -> void:
@@ -94,7 +92,9 @@ func setup(game_state: QuestGameState) -> void:
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	mouse_filter = Control.MOUSE_FILTER_STOP
+	# This screen sits below the persistent hand and bag button. Its full-screen
+	# shell must never become a GUI hit target, or it shields those global controls.
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_build_interface()
 	resized.connect(_layout_draft)
 	LocaleManager.locale_changed.connect(_on_locale_changed)
@@ -235,12 +235,6 @@ func _build_interface() -> void:
 	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(background)
-	background_input = Control.new()
-	background_input.name = "SynthesisBackgroundInput"
-	background_input.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	background_input.mouse_filter = Control.MOUSE_FILTER_STOP
-	background_input.gui_input.connect(_on_background_gui_input)
-	add_child(background_input)
 	draft_layer = Control.new()
 	draft_layer.name = "SynthesisDraft"
 	draft_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -830,12 +824,6 @@ func _on_result_drag_finished(_card: CardItemState, succeeded: bool) -> void:
 	result_layer.visible = false
 	draft_layer.visible = true
 	refresh()
-
-
-func _on_background_gui_input(event: InputEvent) -> void:
-	var click := event as InputEventMouseButton
-	if click != null and click.button_index == MOUSE_BUTTON_LEFT and click.pressed:
-		background_pressed.emit()
 
 
 func _on_state_delta(delta: QuestStateDelta) -> void:
