@@ -78,6 +78,7 @@ var arc_cursor_label: Label
 var arc_cursor_tween: Tween
 var transition_in_progress := false
 var focused_rule: CardSlotRule
+var synthesis_highlight_role: StringName
 var arc_fade_seconds := 0.35
 var arc_typewriter_char_seconds := 0.028
 var arc_typing := false
@@ -517,14 +518,26 @@ func _show_synthesis_immediate() -> void:
 		synthesis_interface.item_inspected.connect(_show_item)
 		synthesis_interface.property_inspected.connect(_show_primary_property)
 		synthesis_interface.hand_tab_requested.connect(hand_bar.show_tab)
+		synthesis_interface.hand_highlight_requested.connect(
+			_on_synthesis_hand_highlight_requested
+		)
+		synthesis_interface.hand_highlight_cleared.connect(
+			_clear_synthesis_hand_highlight
+		)
 		synthesis_interface.card_staging_changed.connect(_on_card_staging_changed)
 		synthesis_interface.details_cleared.connect(_close_detail_popups)
 		synthesis_interface.z_index = 1
 		art_canvas.add_child(synthesis_interface)
 		synthesis_interface.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	synthesis_interface.set_background_passthrough_controls([
+		hand_bar,
+		protagonist_button,
+		debug_button_row,
+	])
 	_activate_screen(synthesis_interface)
 	synthesis_interface.refresh()
 	_on_rule_focused(null)
+	_clear_synthesis_hand_highlight()
 	hand_bar.visible = true
 
 
@@ -563,6 +576,8 @@ func _deactivate_current_screen() -> void:
 	current_screen = null
 	if hand_bar != null:
 		hand_bar.clear_temporarily_hidden_cards()
+		hand_bar.clear_card_highlight_predicate()
+	synthesis_highlight_role = &""
 	if detail_popup != null:
 		detail_popup.close()
 
@@ -601,6 +616,7 @@ func _close_detail_popups() -> void:
 
 func _on_activity_background_pressed() -> void:
 	_close_detail_popups()
+	_clear_synthesis_hand_highlight()
 	if task_dock != null:
 		task_dock.close_open_task()
 
@@ -637,6 +653,29 @@ func _on_hand_card_drag_started(card: CardItemState) -> void:
 func _on_hand_card_drag_finished(_card: CardItemState, _succeeded: bool) -> void:
 	if synthesis_interface != null:
 		synthesis_interface.clear_drop_target_highlights()
+
+
+func _on_synthesis_hand_highlight_requested(role_id: StringName) -> void:
+	if not (current_screen is QuestSynthesisInterface):
+		return
+	synthesis_highlight_role = role_id
+	hand_bar.set_card_highlight_predicate(_synthesis_card_matches_focused_role)
+
+
+func _clear_synthesis_hand_highlight() -> void:
+	synthesis_highlight_role = &""
+	if hand_bar != null:
+		hand_bar.clear_card_highlight_predicate()
+
+
+func _synthesis_card_matches_focused_role(card: CardItemState) -> bool:
+	return (
+		current_screen is QuestSynthesisInterface
+		and not synthesis_highlight_role.is_empty()
+		and (current_screen as QuestSynthesisInterface).can_stage_card(
+			synthesis_highlight_role, card
+		)
+	)
 
 
 func play_card_return_animation(

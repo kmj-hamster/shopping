@@ -663,24 +663,6 @@ msgstr "金属在灯下显出锋利的轮廓。"
 msgid "demo.recipe.scissors.process.2"
 msgstr "两片薄刃在想象中咬合。"
 
-msgid "demo.ui.synthesis.base"
-msgstr "原料"
-
-msgid "demo.ui.synthesis.base.description"
-msgstr "我需要一件确切的物品，以施加想象。[原料提供其全部属性]"
-
-msgid "demo.ui.synthesis.helper"
-msgstr "借助物品"
-
-msgid "demo.ui.synthesis.helper.description"
-msgstr "借助一件物品，将它的全部面相加入合成。合成成功后，这件物品会被消耗。"
-
-msgid "demo.ui.synthesis.persona"
-msgstr "借助自己"
-
-msgid "demo.ui.synthesis.persona.description"
-msgstr "选择自己的一种面相，将它当前的等级加入合成。面相不会被消耗。"
-
 msgid "quest.ui.hand.items"
 msgstr "物品"
 

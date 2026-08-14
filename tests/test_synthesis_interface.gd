@@ -24,7 +24,12 @@ func test_synthesis_uses_full_screen_in_bag_shell() -> void:
 	assert_true(main.hand_bar.visible)
 	assert_true(main.protagonist_button.visible)
 	assert_eq(synthesis.mouse_filter, Control.MOUSE_FILTER_IGNORE)
-	assert_null(synthesis.find_child("SynthesisBackgroundInput", true, false))
+	assert_same(
+		synthesis.find_child("SynthesisBackgroundInput", true, false),
+		synthesis.background_input,
+	)
+	assert_eq(synthesis.background_input.mouse_filter, Control.MOUSE_FILTER_STOP)
+	assert_lt(synthesis.background_input.get_index(), synthesis.draft_layer.get_index())
 	assert_null(synthesis.find_child("InBagBackground", true, false))
 	assert_null(synthesis.find_child("SynthesisBackgroundDimmer", true, false))
 	var star_chart := synthesis.find_child("PersonaStarChart", true, false) as PersonaStarChart
@@ -43,6 +48,15 @@ func test_synthesis_shell_does_not_block_hand_cards_or_bag_button() -> void:
 	var first_wrapper := main.hand_bar.card_row.get_child(0) as Control
 	var first_card := first_wrapper.get_child(0) as CardHandCard
 	var exposed_card_point := first_card.get_global_rect().position + Vector2(8, 52)
+	assert_false(
+		(main.current_screen as QuestSynthesisInterface).background_input._has_point(
+			(main.current_screen as QuestSynthesisInterface)
+				.background_input
+				.get_global_transform_with_canvas()
+				.affine_inverse()
+				* exposed_card_point
+		)
+	)
 	await _click_viewport_at(exposed_card_point)
 	assert_true(main.detail_popup.visible)
 	assert_eq(main.detail_popup.current_definition.id, first_card.definition.id)
@@ -61,6 +75,58 @@ func test_synthesis_shell_does_not_block_hand_cards_or_bag_button() -> void:
 	await _click_viewport_at(bag_point)
 	await get_tree().create_timer(0.4).timeout
 	assert_true(main.current_screen is QuestMapScreen)
+
+
+func test_blank_synthesis_background_closes_top_right_details() -> void:
+	var main := await _spawn_synthesis_main()
+	var synthesis := main.current_screen as QuestSynthesisInterface
+	main._show_item(QuestArcCatalog.item_by_id(&"jasmine"))
+	assert_true(main.detail_popup.visible)
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	synthesis.background_input.gui_input.emit(click)
+	assert_false(main.detail_popup.visible)
+
+
+func test_clicking_material_and_borrow_slots_lifts_only_cards_they_accept() -> void:
+	var main := await _spawn_synthesis_main()
+	var synthesis := main.current_screen as QuestSynthesisInterface
+	var jasmine := _card_by_definition(main.state, &"jasmine")
+	var helper := _card_by_definition(main.state, &"soft_gauze")
+	var dreamwalker := PersonaMaskCatalog.card_for_persona(&"dreamwalker")
+	var jasmine_view := main.hand_bar.card_views[jasmine.instance_id] as CardHandCard
+	var helper_view := main.hand_bar.card_views[helper.instance_id] as CardHandCard
+	var dreamwalker_view := (
+		main.hand_bar.card_views[dreamwalker.instance_id] as CardHandCard
+	)
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+
+	synthesis.base_slot._on_gui_input(click)
+	assert_true(main.hand_bar.card_highlight_predicate.is_valid())
+	assert_true(jasmine_view.rule_match_highlighted)
+	assert_false(dreamwalker_view.rule_match_highlighted)
+	assert_almost_eq(jasmine_view.offset_top, -QuestHandBar.RULE_MATCH_LIFT, 0.01)
+	assert_almost_eq(dreamwalker_view.offset_top, 0.0, 0.01)
+
+	assert_true(synthesis.stage_card(&"base", jasmine))
+	assert_false(main.hand_bar.card_highlight_predicate.is_valid())
+	synthesis.persona_slot._on_gui_input(click)
+	assert_true(dreamwalker_view.rule_match_highlighted)
+	assert_false(helper_view.rule_match_highlighted)
+	assert_almost_eq(dreamwalker_view.offset_top, -QuestHandBar.RULE_MATCH_LIFT, 0.01)
+
+	(synthesis.reinforcement_labels[&"helper"] as Label).gui_input.emit(click)
+	assert_false(dreamwalker_view.rule_match_highlighted)
+	assert_true(helper_view.rule_match_highlighted)
+	assert_almost_eq(helper_view.offset_top, -QuestHandBar.RULE_MATCH_LIFT, 0.01)
+
+	synthesis.background_input.gui_input.emit(click)
+	assert_false(main.hand_bar.card_highlight_predicate.is_valid())
+	assert_false(helper_view.rule_match_highlighted)
+	assert_almost_eq(helper_view.offset_top, 0.0, 0.01)
 
 
 func test_persona_rays_clear_the_card_and_reach_distant_icons_at_level_ten() -> void:

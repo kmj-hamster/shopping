@@ -98,9 +98,6 @@ func test_all_quest_arc_content_keys_exist_in_chinese_and_english() -> void:
 		var mask := PersonaMaskCatalog.definition_for_persona(persona_id, 1)
 		keys.append(mask.display_name_key)
 		keys.append(mask.description_key)
-	for role_id in [&"base", &"helper", &"persona"]:
-		keys.append(StringName("demo.ui.synthesis.%s" % role_id))
-		keys.append(StringName("demo.ui.synthesis.%s.description" % role_id))
 	keys.append_array(RUNTIME_UI_KEYS)
 	for raw_store in manifest.stores:
 		keys.append((raw_store as StoreDefinition).display_name_key)

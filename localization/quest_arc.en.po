@@ -663,24 +663,6 @@ msgstr "Metal reveals a sharp outline beneath the lamp."
 msgid "demo.recipe.scissors.process.2"
 msgstr "Two thin blades bite together in your imagination."
 
-msgid "demo.ui.synthesis.base"
-msgstr "Material"
-
-msgid "demo.ui.synthesis.base.description"
-msgstr "I need one definite object on which to impose imagination. [The material provides all of its properties.]"
-
-msgid "demo.ui.synthesis.helper"
-msgstr "Borrow an Item"
-
-msgid "demo.ui.synthesis.helper.description"
-msgstr "Borrow one item and add all of its Personas. The item is consumed after a successful synthesis."
-
-msgid "demo.ui.synthesis.persona"
-msgstr "Borrow Myself"
-
-msgid "demo.ui.synthesis.persona.description"
-msgstr "Choose one of my Personas and add its current level. The Persona is not consumed."
-
 msgid "quest.ui.hand.items"
 msgstr "Items"
 

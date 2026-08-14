@@ -5,6 +5,8 @@ signal leave_requested
 signal item_inspected(definition: CardItemDefinition)
 signal property_inspected(property_id: StringName)
 signal hand_tab_requested(tab_id: StringName)
+signal hand_highlight_requested(role_id: StringName)
+signal hand_highlight_cleared
 signal card_staging_changed(card: CardItemState, staged: bool)
 signal details_cleared
 
@@ -34,6 +36,7 @@ const REINFORCEMENT_LABEL_HEIGHT := 24.0
 
 var state: QuestGameState
 var phase := Phase.DRAFT
+var background_input: QuestSynthesisBackgroundInput
 var draft_layer: Control
 var star_chart: PersonaStarChart
 var candidate_layer: Control
@@ -80,6 +83,11 @@ func setup(game_state: QuestGameState) -> void:
 		state.state_delta.connect(_on_state_delta)
 	if is_node_ready():
 		refresh()
+
+
+func set_background_passthrough_controls(controls: Array) -> void:
+	if background_input != null:
+		background_input.set_passthrough_controls(controls)
 
 
 func _ready() -> void:
@@ -152,14 +160,19 @@ func can_stage_card(role_id: StringName, card: CardItemState) -> bool:
 func stage_card(role_id: StringName, card: CardItemState) -> bool:
 	if not can_stage_card(role_id, card):
 		return false
+	var staged := false
 	if role_id == &"persona":
-		return state.select_synthesis_persona(PersonaMaskCatalog.persona_for_card(card))
-	var result := (
-		state.assign_synthesis_base(card)
-		if role_id == &"base"
-		else state.assign_synthesis_helper(card)
-	)
-	return bool(result.ok)
+		staged = state.select_synthesis_persona(PersonaMaskCatalog.persona_for_card(card))
+	else:
+		var result := (
+			state.assign_synthesis_base(card)
+			if role_id == &"base"
+			else state.assign_synthesis_helper(card)
+		)
+		staged = bool(result.ok)
+	if staged:
+		hand_highlight_cleared.emit()
+	return staged
 
 
 func definition_for_card(card: CardItemState) -> CardItemDefinition:
@@ -176,6 +189,7 @@ func request_hand_tab_for_role(role_id: StringName) -> void:
 	hand_tab_requested.emit(
 		QuestHandBar.TAB_MASKS if role_id == &"persona" else QuestHandBar.TAB_ITEMS
 	)
+	hand_highlight_requested.emit(role_id)
 
 
 func show_drop_targets_for_card(card: CardItemState) -> void:
@@ -200,6 +214,7 @@ func clear_drop_target_highlights() -> void:
 func cancel_pending_inputs() -> void:
 	set_process(false)
 	clear_drop_target_highlights()
+	hand_highlight_cleared.emit()
 	if pending_output != null:
 		card_staging_changed.emit(pending_output, false)
 		pending_output = null
@@ -222,6 +237,12 @@ func _build_interface() -> void:
 	star_chart = PersonaStarChart.new()
 	star_chart.name = "PersonaStarChart"
 	add_child(star_chart)
+	background_input = QuestSynthesisBackgroundInput.new()
+	background_input.name = "SynthesisBackgroundInput"
+	background_input.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	background_input.mouse_filter = Control.MOUSE_FILTER_STOP
+	background_input.gui_input.connect(_on_background_gui_input)
+	add_child(background_input)
 	draft_layer = Control.new()
 	draft_layer.name = "SynthesisDraft"
 	draft_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -281,7 +302,6 @@ func _build_base_slot() -> void:
 	base_slot = QuestSynthesisMaterialSlot.new()
 	base_slot.setup(self, &"base", null)
 	base_slot.item_inspected.connect(item_inspected.emit)
-	base_slot.help_requested.connect(_on_material_help_requested)
 	base_slot_host.add_child(base_slot)
 	material_slots.append(base_slot)
 
@@ -330,7 +350,9 @@ func _build_reinforcement_slots() -> void:
 		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		label.add_theme_font_size_override("font_size", 14)
 		label.add_theme_color_override("font_color", Color("d7d4c8"))
-		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		label.mouse_filter = Control.MOUSE_FILTER_STOP
+		label.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		label.gui_input.connect(_on_reinforcement_label_gui_input.bind(role_id))
 		slot_column.add_child(label)
 		reinforcement_labels[role_id] = label
 		if role_id == &"persona":
@@ -618,23 +640,18 @@ func _update_candidate_hover_state(persona_id: StringName) -> void:
 		candidate_hover_tweens[recipe_id] = pulse
 
 
-func _on_material_help_requested(role_id: StringName) -> void:
-	var definition := _material_help_definition(role_id)
-	if definition != null:
-		item_inspected.emit(definition)
+func _on_background_gui_input(event: InputEvent) -> void:
+	var click := event as InputEventMouseButton
+	if click == null or click.button_index != MOUSE_BUTTON_LEFT or not click.pressed:
+		return
+	details_cleared.emit()
+	hand_highlight_cleared.emit()
 
 
-func _material_help_definition(role_id: StringName) -> CardItemDefinition:
-	if role_id not in [&"base", &"helper", &"persona"]:
-		return null
-	var definition := CardItemDefinition.new()
-	definition.id = StringName("synthesis_%s_help" % role_id)
-	definition.display_name_key = StringName("demo.ui.synthesis.%s" % role_id)
-	definition.description_key = StringName("demo.ui.synthesis.%s.description" % role_id)
-	definition.can_recycle = false
-	definition.can_be_synthesis_base = false
-	definition.property_set = CardPropertySet.new()
-	return definition
+func _on_reinforcement_label_gui_input(event: InputEvent, role_id: StringName) -> void:
+	var click := event as InputEventMouseButton
+	if click != null and click.button_index == MOUSE_BUTTON_LEFT and click.pressed:
+		request_hand_tab_for_role(role_id)
 
 
 func _on_candidate_pressed(recipe_id: StringName) -> void:

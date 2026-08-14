@@ -160,12 +160,8 @@ func _border_color() -> Color:
 	return Color("bd8fa5")
 
 
-func apply_rule_highlight(rule: CardSlotRule) -> void:
-	rule_match_highlighted = (
-		rule != null
-		and definition != null
-		and CardRuleEvaluator.can_place(rule, definition)
-	)
+func apply_match_highlight(highlighted: bool) -> void:
+	rule_match_highlighted = highlighted
 	if highlight_tween != null and highlight_tween.is_valid():
 		highlight_tween.kill()
 	modulate = Color.WHITE

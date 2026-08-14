@@ -942,7 +942,8 @@ func test_blank_background_closes_top_right_details_in_every_primary_screen() ->
 	main._show_synthesis_immediate()
 	main._show_item(definition)
 	assert_true(main.detail_popup.visible)
-	main._unhandled_input(background_click)
+	var synthesis := main.current_screen as QuestSynthesisInterface
+	synthesis.background_input.gui_input.emit(background_click)
 	assert_false(main.detail_popup.visible)
 
 

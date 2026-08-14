@@ -17,6 +17,7 @@ const TAB_MASKS := &"masks"
 
 var state: QuestGameState
 var highlight_rule: CardSlotRule
+var card_highlight_predicate: Callable
 var card_scroll: ScrollContainer
 var card_row: Control
 var active_tab: StringName = TAB_ITEMS
@@ -134,6 +135,7 @@ func _reconcile_cards(refresh_existing: bool = false) -> void:
 		elif refresh_existing:
 			(card_views[card.instance_id] as CardHandCard).setup(card, definition)
 	rebuilding_cards = false
+	_refresh_card_highlights()
 	_layout_cards_for_rule()
 	_queue_card_layout()
 
@@ -155,7 +157,7 @@ func _create_card_view(card: CardItemState, definition: CardItemDefinition) -> v
 	wrapper.add_child(view)
 	card_row.add_child(wrapper)
 	view.size = CardHandCard.CARD_SIZE
-	view.apply_rule_highlight(highlight_rule)
+	_apply_card_highlight(view, card, definition)
 	card_views[card.instance_id] = view
 	card_wrappers[card.instance_id] = wrapper
 	freshly_created_card_ids[card.instance_id] = true
@@ -182,9 +184,44 @@ func _remove_card_view(instance_id: int) -> void:
 
 func set_highlight_rule(rule: CardSlotRule) -> void:
 	highlight_rule = rule
-	for view in card_views.values():
-		(view as CardHandCard).apply_rule_highlight(rule)
+	_refresh_card_highlights()
 	_layout_cards_for_rule()
+
+
+func set_card_highlight_predicate(predicate: Callable) -> void:
+	card_highlight_predicate = predicate
+	_refresh_card_highlights()
+	_layout_cards_for_rule()
+
+
+func clear_card_highlight_predicate() -> void:
+	if not card_highlight_predicate.is_valid():
+		return
+	card_highlight_predicate = Callable()
+	_refresh_card_highlights()
+	_layout_cards_for_rule()
+
+
+func _refresh_card_highlights() -> void:
+	for raw_instance_id in card_views:
+		var view := card_views[raw_instance_id] as CardHandCard
+		if view != null:
+			_apply_card_highlight(view, view.card, view.definition)
+
+
+func _apply_card_highlight(
+	view: CardHandCard,
+	card: CardItemState,
+	definition: CardItemDefinition,
+) -> void:
+	if view == null:
+		return
+	var matches := false
+	if card_highlight_predicate.is_valid():
+		matches = bool(card_highlight_predicate.call(card))
+	elif highlight_rule != null and definition != null:
+		matches = CardRuleEvaluator.can_place(highlight_rule, definition)
+	view.apply_match_highlight(matches)
 
 
 func _layout_cards_for_rule() -> void:
