@@ -1208,6 +1208,10 @@ func test_item_detail_icons_append_without_overlap_and_close_outside() -> void:
 	await get_tree().process_frame
 	assert_true(main.detail_popup.detail_panel.visible)
 	assert_true(main.detail_popup.property_panel.visible)
+	assert_eq(
+		main.detail_popup.property_description.text,
+		TranslationServer.translate(ItemDetailPopup.property_description_key(&"nightwalker")),
+	)
 	var first_item_property_font_size := (
 		main.detail_popup.property_description.get_theme_font_size("font_size")
 	)

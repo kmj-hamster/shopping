@@ -703,25 +703,25 @@ msgid "demo.mask.nightwalker.name"
 msgstr "Nightwalker"
 
 msgid "demo.mask.nightwalker.description"
-msgstr "A Persona that follows streetlamps through the long night: reason and curiosity."
+msgstr "Alternating current, a brightly lit street corner, moths crackling. Night makes my mind clearer. [Persona of the night: reason, curiosity]"
 
 msgid "demo.mask.mourner.name"
 msgstr "Mourner"
 
 msgid "demo.mask.mourner.description"
-msgstr "A Persona that keeps watch over what was lost in the mirror: empathy and nostalgia."
+msgstr "See me, and you see another self. Hold me, and you hold your own other hand. Night makes me remember sorrowful things. [Persona of the night: empathy, nostalgia]"
 
 msgid "demo.mask.dreamwalker.name"
 msgstr "Dreamwalker"
 
 msgid "demo.mask.dreamwalker.description"
-msgstr "A Persona that raises a glass to hallucination and inspiration."
+msgstr "Ancient fish swim across the bedroom wall; wet concrete branches bloom with white flowers. Night leaves my inspiration nowhere to hide. [Persona of the night: hallucination, reverie]"
 
 msgid "demo.mask.homecomer.name"
 msgstr "Homecomer"
 
 msgid "demo.mask.homecomer.description"
-msgstr "A Persona whom weariness guides home to rest: pleasure and comfort."
+msgstr "A cool goose-down quilt, lavender at the bedside, a moment of solace before dawn. May I sleep well tonight, tonight. [Persona of the night: pleasure, rest]"
 
 msgid "demo.ui.synthesis.candidates"
 msgstr "Possible Shapes"

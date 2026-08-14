@@ -703,25 +703,25 @@ msgid "demo.mask.nightwalker.name"
 msgstr "夜行者"
 
 msgid "demo.mask.nightwalker.description"
-msgstr "循着路灯走过长夜的面相：理性、好奇。"
+msgstr "交流电，明亮的街角，飞蛾噼啪作响。夜晚使我的头脑更加清醒。[夜之面相，理性、好奇]"
 
 msgid "demo.mask.mourner.name"
 msgstr "悼念者"
 
 msgid "demo.mask.mourner.description"
-msgstr "在镜中守望失去之物的面相：共情、怀旧。"
+msgstr "看见我，你就看到了另一个自己。握住我，你就握住了自己的另一只手。夜晚使我想起忧伤之事。[夜之面相，共情、怀旧]"
 
 msgid "demo.mask.dreamwalker.name"
 msgstr "梦游者"
 
 msgid "demo.mask.dreamwalker.description"
-msgstr "举杯步入想象与随想的面相：幻觉、灵感。"
+msgstr "远古鱼游过卧室的墙，湿漉漉的水泥枝条开满白花，夜晚使我的灵感无所遁形。[夜之面相，幻觉、随想]"
 
 msgid "demo.mask.homecomer.name"
 msgstr "倦归者"
 
 msgid "demo.mask.homecomer.description"
-msgstr "倦意引领归途与安歇的面相：享受、慰藉。"
+msgstr "凉爽的鹅绒被，床头的薰衣草，天明前的片刻慰藉。祝我今夜好眠，今夜。[夜之面相，享受、安歇]"
 
 msgid "demo.ui.synthesis.candidates"
 msgstr "可能的形状"

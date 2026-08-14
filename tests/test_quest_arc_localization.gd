@@ -133,16 +133,16 @@ func test_all_quest_arc_content_keys_exist_in_chinese_and_english() -> void:
 func test_persona_descriptions_match_each_confirmed_role() -> void:
 	var expected_descriptions := {
 		&"zh_CN": {
-			&"nightwalker": "循着路灯走过长夜的面相：理性、好奇。",
-			&"dreamwalker": "举杯步入想象与随想的面相：幻觉、灵感。",
-			&"mourner": "在镜中守望失去之物的面相：共情、怀旧。",
-			&"homecomer": "倦意引领归途与安歇的面相：享受、慰藉。",
+			&"nightwalker": "交流电，明亮的街角，飞蛾噼啪作响。夜晚使我的头脑更加清醒。[夜之面相，理性、好奇]",
+			&"mourner": "看见我，你就看到了另一个自己。握住我，你就握住了自己的另一只手。夜晚使我想起忧伤之事。[夜之面相，共情、怀旧]",
+			&"dreamwalker": "远古鱼游过卧室的墙，湿漉漉的水泥枝条开满白花，夜晚使我的灵感无所遁形。[夜之面相，幻觉、随想]",
+			&"homecomer": "凉爽的鹅绒被，床头的薰衣草，天明前的片刻慰藉。祝我今夜好眠，今夜。[夜之面相，享受、安歇]",
 		},
 		&"en": {
-			&"nightwalker": "A Persona that follows streetlamps through the long night: reason and curiosity.",
-			&"dreamwalker": "A Persona that raises a glass to hallucination and inspiration.",
-			&"mourner": "A Persona that keeps watch over what was lost in the mirror: empathy and nostalgia.",
-			&"homecomer": "A Persona whom weariness guides home to rest: pleasure and comfort.",
+			&"nightwalker": "Alternating current, a brightly lit street corner, moths crackling. Night makes my mind clearer. [Persona of the night: reason, curiosity]",
+			&"mourner": "See me, and you see another self. Hold me, and you hold your own other hand. Night makes me remember sorrowful things. [Persona of the night: empathy, nostalgia]",
+			&"dreamwalker": "Ancient fish swim across the bedroom wall; wet concrete branches bloom with white flowers. Night leaves my inspiration nowhere to hide. [Persona of the night: hallucination, reverie]",
+			&"homecomer": "A cool goose-down quilt, lavender at the bedside, a moment of solace before dawn. May I sleep well tonight, tonight. [Persona of the night: pleasure, rest]",
 		},
 	}
 	for locale in expected_descriptions:
