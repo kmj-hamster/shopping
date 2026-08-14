@@ -15,8 +15,6 @@ enum SupplyMode {
 
 func validation_errors() -> PackedStringArray:
 	var errors := super.validation_errors()
-	if base_price > 20:
-		errors.append("Item %s price cannot exceed 20." % id)
 	if property_set != null:
 		if property_set.property_count() > 4:
 			errors.append("Item %s cannot have more than four properties." % id)

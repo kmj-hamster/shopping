@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="StoreUnlockDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/store_unlock_definition.gd" id="1_unlock"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_slot_rule.gd" id="2_rule"]
+
+[sub_resource type="Resource" id="Rule"]
+script = ExtResource("2_rule")
+id = &"record_store_lock"
+display_name_key = &"opening.unlock.record.slot"
+accepted_item_ids = Array[StringName]([&"midnight_rose"])
+
+[resource]
+script = ExtResource("1_unlock")
+id = &"unlock_record"
+store_id = &"record"
+prompt_text_key = &"opening.unlock.record.prompt"
+result_text_key = &"opening.unlock.record.result"
+slot_rule = SubResource("Rule")

@@ -56,7 +56,6 @@ id = &"flower_owner_request"
 display_name_key = &"demo.task.flower_owner.name"
 body_text_key = &"demo.task.flower_owner.body"
 category = 2
-settlement_mode = 1
 slot_mode = 1
 activation_day = 1
 owner_id = &"flower_owner"

@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [string]$ScreenshotPath = "test-reports/runtime-mcp.png"
+	[switch]$CaptureScreenshot,
+	[string]$ScreenshotPath = "test-reports/runtime-mcp.png"
 )
 
 $ErrorActionPreference = "Stop"
@@ -50,7 +51,29 @@ function Invoke-McpTool {
     if ($reply.Json.result.isError) {
         throw "$Name returned an MCP error: $($reply.Json.result.content[0].text)"
     }
-    return $reply.Json.result
+	return $reply.Json.result
+}
+
+function Wait-McpGameReady {
+	param(
+		[Parameter(Mandatory)] [string]$Session,
+		[int]$TimeoutSeconds = 20
+	)
+	$deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+	$requestId = 20
+	$lastStatus = "unknown"
+	do {
+		$state = Invoke-McpTool -RequestId $requestId -Name "editor_state" `
+			-Arguments @{} -Session $Session
+		$requestId += 1
+		$gameStatus = $state.structuredContent.game_status
+		$lastStatus = [string]$gameStatus.status
+		if ($gameStatus.helper_live -or $lastStatus -eq "live") {
+			return $gameStatus
+		}
+		Start-Sleep -Milliseconds 500
+	} while ([DateTime]::UtcNow -lt $deadline)
+	throw "Game did not become MCP-ready within $TimeoutSeconds seconds (status: $lastStatus)."
 }
 
 $initialize = Send-McpMessage -Message @{
@@ -70,14 +93,17 @@ $null = Send-McpMessage -Session $session -Message @{
     method = "notifications/initialized"
 }
 
-$screenshotAbsolute = if ([IO.Path]::IsPathRooted($ScreenshotPath)) {
-    $ScreenshotPath
-} else {
-    Join-Path $projectRoot $ScreenshotPath
-}
-$screenshotDirectory = Split-Path -Parent $screenshotAbsolute
-if (-not (Test-Path $screenshotDirectory)) {
-    New-Item -ItemType Directory -Path $screenshotDirectory | Out-Null
+$screenshotAbsolute = ""
+if ($CaptureScreenshot) {
+	$screenshotAbsolute = if ([IO.Path]::IsPathRooted($ScreenshotPath)) {
+		$ScreenshotPath
+	} else {
+		Join-Path $projectRoot $ScreenshotPath
+	}
+	$screenshotDirectory = Split-Path -Parent $screenshotAbsolute
+	if (-not (Test-Path $screenshotDirectory)) {
+		New-Item -ItemType Directory -Path $screenshotDirectory | Out-Null
+	}
 }
 
 try {
@@ -87,28 +113,32 @@ try {
         include_details = $false
     } -Session $session
     $editorCursor = [int]$baseline.structuredContent.next_cursor
-    $run = Invoke-McpTool -RequestId 3 -Name "project_run" -Arguments @{
-        mode = "main"
-        autosave = $true
-    } -Session $session
-    Write-Host "Runtime launch: $($run.structuredContent.message)"
+	$run = Invoke-McpTool -RequestId 3 -Name "project_run" -Arguments @{
+		mode = "main"
+		autosave = $true
+	} -Session $session
+	Write-Host "Runtime launch: $($run.structuredContent.reason)"
+	$readyStatus = Wait-McpGameReady -Session $session
+	Write-Host "Runtime readiness: $($readyStatus.status)"
 
-    $shot = Invoke-McpTool -RequestId 4 -Name "editor_screenshot" -Arguments @{
-        source = "game"
-        max_resolution = 1280
-    } -Session $session
-    $imageBase64 = $null
-    if ($shot.structuredContent.data.image_base64) {
-        $imageBase64 = [string]$shot.structuredContent.data.image_base64
-    } elseif ($shot.structuredContent.image_base64) {
-        $imageBase64 = [string]$shot.structuredContent.image_base64
-    } else {
-        $imageBlock = @($shot.content | Where-Object { $_.type -eq "image" }) | Select-Object -First 1
-        if ($imageBlock) { $imageBase64 = [string]$imageBlock.data }
-    }
-    if (-not $imageBase64) { throw "editor_screenshot returned no image payload." }
-    [IO.File]::WriteAllBytes($screenshotAbsolute, [Convert]::FromBase64String($imageBase64))
-    Write-Host "Runtime screenshot: $screenshotAbsolute"
+	if ($CaptureScreenshot) {
+		$shot = Invoke-McpTool -RequestId 4 -Name "editor_screenshot" -Arguments @{
+			source = "game"
+			max_resolution = 1280
+		} -Session $session
+		$imageBase64 = $null
+		if ($shot.structuredContent.data.image_base64) {
+			$imageBase64 = [string]$shot.structuredContent.data.image_base64
+		} elseif ($shot.structuredContent.image_base64) {
+			$imageBase64 = [string]$shot.structuredContent.image_base64
+		} else {
+			$imageBlock = @($shot.content | Where-Object { $_.type -eq "image" }) | Select-Object -First 1
+			if ($imageBlock) { $imageBase64 = [string]$imageBlock.data }
+		}
+		if (-not $imageBase64) { throw "editor_screenshot returned no image payload." }
+		[IO.File]::WriteAllBytes($screenshotAbsolute, [Convert]::FromBase64String($imageBase64))
+		Write-Host "Runtime screenshot: $screenshotAbsolute"
+	}
 
     foreach ($source in @("editor", "game")) {
         $arguments = @{

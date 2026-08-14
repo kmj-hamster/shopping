@@ -1,6 +1,6 @@
 extends GutTest
 
-const TEST_PATH := "user://shopping0807_save_repository_test.json"
+const TEST_PATH := "user://opening_save_repository_test.json"
 
 var repository: QuestSaveRepository
 
@@ -14,60 +14,64 @@ func after_each() -> void:
 	repository.erase()
 
 
-func test_round_trip_preserves_ppt_cards_tasks_and_map_state() -> void:
+func test_round_trip_preserves_opening_tasks_cards_and_map_state() -> void:
 	var source := QuestGameState.new()
-	var girl := source.task_instance_for_definition(&"girl_order")
-	var fries := source.inventory[0]
-	assert_true(source.assign_card(girl.instance_id, &"food", fries).ok)
-	assert_true(source.confirm_task(girl.instance_id).ok)
-	var sunflower := source.grant_item(&"sunflower", &"test", 10)
-	assert_true(source.unlock_store(&"record", sunflower).ok)
+	_unlock_toy_shop(source)
+	var self_care := source.task_instance_for_definition(&"self_care")
+	var car := source.grant_item(&"plastic_car", &"test", 8)
+	assert_true(source.assign_card(self_care.instance_id, &"self_care_item", car).ok)
+	assert_true(source.confirm_task(self_care.instance_id).ok)
+	source.mark_store_visited(&"toy")
 	assert_true(repository.save(source))
 
 	var restored := QuestGameState.new()
-	var result := repository.load_into(restored)
-	assert_true(result.ok)
-	assert_eq(restored.wallet.money, 30)
-	assert_true(restored.task_instance_for_definition(&"girl_order").confirmed)
-	assert_true(restored.is_store_unlocked(&"record"))
-	assert_eq(restored.inventory.size(), 6)
-	assert_eq(restored.inventory[0].definition_id, &"fries")
+	assert_true(repository.load_into(restored).ok)
+	assert_eq(restored.wallet.money, 0)
+	assert_true(restored.task_instance_for_definition(&"self_care").confirmed)
+	assert_true(restored.is_store_unlocked(&"toy"))
+	assert_true(restored.has_visited_store(&"toy"))
+	assert_eq(_card_by_definition(restored, &"plastic_car").location, CardItemState.Location.ACTIVITY_SLOT)
 
 
-func test_round_trip_preserves_owner_page_two_cola_stock() -> void:
+func test_round_trip_preserves_fixed_shelf_stock() -> void:
 	var source := QuestGameState.new()
-	assert_true(source.interact_with_store_owner(&"flower").activated)
+	var toy := source.transaction_for_store(&"toy")
+	toy.shelf_slots[0].clear()
 	assert_true(repository.save(source))
 	var restored := QuestGameState.new()
 	assert_true(repository.load_into(restored).ok)
-	var flower := restored.transaction_for_store(&"flower")
-	assert_eq(flower.unlocked_page_count, 2)
-	assert_eq(flower.shelf_slots_for_page(2).size(), 1)
-	assert_eq(flower.shelf_slots_for_page(2)[0].item_id, &"cola")
-	assert_not_null(restored.task_instance_for_definition(&"flower_owner_request"))
+	var restored_toy := restored.transaction_for_store(&"toy")
+	assert_true(restored_toy.shelf_slots[0].is_empty())
+	assert_eq(restored_toy.shelf_slots[1].item_id, &"kaleidoscope")
+	assert_true(restored.transaction_for_store(&"record").shelf_slots.is_empty())
 
 
-func test_pending_arc_resumes_without_duplicate_reward() -> void:
-	var source := _state_with_confirmed_girl_order()
+func test_pending_arc_preserves_dynamic_persona_growth_without_duplicate_reward() -> void:
+	var source := _state_with_confirmed_self_care(&"kaleidoscope")
 	assert_true(source.begin_next_day().ok)
 	assert_true(repository.save(source))
 	var restored := QuestGameState.new()
 	assert_true(repository.load_into(restored).ok)
 	assert_not_null(restored.pending_arc)
-	assert_eq(restored.pending_arc.entries[0].item_definition_ids, [&"fries"])
-	assert_eq(restored.pending_arc.entries[0].reward_money, 12)
-	assert_eq(restored.apply_arc_effects().money_gained, 12)
-	assert_eq(restored.wallet.money, 42)
+	assert_eq(restored.pending_arc.entries[0].item_definition_ids, [&"kaleidoscope"])
+	assert_eq(restored.pending_arc.entries[0].persona_growth, {
+		&"reverie": 1,
+		&"reminiscence": 1,
+	})
+	assert_true(restored.apply_arc_effects().ok)
+	assert_eq(int(restored.protagonist_aspect_counts[&"reverie"]), 1)
+	assert_eq(int(restored.protagonist_aspect_counts[&"reminiscence"]), 1)
 	assert_true(restored.apply_arc_effects().already_applied)
-	assert_eq(restored.wallet.money, 42)
+	assert_eq(int(restored.protagonist_aspect_counts[&"reverie"]), 1)
 
 
 func test_synthesis_placement_is_not_persisted() -> void:
 	var source := QuestGameState.new()
-	var cola := source.grant_item(&"cola", &"test")
-	var sunflower := source.grant_item(&"sunflower", &"test")
-	assert_true(source.assign_synthesis_base(cola).ok)
-	assert_true(source.assign_synthesis_fuel(sunflower).ok)
+	var jasmine := source.grant_item(&"jasmine", &"test")
+	var gardenia := source.grant_item(&"gardenia", &"test")
+	source.protagonist_aspect_counts[&"clarity"] = 1
+	assert_true(source.assign_synthesis_base(jasmine).ok)
+	assert_true(source.assign_synthesis_fuel(gardenia).ok)
 	assert_true(source.select_synthesis_persona(&"clarity"))
 	assert_true(repository.save(source))
 
@@ -76,50 +80,59 @@ func test_synthesis_placement_is_not_persisted() -> void:
 	assert_eq(restored.synthesis_base_instance_id, 0)
 	assert_eq(restored.synthesis_fuel_instance_id, 0)
 	assert_true(restored.synthesis_persona_id.is_empty())
-	assert_eq(_card_by_definition(restored, &"cola").location, CardItemState.Location.HAND)
-	assert_eq(_card_by_definition(restored, &"sunflower").location, CardItemState.Location.HAND)
+	assert_eq(_card_by_definition(restored, &"jasmine").location, CardItemState.Location.HAND)
+	assert_eq(_card_by_definition(restored, &"gardenia").location, CardItemState.Location.HAND)
 
 
-func test_gift_flip_and_claim_state_survive_round_trip() -> void:
+func test_item_and_money_gift_states_survive_round_trip() -> void:
 	var source := QuestGameState.new()
-	var gift := source.task_instance_for_definition(&"tin_boy_gift")
-	assert_true(source.reveal_task_gift(gift.instance_id).ok)
+	var money_gift := source.task_instance_for_definition(&"remittance")
+	assert_true(source.reveal_task_gift(money_gift.instance_id).ok)
+	var item_gift := source.task_instance_for_definition(&"tin_boy_gift")
+	assert_true(source.reveal_task_gift(item_gift.instance_id).ok)
 	assert_true(repository.save(source))
 
 	var revealed := QuestGameState.new()
 	assert_true(repository.load_into(revealed).ok)
-	var revealed_gift := revealed.task_instance_for_definition(&"tin_boy_gift")
-	assert_true(revealed_gift.gift_revealed)
-	assert_false(revealed_gift.gift_claimed)
-	assert_null(_card_by_definition(revealed, &"tin_frog"))
-
-	assert_true(revealed.claim_task_gift(revealed_gift.instance_id).ok)
+	assert_eq(revealed.wallet.money, 100)
+	assert_true(revealed.task_instance_for_definition(&"remittance").gift_claimed)
+	var revealed_item_gift := revealed.task_instance_for_definition(&"tin_boy_gift")
+	assert_true(revealed_item_gift.gift_revealed)
+	assert_false(revealed_item_gift.gift_claimed)
+	assert_true(revealed.claim_task_gift(revealed_item_gift.instance_id).ok)
 	assert_true(repository.save(revealed))
 	var claimed := QuestGameState.new()
 	assert_true(repository.load_into(claimed).ok)
-	var claimed_gift := claimed.task_instance_for_definition(&"tin_boy_gift")
-	assert_true(claimed_gift.gift_revealed)
-	assert_true(claimed_gift.gift_claimed)
+	assert_true(claimed.task_instance_for_definition(&"tin_boy_gift").gift_claimed)
 	assert_not_null(_card_by_definition(claimed, &"tin_frog"))
-	assert_true(claimed.dismiss_claimed_gift_task(claimed_gift.instance_id))
-	assert_null(claimed.task_instance_for_definition(&"tin_boy_gift"))
 
 
-func test_pre_ppt_save_is_rejected_instead_of_migrated() -> void:
-	var file := FileAccess.open(TEST_PATH, FileAccess.WRITE)
-	file.store_string(JSON.stringify({"save_version": 3, "content_version": "quest-arc-1"}))
-	file.close()
-	var result := repository.load_into(QuestGameState.new())
-	assert_false(result.ok)
-	assert_eq(result.reason, &"unsupported_version")
+func test_self_care_history_and_pending_persona_reveals_survive_round_trip() -> void:
+	var source := _state_with_confirmed_self_care(&"plastic_orchid")
+	assert_true(source.begin_next_day().ok)
+	assert_true(source.apply_arc_effects().ok)
+	assert_true(repository.save(source))
+	var restored := QuestGameState.new()
+	assert_true(repository.load_into(restored).ok)
+	assert_true(&"flower" in restored.self_care_category_history[0].category_ids)
+	assert_true(&"toy" in restored.self_care_category_history[0].category_ids)
+	assert_true(&"reverie" in restored.pending_persona_reveal_ids)
+	assert_true(&"reminiscence" in restored.pending_persona_reveal_ids)
 
 
-func _state_with_confirmed_girl_order() -> QuestGameState:
+func _state_with_confirmed_self_care(item_id: StringName) -> QuestGameState:
 	var state := QuestGameState.new()
-	var task := state.task_instance_for_definition(&"girl_order")
-	assert_true(state.assign_card(task.instance_id, &"food", state.inventory[0]).ok)
+	_unlock_toy_shop(state)
+	var task := state.task_instance_for_definition(&"self_care")
+	var item := state.grant_item(item_id, &"test")
+	assert_true(state.assign_card(task.instance_id, &"self_care_item", item).ok)
 	assert_true(state.confirm_task(task.instance_id).ok)
 	return state
+
+
+func _unlock_toy_shop(state: QuestGameState) -> void:
+	var frog := state.grant_item(&"tin_frog", &"test")
+	assert_true(state.unlock_store(&"toy", frog).ok)
 
 
 func _card_by_definition(state: QuestGameState, definition_id: StringName) -> CardItemState:

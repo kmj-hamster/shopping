@@ -27,6 +27,8 @@ var shelf_nav_button: Button
 var talk_nav_button: Button
 var leave_nav_button: Button
 var shelf_caption: Label
+var restock_label: Label
+var empty_store_label: Label
 var page_row: HBoxContainer
 var shelf_buttons: Dictionary = {}
 var page_buttons: Dictionary = {}
@@ -232,6 +234,10 @@ func _build_shelf_popup() -> void:
 	shelf_caption.add_theme_font_size_override("font_size", 15)
 	shelf_caption.add_theme_color_override("font_color", Color("d9c582"))
 	header.add_child(shelf_caption)
+	restock_label = Label.new()
+	restock_label.add_theme_font_size_override("font_size", 11)
+	restock_label.add_theme_color_override("font_color", Color("8ca49f"))
+	header.add_child(restock_label)
 	var close_button := Button.new()
 	close_button.text = "×"
 	close_button.custom_minimum_size = Vector2(34, 30)
@@ -247,6 +253,13 @@ func _build_shelf_popup() -> void:
 		page_button.pressed.connect(_on_page_pressed.bind(page_index))
 		page_row.add_child(page_button)
 		page_buttons[page_index] = page_button
+	empty_store_label = Label.new()
+	empty_store_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	empty_store_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	empty_store_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	empty_store_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	empty_store_label.add_theme_color_override("font_color", Color("879a94"))
+	column.add_child(empty_store_label)
 	shelf_grid = GridContainer.new()
 	shelf_grid.columns = 2
 	shelf_grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -285,22 +298,31 @@ func refresh() -> void:
 		return
 	var owner := QuestArcCatalog.owner_for_store(store_id)
 	owner_name_label.text = TranslationServer.translate(owner.display_name_key) if owner != null else ""
+	owner_portrait.visible = owner != null and owner_portrait.texture != null
+	talk_nav_button.visible = owner != null
+	dialogue_panel.visible = owner != null
 	shelf_nav_button.text = TranslationServer.translate(&"quest.ui.shop.shelf")
 	talk_nav_button.text = TranslationServer.translate(&"quest.ui.owner.talk")
 	leave_nav_button.text = TranslationServer.translate(&"quest.ui.back")
 	shelf_caption.text = TranslationServer.translate(&"quest.ui.shop.shelf")
+	restock_label.text = TranslationServer.translate(&"opening.ui.shop.restock") % state.restock_nights_remaining(store_id)
 	_refresh_owner_dialogue()
 	_refresh_shelf()
 	_refresh_checkout_state()
 
 
 func _refresh_checkout_state() -> void:
-	checkout_button.visible = transaction.cart_count() > 0
-	checkout_button.text = TranslationServer.translate(&"quest.ui.shop.checkout") % transaction.cart_total()
-	checkout_button.disabled = transaction.cart_count() == 0
+	checkout_button.visible = transaction.has_selection()
+	checkout_button.text = TranslationServer.translate(&"quest.ui.shop.checkout") % transaction.selected_price()
+	checkout_button.disabled = not transaction.has_selection()
 
 
 func _refresh_shelf() -> void:
+	var has_shelf_content := not transaction.shelf_slots.is_empty()
+	empty_store_label.visible = not has_shelf_content
+	empty_store_label.text = TranslationServer.translate(&"opening.ui.shop.not_open")
+	shelf_grid.visible = has_shelf_content
+	page_row.visible = has_shelf_content
 	current_page = clampi(current_page, 1, transaction.unlocked_page_count)
 	for page_index in page_buttons:
 		var page_button := page_buttons[page_index] as Button
@@ -336,7 +358,6 @@ func _refresh_shelf() -> void:
 			button.text = definition.localized_name() if definition != null else ""
 			button.icon = definition.image if definition != null else null
 			button.expand_icon = true
-			button.tooltip_text = definition.localized_description() if definition != null else ""
 			button.button_pressed = transaction.is_selected(slot.slot_id)
 			button.disabled = false
 		price.text = (
@@ -404,18 +425,12 @@ func _on_owner_pressed() -> void:
 	_refresh_owner_dialogue(true)
 
 
-func show_owner_result(text_key: StringName) -> void:
-	owner_dialogue_override_key = text_key
-	owner_dialogue_item_name = ""
-	_refresh_owner_dialogue(true)
-
-
 func cancel_pending_purchase() -> void:
 	_cancel_owner_dialogue_playback()
 	owner_dialogue_override_key = &""
 	owner_dialogue_item_name = ""
 	if transaction != null:
-		transaction.cancel_cart()
+		transaction.clear_selection()
 	if feedback_label != null:
 		feedback_label.text = ""
 	if shelf_popup != null:

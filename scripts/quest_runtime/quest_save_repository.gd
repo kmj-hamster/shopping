@@ -1,8 +1,8 @@
 class_name QuestSaveRepository
 extends RefCounted
 
-const SAVE_VERSION := 6
-const CONTENT_VERSION := "gift-task-demo-1"
+const SAVE_VERSION := 7
+const CONTENT_VERSION := "opening-demo-1"
 const DEFAULT_PATH := "user://save_shopping0807_v1.json"
 
 var save_path: String
@@ -101,6 +101,11 @@ func to_dictionary(state: QuestGameState) -> Dictionary:
 		"known_recipe_hint_ids": _string_array(state.known_recipe_hint_ids.keys()),
 		"discovered_recipe_ids": _string_array(state.discovered_recipe_ids.keys()),
 		"owner_states": _string_dictionary(state.owner_states),
+		"self_care_category_history": _serialize_category_history(
+			state.self_care_category_history
+		),
+		"pending_persona_reveal_ids": _string_array(state.pending_persona_reveal_ids),
+		"visited_store_ids": _string_array(state.visited_store_ids.keys()),
 		"pending_arc": _serialize_arc(state.pending_arc),
 		"commerce": state.commerce_snapshot(),
 	}
@@ -108,7 +113,7 @@ func to_dictionary(state: QuestGameState) -> Dictionary:
 
 func _restore(state: QuestGameState, payload: Dictionary) -> bool:
 	state.day = maxi(1, int(payload.get("day", 1)))
-	state.wallet.money = maxi(0, int(payload.get("wallet", 10)))
+	state.wallet.money = maxi(0, int(payload.get("wallet", 0)))
 	state.inventory.clear()
 	for raw_card in payload.get("inventory", []):
 		var data := raw_card as Dictionary
@@ -161,6 +166,13 @@ func _restore(state: QuestGameState, payload: Dictionary) -> bool:
 	state.known_recipe_hint_ids = _name_set(payload.get("known_recipe_hint_ids", []))
 	state.discovered_recipe_ids = _name_set(payload.get("discovered_recipe_ids", []))
 	state.owner_states = _name_dictionary(payload.get("owner_states", {}))
+	state.self_care_category_history = _restore_category_history(
+		payload.get("self_care_category_history", [])
+	)
+	state.pending_persona_reveal_ids = _name_array(
+		payload.get("pending_persona_reveal_ids", [])
+	)
+	state.visited_store_ids = _name_set(payload.get("visited_store_ids", []))
 	state.pending_arc = _restore_arc(payload.get("pending_arc", {}))
 	# Synthesis placement is a screen-local draft and never survives loading.
 	state.synthesis_base_instance_id = 0
@@ -219,6 +231,10 @@ func _serialize_arc(arc: ArcTransitionState) -> Dictionary:
 			"item_definition_ids": _string_array(entry.get("item_definition_ids", [])),
 			"reward_money": int(entry.get("reward_money", 0)),
 			"reward_stats": _string_int_dictionary(entry.get("reward_stats", {})),
+			"persona_growth": _string_int_dictionary(entry.get("persona_growth", {})),
+			"self_care_category_ids": _string_array(
+				entry.get("self_care_category_ids", [])
+			),
 		})
 	return {
 		"from_day": arc.from_day,
@@ -243,6 +259,10 @@ func _restore_arc(data: Dictionary) -> ArcTransitionState:
 			"item_definition_ids": _name_array(entry.get("item_definition_ids", [])),
 			"reward_money": int(entry.get("reward_money", 0)),
 			"reward_stats": _name_int_dictionary(entry.get("reward_stats", {})),
+			"persona_growth": _name_int_dictionary(entry.get("persona_growth", {})),
+			"self_care_category_ids": _name_array(
+				entry.get("self_care_category_ids", [])
+			),
 		})
 	var arc := ArcTransitionState.new(int(data.get("from_day", 1)), entries)
 	arc.effects_applied = bool(data.get("effects_applied", false))
@@ -319,6 +339,29 @@ func _name_set(values: Array) -> Dictionary:
 	var result: Dictionary = {}
 	for value in values:
 		result[StringName(value)] = true
+	return result
+
+
+func _serialize_category_history(values: Array[Dictionary]) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for entry in values:
+		result.append({
+			"day": int(entry.get("day", 0)),
+			"category_ids": _string_array(entry.get("category_ids", [])),
+		})
+	return result
+
+
+func _restore_category_history(values: Array) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for raw_entry in values:
+		if not raw_entry is Dictionary:
+			continue
+		var entry := raw_entry as Dictionary
+		result.append({
+			"day": int(entry.get("day", 0)),
+			"category_ids": _name_array(entry.get("category_ids", [])),
+		})
 	return result
 
 

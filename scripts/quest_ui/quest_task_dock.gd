@@ -3,21 +3,21 @@ extends Control
 
 signal rule_focused(rule: CardSlotRule)
 signal item_inspected(definition: CardItemDefinition)
-signal owner_result_presented(store_id: StringName, text_key: StringName)
 
 var state: QuestGameState
-var current_store_id: StringName
 var bookmark_column: VBoxContainer
+var popup_host: Control
 var task_window: QuestTaskWindow
 var open_task_instance_id := 0
 var bookmark_buttons: Dictionary = {}
 var task_windows: Dictionary = {}
 
 
-func setup(game_state: QuestGameState) -> void:
+func setup(game_state: QuestGameState, task_popup_host: Control = null) -> void:
 	if state != null and state.state_delta.is_connected(_on_state_delta):
 		state.state_delta.disconnect(_on_state_delta)
 	state = game_state
+	popup_host = task_popup_host
 	if state != null and not state.state_delta.is_connected(_on_state_delta):
 		state.state_delta.connect(_on_state_delta)
 	if is_node_ready():
@@ -39,13 +39,6 @@ func _ready() -> void:
 	add_child(bookmark_column)
 	LocaleManager.locale_changed.connect(_on_locale_changed)
 	refresh()
-
-
-func set_store_context(store_id: StringName) -> void:
-	current_store_id = store_id
-	if task_window != null:
-		task_window.current_store_id = store_id
-		task_window.refresh()
 
 
 func refresh() -> void:
@@ -112,15 +105,15 @@ func _toggle_task(instance_id: int) -> void:
 	task_window = task_windows.get(instance_id) as QuestTaskWindow
 	if task_window == null:
 		task_window = QuestTaskWindow.new()
-		task_window.setup(state, instance_id, current_store_id)
+		task_window.setup(state, instance_id)
 		task_window.closed.connect(_close_task)
 		task_window.rule_focused.connect(rule_focused.emit)
 		task_window.item_inspected.connect(item_inspected.emit)
-		task_window.owner_result_presented.connect(owner_result_presented.emit)
-		add_child(task_window)
+		var host := popup_host if popup_host != null else self
+		host.add_child(task_window)
+		task_window.set_drag_bounds_control(host)
 		task_windows[instance_id] = task_window
 	else:
-		task_window.current_store_id = current_store_id
 		task_window.refresh()
 	task_window.visible = true
 

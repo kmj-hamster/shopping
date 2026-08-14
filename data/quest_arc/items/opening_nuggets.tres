@@ -2,22 +2,19 @@
 
 [ext_resource type="Script" path="res://scripts/quest_domain/quest_item_definition.gd" id="1_item"]
 [ext_resource type="Script" path="res://scripts/slot_domain/card_property_set.gd" id="2_props"]
-[ext_resource type="Texture2D" path="res://resources/item-sunflower.png" id="3_image"]
+[ext_resource type="Texture2D" path="res://resources/placeholders/item-food-block.svg" id="3_image"]
 
 [sub_resource type="Resource" id="Props"]
 script = ExtResource("2_props")
-tags = Array[StringName]([&"plant", &"flower"])
-values = {&"lamp": 2}
+tags = Array[StringName]([&"food"])
+values = {&"gauze": 2, &"pillow": 1}
 
 [resource]
 script = ExtResource("1_item")
-id = &"sunflower"
-display_name_key = &"demo.item.sunflower.name"
-description_key = &"demo.item.sunflower.description"
+id = &"nuggets"
+display_name_key = &"opening.item.nuggets.name"
+description_key = &"opening.item.nuggets.description"
 image = ExtResource("3_image")
-store_id = &"flower"
-base_price = 10
-restock_weight = 1
-can_recycle = false
+store_id = &"fast_food"
+base_price = 18
 property_set = SubResource("Props")
-is_map_key = true

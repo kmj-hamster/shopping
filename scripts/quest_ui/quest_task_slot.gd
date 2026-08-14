@@ -67,12 +67,10 @@ func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 	if state == null or task == null or task.confirmed or typeof(data) != TYPE_DICTIONARY:
 		return false
 	var card := data.get("card") as CardItemState
-	var item := QuestArcCatalog.item_by_id(card.definition_id) if card != null else null
 	return (
 		data.get("kind") == &"card_item"
 		and card != null
-		and card in state.inventory
-		and CardRuleEvaluator.can_place(rule, item)
+		and state.can_assign_card_to_task(task.instance_id, rule.id, card)
 	)
 
 

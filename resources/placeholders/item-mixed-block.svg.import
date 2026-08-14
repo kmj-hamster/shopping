@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cnfwwwa7mcrgy"
-path="res://.godot/imported/item-sunflower.png-375a09a0f04e125647dabaa00fb0209e.ctex"
+uid="uid://c5b6wyvtmqsx4"
+path="res://.godot/imported/item-mixed-block.svg-6f443e6109e3d974ab8c4f746dfd9634.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://resources/item-sunflower.png"
-dest_files=["res://.godot/imported/item-sunflower.png-375a09a0f04e125647dabaa00fb0209e.ctex"]
+source_file="res://resources/placeholders/item-mixed-block.svg"
+dest_files=["res://.godot/imported/item-mixed-block.svg-6f443e6109e3d974ab8c4f746dfd9634.ctex"]
 
 [params]
 
@@ -38,3 +38,6 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
+svg/scale=1.0
+editor/scale_with_editor_scale=false
+editor/convert_colors_with_editor_theme=false

@@ -2,43 +2,31 @@
 
 ## Project contract
 
-- Read `godot-codex.json` before running Godot or MCP diagnostics. It is the source of truth for engine path, expected version, MCP endpoint, language, dimension, tests, and addon pins.
-- Follow the configured language and dimension unless the user explicitly changes direction.
-- Inspect `git status` before editing and preserve unrelated user changes.
+- Read `godot-codex.json` before Godot or MCP work. Treat it as the source of truth for the engine path, expected version, MCP endpoint, language, dimension, and test runner.
+- Follow the project's declared language and 2D/3D direction unless the user explicitly changes them.
+- Preserve user changes, inspect `git status` before editing, and never edit `.godot/`.
+- If the project supports multiple locales, use translation keys and verify every supported locale after changing player-facing text.
+- Treat save backward compatibility as an explicit product requirement, not an assumption. Do not invent migrations, legacy fixtures, or compatibility tests unless the project contract or user requires them.
 
-## Authoring policy
+## Authoring and assets
 
-- Prefer text edits for scripts, shaders, configuration, tests, and simple scenes/resources.
-- Prefer Godot AI MCP for complex scene trees, Inspector properties, signals, animations, runtime input, logs, and screenshots.
-- Treat `.tscn` and `.tres` as source and inspect their diff after editor/MCP changes.
-- Never edit `.godot/`; it is generated cache state.
+- Prefer text edits for scripts, shaders, configuration, tests, and simple scenes/resources. Use Godot MCP for complex scene trees, Inspector properties, signals, animations, runtime input, and focused log reads.
+- Treat `.tscn` and `.tres` files as source and inspect their Git diff after editor or MCP writes.
 - Keep deterministic gameplay rules separate from presentation where practical.
+- For image work, first inspect source dimensions, pixel format, alpha/corner pixels, references, and target size. Use deterministic SVG/source edits for flat colors, geometry, recolors, and vector art. Use image generation only for a changed raster subject, with one constrained request and an explicit flat chroma background when transparency is required. Validate the generated pixels before processing, key and resize deterministically, inspect the final asset once, remove intermediates, then run the import gate.
 
-## Required workflow
+## Validation workflow
 
-1. Inspect relevant files, the active Godot session, and current scene.
-2. Make one coherent, reviewable change.
-3. Run `pwsh -File tools/check.ps1` after source, scene, resource, or settings changes.
-4. Verify the live bridge with `pwsh -File tools/check-mcp.ps1` or equivalent native MCP reads.
-5. For runtime changes, run the relevant scene, inspect the runtime tree, capture a game screenshot, and read both editor and game logs.
-6. Stop the test game after automated runtime checks.
-7. Review `git diff --check`, `git diff`, and `git status` before handoff.
+1. Inspect relevant files, the active editor session, and the current scene before editing.
+2. Make one coherent change at a time and validate by risk:
+   - Documentation-only edits: review the diff; no engine run is required.
+   - Resource paths, asset imports, and small presentation-only edits: run the configured import gate and the single affected test when one exists.
+   - Gameplay rules, runtime state, persistence, broad refactors, and release checkpoints: run targeted tests during iteration and the configured full check before handoff.
+3. Use MCP only for editor-specific information that tests or text inspection cannot provide efficiently. Give a failed or unhelpful query one focused attempt rather than expanding into long exploratory sequences.
+4. Launch the game only when the change needs a runtime error check. Read editor and game logs afterward, stop the game, and capture screenshots only when the user explicitly requests visual evidence.
+5. A task is incomplete while its selected import, parse, test, or runtime check fails. Review `git diff --check`, the scoped diff, and `git status` before handoff.
 
-## Efficiency guardrails
+## Collaboration boundary
 
-- During iteration, use `tools/check.ps1 -ImportOnly`, then `tools/check.ps1 -SkipImport -TestPath <test.gd>` for affected tests. Run the unfiltered script once before commit or handoff.
-- On `CreateProcessAsUser`, duplicate `Path`/`PATH`, or denied Godot/GUT cache access inside a sandbox, retry the exact project script once with escalation instead of inventing alternate launch paths.
-- Prefer Godot MCP API lookup and targeted runtime-node reads over web search or a complete UI-tree dump.
-- Give synthetic MCP mouse dragging one probe. If Godot does not enter GUI drag state, switch to focused GUT tests or game evaluation and leave physical feel to the user.
-
-## Quality gates
-
-- A task is incomplete while import, parsing, tests, or relevant runtime checks fail.
-- Add focused GUT tests under `tests/` for deterministic logic and scene behavior.
-- Ask the user to judge subjective visual quality and interaction feel after automated checks pass.
-
-## MCP lifecycle
-
-- Launch the editor through `tools/start-editor.ps1` to disable telemetry and keep MCP loopback-only.
-- If MCP tools are absent, start Godot first and verify `tools/check-mcp.ps1`; Codex may need one restart to rediscover tools.
-- Activate the intended editor session before writes when multiple projects are open.
+- Codex validates imports, code, deterministic behavior, and the absence of parse/load/runtime errors.
+- The user owns final visual composition, image quality, animation timing, and physical interaction feel.

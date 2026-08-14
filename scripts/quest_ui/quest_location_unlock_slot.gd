@@ -28,11 +28,7 @@ func _ready() -> void:
 func refresh() -> void:
 	if rule == null or card_holder == null:
 		return
-	var definition := (
-		QuestArcCatalog.item_by_id(pending_card.definition_id)
-		if pending_card != null
-		else null
-	)
+	var definition := state.definition_for_card(pending_card) if pending_card != null else null
 	if pending_card != null and definition != null:
 		card_view.setup(pending_card, definition, true)
 		card_view.visible = true
@@ -57,9 +53,16 @@ func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 	var card := data.get("card") as CardItemState
 	if data.get("kind") != &"card_item" or card == null or card == pending_card:
 		return false
-	if card not in state.inventory or card.location != CardItemState.Location.HAND:
+	if card.location != CardItemState.Location.HAND:
 		return false
-	var definition := QuestArcCatalog.item_by_id(card.definition_id)
+	var definition := state.definition_for_card(card)
+	var is_owned_item := card in state.inventory
+	var persona_id := PersonaMaskCatalog.persona_for_card(card)
+	if not is_owned_item and (
+		persona_id.is_empty()
+		or int(state.protagonist_aspect_counts.get(persona_id, 0)) <= 0
+	):
+		return false
 	return CardRuleEvaluator.can_execute(rule, definition)
 
 

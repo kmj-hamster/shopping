@@ -3,33 +3,26 @@ extends PaperActivityPopup
 
 signal rule_focused(rule: CardSlotRule)
 signal item_inspected(definition: CardItemDefinition)
-signal owner_result_presented(store_id: StringName, text_key: StringName)
-
 var state: QuestGameState
 var task_instance_id: int
-var current_store_id: StringName
 var slot_views: Dictionary = {}
+var owner_slot_labels: Dictionary = {}
 var or_labels: Array[Label] = []
 var gift_slot: QuestTaskGiftSlot
 
 
-func setup(game_state: QuestGameState, instance_id: int, store_id: StringName = &"") -> void:
+func setup(game_state: QuestGameState, instance_id: int) -> void:
 	state = game_state
 	task_instance_id = instance_id
-	current_store_id = store_id
 	if is_node_ready():
 		refresh()
 
 
 func _ready() -> void:
 	super._ready()
-	# The content viewport begins at 19% of the full HUD; this maps its shelf's
-	# 3.5% left edge into global coordinates. QuestLocationPopup uses the
-	# equivalent viewport-local rectangle.
-	anchor_left = 0.217
-	anchor_top = 0.08
-	anchor_right = 0.517
-	anchor_bottom = 0.68
+	# QuestTaskDock owns the window state, while TaskPopupLayer owns its layout.
+	# The shared PaperActivityPopup anchors now stay viewport-local, matching
+	# QuestLocationPopup instead of approximating that rectangle in full-HUD space.
 	action_button.pressed.connect(_on_action_pressed)
 	LocaleManager.locale_changed.connect(_on_locale_changed)
 	refresh()
@@ -44,6 +37,10 @@ func refresh() -> void:
 		return
 	var definition := QuestArcCatalog.task_by_id(task.definition_id)
 	title_label.text = TranslationServer.translate(definition.display_name_key)
+	var footer_copy := ""
+	if not definition.footer_text_key.is_empty():
+		footer_copy = TranslationServer.translate(definition.footer_text_key)
+	set_footer_copy(footer_copy)
 	if definition.settlement_mode == TaskDefinition.SettlementMode.GIFT_PICKUP:
 		set_body_copy(
 			TranslationServer.translate(definition.body_text_key),
@@ -52,15 +49,14 @@ func refresh() -> void:
 		)
 		_ensure_gift_slot()
 		gift_slot.setup(state, task.instance_id)
-		feedback_label.text = (
-			""
-			if task.gift_claimed
-			else TranslationServer.translate(
+		feedback_label.text = ""
+		if not task.gift_claimed:
+			var feedback_key := (
 				&"demo.ui.synthesis.drag_result"
 				if task.gift_revealed
 				else &"demo.ui.synthesis.flip_result"
 			)
-		)
+			feedback_label.text = TranslationServer.translate(feedback_key)
 		action_button.visible = false
 		return
 	set_body_copy(
@@ -73,7 +69,10 @@ func refresh() -> void:
 	for label in or_labels:
 		label.text = TranslationServer.translate(&"demo.ui.or")
 	for raw_rule in definition.slot_rules:
-		var rule := raw_rule as CardSlotRule
+		var rule := state.effective_task_rule(task, raw_rule as CardSlotRule)
+		var owner_slot_label := owner_slot_labels.get(rule.id) as Label
+		if owner_slot_label != null:
+			owner_slot_label.text = TranslationServer.translate(rule.display_name_key)
 		var slot := slot_views.get(rule.id) as QuestTaskSlot
 		if slot != null:
 			slot.setup(state, task, rule)
@@ -104,11 +103,32 @@ func _ensure_slot_views(task: TaskInstanceState, definition: TaskDefinition) -> 
 			or_labels.append(or_label)
 		var raw_rule := definition.slot_rules[rule_index]
 		var slot := QuestTaskSlot.new()
-		var rule := raw_rule as CardSlotRule
+		var rule := state.effective_task_rule(task, raw_rule as CardSlotRule)
 		slot.setup(state, task, rule)
 		slot.rule_focused.connect(rule_focused.emit)
 		slot.item_inspected.connect(item_inspected.emit)
-		slots_row.add_child(slot)
+		if definition.category == TaskDefinition.Category.OWNER_REQUEST:
+			var slot_column := VBoxContainer.new()
+			slot_column.name = "%sOwnerSlot" % String(rule.id).to_pascal_case()
+			slot_column.mouse_filter = Control.MOUSE_FILTER_PASS
+			slot_column.alignment = BoxContainer.ALIGNMENT_CENTER
+			slot_column.add_theme_constant_override("separation", 5)
+			slots_row.add_child(slot_column)
+			var slot_label := Label.new()
+			slot_label.name = "OwnerSlotLabel"
+			slot_label.custom_minimum_size = Vector2(112, 20)
+			slot_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			slot_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			slot_label.clip_text = true
+			slot_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+			slot_label.add_theme_font_size_override("font_size", 13)
+			slot_label.add_theme_color_override("font_color", Color("594a36"))
+			slot_label.text = TranslationServer.translate(rule.display_name_key)
+			slot_column.add_child(slot_label)
+			slot_column.add_child(slot)
+			owner_slot_labels[rule.id] = slot_label
+		else:
+			slots_row.add_child(slot)
 		slot_views[rule.id] = slot
 
 
@@ -117,23 +137,15 @@ func _update_action_state(
 	definition: TaskDefinition,
 	evaluation: Dictionary,
 ) -> void:
-	if definition.settlement_mode == TaskDefinition.SettlementMode.OWNER_IMMEDIATE:
-		action_button.text = TranslationServer.translate(&"quest.ui.task.deliver")
-		action_button.disabled = not evaluation.is_ready or current_store_id != definition.store_id
-		action_button.tooltip_text = ""
-		if current_store_id != definition.store_id:
-			feedback_label.text = TranslationServer.translate(&"quest.ui.task.owner_elsewhere")
-			action_button.tooltip_text = feedback_label.text
-	else:
-		action_button.text = TranslationServer.translate(
-			&"quest.ui.task.enjoy_tonight"
-			if definition.category == TaskDefinition.Category.SELF_CARE
-			else &"quest.ui.task.deliver_tomorrow"
-		)
-		action_button.disabled = task.confirmed or not evaluation.is_ready
-		action_button.tooltip_text = ""
-		if not evaluation.is_ready and not task.assignments.is_empty():
-			feedback_label.text = TranslationServer.translate(&"quest.ui.task.not_ready")
+	action_button.text = TranslationServer.translate(
+		&"quest.ui.task.enjoy_tonight"
+		if definition.category == TaskDefinition.Category.SELF_CARE
+		else &"quest.ui.task.deliver_tomorrow"
+	)
+	action_button.disabled = task.confirmed or not evaluation.is_ready
+	action_button.tooltip_text = ""
+	if not evaluation.is_ready and not task.assignments.is_empty():
+		feedback_label.text = TranslationServer.translate(&"quest.ui.task.not_ready")
 
 
 func _on_action_pressed() -> void:
@@ -143,13 +155,7 @@ func _on_action_pressed() -> void:
 	var definition := QuestArcCatalog.task_by_id(task.definition_id)
 	if definition.settlement_mode == TaskDefinition.SettlementMode.GIFT_PICKUP:
 		return
-	if definition.settlement_mode == TaskDefinition.SettlementMode.OWNER_IMMEDIATE:
-		var result := state.submit_owner_task(task.instance_id, current_store_id)
-		if result.ok:
-			feedback_label.text = TranslationServer.translate(StringName(result.result_text_key))
-			owner_result_presented.emit(definition.store_id, StringName(result.result_text_key))
-			closed.emit()
-	elif task.confirmed:
+	if task.confirmed:
 		return
 	else:
 		state.confirm_task(task.instance_id)

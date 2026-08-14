@@ -11,6 +11,8 @@ var holder: CenterContainer
 var back_button: Button
 var card_view: CardHandCard
 var virtual_card: CardItemState
+var money_face: PanelContainer
+var money_label: Label
 
 
 func setup(game_state: QuestGameState, instance_id: int) -> void:
@@ -54,6 +56,20 @@ func _ready() -> void:
 	holder.add_child(card_view)
 	card_view.visible = false
 	card_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	money_face = PanelContainer.new()
+	money_face.name = "MoneyGiftFace"
+	money_face.custom_minimum_size = CARD_SIZE
+	money_face.add_theme_stylebox_override(
+		"panel", UiPalette.panel_style(Color("f2ead5"), Color("a58b55"))
+	)
+	holder.add_child(money_face)
+	money_label = Label.new()
+	money_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	money_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	money_label.add_theme_font_size_override("font_size", 32)
+	money_label.add_theme_color_override("font_color", Color("8b6730"))
+	money_face.add_child(money_label)
+	money_face.visible = false
 	refresh()
 
 
@@ -64,19 +80,39 @@ func refresh() -> void:
 	var definition := (
 		QuestArcCatalog.task_by_id(task.definition_id) if task != null else null
 	)
-	if task == null or definition == null or task.settled or task.gift_claimed:
+	if task == null or definition == null or task.settled:
+		visible = false
+		back_button.visible = false
+		card_view.visible = false
+		money_face.visible = false
+		card_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		return
+	if task.gift_claimed and definition.gift_money <= 0:
 		visible = false
 		back_button.visible = false
 		card_view.visible = false
 		card_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		money_face.visible = false
 		return
 	visible = true
 	if not task.gift_revealed:
 		back_button.visible = true
 		card_view.visible = false
+		money_face.visible = false
 		card_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		return
 	back_button.visible = false
+	if definition.gift_money > 0:
+		card_view.visible = false
+		card_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		money_face.visible = true
+		money_label.text = "+%d" % definition.gift_money
+		return
+	money_face.visible = false
+	if task.gift_claimed:
+		card_view.visible = false
+		card_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		return
 	if virtual_card == null or virtual_card.definition_id != definition.gift_item_id:
 		virtual_card = CardItemState.new(
 			-100_000 - task_instance_id,

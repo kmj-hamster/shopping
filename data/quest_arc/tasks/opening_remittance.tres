@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="TaskDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/task_definition.gd" id="1_task"]
+
+[resource]
+script = ExtResource("1_task")
+id = &"remittance"
+display_name_key = &"opening.task.remittance.name"
+body_text_key = &"opening.task.remittance.body"
+category = 3
+settlement_mode = 1
+activation_day = 1
+repeat_interval_days = 7
+gift_money = 100

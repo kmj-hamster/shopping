@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dt0133i3o3xwh"
-path="res://.godot/imported/property-lamp.png-81634156e420dc93d3dce8ba140799c0.ctex"
+uid="uid://363xk8jncclo"
+path="res://.godot/imported/item-food-block.svg-62efe7ca0c1ea909bb95129446f99b90.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://resources/ui/property-lamp.png"
-dest_files=["res://.godot/imported/property-lamp.png-81634156e420dc93d3dce8ba140799c0.ctex"]
+source_file="res://resources/placeholders/item-food-block.svg"
+dest_files=["res://.godot/imported/item-food-block.svg-62efe7ca0c1ea909bb95129446f99b90.ctex"]
 
 [params]
 
@@ -38,3 +38,6 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
+svg/scale=1.0
+editor/scale_with_editor_scale=false
+editor/convert_colors_with_editor_theme=false

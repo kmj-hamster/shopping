@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="QuestItemDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/quest_item_definition.gd" id="1_item"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_property_set.gd" id="2_props"]
+[ext_resource type="Texture2D" path="res://resources/placeholders/item-food-block.svg" id="3_image"]
+
+[sub_resource type="Resource" id="Props"]
+script = ExtResource("2_props")
+tags = Array[StringName]([&"food"])
+values = {&"pillow": 1}
+
+[resource]
+script = ExtResource("1_item")
+id = &"fries"
+display_name_key = &"opening.item.fries.name"
+description_key = &"opening.item.fries.description"
+image = ExtResource("3_image")
+store_id = &"fast_food"
+base_price = 8
+property_set = SubResource("Props")

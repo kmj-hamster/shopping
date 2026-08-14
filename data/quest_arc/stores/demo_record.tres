@@ -7,4 +7,5 @@ script = ExtResource("1_store")
 id = &"record"
 display_name_key = &"demo.store.record.name"
 owner_id = &"record_owner"
-unlock_definition_id = &"unlock_record_with_sunflower"
+unlock_definition_id = &"unlock_record_with_jasmine"
+map_anchor = Vector2(0.66, 0.46)

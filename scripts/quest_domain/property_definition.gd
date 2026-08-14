@@ -11,6 +11,7 @@ enum ValueKind {
 @export var description_key: StringName
 @export var value_kind := ValueKind.TAG
 @export var is_night_aspect := false
+@export var is_item_category := false
 
 
 func is_scaled() -> bool:
@@ -27,4 +28,6 @@ func validation_errors() -> PackedStringArray:
 		errors.append("Night aspect %s must be scaled." % id)
 	if is_night_aspect and id not in CardPropertySet.ASPECTS:
 		errors.append("Unknown night aspect id: %s." % id)
+	if is_item_category and value_kind != ValueKind.TAG:
+		errors.append("Item category %s must be a tag property." % id)
 	return errors

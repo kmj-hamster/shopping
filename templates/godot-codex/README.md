@@ -11,5 +11,6 @@
 
 完整设计、日常循环和故障恢复见项目中的 `docs/godot-codex-workflow.md`。
 
-日常固定顺序是：编辑 → `tools/check.ps1` → MCP 运行目标场景 →
-运行时树/截图/editor+game 日志 → 停止游戏 → Git diff → 人工体验。
+日常固定顺序是：编辑 → `tools/check.ps1` → 行为需要时用 MCP 运行目标场景 →
+聚焦运行时状态与 editor/game 日志 → 停止游戏 → Git diff → 人工体验。
+只有用户明确要求 Codex 侧视觉证据时才获取截图。

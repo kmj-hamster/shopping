@@ -1,82 +1,75 @@
-[gd_resource type="Resource" script_class="GameContentManifest" load_steps=45 format=3]
+[gd_resource type="Resource" script_class="GameContentManifest" load_steps=48 format=3]
 
 [ext_resource type="Script" path="res://scripts/quest_domain/game_content_manifest.gd" id="1_manifest"]
 [ext_resource type="Script" path="res://scripts/quest_domain/property_definition.gd" id="2_property"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/demo_fries.tres" id="3_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/demo_sunflower.tres" id="4_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/demo_agave.tres" id="5_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/demo_cola.tres" id="6_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/demo_scissors.tres" id="7_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/demo_girl_order.tres" id="8_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/demo_self_care.tres" id="9_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/demo_mouse_order.tres" id="10_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/demo_flower_owner_request.tres" id="11_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/recipes/demo_recipe_midnight_rose.tres" id="12_recipe"]
-[ext_resource type="Resource" path="res://data/quest_arc/stores/demo_flower.tres" id="13_store"]
-[ext_resource type="Resource" path="res://data/quest_arc/stores/demo_record.tres" id="14_store"]
-[ext_resource type="Resource" path="res://data/quest_arc/store_unlocks/demo_unlock_record.tres" id="15_unlock"]
-[ext_resource type="Resource" path="res://data/quest_arc/owners/demo_flower_owner.tres" id="16_owner"]
-[ext_resource type="Resource" path="res://data/quest_arc/owners/demo_record_owner.tres" id="17_owner"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/demo_toy_block.tres" id="18_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/demo_midnight_rose.tres" id="19_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/demo_worn_teddy.tres" id="20_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/demo_baby_teddy.tres" id="21_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/demo_pale_teddy.tres" id="22_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/recipes/demo_recipe_worn_teddy.tres" id="23_recipe"]
-[ext_resource type="Resource" path="res://data/quest_arc/recipes/demo_recipe_baby_teddy.tres" id="24_recipe"]
-[ext_resource type="Resource" path="res://data/quest_arc/recipes/demo_recipe_pale_teddy.tres" id="25_recipe"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/demo_soft_gauze.tres" id="26_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/demo_mirror_shard.tres" id="27_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/items/demo_tin_frog.tres" id="28_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/demo_tin_boy_gift.tres" id="29_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/opening_plastic_car.tres" id="3_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/opening_kaleidoscope.tres" id="4_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/opening_lotus_candle.tres" id="5_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/opening_mung_bean_cake.tres" id="6_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/opening_milkshake.tres" id="7_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/opening_cola.tres" id="8_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/opening_fries.tres" id="9_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/opening_nuggets.tres" id="10_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/opening_jasmine.tres" id="11_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/opening_gardenia.tres" id="12_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/opening_cactus.tres" id="13_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/opening_plastic_orchid.tres" id="14_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/opening_tin_frog.tres" id="15_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/demo_midnight_rose.tres" id="16_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/opening_remittance.tres" id="17_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/opening_tin_boy_intro.tres" id="18_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/opening_tin_boy_toy.tres" id="19_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/opening_self_care.tres" id="20_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/opening_aquarium_drink.tres" id="21_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/recipes/demo_recipe_midnight_rose.tres" id="22_recipe"]
+[ext_resource type="Resource" path="res://data/quest_arc/stores/opening_toy.tres" id="23_store"]
+[ext_resource type="Resource" path="res://data/quest_arc/stores/opening_fast_food.tres" id="24_store"]
+[ext_resource type="Resource" path="res://data/quest_arc/stores/opening_flower.tres" id="25_store"]
+[ext_resource type="Resource" path="res://data/quest_arc/stores/opening_record.tres" id="26_store"]
+[ext_resource type="Resource" path="res://data/quest_arc/stores/opening_bookstore.tres" id="27_store"]
+[ext_resource type="Resource" path="res://data/quest_arc/store_unlocks/opening_unlock_toy.tres" id="28_unlock"]
+[ext_resource type="Resource" path="res://data/quest_arc/store_unlocks/opening_unlock_fast_food.tres" id="29_unlock"]
+[ext_resource type="Resource" path="res://data/quest_arc/store_unlocks/opening_unlock_flower.tres" id="30_unlock"]
+[ext_resource type="Resource" path="res://data/quest_arc/store_unlocks/opening_unlock_record.tres" id="31_unlock"]
+[ext_resource type="Resource" path="res://data/quest_arc/store_unlocks/opening_unlock_bookstore.tres" id="32_unlock"]
+[ext_resource type="Resource" path="res://data/quest_arc/owners/opening_toy_owner.tres" id="33_owner"]
+[ext_resource type="Resource" path="res://data/quest_arc/owners/opening_fast_food_owner.tres" id="34_owner"]
+[ext_resource type="Resource" path="res://data/quest_arc/owners/opening_flower_owner.tres" id="35_owner"]
 
 [sub_resource type="Resource" id="PropertyFood"]
 script = ExtResource("2_property")
 id = &"food"
 display_name_key = &"demo.property.food.name"
 description_key = &"demo.property.food.description"
-
-[sub_resource type="Resource" id="PropertySalty"]
-script = ExtResource("2_property")
-id = &"salty"
-display_name_key = &"demo.property.salty.name"
-description_key = &"demo.property.salty.description"
-
-[sub_resource type="Resource" id="PropertyPlant"]
-script = ExtResource("2_property")
-id = &"plant"
-display_name_key = &"demo.property.plant.name"
-description_key = &"demo.property.plant.description"
+is_item_category = true
 
 [sub_resource type="Resource" id="PropertyFlower"]
 script = ExtResource("2_property")
 id = &"flower"
 display_name_key = &"demo.property.flower.name"
 description_key = &"demo.property.flower.description"
+is_item_category = true
 
 [sub_resource type="Resource" id="PropertyToy"]
 script = ExtResource("2_property")
 id = &"toy"
 display_name_key = &"demo.property.toy.name"
 description_key = &"demo.property.toy.description"
-
-[sub_resource type="Resource" id="PropertyRose"]
-script = ExtResource("2_property")
-id = &"rose"
-display_name_key = &"demo.property.rose.name"
-description_key = &"demo.property.rose.description"
-
-[sub_resource type="Resource" id="PropertyTeddyBear"]
-script = ExtResource("2_property")
-id = &"teddy_bear"
-display_name_key = &"demo.property.teddy_bear.name"
-description_key = &"demo.property.teddy_bear.description"
+is_item_category = true
 
 [sub_resource type="Resource" id="PropertyDrink"]
 script = ExtResource("2_property")
 id = &"drink"
 display_name_key = &"demo.property.drink.name"
 description_key = &"demo.property.drink.description"
+is_item_category = true
+
+[sub_resource type="Resource" id="PropertyCd"]
+script = ExtResource("2_property")
+id = &"cd"
+display_name_key = &"opening.property.cd.name"
+description_key = &"opening.property.cd.description"
+is_item_category = true
 
 [sub_resource type="Resource" id="PropertyMetal"]
 script = ExtResource("2_property")
@@ -84,11 +77,11 @@ id = &"metal"
 display_name_key = &"demo.property.metal.name"
 description_key = &"demo.property.metal.description"
 
-[sub_resource type="Resource" id="PropertyTool"]
+[sub_resource type="Resource" id="PropertyRose"]
 script = ExtResource("2_property")
-id = &"tool"
-display_name_key = &"demo.property.tool.name"
-description_key = &"demo.property.tool.description"
+id = &"rose"
+display_name_key = &"demo.property.rose.name"
+description_key = &"demo.property.rose.description"
 
 [sub_resource type="Resource" id="PropertyPersona"]
 script = ExtResource("2_property")
@@ -130,16 +123,16 @@ is_night_aspect = true
 
 [resource]
 script = ExtResource("1_manifest")
-initial_money = 30
-maximum_item_price = 20
+initial_money = 0
+maximum_item_price = 40
 maximum_properties_per_item = 4
 maximum_aspects_per_item = 2
-initial_protagonist_stats = {&"clarity": 3, &"ease": 3, &"reminiscence": 3, &"reverie": 3}
-starting_item_ids = Array[StringName]([&"fries", &"sunflower", &"toy_block", &"soft_gauze", &"soft_gauze", &"mirror_shard"])
-properties = Array[Resource]([SubResource("PropertyFood"), SubResource("PropertySalty"), SubResource("PropertyPlant"), SubResource("PropertyFlower"), SubResource("PropertyToy"), SubResource("PropertyRose"), SubResource("PropertyTeddyBear"), SubResource("PropertyDrink"), SubResource("PropertyMetal"), SubResource("PropertyTool"), SubResource("PropertyPersona"), SubResource("PropertyLamp"), SubResource("PropertyMirror"), SubResource("PropertyGauze"), SubResource("PropertyPillow")])
-items = Array[Resource]([ExtResource("3_item"), ExtResource("4_item"), ExtResource("5_item"), ExtResource("6_item"), ExtResource("7_item"), ExtResource("18_item"), ExtResource("19_item"), ExtResource("20_item"), ExtResource("21_item"), ExtResource("22_item"), ExtResource("26_item"), ExtResource("27_item"), ExtResource("28_item")])
-tasks = Array[Resource]([ExtResource("29_task"), ExtResource("8_task"), ExtResource("9_task"), ExtResource("10_task"), ExtResource("11_task")])
-recipes = Array[Resource]([ExtResource("12_recipe"), ExtResource("23_recipe"), ExtResource("24_recipe"), ExtResource("25_recipe")])
-stores = Array[Resource]([ExtResource("13_store"), ExtResource("14_store")])
-store_unlocks = Array[Resource]([ExtResource("15_unlock")])
-owners = Array[Resource]([ExtResource("16_owner"), ExtResource("17_owner")])
+initial_protagonist_stats = {&"clarity": 0, &"ease": 0, &"reminiscence": 0, &"reverie": 0}
+starting_item_ids = Array[StringName]([])
+properties = Array[Resource]([SubResource("PropertyFood"), SubResource("PropertyFlower"), SubResource("PropertyToy"), SubResource("PropertyDrink"), SubResource("PropertyCd"), SubResource("PropertyMetal"), SubResource("PropertyRose"), SubResource("PropertyPersona"), SubResource("PropertyLamp"), SubResource("PropertyMirror"), SubResource("PropertyGauze"), SubResource("PropertyPillow")])
+items = Array[Resource]([ExtResource("3_item"), ExtResource("4_item"), ExtResource("5_item"), ExtResource("6_item"), ExtResource("7_item"), ExtResource("8_item"), ExtResource("9_item"), ExtResource("10_item"), ExtResource("11_item"), ExtResource("12_item"), ExtResource("13_item"), ExtResource("14_item"), ExtResource("15_item"), ExtResource("16_item")])
+tasks = Array[Resource]([ExtResource("17_task"), ExtResource("18_task"), ExtResource("19_task"), ExtResource("20_task"), ExtResource("21_task")])
+recipes = Array[Resource]([ExtResource("22_recipe")])
+stores = Array[Resource]([ExtResource("23_store"), ExtResource("24_store"), ExtResource("25_store"), ExtResource("26_store"), ExtResource("27_store")])
+store_unlocks = Array[Resource]([ExtResource("28_unlock"), ExtResource("29_unlock"), ExtResource("30_unlock"), ExtResource("31_unlock"), ExtResource("32_unlock")])
+owners = Array[Resource]([ExtResource("33_owner"), ExtResource("34_owner"), ExtResource("35_owner")])

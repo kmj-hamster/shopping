@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="StoreDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/store_definition.gd" id="1_store"]
+
+[resource]
+script = ExtResource("1_store")
+id = &"toy"
+display_name_key = &"opening.store.toy.name"
+owner_id = &"toy_owner"
+unlock_definition_id = &"unlock_toy"
+map_anchor = Vector2(0.28, 0.55)
+restock_interval_days = 3
+restock_phase_day = 1
+initial_capacity = 4
+initial_shelf_item_ids = Array[StringName]([&"plastic_car", &"kaleidoscope", &"lotus_candle", &"mung_bean_cake"])

@@ -433,10 +433,6 @@ msgid "quest.ui.task.confirmed"
 msgstr "已收好。离开商场时结算。"
 msgid "quest.ui.task.not_ready"
 msgstr "物品能放入，但程度还不够。"
-msgid "quest.ui.task.deliver"
-msgstr "交给店主"
-msgid "quest.ui.task.owner_elsewhere"
-msgstr "要去对方的店里交付。"
 msgid "quest.ui.synthesis.open"
 msgstr "进入袋中之色"
 msgid "quest.ui.synthesis.title"
@@ -480,11 +476,11 @@ msgstr "为了改变其他事物而被制造的东西。"
 msgid "demo.property.lamp.name"
 msgstr "灯"
 msgid "demo.property.lamp.description"
-msgstr "照亮不存在之物的影响。"
+msgstr "交流电，明亮的街角，飞蛾噼啪作响。夜晚使我的头脑更加清醒。[夜之形，理性、好奇，致所有夜行者。]"
 msgid "demo.property.mirror.name"
 msgstr "镜"
 msgid "demo.property.mirror.description"
-msgstr "使旧日轮廓再次显现的影响。"
+msgstr "看见我，你就看到了另一个自己。握住我，你就握住了自己的另一只手。夜晚使我想起忧伤之事。[夜之形，共情、怀旧，致所有悼念者。]"
 msgid "demo.stat.fantasy.name"
 msgstr "幻想"
 msgid "demo.stat.fantasy.description"
@@ -506,10 +502,10 @@ msgid "demo.item.fries.name"
 msgstr "薯条"
 msgid "demo.item.fries.description"
 msgstr "炸得酥脆，盐粒落在纸袋底部。"
-msgid "demo.item.sunflower.name"
-msgstr "向日葵"
-msgid "demo.item.sunflower.description"
-msgstr "夜晚的向日葵，为一切不合时宜者绽放。"
+msgid "demo.item.jasmine.name"
+msgstr "茉莉"
+msgid "demo.item.jasmine.description"
+msgstr "夜里的茉莉，将睡意藏进一小簇白花。"
 msgid "demo.item.agave.name"
 msgstr "龙舌兰"
 msgid "demo.item.agave.description"
@@ -592,13 +588,13 @@ msgid "demo.property.gauze.name"
 msgstr "纱"
 
 msgid "demo.property.gauze.description"
-msgstr "让遥远想象获得轻薄轮廓的性相。"
+msgstr "远古鱼游过卧室的墙，湿漉漉的水泥枝条开满白花，夜晚使我的灵感无所遁形。[夜之形，幻觉、随想，致所有梦游者。]"
 
 msgid "demo.property.pillow.name"
 msgstr "枕"
 
 msgid "demo.property.pillow.description"
-msgstr "让事物柔软、安稳并适合依靠的性相。"
+msgstr "凉爽的鹅绒被，床头的薰衣草，天明前的片刻慰藉。祝你今夜好眠，今夜。[夜之形，享受、安歇，致所有倦归者。]"
 
 msgid "demo.persona.ease.name"
 msgstr "安逸"
@@ -736,16 +732,16 @@ msgid "demo.ui.synthesis.base.description"
 msgstr "我需要一件确切的物品，以施加想象。[原料提供其全部属性]"
 
 msgid "demo.ui.synthesis.fuel"
-msgstr "燃料"
+msgstr "引子"
 
 msgid "demo.ui.synthesis.fuel.description"
-msgstr "让我的想象力烧得更旺，临时。[燃料仅提供性相，将被消耗]"
+msgstr "这件东西让我对夜晚更加了解，暂时。[引子仅提供夜之形，且会被消耗。]"
 
 msgid "demo.ui.synthesis.mask"
-msgstr "面具"
+msgstr "我"
 
 msgid "demo.ui.synthesis.mask.description"
-msgstr "你是哪一种夜之居民？[提供性相，不会被消耗]"
+msgstr "我是哪一种不眠者？[利用我的能力提供夜之形。面具不会被消耗。]"
 
 msgid "quest.ui.hand.items"
 msgstr "物品"
@@ -854,3 +850,217 @@ msgstr "铁皮青蛙"
 
 msgid "demo.item.tin_frog.description"
 msgstr "一只肚子空响的发条青蛙，眼睛里留着一小点稳定的灯光。"
+msgid "opening.property.cd.name"
+msgstr "CD"
+
+msgid "opening.property.cd.description"
+msgstr "能够播放声音的圆盘，也是一种物品类别。"
+
+msgid "opening.task.remittance.name"
+msgstr "定期汇款"
+
+msgid "opening.task.remittance.body"
+msgstr "购物袋，请您努力。\n\n雨林小组"
+
+msgid "opening.task.tin_intro.name"
+msgstr "铁皮男孩：介绍"
+
+msgid "opening.task.tin_intro.body"
+msgstr "亲爱的购物袋：\n谢谢你愿意帮我买玩具！\n那家店叫欣欣玩具店，老板的胡子很zha。\n这是我之前买的铁皮青蛙，要是他跟你不熟，就给他看。"
+
+msgid "opening.task.tin_toy.name"
+msgstr "铁皮男孩：玩具"
+
+msgid "opening.task.tin_toy.body"
+msgstr "亲爱的购物袋：\n我还是不敢晚上出来，hai怕被抓起来，你真勇敢！\n买什么玩具都行，你自由发hui吧。\n此致，\n敬礼"
+
+msgid "opening.task.tin_toy.footer"
+msgstr "报酬：20元"
+
+msgid "opening.task.tin_toy.slot"
+msgstr "任意玩具"
+
+msgid "opening.task.tin_toy.result"
+msgstr "铁皮男孩把玩具抱得很紧。他没有在信里写谢谢，大概是忘了。"
+
+msgid "opening.task.self_care.name"
+msgstr "我：照顾自己"
+
+msgid "opening.task.self_care.body"
+msgstr "夜晚很长。我也应该给自己留下一件东西。"
+
+msgid "opening.task.self_care.footer"
+msgstr "在夜晚结束前，至少要满足自己。"
+
+msgid "opening.task.self_care.slot"
+msgstr "今晚给自己的东西"
+
+msgid "opening.task.self_care.result"
+msgstr "我把它留在身边。夜晚因此呈现出另一种形状。"
+
+msgid "opening.task.aquarium.name"
+msgstr "鱼缸女孩：饮料"
+
+msgid "opening.task.aquarium.body"
+msgstr "亲爱的购物袋：\n水里的夜晚很渴。请给我带一杯饮料，什么味道都可以。\n\n鱼缸女孩"
+
+msgid "opening.task.aquarium.footer"
+msgstr "报酬：15元"
+
+msgid "opening.task.aquarium.slot"
+msgstr "任意饮品"
+
+msgid "opening.task.aquarium.result"
+msgstr "饮料沉到鱼缸底部，细小的气泡整夜向上漂。"
+
+msgid "opening.item.plastic_car.name"
+msgstr "塑料车"
+
+msgid "opening.item.plastic_car.description"
+msgstr "空心的车轮在瓷砖缝上颠簸，透明车灯永远亮着。"
+
+msgid "opening.item.kaleidoscope.name"
+msgstr "万花筒"
+
+msgid "opening.item.kaleidoscope.description"
+msgstr "贴近眼睛转动纸筒，碎玻璃就把同一个房间拼成许多个。"
+
+msgid "opening.item.lotus_candle.name"
+msgstr "莲花蜡烛"
+
+msgid "opening.item.lotus_candle.description"
+msgstr "塑料花瓣会随着生日歌张开。火熄灭后，它仍慢慢旋转。"
+
+msgid "opening.item.mung_bean_cake.name"
+msgstr "绿豆糕"
+
+msgid "opening.item.mung_bean_cake.description"
+msgstr "一种使人悲伤的食物，在节日的尾声，客厅的茶几上堆满了这个。"
+
+msgid "opening.item.milkshake.name"
+msgstr "奶昔"
+
+msgid "opening.item.milkshake.description"
+msgstr "杯壁冰凉，奶油柔软得像一小块尚未使用的枕头。"
+
+msgid "opening.item.cola.name"
+msgstr "可乐"
+
+msgid "opening.item.cola.description"
+msgstr "拉环响了一声，褐色气泡同时带来清醒和困意。"
+
+msgid "opening.item.fries.name"
+msgstr "薯条"
+
+msgid "opening.item.fries.description"
+msgstr "纸袋底部还留着一点盐和温度，适合在回家路上吃完。"
+
+msgid "opening.item.nuggets.name"
+msgstr "鸡块"
+
+msgid "opening.item.nuggets.description"
+msgstr "规则的金色外壳，里面却有谁也说不清的柔软形状。"
+
+msgid "opening.item.gardenia.name"
+msgstr "栀子"
+
+msgid "opening.item.gardenia.description"
+msgstr "白花的香气太浓，像潮湿空气里一段看得见的梦。"
+
+msgid "opening.item.cactus.name"
+msgstr "仙人掌"
+
+msgid "opening.item.cactus.description"
+msgstr "它把白天储存在身体里，夜里仍保持干燥和清醒。"
+
+msgid "opening.item.plastic_orchid.name"
+msgstr "塑料兰花"
+
+msgid "opening.item.plastic_orchid.description"
+msgstr "不会枯萎，也不会生长。叶片上的灰尘倒是一年比一年真实。"
+msgid "opening.store.toy.name"
+msgstr "欣欣玩具店"
+
+msgid "opening.store.fast_food.name"
+msgstr "快餐店"
+
+msgid "opening.store.flower.name"
+msgstr "花店"
+
+msgid "opening.store.record.name"
+msgstr "唱片店"
+
+msgid "opening.store.bookstore.name"
+msgstr "书店"
+
+msgid "opening.unlock.toy.prompt"
+msgstr "卷帘门后传来发条空转的声音。拿出任何玩具，证明你知道该怎样和这里相处。"
+
+msgid "opening.unlock.toy.slot"
+msgstr "任何玩具"
+
+msgid "opening.unlock.toy.result"
+msgstr "门锁认出了玩具，卷帘门缓慢升起。"
+
+msgid "opening.unlock.fast_food.prompt"
+msgstr "店门口挂着牌子：请自带食物。带来任何食物，门才会打开。"
+
+msgid "opening.unlock.fast_food.slot"
+msgstr "任何食物"
+
+msgid "opening.unlock.fast_food.result"
+msgstr "牌子晃了一下，店里的灯亮了。"
+
+msgid "opening.unlock.flower.prompt"
+msgstr "玻璃门后全是沉睡的白花。展示任何一张 Persona，让它们认出今夜的你。"
+
+msgid "opening.unlock.flower.slot"
+msgstr "任何 Persona"
+
+msgid "opening.unlock.flower.result"
+msgstr "面具映在玻璃上，花店从倒影里打开。"
+
+msgid "opening.unlock.record.prompt"
+msgstr "唱针停在寂静的唱片上。这里明确要求一朵午夜玫瑰。"
+
+msgid "opening.unlock.record.slot"
+msgstr "午夜玫瑰"
+
+msgid "opening.unlock.record.result"
+msgstr "玫瑰被留在门边，唱片开始转动。"
+
+msgid "opening.unlock.bookstore.prompt"
+msgstr "书页在门缝里自行翻动。夜行者或梦游者 Persona 达到 3 级，才看得清门牌。"
+
+msgid "opening.unlock.bookstore.slot"
+msgstr "3级夜行者或梦游者"
+
+msgid "opening.unlock.bookstore.result"
+msgstr "书脊依次发出轻响，门出现在两排书之间。"
+
+msgid "opening.owner.toy.name"
+msgstr "胡子老板"
+
+msgid "opening.owner.toy.idle"
+msgstr "柜台后的胡子动了一下。今晚的玩具都在货架上。"
+
+msgid "opening.owner.toy.item"
+msgstr "“%s。发条和轮子都不保证听话。”"
+
+msgid "opening.owner.fast_food.name"
+msgstr "夜班店员"
+
+msgid "opening.owner.fast_food.idle"
+msgstr "炸锅安静地亮着，像一口没有波纹的金色池塘。"
+
+msgid "opening.owner.fast_food.item"
+msgstr "“%s。最好趁它还记得温度时带走。”"
+
+msgid "opening.owner.flower.name"
+msgstr "花店老板"
+
+msgid "opening.owner.flower.idle"
+msgstr "老板正在给已经睡着的花浇水。"
+
+msgid "opening.owner.flower.item"
+msgstr "“%s。夜里别问它究竟是真是假。”"

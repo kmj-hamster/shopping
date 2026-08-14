@@ -1,30 +1,39 @@
 extends GutTest
 
 
+func before_all() -> void:
+	assert_true(QuestArcCatalog.use_manifest_for_tests(QuestArcCatalog.LEGACY_MANIFEST_PATH))
+
+
+func after_all() -> void:
+	QuestArcCatalog.clear_manifest_test_override()
+
+
 func before_each() -> void:
 	GameState.reset_game()
 
 
-func test_flower_shop_purchase_moves_sunflower_into_center_hand() -> void:
+func test_flower_shop_purchase_moves_jasmine_into_center_hand() -> void:
+	GameState.quest_state.wallet.money = 30
 	var main := await _spawn_main()
 	main._show_shop(&"flower")
 	await get_tree().process_frame
 	var shop := main.current_screen as QuestShopScreen
 	var transaction := GameState.quest_state.transaction_for_store(&"flower")
-	var sunflower_slot := transaction.shelf_slots[0]
-	assert_eq(sunflower_slot.item_id, &"sunflower")
-	shop._on_shelf_pressed(sunflower_slot.slot_id)
-	assert_eq(transaction.cart_count(), 1)
+	var jasmine_slot := transaction.shelf_slots[0]
+	assert_eq(jasmine_slot.item_id, &"jasmine")
+	shop._on_shelf_pressed(jasmine_slot.slot_id)
+	assert_true(transaction.has_selection())
 	shop._on_checkout_pressed()
 	await get_tree().process_frame
 	await get_tree().process_frame
 	assert_eq(GameState.quest_state.wallet.money, 20)
 	assert_eq(GameState.quest_state.inventory.size(), 7)
-	assert_not_null(_card_by_definition(GameState.quest_state, &"sunflower"))
+	assert_not_null(_card_by_definition(GameState.quest_state, &"jasmine"))
 	assert_eq(main.hand_bar.card_views.size(), 7)
 
 
-func test_shop_keeps_only_one_item_selected_for_checkout() -> void:
+func test_shop_replaces_the_single_checkout_selection() -> void:
 	var state := GameState.quest_state
 	var transaction := state.transaction_for_store(&"flower")
 	var available_slots := transaction.shelf_slots.filter(
@@ -35,13 +44,15 @@ func test_shop_keeps_only_one_item_selected_for_checkout() -> void:
 	var second := available_slots[1] as ShelfSlotState
 	assert_true(transaction.toggle_shelf_slot(first.slot_id).ok)
 	assert_true(transaction.toggle_shelf_slot(second.slot_id).ok)
-	assert_eq(transaction.cart_count(), 1)
+	assert_true(transaction.has_selection())
+	assert_eq(transaction.selected_shelf_slot_id, second.slot_id)
 	assert_false(transaction.is_selected(first.slot_id))
 	assert_true(transaction.is_selected(second.slot_id))
 
 
 func test_shop_selection_is_local_but_checkout_changes_global_state() -> void:
 	var state := GameState.quest_state
+	state.wallet.money = 30
 	var transaction := state.transaction_for_store(&"flower")
 	var slot := transaction.shelf_slots.filter(
 		func(candidate: ShelfSlotState) -> bool: return not candidate.is_empty()
@@ -72,7 +83,7 @@ func test_submitted_arc_task_is_permanently_locked() -> void:
 	assert_eq(fries.location, CardItemState.Location.ACTIVITY_SLOT)
 
 
-func test_flower_owner_request_requires_submission_inside_flower_shop() -> void:
+func test_flower_owner_request_confirms_anywhere_and_settles_in_the_arc() -> void:
 	var state := GameState.quest_state
 	var interaction := state.interact_with_store_owner(&"flower")
 	assert_true(interaction.ok)
@@ -81,25 +92,37 @@ func test_flower_owner_request_requires_submission_inside_flower_shop() -> void:
 	assert_eq(state.transaction_for_store(&"flower").unlocked_page_count, 2)
 	var scissors := state.grant_item(&"scissors", &"test")
 	assert_true(state.assign_card(task.instance_id, &"trim", scissors).ok)
-	assert_false(state.submit_owner_task(task.instance_id, &"record").ok)
-	var result := state.submit_owner_task(task.instance_id, &"flower")
-	assert_true(result.ok)
-	assert_eq(result.outcome_id, &"trimmed")
+	assert_true(state.confirm_task(task.instance_id).ok)
+	assert_true(task.confirmed)
+	assert_eq(task.resolved_outcome_id, &"trimmed")
+	assert_false(state.owner_states.has(&"flower_owner"))
+	assert_true(scissors in state.inventory)
+	assert_true(state.begin_next_day().ok)
+	assert_eq(state.pending_arc.entries.size(), 1)
+	assert_eq(state.pending_arc.entries[0].task_definition_id, &"flower_owner_request")
+	assert_eq(state.pending_arc.entries[0].outcome_id, &"trimmed")
+	assert_eq(
+		state.pending_arc.entries[0].result_text_key,
+		&"demo.task.flower_owner.result.trimmed",
+	)
+	assert_true(state.apply_arc_effects().ok)
 	assert_eq(state.owner_states[&"flower_owner"], &"trimmed")
+	assert_true(task.settled)
+	assert_false(scissors in state.inventory)
 
 
 func test_new_synthesis_consumes_base_but_not_persona_and_creates_rose() -> void:
 	var state := GameState.quest_state
-	var sunflower := _card_by_definition(state, &"sunflower")
+	var jasmine := _card_by_definition(state, &"jasmine")
 	var soft_gauze := _card_by_definition(state, &"soft_gauze")
 	var reverie_before: int = int(state.protagonist_aspect_counts[&"reverie"])
-	assert_true(state.assign_synthesis_base(sunflower).ok)
+	assert_true(state.assign_synthesis_base(jasmine).ok)
 	assert_true(state.assign_synthesis_fuel(soft_gauze).ok)
 	assert_true(state.select_synthesis_persona(&"reverie"))
 	assert_true(state.select_synthesis_candidate(&"recipe_midnight_rose"))
 	var result := state.begin_synthesis()
 	assert_true(result.ok)
-	assert_null(state.card_by_instance_id(sunflower.instance_id))
+	assert_null(state.card_by_instance_id(jasmine.instance_id))
 	assert_null(state.card_by_instance_id(soft_gauze.instance_id))
 	assert_eq(state.protagonist_aspect_counts[&"reverie"], reverie_before)
 	assert_not_null(_card_by_definition(state, &"midnight_rose"))
@@ -138,13 +161,13 @@ func test_worn_teddy_can_be_used_for_both_second_step_recipes() -> void:
 	assert_not_null(_card_by_definition(state, &"pale_teddy"))
 
 
-func test_sunflower_unlocks_record_shop_and_is_consumed() -> void:
+func test_jasmine_unlocks_record_shop_and_is_consumed() -> void:
 	var state := GameState.quest_state
-	var sunflower := state.grant_item(&"sunflower", &"test")
-	var result := state.unlock_store(&"record", sunflower)
+	var jasmine := state.grant_item(&"jasmine", &"test")
+	var result := state.unlock_store(&"record", jasmine)
 	assert_true(result.ok)
 	assert_true(state.is_store_unlocked(&"record"))
-	assert_null(state.card_by_instance_id(sunflower.instance_id))
+	assert_null(state.card_by_instance_id(jasmine.instance_id))
 
 
 func _spawn_main() -> QuestMain:

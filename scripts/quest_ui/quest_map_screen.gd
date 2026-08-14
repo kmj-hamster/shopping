@@ -43,19 +43,15 @@ func refresh() -> void:
 	debug_refresh_count += 1
 	for store_id in store_hotspots:
 		var hotspot := store_hotspots[store_id] as QuestStoreHotspot
-		var store := QuestArcCatalog.store_by_id(store_id)
+		var map_visible := state.is_store_visible(store_id)
+		hotspot.visible = map_visible
+		if not map_visible:
+			continue
 		var unlocked := state.is_store_unlocked(store_id)
 		hotspot.text = "➜" if unlocked else "▣"
 		hotspot.add_theme_font_size_override("font_size", 32 if unlocked else 26)
 		hotspot.modulate = Color.WHITE if unlocked else Color(0.62, 0.71, 0.69, 0.92)
-		if unlocked:
-			hotspot.tooltip_text = TranslationServer.translate(store.display_name_key)
-		else:
-			var unlock := QuestArcCatalog.store_unlock_for_store(store_id)
-			hotspot.tooltip_text = "%s\n%s" % [
-				TranslationServer.translate(store.display_name_key),
-				TranslationServer.translate(unlock.prompt_text_key),
-			]
+		hotspot.tooltip_text = ""
 
 
 func show_notice(message_key: StringName) -> void:
@@ -83,21 +79,17 @@ func _build_interface() -> void:
 	background_input.gui_input.connect(_on_background_gui_input)
 	add_child(background_input)
 
-	var layout := {
-		&"flower": Vector2(0.40, 0.61),
-		&"record": Vector2(0.66, 0.46),
-	}
 	var content := QuestArcCatalog.manifest()
 	if content != null:
 		for raw_store in content.stores:
 			var store := raw_store as StoreDefinition
-			if store == null or not layout.has(store.id):
+			if store == null:
 				continue
 			var hotspot := QuestStoreHotspot.new()
 			hotspot.name = "%sHotspot" % String(store.id).to_pascal_case()
 			hotspot.state = state
 			hotspot.store_id = store.id
-			var anchor: Vector2 = layout[store.id]
+			var anchor := store.map_anchor
 			hotspot.anchor_left = anchor.x
 			hotspot.anchor_top = anchor.y
 			hotspot.anchor_right = anchor.x
@@ -135,6 +127,8 @@ func _build_interface() -> void:
 
 
 func _on_store_pressed(store_id: StringName) -> void:
+	if not state.is_store_visible(store_id):
+		return
 	if state.is_store_unlocked(store_id):
 		shop_requested.emit(store_id)
 	else:
@@ -154,6 +148,7 @@ func _open_location_popup(store_id: StringName) -> void:
 		location_popup.item_inspected.connect(item_inspected.emit)
 		location_popup.unlock_confirmed.connect(_on_unlock_confirmed)
 		add_child(location_popup)
+		location_popup.set_drag_bounds_control(self)
 		location_popups[store_id] = location_popup
 	else:
 		location_popup.refresh()

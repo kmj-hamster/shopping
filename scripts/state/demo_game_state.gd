@@ -4,6 +4,7 @@ extends Node
 signal state_changed
 
 const SAVE_PATH := "user://save_shopping0807_v1.json"
+const LEGACY_SAVE_PATH := "user://save_shopping0807_legacy.json"
 const AUTOSAVE_DEBOUNCE_SECONDS := 0.4
 
 var quest_state: QuestGameState
@@ -14,6 +15,8 @@ var autosave_timer: Timer
 
 
 func _ready() -> void:
+	if QuestArcCatalog.using_legacy_demo():
+		save_repository = QuestSaveRepository.new(LEGACY_SAVE_PATH)
 	autosave_timer = Timer.new()
 	autosave_timer.one_shot = true
 	autosave_timer.wait_time = AUTOSAVE_DEBOUNCE_SECONDS

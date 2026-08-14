@@ -1,8 +1,8 @@
 class_name GameContentManifest
 extends Resource
 
-@export_range(0, 20, 1) var initial_money := 10
-@export_range(1, 20, 1) var maximum_item_price := 20
+@export_range(0, 20, 1) var initial_money := 0
+@export_range(1, 999, 1) var maximum_item_price := 20
 @export_range(1, 8, 1) var maximum_properties_per_item := 4
 @export_range(1, 4, 1) var maximum_aspects_per_item := 2
 @export var initial_protagonist_stats: Dictionary = {}
@@ -57,10 +57,16 @@ func validation_errors() -> PackedStringArray:
 			_validate_slot_rules(task.slot_rules, properties_by_id, items_by_id, errors)
 			if (
 				task.category == TaskDefinition.Category.GIFT
+				and not task.gift_item_id.is_empty()
 				and not items_by_id.has(task.gift_item_id)
 			):
+					errors.append(
+						"Gift task %s references missing item %s." % [task.id, task.gift_item_id]
+					)
+			if not task.activation_store_id.is_empty() and not stores_by_id.has(task.activation_store_id):
 				errors.append(
-					"Gift task %s references missing item %s." % [task.id, task.gift_item_id]
+					"Task %s references missing activation store %s."
+					% [task.id, task.activation_store_id]
 				)
 	for raw_recipe in recipes:
 		var recipe := raw_recipe as SynthesisRecipeDefinition
@@ -83,6 +89,12 @@ func validation_errors() -> PackedStringArray:
 			errors.append("Store %s references missing unlock %s." % [store.id, store.unlock_definition_id])
 		if not store.owner_id.is_empty() and not owners_by_id.has(store.owner_id):
 			errors.append("Store %s references missing owner %s." % [store.id, store.owner_id])
+		for prerequisite_store_id in store.visible_after_store_ids:
+			if not stores_by_id.has(prerequisite_store_id):
+				errors.append(
+					"Store %s references missing visibility prerequisite %s."
+					% [store.id, prerequisite_store_id]
+				)
 		for item_id in store.initial_shelf_item_ids:
 			var item := items_by_id.get(item_id) as QuestItemDefinition
 			if item == null or item.store_id != store.id:

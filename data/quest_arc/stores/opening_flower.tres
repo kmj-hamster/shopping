@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="StoreDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/store_definition.gd" id="1_store"]
+
+[resource]
+script = ExtResource("1_store")
+id = &"flower"
+display_name_key = &"opening.store.flower.name"
+owner_id = &"opening_flower_owner"
+unlock_definition_id = &"unlock_flower"
+map_anchor = Vector2(0.69, 0.57)
+restock_interval_days = 3
+restock_phase_day = 3
+initial_capacity = 4
+initial_shelf_item_ids = Array[StringName]([&"jasmine", &"gardenia", &"cactus", &"plastic_orchid"])

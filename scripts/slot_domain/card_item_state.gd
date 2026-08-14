@@ -2,10 +2,11 @@ class_name CardItemState
 extends RefCounted
 
 enum Location {
-	HAND,
-	ACTIVITY_SLOT,
-	OWNER_REQUEST,
-	RECYCLE,
+	# These values are serialized in save files. Preserve them or migrate the save format.
+	HAND = 0,
+	ACTIVITY_SLOT = 1,
+	OWNER_REQUEST = 2,
+	RECYCLE = 3,
 }
 
 var instance_id: int

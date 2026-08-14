@@ -8,7 +8,9 @@ const UI_THEME: Theme = preload("res://resources/fonts/shancha_ui_theme.tres")
 
 var state: QuestGameState
 var current_screen: Control
+var content_viewport_region: Control
 var screen_host: Control
+var task_popup_layer: Control
 var map_screen: QuestMapScreen
 var shop_screens: Dictionary = {}
 var task_dock: QuestTaskDock
@@ -25,6 +27,8 @@ var language_button: Button
 var clear_save_button: Button
 var forbidden_cursor_texture: Texture2D
 var next_day_dialog: ConfirmationDialog
+var next_day_blocked_dialog: AcceptDialog
+var screen_transition_overlay: ColorRect
 var arc_overlay: ColorRect
 var arc_day_label: Label
 var arc_result_label: Label
@@ -48,6 +52,13 @@ var drag_return_layer: CanvasLayer
 var drag_return_card: CardHandCard
 var drag_return_tween: Tween
 var drag_return_source: CardHandCard
+var persona_reveal_overlay: ColorRect
+var persona_reveal_title: Label
+var persona_reveal_back: Button
+var persona_reveal_card: CardHandCard
+var persona_reveal_hint: Label
+var persona_reveal_persona_id: StringName
+var persona_reveal_flipped := false
 
 
 func _ready() -> void:
@@ -60,9 +71,11 @@ func _ready() -> void:
 	_bind_state()
 	LocaleManager.locale_changed.connect(_on_locale_changed)
 	_refresh_global_text()
-	_show_map()
+	_show_map_immediate()
 	if state.pending_arc != null:
 		call_deferred("_resume_arc")
+	elif not state.pending_persona_reveal_ids.is_empty():
+		call_deferred("_run_pending_persona_reveals")
 
 
 func _build_shell() -> void:
@@ -125,17 +138,23 @@ func _build_shell() -> void:
 	next_day_button.pressed.connect(_on_next_day_pressed)
 	sidebar_column.add_child(next_day_button)
 
+	content_viewport_region = Control.new()
+	content_viewport_region.name = "ContentViewportRegion"
+	content_viewport_region.anchor_left = 0.19
+	content_viewport_region.anchor_top = 0.045
+	content_viewport_region.anchor_right = 0.96
+	content_viewport_region.anchor_bottom = 0.755
+	content_viewport_region.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(content_viewport_region)
+
 	var screen_frame := PanelContainer.new()
 	screen_frame.name = "ContentViewportFrame"
-	screen_frame.anchor_left = 0.19
-	screen_frame.anchor_top = 0.045
-	screen_frame.anchor_right = 0.96
-	screen_frame.anchor_bottom = 0.755
+	screen_frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	screen_frame.add_theme_stylebox_override(
 		"panel",
 		UiPalette.panel_style(Color("061015", 0.98), Color("77958c", 0.78)),
 	)
-	add_child(screen_frame)
+	content_viewport_region.add_child(screen_frame)
 	var screen_margin := MarginContainer.new()
 	for side in ["left", "right", "top", "bottom"]:
 		screen_margin.add_theme_constant_override("margin_%s" % side, 6)
@@ -145,6 +164,13 @@ func _build_shell() -> void:
 	screen_host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	screen_host.clip_contents = true
 	screen_margin.add_child(screen_host)
+	task_popup_layer = Control.new()
+	task_popup_layer.name = "TaskPopupLayer"
+	task_popup_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	task_popup_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	task_popup_layer.clip_contents = true
+	task_popup_layer.z_index = 20
+	content_viewport_region.add_child(task_popup_layer)
 
 	protagonist_button = TextureButton.new()
 	protagonist_button.name = "ProtagonistPortrait"
@@ -185,15 +211,17 @@ func _build_shell() -> void:
 	next_day_dialog = ConfirmationDialog.new()
 	next_day_dialog.confirmed.connect(_on_next_day_requested)
 	add_child(next_day_dialog)
+	next_day_blocked_dialog = AcceptDialog.new()
+	next_day_blocked_dialog.ok_button_text = TranslationServer.translate(&"demo.ui.confirm")
+	add_child(next_day_blocked_dialog)
 
 
 func _build_global_interface() -> void:
 	task_dock = QuestTaskDock.new()
 	task_dock.name = "QuestTaskDock"
-	task_dock.setup(state)
+	task_dock.setup(state, task_popup_layer)
 	task_dock.rule_focused.connect(_on_rule_focused)
 	task_dock.item_inspected.connect(_show_item)
-	task_dock.owner_result_presented.connect(_on_owner_result_presented)
 	add_child(task_dock)
 
 	hand_bar = QuestHandBar.new()
@@ -204,6 +232,8 @@ func _build_global_interface() -> void:
 	hand_bar.anchor_bottom = 0.985
 	hand_bar.setup(state)
 	hand_bar.item_inspected.connect(_show_item)
+	hand_bar.card_drag_started.connect(_on_hand_card_drag_started)
+	hand_bar.card_drag_finished.connect(_on_hand_card_drag_finished)
 	add_child(hand_bar)
 
 	detail_popup = ItemDetailPopup.new()
@@ -212,6 +242,8 @@ func _build_global_interface() -> void:
 	rule_detail_popup.name = "QuestRuleDetailPopup"
 	add_child(rule_detail_popup)
 	_build_drag_return_layer()
+	_build_screen_transition_overlay()
+	_build_persona_reveal_overlay()
 	_build_arc_overlay()
 
 
@@ -230,12 +262,156 @@ func _build_drag_return_layer() -> void:
 	drag_return_layer.add_child(drag_return_card)
 
 
+func _build_screen_transition_overlay() -> void:
+	screen_transition_overlay = ColorRect.new()
+	screen_transition_overlay.name = "ScreenTransitionOverlay"
+	screen_transition_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	screen_transition_overlay.color = Color("05090d")
+	screen_transition_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	screen_transition_overlay.z_index = 400
+	screen_transition_overlay.visible = false
+	add_child(screen_transition_overlay)
+
+
+func _run_screen_transition(
+	switcher: Callable,
+	fade_out_seconds: float,
+	fade_in_seconds: float,
+	color: Color = Color("05090d"),
+	hold_seconds: float = 0.0,
+) -> void:
+	if transition_in_progress or not switcher.is_valid():
+		return
+	if not GameState.autosave_enabled:
+		switcher.call()
+		return
+	transition_in_progress = true
+	screen_transition_overlay.color = color
+	screen_transition_overlay.modulate.a = 0.0
+	screen_transition_overlay.visible = true
+	var fade_out := create_tween()
+	fade_out.tween_property(
+		screen_transition_overlay, "modulate:a", 1.0, fade_out_seconds
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	await fade_out.finished
+	switcher.call()
+	if hold_seconds > 0.0:
+		await get_tree().create_timer(hold_seconds).timeout
+	var fade_in := create_tween()
+	fade_in.tween_property(
+		screen_transition_overlay, "modulate:a", 0.0, fade_in_seconds
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	await fade_in.finished
+	screen_transition_overlay.visible = false
+	transition_in_progress = false
+func _build_persona_reveal_overlay() -> void:
+	persona_reveal_overlay = ColorRect.new()
+	persona_reveal_overlay.name = "PersonaRevealOverlay"
+	persona_reveal_overlay.color = Color("02050a", 0.97)
+	persona_reveal_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	persona_reveal_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	persona_reveal_overlay.z_index = 450
+	persona_reveal_overlay.visible = false
+	persona_reveal_overlay.gui_input.connect(_on_persona_reveal_input)
+	add_child(persona_reveal_overlay)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	persona_reveal_overlay.add_child(center)
+	var column := VBoxContainer.new()
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override("separation", 18)
+	center.add_child(column)
+	persona_reveal_title = Label.new()
+	persona_reveal_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	persona_reveal_title.add_theme_font_size_override("font_size", 24)
+	persona_reveal_title.add_theme_color_override("font_color", Color("d8c480"))
+	column.add_child(persona_reveal_title)
+	var holder := CenterContainer.new()
+	holder.custom_minimum_size = Vector2(220, 260)
+	column.add_child(holder)
+	persona_reveal_back = Button.new()
+	persona_reveal_back.custom_minimum_size = Vector2(170, 230)
+	persona_reveal_back.text = "◇\n◇\n◇"
+	persona_reveal_back.add_theme_font_size_override("font_size", 30)
+	persona_reveal_back.add_theme_stylebox_override(
+		"normal", UiPalette.panel_style(Color("071013"), Color("8ba19a"))
+	)
+	persona_reveal_back.pressed.connect(_flip_persona_reveal)
+	holder.add_child(persona_reveal_back)
+	persona_reveal_card = CardHandCard.new()
+	persona_reveal_card.drag_enabled = false
+	persona_reveal_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	persona_reveal_card.scale = Vector2(1.5, 1.5)
+	holder.add_child(persona_reveal_card)
+	persona_reveal_hint = Label.new()
+	persona_reveal_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	persona_reveal_hint.add_theme_color_override("font_color", Color("9db0aa"))
+	column.add_child(persona_reveal_hint)
+
+
+func _run_pending_persona_reveals() -> void:
+	if state.pending_persona_reveal_ids.is_empty():
+		persona_reveal_overlay.visible = false
+		return
+	transition_in_progress = true
+	persona_reveal_overlay.visible = true
+	_show_next_persona_reveal()
+
+
+func _show_next_persona_reveal() -> void:
+	if state.pending_persona_reveal_ids.is_empty():
+		persona_reveal_overlay.visible = false
+		transition_in_progress = false
+		return
+	persona_reveal_persona_id = state.pending_persona_reveal_ids[0]
+	persona_reveal_flipped = false
+	persona_reveal_title.text = TranslationServer.translate(&"opening.ui.persona.reveal")
+	persona_reveal_hint.text = TranslationServer.translate(&"opening.ui.persona.flip")
+	persona_reveal_back.visible = true
+	persona_reveal_card.visible = false
+	var amount := int(state.protagonist_aspect_counts.get(persona_reveal_persona_id, 0))
+	persona_reveal_card.setup(
+		PersonaMaskCatalog.card_for_persona(persona_reveal_persona_id),
+		PersonaMaskCatalog.definition_for_persona(persona_reveal_persona_id, amount),
+		false,
+	)
+
+
+func _flip_persona_reveal() -> void:
+	if persona_reveal_flipped:
+		return
+	persona_reveal_flipped = true
+	persona_reveal_back.visible = false
+	persona_reveal_card.visible = true
+	persona_reveal_hint.text = TranslationServer.translate(&"opening.ui.persona.continue")
+
+
+func _on_persona_reveal_input(event: InputEvent) -> void:
+	var click := event as InputEventMouseButton
+	var key := event as InputEventKey
+	if not (
+		(click != null and click.button_index == MOUSE_BUTTON_LEFT and click.pressed)
+		or (key != null and key.pressed and not key.echo and key.is_action("ui_accept"))
+	):
+		return
+	if not persona_reveal_flipped:
+		_flip_persona_reveal()
+		return
+	state.acknowledge_persona_reveal(persona_reveal_persona_id)
+	_show_next_persona_reveal()
+
+
 func _bind_state() -> void:
 	if state != null and not state.state_delta.is_connected(_on_state_delta):
 		state.state_delta.connect(_on_state_delta)
 
 
 func _show_map() -> void:
+	_run_screen_transition(Callable(self, "_show_map_immediate"), 0.16, 0.18)
+
+
+func _show_map_immediate() -> void:
 	_deactivate_current_screen()
 	if map_screen == null:
 		map_screen = QuestMapScreen.new()
@@ -250,11 +426,21 @@ func _show_map() -> void:
 		map_screen.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_activate_screen(map_screen)
 	map_screen.refresh()
-	task_dock.set_store_context(&"")
 	hand_bar.visible = true
 
 
 func _show_shop(store_id: StringName) -> void:
+	var first_visit := not state.has_visited_store(store_id)
+	_run_screen_transition(
+		Callable(self, "_show_shop_immediate").bind(store_id),
+		0.42 if first_visit else 0.16,
+		0.50 if first_visit else 0.18,
+		Color("05090d") if not first_visit else Color("18110b"),
+		0.12 if first_visit else 0.0,
+	)
+
+
+func _show_shop_immediate(store_id: StringName) -> void:
 	hand_bar.clear_temporarily_hidden_cards()
 	_deactivate_current_screen()
 	var shop := shop_screens.get(store_id) as QuestShopScreen
@@ -271,15 +457,24 @@ func _show_shop(store_id: StringName) -> void:
 		shop_screens[store_id] = shop
 	_activate_screen(shop)
 	shop.refresh()
-	task_dock.set_store_context(store_id)
 	shop.set_highlight_rule(focused_rule)
 	hand_bar.visible = true
+	state.mark_store_visited(store_id)
 
 
 func _show_synthesis() -> void:
 	if current_screen is QuestSynthesisInterface:
 		_return_from_synthesis()
 		return
+	_run_screen_transition(
+		Callable(self, "_show_synthesis_immediate"),
+		0.15,
+		0.15,
+		Color("05090d"),
+	)
+
+
+func _show_synthesis_immediate() -> void:
 	synthesis_return_store_id = (
 		(current_screen as QuestShopScreen).store_id
 		if current_screen is QuestShopScreen
@@ -301,16 +496,17 @@ func _show_synthesis() -> void:
 		synthesis_interface.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_activate_screen(synthesis_interface)
 	synthesis_interface.refresh()
-	task_dock.set_store_context(&"")
 	_on_rule_focused(null)
 	hand_bar.visible = true
 
 
 func _return_from_synthesis() -> void:
-	if not synthesis_return_store_id.is_empty():
-		_show_shop(synthesis_return_store_id)
-	else:
-		_show_map()
+	var switcher := (
+		Callable(self, "_show_shop_immediate").bind(synthesis_return_store_id)
+		if not synthesis_return_store_id.is_empty()
+		else Callable(self, "_show_map_immediate")
+	)
+	_run_screen_transition(switcher, 0.15, 0.15, Color("05090d"))
 
 
 func _deactivate_current_screen() -> void:
@@ -368,6 +564,16 @@ func _on_activity_background_pressed() -> void:
 
 func _on_card_staging_changed(card: CardItemState, staged: bool) -> void:
 	hand_bar.set_card_temporarily_hidden(card, staged)
+
+
+func _on_hand_card_drag_started(card: CardItemState) -> void:
+	if current_screen is QuestSynthesisInterface:
+		(current_screen as QuestSynthesisInterface).show_drop_targets_for_card(card)
+
+
+func _on_hand_card_drag_finished(_card: CardItemState, _succeeded: bool) -> void:
+	if synthesis_interface != null:
+		synthesis_interface.clear_drop_target_highlights()
 
 
 func play_card_return_animation(
@@ -432,14 +638,13 @@ func _task_definition_for_rule(rule: CardSlotRule) -> TaskDefinition:
 		return null
 	for task in state.active_tasks():
 		var definition := QuestArcCatalog.task_by_id(task.definition_id)
-		if definition != null and rule in definition.slot_rules:
-			return definition
+		if definition == null:
+			continue
+		for raw_rule in definition.slot_rules:
+			var definition_rule := raw_rule as CardSlotRule
+			if definition_rule != null and definition_rule.id == rule.id:
+				return definition
 	return null
-
-
-func _on_owner_result_presented(store_id: StringName, text_key: StringName) -> void:
-	if current_screen is QuestShopScreen and (current_screen as QuestShopScreen).store_id == store_id:
-		(current_screen as QuestShopScreen).show_owner_result(text_key)
 
 
 func _on_next_day_pressed() -> void:
@@ -468,6 +673,12 @@ func _on_next_day_requested() -> void:
 	var result := state.begin_next_day()
 	if result.ok:
 		_run_arc()
+	elif result.reason == QuestGameState.RESULT_REQUIRED_TASK_INCOMPLETE:
+		next_day_blocked_dialog.title = TranslationServer.translate(&"demo.ui.next_day")
+		next_day_blocked_dialog.dialog_text = TranslationServer.translate(
+			&"opening.ui.next_day.self_care_required"
+		)
+		next_day_blocked_dialog.popup_centered(Vector2i(520, 190))
 
 
 func _resume_arc() -> void:
@@ -518,7 +729,9 @@ func _run_arc() -> void:
 	arc_overlay.visible = false
 	transition_in_progress = false
 	hand_bar.visible = true
-	_show_map()
+	_show_map_immediate()
+	if not state.pending_persona_reveal_ids.is_empty():
+		_run_pending_persona_reveals()
 
 
 func _build_arc_overlay() -> void:
@@ -715,6 +928,7 @@ func _refresh_global_text() -> void:
 	next_day_dialog.dialog_text = TranslationServer.translate(&"demo.ui.next_day.question")
 	next_day_dialog.ok_button_text = TranslationServer.translate(&"demo.ui.confirm")
 	next_day_dialog.cancel_button_text = TranslationServer.translate(&"demo.ui.cancel")
+	next_day_blocked_dialog.ok_button_text = TranslationServer.translate(&"demo.ui.confirm")
 
 
 func _refresh_hud_state() -> void:

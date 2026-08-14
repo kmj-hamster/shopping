@@ -168,6 +168,8 @@ func _refresh() -> void:
 		_add_property_requirement(required_row, property_id)
 	for property_id in current_rule.allowed_any:
 		_add_property_requirement(required_row, property_id)
+	for property_id in current_rule.forbidden_any:
+		_add_property_requirement(required_row, property_id, &"demo.ui.rule.recently_used")
 	_add_bonus_requirements()
 	bonus_section.visible = int(requirement_row_positions.get(&"bonus", 0)) > 0
 	if property_panel.visible and not selected_property_id.is_empty():
@@ -214,7 +216,11 @@ func _add_item_requirement(item_id: StringName) -> void:
 	_show_requirement_view(key, required_row)
 
 
-func _add_property_requirement(row: HBoxContainer, property_id: StringName) -> StringName:
+func _add_property_requirement(
+	row: HBoxContainer,
+	property_id: StringName,
+	label_key: StringName = &"",
+) -> StringName:
 	var section := &"bonus" if row == bonus_row else &"required"
 	var key := _next_requirement_key(section, &"property", property_id)
 	var view: Dictionary = requirement_views.get(key, {})
@@ -236,9 +242,10 @@ func _add_property_requirement(row: HBoxContainer, property_id: StringName) -> S
 	var icon := view.button as Button
 	icon.tooltip_text = TranslationServer.translate(ItemDetailPopup.property_name_key(property_id))
 	_register_property_button(property_id, icon)
-	(view.label as Label).text = TranslationServer.translate(
-		&"demo.ui.rule.bonus" if row == bonus_row else &"demo.ui.rule.must"
-	)
+	var resolved_label_key := label_key
+	if resolved_label_key.is_empty():
+		resolved_label_key = &"demo.ui.rule.bonus" if row == bonus_row else &"demo.ui.rule.must"
+	(view.label as Label).text = TranslationServer.translate(resolved_label_key)
 	_show_requirement_view(key, row)
 	return key
 

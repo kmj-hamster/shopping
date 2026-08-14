@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="StoreUnlockDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/store_unlock_definition.gd" id="1_unlock"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_slot_rule.gd" id="2_rule"]
+[ext_resource type="Script" path="res://scripts/slot_domain/slot_value_requirement.gd" id="3_value"]
+
+[sub_resource type="Resource" id="LevelRequirement"]
+script = ExtResource("3_value")
+mode = 1
+tags = Array[StringName]([&"lamp", &"gauze"])
+minimum = 3
+
+[sub_resource type="Resource" id="Rule"]
+script = ExtResource("2_rule")
+id = &"bookstore_lock"
+display_name_key = &"opening.unlock.bookstore.slot"
+required_all = Array[StringName]([&"persona"])
+allowed_any = Array[StringName]([&"lamp", &"gauze"])
+value_requirements = Array[Resource]([SubResource("LevelRequirement")])
+
+[resource]
+script = ExtResource("1_unlock")
+id = &"unlock_bookstore"
+store_id = &"bookstore"
+prompt_text_key = &"opening.unlock.bookstore.prompt"
+result_text_key = &"opening.unlock.bookstore.result"
+slot_rule = SubResource("Rule")
+consume_item = false

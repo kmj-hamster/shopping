@@ -1,6 +1,14 @@
 extends GutTest
 
 
+func before_all() -> void:
+	assert_true(QuestArcCatalog.use_manifest_for_tests(QuestArcCatalog.LEGACY_MANIFEST_PATH))
+
+
+func after_all() -> void:
+	QuestArcCatalog.clear_manifest_test_override()
+
+
 func before_each() -> void:
 	GameState.reset_game()
 
@@ -90,7 +98,7 @@ func test_mask_tab_presents_four_live_persona_cards_without_entering_inventory()
 func test_overflowing_hand_overlaps_and_hovered_card_receives_full_space() -> void:
 	var main := await _spawn_main()
 	for index in 10:
-		main.state.grant_item(&"sunflower")
+		main.state.grant_item(&"jasmine")
 	await get_tree().process_frame
 	await get_tree().process_frame
 

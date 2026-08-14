@@ -433,10 +433,6 @@ msgid "quest.ui.task.confirmed"
 msgstr "Packed. It will settle when you leave the mall."
 msgid "quest.ui.task.not_ready"
 msgstr "It fits, but its strength is not enough."
-msgid "quest.ui.task.deliver"
-msgstr "Give to owner"
-msgid "quest.ui.task.owner_elsewhere"
-msgstr "This must be delivered at the owner's shop."
 msgid "quest.ui.synthesis.open"
 msgstr "Enter the Colors Within"
 msgid "quest.ui.synthesis.title"
@@ -480,11 +476,11 @@ msgstr "Something made to change other things."
 msgid "demo.property.lamp.name"
 msgstr "Lamp"
 msgid "demo.property.lamp.description"
-msgstr "An influence that illuminates what does not exist."
+msgstr "Alternating current, a brightly lit street corner, moths crackling in the light. Night makes my mind clearer. [A form of the night: reason and curiosity, for all Nightwalkers.]"
 msgid "demo.property.mirror.name"
 msgstr "Mirror"
 msgid "demo.property.mirror.description"
-msgstr "An influence that recalls the outline of the past."
+msgstr "See me, and you see another you. Hold me, and you hold your own other hand. Night makes me remember sorrowful things. [A form of the night: empathy and nostalgia, for all Mourners.]"
 msgid "demo.stat.fantasy.name"
 msgstr "Fantasy"
 msgid "demo.stat.fantasy.description"
@@ -506,10 +502,10 @@ msgid "demo.item.fries.name"
 msgstr "Fries"
 msgid "demo.item.fries.description"
 msgstr "Crisp-fried, with grains of salt at the bottom of the packet."
-msgid "demo.item.sunflower.name"
-msgstr "Sunflower"
-msgid "demo.item.sunflower.description"
-msgstr "A sunflower at night, blooming for everything out of place."
+msgid "demo.item.jasmine.name"
+msgstr "Jasmine"
+msgid "demo.item.jasmine.description"
+msgstr "Jasmine at night, tucking sleep into a small cluster of white blossoms."
 msgid "demo.item.agave.name"
 msgstr "Agave"
 msgid "demo.item.agave.description"
@@ -592,13 +588,13 @@ msgid "demo.property.gauze.name"
 msgstr "Gauze"
 
 msgid "demo.property.gauze.description"
-msgstr "An aspect that gives distant imaginings a thin outline."
+msgstr "Ancient fish swim across the bedroom wall; damp concrete branches bloom with white flowers. Night leaves my inspiration nowhere to hide. [A form of the night: hallucination and reverie, for all Dreamwalkers.]"
 
 msgid "demo.property.pillow.name"
 msgstr "Pillow"
 
 msgid "demo.property.pillow.description"
-msgstr "An aspect that makes things soft, settled, and safe to lean on."
+msgstr "A cool goose-down duvet, lavender at the bedside, a moment of comfort before dawn. Sleep well tonight, tonight. [A form of the night: pleasure and repose, for all Homecomers.]"
 
 msgid "demo.persona.ease.name"
 msgstr "Ease"
@@ -736,16 +732,16 @@ msgid "demo.ui.synthesis.base.description"
 msgstr "I need one definite object on which to impose imagination. [The material provides all of its properties.]"
 
 msgid "demo.ui.synthesis.fuel"
-msgstr "Fuel"
+msgstr "Spark"
 
 msgid "demo.ui.synthesis.fuel.description"
-msgstr "Something to make my imagination burn brighter, temporarily. [Fuel provides aspects only and will be consumed.]"
+msgstr "This thing lets me understand the night better, temporarily. [The Spark provides only forms of the night and will be consumed.]"
 
 msgid "demo.ui.synthesis.mask"
-msgstr "Mask"
+msgstr "Me"
 
 msgid "demo.ui.synthesis.mask.description"
-msgstr "What kind of resident of the night are you? [Provides an aspect and will not be consumed.]"
+msgstr "What kind of sleepless one am I? [Use my ability to provide forms of the night. The mask will not be consumed.]"
 
 msgid "quest.ui.hand.items"
 msgstr "Items"
@@ -854,3 +850,217 @@ msgstr "Tin Frog"
 
 msgid "demo.item.tin_frog.description"
 msgstr "A wind-up frog with a hollow tin belly. Its eyes hold a small, steady lamplight."
+msgid "opening.property.cd.name"
+msgstr "CD"
+
+msgid "opening.property.cd.description"
+msgstr "A disc that plays sound, and an item category."
+
+msgid "opening.task.remittance.name"
+msgstr "Regular Remittance"
+
+msgid "opening.task.remittance.body"
+msgstr "Shopping Bag, please work hard.\n\nThe Rainforest Group"
+
+msgid "opening.task.tin_intro.name"
+msgstr "Tin Boy: Introduction"
+
+msgid "opening.task.tin_intro.body"
+msgstr "Dear Shopping Bag:\nThank you for helping me buy a toy!\nThe shop is called Xinxin Toy Shop. The owner's beard is very prikkly.\nThis is the tin frog I bought before. If he doesn't know you, show it to him."
+
+msgid "opening.task.tin_toy.name"
+msgstr "Tin Boy: A Toy"
+
+msgid "opening.task.tin_toy.body"
+msgstr "Dear Shopping Bag:\nI still don't dare go out at night. I'm afrade they'll catch me. You're so brave!\nAny toy is fine. You can chuze.\nYours,\nRespectfully"
+
+msgid "opening.task.tin_toy.footer"
+msgstr "Reward: 20"
+
+msgid "opening.task.tin_toy.slot"
+msgstr "Any toy"
+
+msgid "opening.task.tin_toy.result"
+msgstr "The Tin Boy held the toy very tightly. He did not write thank you, perhaps because he forgot."
+
+msgid "opening.task.self_care.name"
+msgstr "Me: Take Care of Yourself"
+
+msgid "opening.task.self_care.body"
+msgstr "The night is long. I should keep one thing for myself."
+
+msgid "opening.task.self_care.footer"
+msgstr "Before the night ends, I must at least satisfy myself."
+
+msgid "opening.task.self_care.slot"
+msgstr "Something for me tonight"
+
+msgid "opening.task.self_care.result"
+msgstr "I keep it close. The night takes on another shape."
+
+msgid "opening.task.aquarium.name"
+msgstr "Aquarium Girl: A Drink"
+
+msgid "opening.task.aquarium.body"
+msgstr "Dear Shopping Bag:\nNights underwater make me thirsty. Please bring me a drink. Any flavor will do.\n\nThe Aquarium Girl"
+
+msgid "opening.task.aquarium.footer"
+msgstr "Reward: 15"
+
+msgid "opening.task.aquarium.slot"
+msgstr "Any drink"
+
+msgid "opening.task.aquarium.result"
+msgstr "The drink sank to the bottom of the aquarium. Tiny bubbles drifted upward all night."
+
+msgid "opening.item.plastic_car.name"
+msgstr "Plastic Car"
+
+msgid "opening.item.plastic_car.description"
+msgstr "Hollow wheels rattle over the tile seams. Its clear headlights are always on."
+
+msgid "opening.item.kaleidoscope.name"
+msgstr "Kaleidoscope"
+
+msgid "opening.item.kaleidoscope.description"
+msgstr "Turn the paper tube against your eye, and broken glass assembles the same room many times."
+
+msgid "opening.item.lotus_candle.name"
+msgstr "Lotus Candle"
+
+msgid "opening.item.lotus_candle.description"
+msgstr "Plastic petals open with the birthday song. After the flames die, it keeps turning."
+
+msgid "opening.item.mung_bean_cake.name"
+msgstr "Mung Bean Cake"
+
+msgid "opening.item.mung_bean_cake.description"
+msgstr "A food that makes people sad. At the end of the festival, the living-room table is piled with it."
+
+msgid "opening.item.milkshake.name"
+msgstr "Milkshake"
+
+msgid "opening.item.milkshake.description"
+msgstr "The cup is cold; the cream is as soft as a small pillow no one has used."
+
+msgid "opening.item.cola.name"
+msgstr "Cola"
+
+msgid "opening.item.cola.description"
+msgstr "The tab snaps once. Brown bubbles bring alertness and sleepiness together."
+
+msgid "opening.item.fries.name"
+msgstr "Fries"
+
+msgid "opening.item.fries.description"
+msgstr "A little salt and warmth remain at the bottom of the paper bag, enough for the walk home."
+
+msgid "opening.item.nuggets.name"
+msgstr "Chicken Nuggets"
+
+msgid "opening.item.nuggets.description"
+msgstr "Regular golden shells, with soft shapes inside that no one can quite name."
+
+msgid "opening.item.gardenia.name"
+msgstr "Gardenia"
+
+msgid "opening.item.gardenia.description"
+msgstr "The white flower smells too strong, like a visible dream in damp air."
+
+msgid "opening.item.cactus.name"
+msgstr "Cactus"
+
+msgid "opening.item.cactus.description"
+msgstr "It stores the day inside its body and remains dry and awake at night."
+
+msgid "opening.item.plastic_orchid.name"
+msgstr "Plastic Orchid"
+
+msgid "opening.item.plastic_orchid.description"
+msgstr "It never wilts and never grows. The dust on its leaves becomes more real each year."
+msgid "opening.store.toy.name"
+msgstr "Xinxin Toy Shop"
+
+msgid "opening.store.fast_food.name"
+msgstr "Fast-Food Shop"
+
+msgid "opening.store.flower.name"
+msgstr "Flower Shop"
+
+msgid "opening.store.record.name"
+msgstr "Record Shop"
+
+msgid "opening.store.bookstore.name"
+msgstr "Bookshop"
+
+msgid "opening.unlock.toy.prompt"
+msgstr "A loose spring turns behind the shutter. Show any toy to prove you know how to behave here."
+
+msgid "opening.unlock.toy.slot"
+msgstr "Any toy"
+
+msgid "opening.unlock.toy.result"
+msgstr "The lock recognizes the toy, and the shutter rises slowly."
+
+msgid "opening.unlock.fast_food.prompt"
+msgstr "A sign hangs on the door: PLEASE BRING YOUR OWN FOOD. Any food will open it."
+
+msgid "opening.unlock.fast_food.slot"
+msgstr "Any food"
+
+msgid "opening.unlock.fast_food.result"
+msgstr "The sign sways once. The lights inside come on."
+
+msgid "opening.unlock.flower.prompt"
+msgstr "Sleeping white flowers fill the other side of the glass. Show any Persona so they recognize tonight's you."
+
+msgid "opening.unlock.flower.slot"
+msgstr "Any Persona"
+
+msgid "opening.unlock.flower.result"
+msgstr "The mask appears in the glass, and the shop opens through its reflection."
+
+msgid "opening.unlock.record.prompt"
+msgstr "The needle rests on a silent record. This place specifically asks for a Midnight Rose."
+
+msgid "opening.unlock.record.slot"
+msgstr "A Midnight Rose"
+
+msgid "opening.unlock.record.result"
+msgstr "The rose remains beside the door. A record begins to turn."
+
+msgid "opening.unlock.bookstore.prompt"
+msgstr "Pages turn by themselves behind the door. Only a level 3 Nightwalker or Dreamwalker Persona can read the sign."
+
+msgid "opening.unlock.bookstore.slot"
+msgstr "Level 3 Nightwalker or Dreamwalker"
+
+msgid "opening.unlock.bookstore.result"
+msgstr "Book spines click in sequence, and a door appears between two shelves."
+
+msgid "opening.owner.toy.name"
+msgstr "The Bearded Owner"
+
+msgid "opening.owner.toy.idle"
+msgstr "The beard behind the counter moves. Tonight's toys are all on the shelf."
+
+msgid "opening.owner.toy.item"
+msgstr "“%s. Neither its spring nor its wheels promise to behave.”"
+
+msgid "opening.owner.fast_food.name"
+msgstr "Night-Shift Clerk"
+
+msgid "opening.owner.fast_food.idle"
+msgstr "The fryer glows quietly, like a golden pond without ripples."
+
+msgid "opening.owner.fast_food.item"
+msgstr "“%s. Take it while it still remembers being warm.”"
+
+msgid "opening.owner.flower.name"
+msgstr "The Florist"
+
+msgid "opening.owner.flower.idle"
+msgstr "The florist is watering flowers that have already fallen asleep."
+
+msgid "opening.owner.flower.item"
+msgstr "“%s. At night, do not ask whether it is real.”"

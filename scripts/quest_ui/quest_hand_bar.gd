@@ -2,6 +2,8 @@ class_name QuestHandBar
 extends PanelContainer
 
 signal item_inspected(definition: CardItemDefinition)
+signal card_drag_started(card: CardItemState)
+signal card_drag_finished(card: CardItemState, succeeded: bool)
 
 const RULE_MATCH_LIFT := 8.0
 const NORMAL_CARD_GAP := 8.0
@@ -150,6 +152,9 @@ func _visible_card_entries() -> Array:
 	if active_tab == TAB_MASKS:
 		PersonaMaskCatalog.sync_selection(state.synthesis_persona_id)
 		for persona_id in mask_persona_order:
+			var amount := int(state.protagonist_aspect_counts.get(persona_id, 0))
+			if amount <= 0:
+				continue
 			var mask_card := PersonaMaskCatalog.card_for_persona(persona_id)
 			if mask_card.location != CardItemState.Location.HAND:
 				continue
@@ -157,7 +162,7 @@ func _visible_card_entries() -> Array:
 				mask_card,
 				PersonaMaskCatalog.definition_for_persona(
 					persona_id,
-					int(state.protagonist_aspect_counts.get(persona_id, 0)),
+					amount,
 				),
 			])
 		return entries
@@ -210,6 +215,8 @@ func _create_card_view(card: CardItemState, definition: CardItemDefinition) -> v
 	var view := CardHandCard.new()
 	view.setup(card, definition)
 	view.inspect_requested.connect(item_inspected.emit)
+	view.drag_started.connect(card_drag_started.emit)
+	view.drag_finished.connect(card_drag_finished.emit)
 	view.mouse_entered.connect(_on_card_hovered.bind(card.instance_id))
 	view.mouse_exited.connect(_on_card_unhovered.bind(card.instance_id))
 	wrapper.add_child(view)

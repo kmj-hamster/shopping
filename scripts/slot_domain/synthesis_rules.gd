@@ -39,7 +39,7 @@ static func evaluate_candidate(
 	var missing: Dictionary = {}
 	for raw_aspect in recipe.required_aspects:
 		var aspect := StringName(raw_aspect)
-		var required := int(recipe.required_aspects[raw_aspect])
+		var required := recipe.required_value(aspect)
 		var actual := int(totals.get(aspect, 0))
 		has_corresponding_aspects = has_corresponding_aspects and actual > 0
 		requirements_met = requirements_met and actual >= required

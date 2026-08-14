@@ -2,12 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cr1vx5frsnwta"
-valid=false
+uid="uid://fjw5v2rihdlu"
+path="res://.godot/imported/item-jasmine.png-ba2f81b63f4a2ac28015831e58a6836e.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
-source_file="res://resources/background/flowerstore.jpg"
+source_file="res://resources/item-jasmine.png"
+dest_files=["res://.godot/imported/item-jasmine.png-ba2f81b63f4a2ac28015831e58a6836e.ctex"]
 
 [params]
 

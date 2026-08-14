@@ -8,4 +8,5 @@ id = &"flower"
 display_name_key = &"demo.store.flower.name"
 owner_id = &"flower_owner"
 initially_unlocked = true
-initial_shelf_item_ids = Array[StringName]([&"sunflower", &"agave"])
+map_anchor = Vector2(0.4, 0.61)
+initial_shelf_item_ids = Array[StringName]([&"jasmine", &"agave"])

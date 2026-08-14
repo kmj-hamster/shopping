@@ -19,8 +19,17 @@ func validation_errors() -> PackedStringArray:
 		errors.append("Store unlock %s needs a slot rule." % id)
 	else:
 		errors.append_array(slot_rule.validation_errors())
-		if slot_rule.accepted_item_ids.is_empty():
-			errors.append("Store unlock %s must name accepted item ids." % id)
-	if not consume_item:
-		errors.append("Store unlock %s must consume its key item." % id)
+		if (
+			slot_rule.accepted_item_ids.is_empty()
+			and slot_rule.required_all.is_empty()
+			and slot_rule.allowed_any.is_empty()
+		):
+			errors.append("Store unlock %s needs an item or property condition." % id)
+	if (
+		not consume_item
+		and slot_rule != null
+		and CardPropertySet.PROPERTY_PERSONA not in slot_rule.required_all
+		and CardPropertySet.PROPERTY_PERSONA not in slot_rule.allowed_any
+	):
+		errors.append("Non-consuming store unlock %s must require a persona." % id)
 	return errors

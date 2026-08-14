@@ -14,7 +14,7 @@ func test_project_name_is_shopping() -> void:
 func test_runtime_art_assets_exist() -> void:
 	assert_true(FileAccess.file_exists("res://resources/background/map.png"))
 	assert_true(FileAccess.file_exists("res://resources/background/toystore.png"))
-	assert_true(FileAccess.file_exists("res://resources/background/flowerstore.jpg"))
+	assert_true(FileAccess.file_exists("res://resources/background/flowerstore.png"))
 	assert_true(FileAccess.file_exists("res://resources/background/food.png"))
 	assert_true(FileAccess.file_exists("res://resources/background/musicstore.png"))
 	assert_true(FileAccess.file_exists("res://resources/background/bookstore.png"))

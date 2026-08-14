@@ -23,10 +23,10 @@ func test_one_persona_and_both_items_contribute_all_aspects() -> void:
 func test_matching_candidate_is_gray_below_threshold_and_named_when_ready() -> void:
 	var recipe := _recipe(&"rose", &"flower", &"gauze", 5)
 	var flower := _item(&"flower", [&"flower"], {})
-	var gray := SynthesisRules.evaluate_candidate(recipe, flower, {&"gauze": 3})
+	var gray := SynthesisRules.evaluate_candidate(recipe, flower, {&"gauze": 1})
 	assert_true(gray.is_visible)
 	assert_false(gray.is_complete)
-	assert_eq(gray.missing_aspects[&"gauze"], 2)
+	assert_eq(gray.missing_aspects[&"gauze"], 4)
 	var ready := SynthesisRules.evaluate_candidate(recipe, flower, {
 		&"gauze": 5,
 		&"lamp": 20,

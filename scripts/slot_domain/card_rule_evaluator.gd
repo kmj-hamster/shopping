@@ -27,7 +27,7 @@ static func can_execute(rule: CardSlotRule, item: CardItemDefinition) -> bool:
 		return false
 	for raw_requirement in rule.value_requirements:
 		var requirement := raw_requirement as SlotValueRequirement
-		if requirement == null or requirement.actual_value(item) < requirement.minimum:
+		if requirement == null or not requirement.is_met(item):
 			return false
 	return true
 
@@ -59,19 +59,14 @@ static func evaluate(rule: CardSlotRule, item: CardItemDefinition) -> Dictionary
 		if item.has_property(tag):
 			forbidden_matches.append(tag)
 
-	var can_place := (
-		missing_required.is_empty()
-		and (rule.allowed_any.is_empty() or not allowed_matches.is_empty())
-		and forbidden_matches.is_empty()
-		and (rule.accepted_item_ids.is_empty() or item.id in rule.accepted_item_ids)
-	)
+	var placement_allowed := can_place(rule, item)
 	for raw_requirement in rule.value_requirements:
 		var requirement := raw_requirement as SlotValueRequirement
 		if requirement == null:
 			insufficient_values.append({"actual": 0, "minimum": 1, "tags": []})
 			continue
 		var actual := requirement.actual_value(item)
-		if actual < requirement.minimum:
+		if not requirement.is_met(item):
 			insufficient_values.append({
 				"mode": requirement.mode,
 				"tags": requirement.tags.duplicate(),
@@ -80,9 +75,9 @@ static func evaluate(rule: CardSlotRule, item: CardItemDefinition) -> Dictionary
 			})
 	var values_met := insufficient_values.is_empty()
 	return {
-		"can_place": can_place,
+		"can_place": placement_allowed,
 		"value_satisfied": values_met,
-		"can_execute": can_place and values_met,
+		"can_execute": can_execute(rule, item),
 		"missing_required": missing_required,
 		"allowed_matches": allowed_matches,
 		"forbidden_matches": forbidden_matches,

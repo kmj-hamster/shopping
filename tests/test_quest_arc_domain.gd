@@ -60,7 +60,7 @@ func test_exact_item_rule_is_suitable_for_map_unlocks() -> void:
 	unlock.result_text_key = &"unlock.record.result"
 	unlock.slot_rule = rule
 	assert_true(QuestArcRules.store_unlock_accepts(unlock, _item(&"windup_moth")))
-	assert_false(QuestArcRules.store_unlock_accepts(unlock, _item(&"sunflower")))
+	assert_false(QuestArcRules.store_unlock_accepts(unlock, _item(&"jasmine")))
 
 
 func test_task_outcome_uses_dominant_aspect_and_declared_tie_priority() -> void:

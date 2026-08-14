@@ -10,7 +10,6 @@ enum Category {
 
 enum SettlementMode {
 	ARC,
-	OWNER_IMMEDIATE,
 	GIFT_PICKUP,
 }
 
@@ -22,13 +21,18 @@ enum SlotMode {
 @export var id: StringName
 @export var display_name_key: StringName
 @export var body_text_key: StringName
+@export var footer_text_key: StringName
 @export var category := Category.ORDER
 @export var settlement_mode := SettlementMode.ARC
 @export var slot_mode := SlotMode.ALL
 @export_range(1, 999, 1) var activation_day := 1
+@export_range(0, 999, 1) var repeat_interval_days := 0
+@export var activation_store_id: StringName
+@export var required_before_next_day := false
 @export var owner_id: StringName
 @export var store_id: StringName
 @export var gift_item_id: StringName
+@export_range(0, 9999, 1) var gift_money := 0
 @export var slot_rules: Array[Resource] = []
 @export var outcomes: Array[Resource] = []
 @export var tie_priority: Array[StringName] = []
@@ -74,16 +78,17 @@ func validation_errors() -> PackedStringArray:
 	if is_gift:
 		if settlement_mode != SettlementMode.GIFT_PICKUP:
 			errors.append("Gift task %s must use gift-pickup settlement." % id)
-		if gift_item_id.is_empty():
-			errors.append("Gift task %s needs a gift item." % id)
-	elif category == Category.OWNER_REQUEST:
-		if settlement_mode != SettlementMode.OWNER_IMMEDIATE:
-			errors.append("Owner task %s must settle immediately." % id)
+		if gift_item_id.is_empty() == (gift_money <= 0):
+			errors.append("Gift task %s needs exactly one item or money reward." % id)
+	else:
+		if settlement_mode != SettlementMode.ARC:
+			errors.append("Submitted task %s must settle in the Arc." % id)
+	if category == Category.OWNER_REQUEST:
 		if owner_id.is_empty() or store_id.is_empty():
 			errors.append("Owner task %s needs owner and store ids." % id)
-	elif settlement_mode != SettlementMode.ARC:
-		errors.append("Non-owner task %s must settle in the Arc." % id)
 	for aspect in tie_priority:
 		if aspect not in CardPropertySet.ASPECTS:
 			errors.append("Task %s has unknown tie-priority aspect %s." % [id, aspect])
+	if required_before_next_day and repeat_interval_days <= 0:
+		errors.append("Required task %s must have a repeat interval." % id)
 	return errors

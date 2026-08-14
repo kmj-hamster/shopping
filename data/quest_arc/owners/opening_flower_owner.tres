@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="OwnerDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/owner_definition.gd" id="1_owner"]
+
+[resource]
+script = ExtResource("1_owner")
+id = &"opening_flower_owner"
+store_id = &"flower"
+display_name_key = &"opening.owner.flower.name"
+idle_dialogue_key = &"opening.owner.flower.idle"
+item_comment_key = &"opening.owner.flower.item"

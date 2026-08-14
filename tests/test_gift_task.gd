@@ -1,6 +1,14 @@
 extends GutTest
 
 
+func before_all() -> void:
+	assert_true(QuestArcCatalog.use_manifest_for_tests(QuestArcCatalog.LEGACY_MANIFEST_PATH))
+
+
+func after_all() -> void:
+	QuestArcCatalog.clear_manifest_test_override()
+
+
 func before_each() -> void:
 	GameState.reset_game()
 
@@ -25,7 +33,9 @@ func test_gift_task_preserves_flip_state_and_only_disappears_after_claimed_close
 	)
 	assert_almost_eq(
 		window.size.y,
-		main.task_dock.size.y * (0.68 - 0.08),
+		main.task_popup_layer.size.y * (
+			PaperActivityPopup.PAPER_ANCHOR_BOTTOM - PaperActivityPopup.PAPER_ANCHOR_TOP
+		),
 		0.5,
 	)
 	LocaleManager.set_locale(LocaleManager.LOCALE_EN, false)
@@ -34,7 +44,9 @@ func test_gift_task_preserves_flip_state_and_only_disappears_after_claimed_close
 	assert_lte(window.body_label.get_line_count(), PaperActivityPopup.LETTER_BODY_MAX_LINES)
 	assert_almost_eq(
 		window.size.y,
-		main.task_dock.size.y * (0.68 - 0.08),
+		main.task_popup_layer.size.y * (
+			PaperActivityPopup.PAPER_ANCHOR_BOTTOM - PaperActivityPopup.PAPER_ANCHOR_TOP
+		),
 		0.5,
 	)
 	LocaleManager.set_locale(original_locale, false)

@@ -12,13 +12,13 @@ const RESULT_ALREADY_SELECTED := &"already_selected"
 const RESULT_INSUFFICIENT_FUNDS := &"insufficient_funds"
 const RESULT_INVALID_ITEM := &"invalid_item"
 const PAGE_SIZE := 6
-const MAX_PAGE_COUNT := 3
+const MAX_PAGE_COUNT := ShelfSlotState.MAX_PAGE_COUNT
 
 var store_id: StringName
 var wallet: PlayerWallet
 var inventory: Array[CardItemState] = []
 var shelf_slots: Array[ShelfSlotState] = []
-var selected_shelf_slot_ids: Array[StringName] = []
+var selected_shelf_slot_id: StringName = &""
 var discount_rate := 0.0
 var unlocked_page_count := 1
 var definition_resolver: Callable
@@ -86,50 +86,41 @@ func select_shelf_slot(slot_id: StringName) -> Dictionary:
 		return _result(false, RESULT_UNKNOWN_SLOT)
 	if slot.is_empty():
 		return _result(false, RESULT_SLOT_EMPTY)
-	if selected_shelf_slot_ids.has(slot_id):
+	if selected_shelf_slot_id == slot_id:
 		return _result(false, RESULT_ALREADY_SELECTED)
-	var previous_slot_id := selected_shelf_slot_id()
-	selected_shelf_slot_ids.clear()
-	selected_shelf_slot_ids.append(slot_id)
+	var previous_slot_id := selected_shelf_slot_id
+	selected_shelf_slot_id = slot_id
 	selection_changed.emit(previous_slot_id, slot_id)
 	return _result(true, RESULT_OK)
 
 
 func deselect_shelf_slot(slot_id: StringName) -> bool:
-	if not selected_shelf_slot_ids.has(slot_id):
+	if selected_shelf_slot_id != slot_id:
 		return false
-	selected_shelf_slot_ids.erase(slot_id)
+	selected_shelf_slot_id = &""
 	selection_changed.emit(slot_id, &"")
 	return true
 
 
 func toggle_shelf_slot(slot_id: StringName) -> Dictionary:
-	if selected_shelf_slot_ids.has(slot_id):
+	if selected_shelf_slot_id == slot_id:
 		deselect_shelf_slot(slot_id)
 		return _result(true, RESULT_OK)
 	return select_shelf_slot(slot_id)
 
 
 func is_selected(slot_id: StringName) -> bool:
-	return selected_shelf_slot_ids.has(slot_id)
+	return selected_shelf_slot_id == slot_id
 
 
-func selected_shelf_slot_id() -> StringName:
-	return selected_shelf_slot_ids[0] if not selected_shelf_slot_ids.is_empty() else &""
+func has_selection() -> bool:
+	return not selected_shelf_slot_id.is_empty()
 
 
-func cart_count() -> int:
-	return selected_shelf_slot_ids.size()
-
-
-func cart_total() -> int:
-	var total := 0
-	for slot_id in selected_shelf_slot_ids:
-		var slot := shelf_slot(slot_id)
-		var definition := _definition_by_id(slot.item_id) if slot != null else null
-		if definition != null:
-			total += price_for(definition)
-	return total
+func selected_price() -> int:
+	var slot := shelf_slot(selected_shelf_slot_id)
+	var definition := _definition_by_id(slot.item_id) if slot != null else null
+	return price_for(definition)
 
 
 func price_for(definition: CardItemDefinition) -> int:
@@ -147,59 +138,49 @@ func set_discount_rate(value: float) -> void:
 
 
 func checkout(day: int) -> Dictionary:
-	if selected_shelf_slot_ids.is_empty():
+	if not has_selection():
 		return _result(false, RESULT_EMPTY)
-	var selected_slots: Array[ShelfSlotState] = []
-	var definitions: Array[CardItemDefinition] = []
-	for slot_id in selected_shelf_slot_ids:
-		var slot := shelf_slot(slot_id)
-		if slot == null:
-			return _result(false, RESULT_UNKNOWN_SLOT)
-		if slot.is_empty():
-			return _result(false, RESULT_SLOT_EMPTY)
-		var definition := _definition_by_id(slot.item_id)
-		if definition == null or definition.store_id != store_id:
-			return _result(false, RESULT_INVALID_ITEM)
-		selected_slots.append(slot)
-		definitions.append(definition)
-	var total := cart_total()
+	var slot := shelf_slot(selected_shelf_slot_id)
+	if slot == null:
+		return _result(false, RESULT_UNKNOWN_SLOT)
+	if slot.is_empty():
+		return _result(false, RESULT_SLOT_EMPTY)
+	var definition := _definition_by_id(slot.item_id)
+	if definition == null or definition.store_id != store_id:
+		return _result(false, RESULT_INVALID_ITEM)
+	var total := selected_price()
 	if wallet.money < total:
 		return _result(false, RESULT_INSUFFICIENT_FUNDS)
 
-	var next_instance_id := _next_instance_id()
-	var purchased: Array[CardItemState] = []
-	for definition in definitions:
-		purchased.append(CardItemState.new(
-			next_instance_id,
-			definition.id,
-			day,
-			store_id,
-			price_for(definition),
-		))
-		next_instance_id += 1
+	var purchased := CardItemState.new(
+		_next_instance_id(),
+		definition.id,
+		day,
+		store_id,
+		total,
+	)
 
 	# Validation is complete before the first mutation, so checkout is atomic.
 	wallet.money -= total
-	for slot in selected_slots:
-		slot.clear()
-	inventory.append_array(purchased)
-	selected_shelf_slot_ids.clear()
+	slot.clear()
+	inventory.append(purchased)
+	selected_shelf_slot_id = &""
 	state_changed.emit()
 	return {
 		"ok": true,
 		"reason": RESULT_OK,
 		"total": total,
-		"purchased": purchased,
+		"purchased": [purchased],
 	}
 
 
-func cancel_cart() -> int:
-	var removed := selected_shelf_slot_ids.size()
-	var previous_slot_id := selected_shelf_slot_id()
-	selected_shelf_slot_ids.clear()
-	if removed > 0:
-		selection_changed.emit(previous_slot_id, &"")
-	return removed
+func clear_selection() -> bool:
+	if not has_selection():
+		return false
+	var previous_slot_id := selected_shelf_slot_id
+	selected_shelf_slot_id = &""
+	selection_changed.emit(previous_slot_id, &"")
+	return true
 
 
 func _next_instance_id() -> int:

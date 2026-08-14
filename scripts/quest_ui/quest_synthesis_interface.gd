@@ -170,8 +170,29 @@ func request_hand_tab_for_role(role_id: StringName) -> void:
 	)
 
 
+func show_drop_targets_for_card(card: CardItemState) -> void:
+	var is_mask := not PersonaMaskCatalog.persona_for_card(card).is_empty()
+	for slot in material_slots:
+		var should_highlight := false
+		if is_mask:
+			should_highlight = slot.role_id == &"mask" and can_stage_card(&"mask", card)
+		else:
+			should_highlight = (
+				slot.role_id in [&"base", &"fuel"]
+				and slot.card == null
+				and can_stage_card(slot.role_id, card)
+			)
+		slot.set_drop_highlight(should_highlight)
+
+
+func clear_drop_target_highlights() -> void:
+	for slot in material_slots:
+		slot.set_drop_highlight(false)
+
+
 func cancel_pending_inputs() -> void:
 	set_process(false)
+	clear_drop_target_highlights()
 	if pending_output != null:
 		card_staging_changed.emit(pending_output, false)
 		pending_output = null
@@ -489,7 +510,7 @@ func _create_total_chip(tag: StringName) -> Dictionary:
 	var icon := ItemDetailPopup.make_property_icon_button(tag, 28)
 	icon.toggle_mode = false
 	icon.mouse_filter = Control.MOUSE_FILTER_STOP
-	icon.pressed.connect(_on_total_property_pressed.bind(tag))
+	icon.pressed.connect(_on_property_pressed.bind(tag))
 	chip.add_child(icon)
 	var value := Label.new()
 	value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -500,7 +521,7 @@ func _create_total_chip(tag: StringName) -> Dictionary:
 	return {"root": chip, "button": icon, "value": value}
 
 
-func _on_total_property_pressed(property_id: StringName) -> void:
+func _on_property_pressed(property_id: StringName) -> void:
 	property_inspected.emit(property_id)
 
 
@@ -601,9 +622,17 @@ func _create_candidate_view(recipe: SynthesisRecipeDefinition) -> Dictionary:
 	requirements.alignment = BoxContainer.ALIGNMENT_CENTER
 	requirements.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var requirement_values: Dictionary = {}
+	var requirement_buttons: Dictionary = {}
+	if recipe.base_rule != null:
+		for raw_property_id in recipe.base_rule.required_all:
+			var property_id := StringName(raw_property_id)
+			var base_requirement := _add_requirement_chip(requirements, property_id, false)
+			requirement_buttons[property_id] = base_requirement.button
 	for raw_aspect in recipe.required_aspects:
 		var aspect := StringName(raw_aspect)
-		requirement_values[aspect] = _add_requirement_chip(requirements, aspect)
+		var aspect_requirement := _add_requirement_chip(requirements, aspect)
+		requirement_buttons[aspect] = aspect_requirement.button
+		requirement_values[aspect] = aspect_requirement.value
 	button.add_child(requirements)
 	requirements.anchor_left = 0.58
 	requirements.anchor_top = 0.12
@@ -611,6 +640,7 @@ func _create_candidate_view(recipe: SynthesisRecipeDefinition) -> Dictionary:
 	requirements.anchor_bottom = 0.88
 	return {
 		"button": button,
+		"requirement_buttons": requirement_buttons,
 		"requirement_values": requirement_values,
 	}
 
@@ -618,15 +648,19 @@ func _create_candidate_view(recipe: SynthesisRecipeDefinition) -> Dictionary:
 func _add_requirement_chip(
 	parent: Container,
 	aspect: StringName,
-) -> Label:
+	show_value: bool = true,
+) -> Dictionary:
 	var icon := ItemDetailPopup.make_property_icon_button(aspect, 26)
-	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.toggle_mode = false
+	icon.mouse_filter = Control.MOUSE_FILTER_STOP
+	icon.pressed.connect(_on_property_pressed.bind(aspect))
 	parent.add_child(icon)
 	var value := Label.new()
 	value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	value.add_theme_font_size_override("font_size", 12)
+	value.visible = show_value
 	parent.add_child(value)
-	return value
+	return {"button": icon, "value": value}
 
 
 func _update_candidate_selection() -> void:

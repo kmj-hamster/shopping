@@ -12,6 +12,12 @@ const TITLE_FONT_SIZE := 26
 const DESCRIPTION_FONT_SIZE := 22
 const DESCRIPTION_MIN_FONT_SIZE := 17
 const DESCRIPTION_MAX_LINES := 3
+const ITEM_SUMMARY_HEIGHT := 82
+const PROPERTY_ICON_SIDE := 53
+const PROPERTY_VALUE_FONT_SIZE := 36
+const PROPERTY_VALUE_MIN_WIDTH := 30
+const PROPERTY_ICON_VALUE_GAP := 8
+const PROPERTY_GROUP_GAP := 3
 const POPUP_BACKGROUND := Color("020304", 0.5)
 
 var current_definition: CardItemDefinition
@@ -120,7 +126,8 @@ func _build_detail_panel() -> void:
 	margin.add_child(column)
 
 	var top_row := HBoxContainer.new()
-	top_row.custom_minimum_size = Vector2(0, 104)
+	top_row.name = "ItemSummaryRow"
+	top_row.custom_minimum_size = Vector2(0, ITEM_SUMMARY_HEIGHT)
 	top_row.add_theme_constant_override("separation", 9)
 	column.add_child(top_row)
 	item_frame = PanelContainer.new()
@@ -146,7 +153,7 @@ func _build_detail_panel() -> void:
 	item_frame.add_child(item_image)
 
 	var text_column := VBoxContainer.new()
-	text_column.custom_minimum_size = Vector2(0, 104)
+	text_column.custom_minimum_size = Vector2(0, ITEM_SUMMARY_HEIGHT)
 	text_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	text_column.add_theme_constant_override("separation", 4)
 	top_row.add_child(text_column)
@@ -183,7 +190,7 @@ func _build_detail_panel() -> void:
 
 	property_band = MarginContainer.new()
 	property_band.name = "PropertyBand"
-	property_band.custom_minimum_size = Vector2(0, 34)
+	property_band.custom_minimum_size = Vector2(0, PROPERTY_ICON_SIDE + 4)
 	column.add_child(property_band)
 	property_band.add_theme_constant_override("margin_left", 8)
 	property_band.add_theme_constant_override("margin_right", 8)
@@ -194,9 +201,9 @@ func _build_detail_panel() -> void:
 	property_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	property_band.add_child(property_scroll)
 	property_row = HBoxContainer.new()
-	property_row.custom_minimum_size = Vector2(0, 30)
+	property_row.custom_minimum_size = Vector2(0, PROPERTY_ICON_SIDE)
 	property_row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	property_row.add_theme_constant_override("separation", 5)
+	property_row.add_theme_constant_override("separation", PROPERTY_GROUP_GAP)
 	property_scroll.add_child(property_row)
 
 
@@ -402,11 +409,9 @@ func _rebuild_properties() -> void:
 		var tag := StringName(tags[index])
 		var view := _ensure_property_view(tag)
 		var root := view.root as HBoxContainer
-		var separator := view.separator as Label
 		var icon := view.button as Button
 		var value := view.value as Label
 		root.visible = true
-		separator.visible = index > 0
 		icon.tooltip_text = TranslationServer.translate(property_name_key(tag))
 		property_buttons[tag] = icon
 		var amount := current_definition.property_value(tag)
@@ -421,30 +426,21 @@ func _ensure_property_view(tag: StringName) -> Dictionary:
 	if property_views.has(tag):
 		return property_views[tag] as Dictionary
 	var root := HBoxContainer.new()
-	root.add_theme_constant_override("separation", 3)
+	root.add_theme_constant_override("separation", PROPERTY_ICON_VALUE_GAP)
 	property_row.add_child(root)
-	var separator := Label.new()
-	separator.text = "◆"
-	separator.custom_minimum_size = Vector2(10, 30)
-	separator.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	separator.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	separator.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	separator.add_theme_font_size_override("font_size", 7)
-	separator.add_theme_color_override("font_color", Color("b69b5d"))
-	root.add_child(separator)
-	var icon := make_property_icon_button(tag, 30)
+	var icon := make_property_icon_button(tag, PROPERTY_ICON_SIDE)
 	icon.pressed.connect(_show_property.bind(tag))
 	root.add_child(icon)
 	var value := Label.new()
-	value.custom_minimum_size = Vector2(14, 30)
+	value.custom_minimum_size = Vector2(PROPERTY_VALUE_MIN_WIDTH, PROPERTY_ICON_SIDE)
 	value.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	value.add_theme_font_size_override("font_size", 13)
+	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	value.add_theme_font_size_override("font_size", PROPERTY_VALUE_FONT_SIZE)
 	value.add_theme_color_override("font_color", Color("e7dcc0"))
 	root.add_child(value)
 	var view := {
 		"root": root,
-		"separator": separator,
 		"button": icon,
 		"value": value,
 	}
@@ -597,7 +593,7 @@ static func property_icon_texture(tag: StringName) -> Texture2D:
 	var paths := {
 		&"food": "res://resources/ui/property-food.png",
 		&"salty": "res://resources/ui/property-salty.png",
-		&"lamp": "res://resources/ui/property-lamp.png",
+		&"lamp": "res://resources/ui/property-lamp.svg",
 		&"mirror": "res://resources/ui/property-mirror.svg",
 		&"gauze": "res://resources/ui/property-gauze.svg",
 		&"pillow": "res://resources/ui/property-pillow.svg",
