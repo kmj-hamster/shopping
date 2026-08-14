@@ -31,6 +31,8 @@ const BACKGROUND_OVERSCAN := 20.0
 const PROTAGONIST_ANCHOR_LEFT := 0.78
 const PROTAGONIST_ANCHOR_RIGHT := 1.025
 const HAND_VERTICAL_OFFSET := 16.0
+const DRAG_RETURN_CANVAS_LAYER := 200
+const SCREEN_TRANSITION_CANVAS_LAYER := 300
 const FRAME_TEXTURE_PATHS := {
 	&"map": "res://resources/ui/frames/frame-map.png",
 	&"toy": "res://resources/ui/frames/frame-toy.png",
@@ -67,6 +69,7 @@ var clear_save_button: Button
 var forbidden_cursor_texture: Texture2D
 var next_day_dialog: ConfirmationDialog
 var next_day_blocked_dialog: AcceptDialog
+var screen_transition_layer: CanvasLayer
 var screen_transition_overlay: ColorRect
 var arc_overlay: ColorRect
 var arc_day_label: Label
@@ -275,7 +278,7 @@ func _build_global_interface() -> void:
 func _build_drag_return_layer() -> void:
 	drag_return_layer = CanvasLayer.new()
 	drag_return_layer.name = "CardDragReturnLayer"
-	drag_return_layer.layer = 200
+	drag_return_layer.layer = DRAG_RETURN_CANVAS_LAYER
 	add_child(drag_return_layer)
 	drag_return_card = CardHandCard.new()
 	drag_return_card.name = "CardDragReturnPreview"
@@ -288,14 +291,17 @@ func _build_drag_return_layer() -> void:
 
 
 func _build_screen_transition_overlay() -> void:
+	screen_transition_layer = CanvasLayer.new()
+	screen_transition_layer.name = "ScreenTransitionLayer"
+	screen_transition_layer.layer = SCREEN_TRANSITION_CANVAS_LAYER
+	add_child(screen_transition_layer)
 	screen_transition_overlay = ColorRect.new()
 	screen_transition_overlay.name = "ScreenTransitionOverlay"
 	screen_transition_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	screen_transition_overlay.color = Color("05090d")
 	screen_transition_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	screen_transition_overlay.z_index = 400
 	screen_transition_overlay.visible = false
-	add_child(screen_transition_overlay)
+	screen_transition_layer.add_child(screen_transition_overlay)
 
 
 func _run_screen_transition(

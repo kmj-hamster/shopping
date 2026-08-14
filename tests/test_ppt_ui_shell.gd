@@ -1116,6 +1116,21 @@ func test_drag_source_disappears_and_preview_is_above_popups() -> void:
 	preview_carrier.free()
 
 
+func test_screen_transition_canvas_covers_hovered_cards_and_drag_return_preview() -> void:
+	var main := await _spawn_main()
+	var view := main.hand_bar.card_views.values()[0] as CardHandCard
+	main.hand_bar._on_card_hovered(view.card.instance_id)
+	assert_eq(view.z_index, QuestHandBar.HOVER_Z_INDEX)
+	assert_gt(view.z_index, 400)
+	assert_same(main.screen_transition_overlay.get_parent(), main.screen_transition_layer)
+	assert_eq(
+		main.screen_transition_layer.layer,
+		QuestMain.SCREEN_TRANSITION_CANVAS_LAYER,
+	)
+	assert_eq(main.drag_return_layer.layer, QuestMain.DRAG_RETURN_CANVAS_LAYER)
+	assert_gt(main.screen_transition_layer.layer, main.drag_return_layer.layer)
+
+
 func test_failed_drag_reuses_the_global_return_preview() -> void:
 	var main := await _spawn_main()
 	var view := main.hand_bar.card_views.values()[0] as CardHandCard
