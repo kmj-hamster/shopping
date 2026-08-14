@@ -231,6 +231,41 @@ func test_fast_food_bookstore_and_record_shop_show_lowered_owner_portraits() -> 
 			assert_false(shop.dialogue_panel.visible)
 
 
+func test_opening_shop_owners_share_the_flower_voice_effect_and_play_it() -> void:
+	var main := await _spawn_main()
+	var expected_paths := [
+		"res://resources/audio/dialogue/robot_blip_a.wav",
+		"res://resources/audio/dialogue/robot_blip_b.wav",
+	]
+	for store_id in [&"toy", &"fast_food", &"flower"]:
+		var owner := QuestArcCatalog.owner_for_store(store_id)
+		assert_not_null(owner, store_id)
+		assert_eq(owner.dialogue_voice_streams.size(), 2, store_id)
+		for index in expected_paths.size():
+			assert_eq(
+				owner.dialogue_voice_streams[index].resource_path,
+				expected_paths[index],
+				store_id,
+			)
+
+		main._show_shop_immediate(store_id)
+		await get_tree().process_frame
+		var shop := main.current_screen as QuestShopScreen
+		shop._stop_owner_dialogue_voice()
+		var voice_index := shop.owner_dialogue_voice_index
+		var player := shop.owner_dialogue_voice_players[
+			voice_index % shop.owner_dialogue_voice_players.size()
+		] as AudioStreamPlayer
+		shop._play_owner_dialogue_voice()
+		assert_eq(shop.owner_dialogue_voice_index, voice_index + 1, store_id)
+		assert_same(
+			player.stream,
+			owner.dialogue_voice_streams[voice_index % owner.dialogue_voice_streams.size()],
+			store_id,
+		)
+		assert_true(player.playing, store_id)
+
+
 func test_persona_first_acquisition_reveals_each_new_mask_after_arc() -> void:
 	var main := await _spawn_main()
 	var state := main.state
