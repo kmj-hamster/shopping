@@ -37,12 +37,6 @@ var pulse_strengths: Dictionary = {}
 var active_pair_recipes: Array[SynthesisRecipeDefinition] = []
 var hovered_persona_id: StringName
 var totals_initialized := false
-var paints_background := true:
-	set(value):
-		if paints_background == value:
-			return
-		paints_background = value
-		queue_redraw()
 
 
 func _ready() -> void:
@@ -174,8 +168,7 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
-	if paints_background:
-		draw_rect(Rect2(Vector2.ZERO, size), BACKGROUND_COLOR)
+	draw_rect(Rect2(Vector2.ZERO, size), BACKGROUND_COLOR)
 	_draw_orbit_rings()
 	for persona_id in CardPropertySet.PERSONAS:
 		_draw_persona_axis(persona_id)

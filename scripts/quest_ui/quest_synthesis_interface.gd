@@ -22,7 +22,6 @@ enum NarrativeState {
 	HOLDING,
 }
 
-const BACKGROUND_TEXTURE := preload("res://resources/ui/synthesis/bg-inbag.png")
 const NARRATIVE_FADE_SECONDS := 0.55
 const NARRATIVE_HOLD_SECONDS := 1.25
 const FIELD_CENTER := PersonaStarChart.FIELD_CENTER
@@ -40,7 +39,6 @@ const BASE_TYPE_BOTTOM_GAP := 8.0
 
 var state: QuestGameState
 var phase := Phase.DRAFT
-var in_bag_background: TextureRect
 var background_input: QuestSynthesisBackgroundInput
 var draft_layer: Control
 var star_chart: PersonaStarChart
@@ -244,17 +242,8 @@ func cancel_pending_inputs() -> void:
 
 
 func _build_interface() -> void:
-	in_bag_background = TextureRect.new()
-	in_bag_background.name = "InBagBackground"
-	in_bag_background.texture = BACKGROUND_TEXTURE
-	in_bag_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	in_bag_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	in_bag_background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	in_bag_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(in_bag_background)
 	star_chart = PersonaStarChart.new()
 	star_chart.name = "PersonaStarChart"
-	star_chart.paints_background = false
 	add_child(star_chart)
 	background_input = QuestSynthesisBackgroundInput.new()
 	background_input.name = "SynthesisBackgroundInput"
