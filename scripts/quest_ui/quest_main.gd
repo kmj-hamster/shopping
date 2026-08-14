@@ -28,6 +28,9 @@ const CONTENT_TOP := 97.0 / 1080.0
 const CONTENT_RIGHT := 1780.0 / 1920.0
 const CONTENT_BOTTOM := 920.0 / 1080.0
 const BACKGROUND_OVERSCAN := 20.0
+const PROTAGONIST_ANCHOR_LEFT := 0.78
+const PROTAGONIST_ANCHOR_RIGHT := 1.025
+const HAND_VERTICAL_OFFSET := 16.0
 const FRAME_TEXTURE_PATHS := {
 	&"map": "res://resources/ui/frames/frame-map.png",
 	&"toy": "res://resources/ui/frames/frame-toy.png",
@@ -181,12 +184,15 @@ func _build_shell() -> void:
 	protagonist_button.texture_hover = load(
 		"res://resources/character/bag-light.png"
 	) as Texture2D
-	protagonist_button.anchor_left = 0.745
+	protagonist_button.anchor_left = PROTAGONIST_ANCHOR_LEFT
 	protagonist_button.anchor_top = 0.60
-	protagonist_button.anchor_right = 0.99
+	protagonist_button.anchor_right = PROTAGONIST_ANCHOR_RIGHT
 	protagonist_button.anchor_bottom = 1.08
 	protagonist_button.ignore_texture_size = true
 	protagonist_button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	protagonist_button.texture_click_mask = _texture_alpha_mask(
+		protagonist_button.texture_normal
+	)
 	protagonist_button.pressed.connect(_show_synthesis)
 	protagonist_button.z_index = 45
 	art_canvas.add_child(protagonist_button)
@@ -245,6 +251,8 @@ func _build_global_interface() -> void:
 	hand_bar.anchor_top = 0.775
 	hand_bar.anchor_right = 0.82
 	hand_bar.anchor_bottom = 0.998
+	hand_bar.offset_top = HAND_VERTICAL_OFFSET
+	hand_bar.offset_bottom = HAND_VERTICAL_OFFSET
 	hand_bar.z_index = 45
 	hand_bar.setup(state)
 	hand_bar.item_inspected.connect(_show_item)
@@ -592,8 +600,29 @@ func _close_detail_popups() -> void:
 
 
 func _on_activity_background_pressed() -> void:
+	_close_detail_popups()
 	if task_dock != null:
 		task_dock.close_open_task()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not (current_screen is QuestSynthesisInterface):
+		return
+	var click := event as InputEventMouseButton
+	if click == null or click.button_index != MOUSE_BUTTON_LEFT or not click.pressed:
+		return
+	_on_activity_background_pressed()
+
+
+func _texture_alpha_mask(texture: Texture2D) -> BitMap:
+	if texture == null:
+		return null
+	var image := texture.get_image()
+	if image == null or image.is_empty():
+		return null
+	var click_mask := BitMap.new()
+	click_mask.create_from_image_alpha(image, 0.08)
+	return click_mask
 
 
 func _on_card_staging_changed(card: CardItemState, staged: bool) -> void:

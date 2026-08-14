@@ -38,10 +38,21 @@ func test_main_uses_the_centered_art_shell_and_unified_hand() -> void:
 		main.protagonist_button.texture_hover.resource_path,
 		"res://resources/character/bag-light.png",
 	)
-	assert_almost_eq(main.protagonist_button.anchor_left, 0.745, 0.001)
+	assert_almost_eq(
+		main.protagonist_button.anchor_left, QuestMain.PROTAGONIST_ANCHOR_LEFT, 0.001
+	)
 	assert_almost_eq(main.protagonist_button.anchor_top, 0.60, 0.001)
-	assert_almost_eq(main.protagonist_button.anchor_right, 0.99, 0.001)
+	assert_almost_eq(
+		main.protagonist_button.anchor_right, QuestMain.PROTAGONIST_ANCHOR_RIGHT, 0.001
+	)
 	assert_almost_eq(main.protagonist_button.anchor_bottom, 1.08, 0.001)
+	assert_not_null(main.protagonist_button.texture_click_mask)
+	var bag_click_mask := main.protagonist_button.texture_click_mask
+	var bag_mask_size := bag_click_mask.get_size()
+	assert_false(bag_click_mask.get_bit(0, int(bag_mask_size.y / 2)))
+	assert_true(bag_click_mask.get_bit(
+		int(bag_mask_size.x / 2), int(bag_mask_size.y / 2)
+	))
 	assert_eq(main.protagonist_button.tooltip_text, "")
 	assert_gt(
 		main.protagonist_button.get_global_rect().end.y,
@@ -73,6 +84,14 @@ func test_main_uses_the_centered_art_shell_and_unified_hand() -> void:
 	assert_false(main.content_viewport_region.clip_contents)
 	assert_false(main.screen_host.clip_contents)
 	assert_true(main.current_screen is QuestMapScreen)
+	assert_eq(main.hand_bar.offset_top, QuestMain.HAND_VERTICAL_OFFSET)
+	assert_eq(main.hand_bar.offset_bottom, QuestMain.HAND_VERTICAL_OFFSET)
+	var first_hand_card := main.hand_bar.card_views.values()[0] as CardHandCard
+	assert_almost_eq(
+		first_hand_card.get_global_rect().end.y,
+		main.art_canvas.get_global_rect().end.y,
+		1.0,
+	)
 	var map_background := main.current_screen.get_node("MapBackground") as TextureRect
 	_assert_background_overscans_frame(map_background)
 	assert_eq((main.current_screen as QuestMapScreen).store_hotspots.size(), 2)
@@ -897,6 +916,34 @@ func test_task_and_location_popups_close_on_background_click() -> void:
 	assert_false(location_popup.get_global_rect().has_point(background_click.position))
 	map.background_input.gui_input.emit(background_click)
 	assert_null(map.location_popup)
+
+
+func test_blank_background_closes_top_right_details_in_every_primary_screen() -> void:
+	var main := await _spawn_main()
+	var definition := QuestArcCatalog.item_by_id(&"fries")
+	var background_click := InputEventMouseButton.new()
+	background_click.button_index = MOUSE_BUTTON_LEFT
+	background_click.pressed = true
+	background_click.position = Vector2(1.0, 1.0)
+
+	main._show_item(definition)
+	assert_true(main.detail_popup.visible)
+	var map := main.current_screen as QuestMapScreen
+	map.background_input.gui_input.emit(background_click)
+	assert_false(main.detail_popup.visible)
+
+	main._show_shop_immediate(&"toy")
+	main._show_item(definition)
+	assert_true(main.detail_popup.visible)
+	var shop := main.current_screen as QuestShopScreen
+	shop.background_input.gui_input.emit(background_click)
+	assert_false(main.detail_popup.visible)
+
+	main._show_synthesis_immediate()
+	main._show_item(definition)
+	assert_true(main.detail_popup.visible)
+	main._unhandled_input(background_click)
+	assert_false(main.detail_popup.visible)
 
 
 func test_task_assignment_reuses_bookmark_popup_slot_and_card_view() -> void:
