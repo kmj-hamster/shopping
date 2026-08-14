@@ -42,6 +42,7 @@ func test_next_night_is_blocked_until_self_care_is_confirmed() -> void:
 func test_self_care_grows_each_persona_and_queues_first_reveals() -> void:
 	var state := QuestGameState.new()
 	state.protagonist_persona_counts[&"dreamwalker"] = 0
+	state.protagonist_persona_counts[&"mourner"] = 0
 	_unlock_toy_shop(state)
 	var self_care := state.task_instance_for_definition(&"self_care")
 	var kaleidoscope := state.grant_item(&"kaleidoscope", &"test")

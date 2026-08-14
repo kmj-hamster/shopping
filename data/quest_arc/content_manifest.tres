@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="GameContentManifest" load_steps=52 format=3]
+[gd_resource type="Resource" script_class="GameContentManifest" load_steps=83 format=3]
 
 [ext_resource type="Script" path="res://scripts/quest_domain/game_content_manifest.gd" id="1_manifest"]
 [ext_resource type="Script" path="res://scripts/quest_domain/property_definition.gd" id="2_property"]
@@ -25,6 +25,33 @@
 [ext_resource type="Resource" path="res://data/quest_arc/tasks/debug_todo_page_2.tres" id="37_task"]
 [ext_resource type="Resource" path="res://data/quest_arc/tasks/debug_todo_page_3.tres" id="38_task"]
 [ext_resource type="Resource" path="res://data/quest_arc/tasks/debug_todo_page_4.tres" id="39_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/test_late_train_timetable.tres" id="40_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/test_blank_disc.tres" id="41_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/test_rewound_tape.tres" id="42_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/test_clockwork_moon.tres" id="43_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/test_cold_pudding.tres" id="44_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/test_paper_cup_water.tres" id="45_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/test_pressed_violet.tres" id="46_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/test_birthday_candle.tres" id="47_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/test_inside_out_raincoat.tres" id="48_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/test_unborrowed_atlas.tres" id="49_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/test_four_am_live.tres" id="50_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/test_unsent_message.tres" id="51_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/test_blinking_satellite.tres" id="52_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/test_counterclockwise_pudding.tres" id="53_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/test_waiting_room_soda.tres" id="54_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/test_echo_violet.tres" id="55_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/test_countdown_candle.tres" id="56_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/test_bedtime_overcoat.tres" id="57_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/recipes/test_recipe_unborrowed_atlas.tres" id="58_recipe"]
+[ext_resource type="Resource" path="res://data/quest_arc/recipes/test_recipe_four_am_live.tres" id="59_recipe"]
+[ext_resource type="Resource" path="res://data/quest_arc/recipes/test_recipe_unsent_message.tres" id="60_recipe"]
+[ext_resource type="Resource" path="res://data/quest_arc/recipes/test_recipe_blinking_satellite.tres" id="61_recipe"]
+[ext_resource type="Resource" path="res://data/quest_arc/recipes/test_recipe_counterclockwise_pudding.tres" id="62_recipe"]
+[ext_resource type="Resource" path="res://data/quest_arc/recipes/test_recipe_waiting_room_soda.tres" id="63_recipe"]
+[ext_resource type="Resource" path="res://data/quest_arc/recipes/test_recipe_echo_violet.tres" id="64_recipe"]
+[ext_resource type="Resource" path="res://data/quest_arc/recipes/test_recipe_countdown_candle.tres" id="65_recipe"]
+[ext_resource type="Resource" path="res://data/quest_arc/recipes/test_recipe_bedtime_overcoat.tres" id="66_recipe"]
 [ext_resource type="Resource" path="res://data/quest_arc/recipes/demo_recipe_midnight_rose.tres" id="22_recipe"]
 [ext_resource type="Resource" path="res://data/quest_arc/stores/opening_toy.tres" id="23_store"]
 [ext_resource type="Resource" path="res://data/quest_arc/stores/opening_fast_food.tres" id="24_store"]
@@ -73,6 +100,34 @@ script = ExtResource("2_property")
 id = &"cd"
 display_name_key = &"opening.property.cd.name"
 description_key = &"opening.property.cd.description"
+is_item_category = true
+
+[sub_resource type="Resource" id="PropertyBook"]
+script = ExtResource("2_property")
+id = &"book"
+display_name_key = &"test.property.book.name"
+description_key = &"test.property.book.description"
+is_item_category = true
+
+[sub_resource type="Resource" id="PropertyCassette"]
+script = ExtResource("2_property")
+id = &"cassette"
+display_name_key = &"test.property.cassette.name"
+description_key = &"test.property.cassette.description"
+is_item_category = true
+
+[sub_resource type="Resource" id="PropertyCandle"]
+script = ExtResource("2_property")
+id = &"candle"
+display_name_key = &"test.property.candle.name"
+description_key = &"test.property.candle.description"
+is_item_category = true
+
+[sub_resource type="Resource" id="PropertyClothing"]
+script = ExtResource("2_property")
+id = &"clothing"
+display_name_key = &"test.property.clothing.name"
+description_key = &"test.property.clothing.description"
 is_item_category = true
 
 [sub_resource type="Resource" id="PropertyMetal"]
@@ -131,12 +186,12 @@ initial_money = 0
 maximum_item_price = 40
 maximum_properties_per_item = 4
 maximum_personas_per_item = 2
-initial_protagonist_stats = {&"nightwalker": 0, &"homecomer": 0, &"mourner": 0, &"dreamwalker": 3}
-starting_item_ids = Array[StringName]([&"fries", &"plastic_car", &"midnight_rose"])
-properties = Array[Resource]([SubResource("PropertyFood"), SubResource("PropertyFlower"), SubResource("PropertyToy"), SubResource("PropertyDrink"), SubResource("PropertyCd"), SubResource("PropertyMetal"), SubResource("PropertyRose"), SubResource("PropertyPersona"), SubResource("PropertyNightwalker"), SubResource("PropertyMourner"), SubResource("PropertyDreamwalker"), SubResource("PropertyHomecomer")])
-items = Array[Resource]([ExtResource("3_item"), ExtResource("4_item"), ExtResource("5_item"), ExtResource("6_item"), ExtResource("7_item"), ExtResource("8_item"), ExtResource("9_item"), ExtResource("10_item"), ExtResource("11_item"), ExtResource("12_item"), ExtResource("13_item"), ExtResource("14_item"), ExtResource("15_item"), ExtResource("16_item")])
+initial_protagonist_stats = {&"nightwalker": 1, &"homecomer": 3, &"mourner": 3, &"dreamwalker": 5}
+starting_item_ids = Array[StringName]([&"fries", &"plastic_car", &"midnight_rose", &"test_late_train_timetable", &"test_blank_disc", &"test_rewound_tape", &"test_clockwork_moon", &"test_cold_pudding", &"test_paper_cup_water", &"test_pressed_violet", &"test_birthday_candle", &"test_inside_out_raincoat"])
+properties = Array[Resource]([SubResource("PropertyFood"), SubResource("PropertyFlower"), SubResource("PropertyToy"), SubResource("PropertyDrink"), SubResource("PropertyCd"), SubResource("PropertyBook"), SubResource("PropertyCassette"), SubResource("PropertyCandle"), SubResource("PropertyClothing"), SubResource("PropertyMetal"), SubResource("PropertyRose"), SubResource("PropertyPersona"), SubResource("PropertyNightwalker"), SubResource("PropertyMourner"), SubResource("PropertyDreamwalker"), SubResource("PropertyHomecomer")])
+items = Array[Resource]([ExtResource("3_item"), ExtResource("4_item"), ExtResource("5_item"), ExtResource("6_item"), ExtResource("7_item"), ExtResource("8_item"), ExtResource("9_item"), ExtResource("10_item"), ExtResource("11_item"), ExtResource("12_item"), ExtResource("13_item"), ExtResource("14_item"), ExtResource("15_item"), ExtResource("16_item"), ExtResource("40_item"), ExtResource("41_item"), ExtResource("42_item"), ExtResource("43_item"), ExtResource("44_item"), ExtResource("45_item"), ExtResource("46_item"), ExtResource("47_item"), ExtResource("48_item"), ExtResource("49_item"), ExtResource("50_item"), ExtResource("51_item"), ExtResource("52_item"), ExtResource("53_item"), ExtResource("54_item"), ExtResource("55_item"), ExtResource("56_item"), ExtResource("57_item")])
 tasks = Array[Resource]([ExtResource("17_task"), ExtResource("18_task"), ExtResource("19_task"), ExtResource("20_task"), ExtResource("21_task"), ExtResource("36_task"), ExtResource("37_task"), ExtResource("38_task"), ExtResource("39_task")])
-recipes = Array[Resource]([ExtResource("22_recipe")])
+recipes = Array[Resource]([ExtResource("22_recipe"), ExtResource("58_recipe"), ExtResource("59_recipe"), ExtResource("60_recipe"), ExtResource("61_recipe"), ExtResource("62_recipe"), ExtResource("63_recipe"), ExtResource("64_recipe"), ExtResource("65_recipe"), ExtResource("66_recipe")])
 stores = Array[Resource]([ExtResource("23_store"), ExtResource("24_store"), ExtResource("25_store"), ExtResource("26_store"), ExtResource("27_store")])
 store_unlocks = Array[Resource]([ExtResource("28_unlock"), ExtResource("29_unlock"), ExtResource("30_unlock"), ExtResource("31_unlock"), ExtResource("32_unlock")])
 owners = Array[Resource]([ExtResource("33_owner"), ExtResource("34_owner"), ExtResource("35_owner")])

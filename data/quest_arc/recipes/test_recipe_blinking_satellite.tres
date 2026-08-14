@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SynthesisRecipeDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/slot_domain/synthesis_recipe_definition.gd" id="1_recipe"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_slot_rule.gd" id="2_rule"]
+
+[sub_resource type="Resource" id="BaseRule"]
+script = ExtResource("2_rule")
+id = &"test_toy_base"
+display_name_key = &"test.recipe.base.toy"
+required_all = Array[StringName]([&"toy"])
+
+[resource]
+script = ExtResource("1_recipe")
+id = &"recipe_test_blinking_satellite"
+display_name_key = &"test.recipe.blinking_satellite.name"
+base_rule = SubResource("BaseRule")
+required_personas = {&"nightwalker": 5, &"dreamwalker": 5}
+output_id = &"test_blinking_satellite"
+process_text_keys = Array[StringName]([&"test.recipe.blinking_satellite.process.1", &"test.recipe.blinking_satellite.process.2"])

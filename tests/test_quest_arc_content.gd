@@ -1,5 +1,27 @@
 extends GutTest
 
+const TEST_STARTING_IDS: Array[StringName] = [
+	&"fries",
+	&"plastic_car",
+	&"midnight_rose",
+	&"test_late_train_timetable",
+	&"test_blank_disc",
+	&"test_rewound_tape",
+	&"test_clockwork_moon",
+	&"test_cold_pudding",
+	&"test_paper_cup_water",
+	&"test_pressed_violet",
+	&"test_birthday_candle",
+	&"test_inside_out_raincoat",
+]
+
+const TEST_PERSONA_LEVELS := {
+	&"nightwalker": 1,
+	&"mourner": 3,
+	&"dreamwalker": 5,
+	&"homecomer": 3,
+}
+
 
 func test_manifest_is_the_new_opening_whitelist() -> void:
 	var manifest := QuestArcCatalog.manifest()
@@ -7,40 +29,95 @@ func test_manifest_is_the_new_opening_whitelist() -> void:
 	assert_eq(manifest.initial_money, 0)
 	assert_eq(
 		manifest.starting_item_ids,
-		[&"fries", &"plastic_car", &"midnight_rose"],
+		TEST_STARTING_IDS,
 	)
 	assert_eq(manifest.maximum_item_price, 40)
-	assert_eq(manifest.properties.size(), 12)
-	assert_eq(manifest.items.size(), 14)
+	assert_eq(manifest.properties.size(), 16)
+	assert_eq(manifest.items.size(), 32)
 	assert_eq(manifest.tasks.size(), 9)
-	assert_eq(manifest.recipes.size(), 1)
+	assert_eq(manifest.recipes.size(), 10)
 	assert_eq(manifest.stores.size(), 5)
 	assert_eq(manifest.store_unlocks.size(), 5)
 	assert_eq(manifest.owners.size(), 3)
 	for persona_id in CardPropertySet.PERSONAS:
-		var expected_level := 3 if persona_id == &"dreamwalker" else 0
-		assert_eq(int(manifest.initial_protagonist_stats.get(persona_id, -1)), expected_level)
+		assert_eq(
+			int(manifest.initial_protagonist_stats.get(persona_id, -1)),
+			int(TEST_PERSONA_LEVELS[persona_id]),
+		)
 	assert_true(manifest.validation_errors().is_empty(), str(manifest.validation_errors()))
 
 
-func test_opening_items_are_runtime_visible_and_have_images() -> void:
+func test_opening_items_keep_images_and_generated_synthesis_cards_use_no_icons() -> void:
 	var expected_ids: Array[StringName] = [
 		&"plastic_car", &"kaleidoscope", &"lotus_candle", &"mung_bean_cake",
 		&"milkshake", &"cola", &"fries", &"nuggets",
 		&"jasmine", &"gardenia", &"cactus", &"plastic_orchid",
 		&"tin_frog", &"midnight_rose",
+		&"test_late_train_timetable", &"test_blank_disc", &"test_rewound_tape",
+		&"test_clockwork_moon", &"test_cold_pudding", &"test_paper_cup_water",
+		&"test_pressed_violet", &"test_birthday_candle", &"test_inside_out_raincoat",
+		&"test_unborrowed_atlas", &"test_four_am_live", &"test_unsent_message",
+		&"test_blinking_satellite", &"test_counterclockwise_pudding",
+		&"test_waiting_room_soda", &"test_echo_violet", &"test_countdown_candle",
+		&"test_bedtime_overcoat",
 	]
 	var actual_ids: Array[StringName] = []
 	for raw_item in QuestArcCatalog.manifest().items:
 		var item := raw_item as QuestItemDefinition
 		assert_not_null(item)
 		actual_ids.append(item.id)
-		assert_not_null(item.image, String(item.id))
+		if String(item.id).begins_with("test_"):
+			assert_null(item.image, String(item.id))
+		else:
+			assert_not_null(item.image, String(item.id))
 	actual_ids.sort()
 	expected_ids.sort()
 	assert_eq(actual_ids, expected_ids)
 	assert_null(QuestArcCatalog.item_by_id(&"toy_block"))
 	assert_null(QuestArcCatalog.store_by_id(&"recycling"))
+
+
+func test_generated_recipes_cover_every_requested_type_and_are_craftable() -> void:
+	var cases := {
+		&"book": [&"recipe_test_unborrowed_atlas", &"test_late_train_timetable", &"test_birthday_candle", &""],
+		&"cd": [&"recipe_test_four_am_live", &"test_blank_disc", &"", &"dreamwalker"],
+		&"cassette": [&"recipe_test_unsent_message", &"test_rewound_tape", &"", &"mourner"],
+		&"toy": [&"recipe_test_blinking_satellite", &"test_clockwork_moon", &"test_birthday_candle", &"dreamwalker"],
+		&"food": [&"recipe_test_counterclockwise_pudding", &"test_cold_pudding", &"", &"homecomer"],
+		&"drink": [&"recipe_test_waiting_room_soda", &"test_paper_cup_water", &"test_clockwork_moon", &""],
+		&"flower": [&"recipe_test_echo_violet", &"test_pressed_violet", &"test_rewound_tape", &"dreamwalker"],
+		&"candle": [&"recipe_test_countdown_candle", &"test_birthday_candle", &"", &"mourner"],
+		&"clothing": [&"recipe_test_bedtime_overcoat", &"test_inside_out_raincoat", &"test_cold_pudding", &""],
+	}
+	for type_id in cases:
+		var test_case := cases[type_id] as Array
+		var recipe := QuestArcCatalog.recipe_by_id(test_case[0])
+		var base := QuestArcCatalog.item_by_id(test_case[1])
+		var helper := (
+			QuestArcCatalog.item_by_id(test_case[2])
+			if not (test_case[2] as StringName).is_empty()
+			else null
+		)
+		var persona_id := test_case[3] as StringName
+		var output := QuestArcCatalog.item_by_id(recipe.output_id)
+		assert_not_null(recipe, type_id)
+		assert_not_null(base, type_id)
+		assert_not_null(output, type_id)
+		assert_eq(base.property_set.tags, [type_id], type_id)
+		assert_eq(output.property_set.tags, [type_id], type_id)
+		assert_lte(base.property_set.present_personas().size(), 2, type_id)
+		assert_lte(output.property_set.present_personas().size(), 2, type_id)
+		assert_lte(recipe.required_personas.size(), 2, type_id)
+		var totals := SynthesisRules.persona_totals(
+			base,
+			helper,
+			persona_id,
+			TEST_PERSONA_LEVELS,
+		)
+		assert_true(
+			SynthesisRules.evaluate_candidate(recipe, base, totals).is_complete,
+			"Generated %s recipe should be reachable with its documented test inputs." % type_id,
+		)
 
 
 func test_opening_shelves_match_the_requested_prices_and_properties() -> void:
@@ -99,7 +176,7 @@ func test_new_game_starts_with_letters_pagination_tests_and_store_unlock_cards()
 		starting_definition_ids.append(card.definition_id)
 	assert_eq(
 		starting_definition_ids,
-		[&"fries", &"plastic_car", &"midnight_rose"],
+		TEST_STARTING_IDS,
 	)
 	assert_true(state.unlocked_store_ids.is_empty())
 	assert_eq(state.active_tasks().size(), 6)
@@ -111,8 +188,10 @@ func test_new_game_starts_with_letters_pagination_tests_and_store_unlock_cards()
 		))
 	assert_null(state.task_instance_for_definition(&"self_care"))
 	for persona_id in CardPropertySet.PERSONAS:
-		var expected_level := 3 if persona_id == &"dreamwalker" else 0
-		assert_eq(int(state.protagonist_persona_counts.get(persona_id, -1)), expected_level)
+		assert_eq(
+			int(state.protagonist_persona_counts.get(persona_id, -1)),
+			int(TEST_PERSONA_LEVELS[persona_id]),
+		)
 
 
 func test_new_order_rewards_are_fixed() -> void:

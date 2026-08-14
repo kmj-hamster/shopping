@@ -1029,3 +1029,225 @@ msgstr "Any item"
 
 msgid "debug.task.todo_page.result"
 msgstr "The test item has been recorded. This request gives no reward."
+
+msgid "test.property.book.name"
+msgstr "Book"
+
+msgid "test.property.book.description"
+msgstr "Something bound together to be read, dog-eared, or forgotten."
+
+msgid "test.property.cassette.name"
+msgstr "Cassette"
+
+msgid "test.property.cassette.description"
+msgstr "An object that winds sound between two small wheels."
+
+msgid "test.property.candle.name"
+msgstr "Candle"
+
+msgid "test.property.candle.description"
+msgstr "Something that keeps a small light alive by slowly shortening itself."
+
+msgid "test.property.clothing.name"
+msgstr "Clothing"
+
+msgid "test.property.clothing.description"
+msgstr "Something worn outside the body that remembers warmth and scent."
+
+msgid "test.item.late_train_timetable.name"
+msgstr "Last-Train Timetable"
+
+msgid "test.item.late_train_timetable.description"
+msgstr "After the last train, the station names continue to move. A short unfinished night road is caught in the folds."
+
+msgid "test.item.blank_disc.name"
+msgstr "Blank Disc"
+
+msgid "test.item.blank_disc.description"
+msgstr "Its surface appears empty, yet reflects lamps from unfamiliar rooms when spun. It seems to await a sound that has not happened."
+
+msgid "test.item.rewound_tape.name"
+msgstr "Rewound Tape"
+
+msgid "test.item.rewound_tape.description"
+msgstr "The tape has returned to the beginning, leaving no fingerprints in its window. Before play is pressed, it remembers the final unfinished sentence."
+
+msgid "test.item.clockwork_moon.name"
+msgstr "Clockwork Moon"
+
+msgid "test.item.clockwork_moon.description"
+msgstr "Wind it and it slowly orbits the edge of a table. Whenever it stops, its far side faces you."
+
+msgid "test.item.cold_pudding.name"
+msgstr "Cold Pudding"
+
+msgid "test.item.cold_pudding.description"
+msgstr "The caramel has set into thin amber, and the spoon still waits beside the plate. The refrigerator light watched over it all night."
+
+msgid "test.item.paper_cup_water.name"
+msgstr "Paper Cup of Warm Water"
+
+msgid "test.item.paper_cup_water.description"
+msgstr "The water is no longer hot, though a little mist remains on the cup. It resembles a rest that ended too soon."
+
+msgid "test.item.pressed_violet.name"
+msgstr "Violet Between Pages"
+
+msgid "test.item.pressed_violet.description"
+msgstr "The petals are pressed flat as an old ink stain, but their scent has not entirely left. The flower quietly changes color whenever the book is closed."
+
+msgid "test.item.birthday_candle.name"
+msgstr "Extinguished Birthday Candle"
+
+msgid "test.item.birthday_candle.description"
+msgstr "The wick has smoked, and wax tears have hardened on the side where no wish was made. It remembers the song but not who blew it out."
+
+msgid "test.item.inside_out_raincoat.name"
+msgstr "Inside-Out Raincoat"
+
+msgid "test.item.inside_out_raincoat.description"
+msgstr "Its pockets hide inside while rain drips outward from the lining. Anyone wearing it feels as though they are waking from the weather."
+
+msgid "test.item.unborrowed_atlas.name"
+msgstr "Unborrowed Atlas"
+
+msgid "test.item.unborrowed_atlas.description"
+msgstr "Every road leads to a reading room after closing. On the final page, you find the route you just walked."
+
+msgid "test.item.four_am_live.name"
+msgstr "Four A.M. Live"
+
+msgid "test.item.four_am_live.description"
+msgstr "The applause comes from an audience that never entered the studio. When the last song ends, morning still refuses admission."
+
+msgid "test.item.unsent_message.name"
+msgstr "Unsent Message"
+
+msgid "test.item.unsent_message.description"
+msgstr "Press play and first hear a very long breath. The real message appears while rewinding, its ending closer than its beginning."
+
+msgid "test.item.blinking_satellite.name"
+msgstr "Blinking Satellite"
+
+msgid "test.item.blinking_satellite.description"
+msgstr "It circles the bedroom's only bulb and blinks every seventh orbit. No one knows whether it is reporting in or asking for rescue."
+
+msgid "test.item.counterclockwise_pudding.name"
+msgstr "Counterclockwise Pudding"
+
+msgid "test.item.counterclockwise_pudding.description"
+msgstr "Caramel retreats around the plate and each spoon mark disappears in turn. By the last bite, you have only just sat down."
+
+msgid "test.item.waiting_room_soda.name"
+msgstr "Waiting-Room Soda"
+
+msgid "test.item.waiting_room_soda.description"
+msgstr "Its bubbles imitate a distant train arriving. Once empty, the cup contains a platform ticket for a station that does not exist."
+
+msgid "test.item.echo_violet.name"
+msgstr "Echo Violet"
+
+msgid "test.item.echo_violet.description"
+msgstr "Each petal preserves the soft sound of a book closing. Hold it to your ear and hear a room from long ago."
+
+msgid "test.item.countdown_candle.name"
+msgstr "Countdown Candle"
+
+msgid "test.item.countdown_candle.description"
+msgstr "Its flame silently counts down from ten. At zero the room stays bright, but loses one piece of furniture you remember."
+
+msgid "test.item.bedtime_overcoat.name"
+msgstr "Bedtime Overcoat"
+
+msgid "test.item.bedtime_overcoat.description"
+msgstr "The collar holds the scent of sun-dried sheets, and the cuffs fall asleep before your arms. Fasten the final button and the corridor shortens to the bed."
+
+msgid "test.recipe.base.book"
+msgstr "Any Book"
+
+msgid "test.recipe.base.cd"
+msgstr "Any CD"
+
+msgid "test.recipe.base.cassette"
+msgstr "Any Cassette"
+
+msgid "test.recipe.base.toy"
+msgstr "Any Toy"
+
+msgid "test.recipe.base.food"
+msgstr "Any Food"
+
+msgid "test.recipe.base.drink"
+msgstr "Any Drink"
+
+msgid "test.recipe.base.flower"
+msgstr "Any Flower"
+
+msgid "test.recipe.base.candle"
+msgstr "Any Candle"
+
+msgid "test.recipe.base.clothing"
+msgstr "Any Clothing"
+
+msgid "test.recipe.unborrowed_atlas.name"
+msgstr "Unborrowed Atlas"
+msgid "test.recipe.unborrowed_atlas.process.1"
+msgstr "Station names loosen from the paper and arrange themselves along the folds."
+msgid "test.recipe.unborrowed_atlas.process.2"
+msgstr "Every unfinished night road meets again inside the back cover."
+
+msgid "test.recipe.four_am_live.name"
+msgstr "Four A.M. Live"
+msgid "test.recipe.four_am_live.process.1"
+msgstr "Empty grooves begin to remember applause from an audience that never existed."
+msgid "test.recipe.four_am_live.process.2"
+msgstr "The needle drops, and it remains night outside the studio."
+
+msgid "test.recipe.unsent_message.name"
+msgstr "Unsent Message"
+msgid "test.recipe.unsent_message.process.1"
+msgstr "The two wheels turn apart and wind a long breath tight again."
+msgid "test.recipe.unsent_message.process.2"
+msgstr "The sentence ending arrives first, then finds its speaker."
+
+msgid "test.recipe.blinking_satellite.name"
+msgstr "Blinking Satellite"
+msgid "test.recipe.blinking_satellite.process.1"
+msgstr "The spring pushes the tabletop away, raising the bulb into a small star."
+msgid "test.recipe.blinking_satellite.process.2"
+msgstr "At the end of its seventh orbit, it blinks at the bedroom."
+
+msgid "test.recipe.counterclockwise_pudding.name"
+msgstr "Counterclockwise Pudding"
+msgid "test.recipe.counterclockwise_pudding.process.1"
+msgstr "Caramel runs backward around the plate and each spoon mark closes."
+msgid "test.recipe.counterclockwise_pudding.process.2"
+msgstr "The last bite returns to the cup, just as the late snack begins."
+
+msgid "test.recipe.waiting_room_soda.name"
+msgstr "Waiting-Room Soda"
+msgid "test.recipe.waiting_room_soda.process.1"
+msgstr "Tiny bubbles rise and arrange themselves as departing train lights."
+msgid "test.recipe.waiting_room_soda.process.2"
+msgstr "A damp platform ticket settles at the bottom of the cup."
+
+msgid "test.recipe.echo_violet.name"
+msgstr "Echo Violet"
+msgid "test.recipe.echo_violet.process.1"
+msgstr "The petals absorb the sound of a closing book and deepen in color."
+msgid "test.recipe.echo_violet.process.2"
+msgstr "A room from long ago answers softly inside the flower."
+
+msgid "test.recipe.countdown_candle.name"
+msgstr "Countdown Candle"
+msgid "test.recipe.countdown_candle.process.1"
+msgstr "The dead wick lights again and silently begins counting from ten."
+msgid "test.recipe.countdown_candle.process.2"
+msgstr "At zero, one familiar piece of furniture leaves the room."
+
+msgid "test.recipe.bedtime_overcoat.name"
+msgstr "Bedtime Overcoat"
+msgid "test.recipe.bedtime_overcoat.process.1"
+msgstr "Rain withdraws from the lining, leaving the scent of sun-dried sheets."
+msgid "test.recipe.bedtime_overcoat.process.2"
+msgstr "The last button closes and the corridor shortens to the bed."

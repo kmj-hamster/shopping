@@ -16,12 +16,13 @@ func before_each() -> void:
 func test_opening_ui_has_letters_pagination_tests_unlock_cards_and_three_visible_stores() -> void:
 	var main := await _spawn_main()
 	assert_eq(main.task_dock.bookmark_buttons.size(), 6)
-	assert_eq(main.state.inventory.size(), 3)
-	var dreamwalker := PersonaMaskCatalog.card_for_persona(&"dreamwalker")
-	assert_true(main.hand_bar.card_views.has(dreamwalker.instance_id))
+	assert_eq(main.state.inventory.size(), 12)
+	for persona_id in CardPropertySet.PERSONAS:
+		var persona_card := PersonaMaskCatalog.card_for_persona(persona_id)
+		assert_true(main.hand_bar.card_views.has(persona_card.instance_id))
 	for card in main.state.inventory:
 		assert_true(main.hand_bar.card_views.has(card.instance_id))
-	assert_eq(main.hand_bar.card_views.size(), 4)
+	assert_eq(main.hand_bar.card_views.size(), 16)
 	assert_eq(main.map_screen.store_hotspots.size(), 5)
 	assert_true((main.map_screen.store_hotspots[&"toy"] as Button).visible)
 	assert_true((main.map_screen.store_hotspots[&"fast_food"] as Button).visible)
@@ -31,7 +32,7 @@ func test_opening_ui_has_letters_pagination_tests_unlock_cards_and_three_visible
 	for hotspot in main.map_screen.store_hotspots.values():
 		assert_eq((hotspot as Button).tooltip_text, "")
 	main.hand_bar.show_tab(QuestHandBar.TAB_MASKS)
-	assert_eq(main.hand_bar.card_views.size(), 4)
+	assert_eq(main.hand_bar.card_views.size(), 16)
 	assert_false(main.state.select_synthesis_persona(&"nightwalker"))
 
 
@@ -234,6 +235,7 @@ func test_persona_first_acquisition_reveals_each_new_mask_after_arc() -> void:
 	var main := await _spawn_main()
 	var state := main.state
 	state.protagonist_persona_counts[&"dreamwalker"] = 0
+	state.protagonist_persona_counts[&"mourner"] = 0
 	var frog := state.grant_item(&"tin_frog", &"test")
 	assert_true(state.unlock_store(&"toy", frog).ok)
 	var self_care := state.task_instance_for_definition(&"self_care")
@@ -260,7 +262,7 @@ func test_persona_first_acquisition_reveals_each_new_mask_after_arc() -> void:
 	assert_false(main.persona_reveal_overlay.visible)
 	assert_true(state.pending_persona_reveal_ids.is_empty())
 	main.hand_bar.show_tab(QuestHandBar.TAB_MASKS)
-	assert_eq(main.hand_bar.card_views.size(), main.state.inventory.size() + 2)
+	assert_eq(main.hand_bar.card_views.size(), main.state.inventory.size() + 4)
 
 
 func _spawn_main() -> QuestMain:

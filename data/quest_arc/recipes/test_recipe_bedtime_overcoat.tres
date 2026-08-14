@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SynthesisRecipeDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/slot_domain/synthesis_recipe_definition.gd" id="1_recipe"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_slot_rule.gd" id="2_rule"]
+
+[sub_resource type="Resource" id="BaseRule"]
+script = ExtResource("2_rule")
+id = &"test_clothing_base"
+display_name_key = &"test.recipe.base.clothing"
+required_all = Array[StringName]([&"clothing"])
+
+[resource]
+script = ExtResource("1_recipe")
+id = &"recipe_test_bedtime_overcoat"
+display_name_key = &"test.recipe.bedtime_overcoat.name"
+base_rule = SubResource("BaseRule")
+required_personas = {&"homecomer": 10}
+output_id = &"test_bedtime_overcoat"
+process_text_keys = Array[StringName]([&"test.recipe.bedtime_overcoat.process.1", &"test.recipe.bedtime_overcoat.process.2"])

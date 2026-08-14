@@ -795,7 +795,7 @@ msgstr "铁皮青蛙"
 msgid "demo.item.tin_frog.description"
 msgstr "一只肚子空响的发条青蛙，眼睛里留着一小点稳定的灯光。"
 msgid "opening.property.cd.name"
-msgstr "CD"
+msgstr "光盘"
 
 msgid "opening.property.cd.description"
 msgstr "能够播放声音的圆盘，也是一种物品类别。"
@@ -1029,3 +1029,225 @@ msgstr "任何物品"
 
 msgid "debug.task.todo_page.result"
 msgstr "测试物品已记录。这项委托没有报酬。"
+
+msgid "test.property.book.name"
+msgstr "书"
+
+msgid "test.property.book.description"
+msgstr "装订成册，等待被阅读、折角或遗忘的东西。"
+
+msgid "test.property.cassette.name"
+msgstr "磁带"
+
+msgid "test.property.cassette.description"
+msgstr "把声音缠绕在两只轮子之间的物品。"
+
+msgid "test.property.candle.name"
+msgstr "蜡烛"
+
+msgid "test.property.candle.description"
+msgstr "以缓慢缩短自身来维持一小团光的东西。"
+
+msgid "test.property.clothing.name"
+msgstr "衣服"
+
+msgid "test.property.clothing.description"
+msgstr "穿在身体外面，也会保存体温与气味的东西。"
+
+msgid "test.item.late_train_timetable.name"
+msgstr "末班车时刻表"
+
+msgid "test.item.late_train_timetable.description"
+msgstr "末班车之后，纸上的站名仍在移动。折痕里夹着一小段没人走完的夜路。"
+
+msgid "test.item.blank_disc.name"
+msgstr "空白光盘"
+
+msgid "test.item.blank_disc.description"
+msgstr "表面看起来什么也没有，转起来却会反射陌生房间的灯。它似乎在等待一段尚未发生的声音。"
+
+msgid "test.item.rewound_tape.name"
+msgstr "倒带磁带"
+
+msgid "test.item.rewound_tape.description"
+msgstr "磁带已经退回最开头，塑料窗里没有留下指纹。按下播放前，它一直记得最后那句没说完的话。"
+
+msgid "test.item.clockwork_moon.name"
+msgstr "发条月亮"
+
+msgid "test.item.clockwork_moon.description"
+msgstr "拧紧发条，它会沿桌沿缓慢公转。停下时，背面总是朝着你。"
+
+msgid "test.item.cold_pudding.name"
+msgstr "冷掉的布丁"
+
+msgid "test.item.cold_pudding.description"
+msgstr "焦糖凝成薄薄的琥珀，勺子还留在盘边。冰箱的灯替它守了整整一夜。"
+
+msgid "test.item.paper_cup_water.name"
+msgstr "纸杯热水"
+
+msgid "test.item.paper_cup_water.description"
+msgstr "纸杯里的热水已经不烫了，杯壁仍有一点雾。它像一次过于简短的休息。"
+
+msgid "test.item.pressed_violet.name"
+msgstr "书页里的紫罗兰"
+
+msgid "test.item.pressed_violet.description"
+msgstr "花瓣被压得像一块旧墨迹，香气却没有完全离开。合上书时，它仍在两页之间悄悄变色。"
+
+msgid "test.item.birthday_candle.name"
+msgstr "熄灭的生日蜡烛"
+
+msgid "test.item.birthday_candle.description"
+msgstr "烛芯冒过烟，蜡泪凝在无人许愿的一侧。它记得歌唱，却忘了是谁吹灭它。"
+
+msgid "test.item.inside_out_raincoat.name"
+msgstr "反穿的雨衣"
+
+msgid "test.item.inside_out_raincoat.description"
+msgstr "口袋都藏在里面，雨水却从内衬向外滴。穿上它的人会觉得自己正从天气里醒来。"
+
+msgid "test.item.unborrowed_atlas.name"
+msgstr "无人借阅的地图册"
+
+msgid "test.item.unborrowed_atlas.description"
+msgstr "每条道路都通向闭馆后的阅览室。翻到最后一页，会看到自己刚刚走过的路线。"
+
+msgid "test.item.four_am_live.name"
+msgstr "凌晨四点现场"
+
+msgid "test.item.four_am_live.description"
+msgstr "掌声来自录音棚里并不存在的观众。最后一首结束后，清晨仍拒绝入场。"
+
+msgid "test.item.unsent_message.name"
+msgstr "没有寄出的留言"
+
+msgid "test.item.unsent_message.description"
+msgstr "按下播放，先听见很长的呼吸。真正的留言藏在倒带时，句尾比句首更接近你。"
+
+msgid "test.item.blinking_satellite.name"
+msgstr "会眨眼的卫星"
+
+msgid "test.item.blinking_satellite.description"
+msgstr "它绕着卧室唯一的灯泡旋转，每七圈眨一次眼。没有人知道那是在汇报，还是在求救。"
+
+msgid "test.item.counterclockwise_pudding.name"
+msgstr "逆时针布丁"
+
+msgid "test.item.counterclockwise_pudding.description"
+msgstr "焦糖沿盘沿慢慢退回杯中，勺痕也依次消失。吃到最后一口时，你反而刚刚坐下。"
+
+msgid "test.item.waiting_room_soda.name"
+msgstr "候车室汽水"
+
+msgid "test.item.waiting_room_soda.description"
+msgstr "气泡模仿远处列车进站的声音。喝完以后，纸杯底部会多出一张不存在的站台票。"
+
+msgid "test.item.echo_violet.name"
+msgstr "回声紫罗兰"
+
+msgid "test.item.echo_violet.description"
+msgstr "每片花瓣都保存着一次合书的轻响。把它贴近耳边，会听见很久以前的房间。"
+
+msgid "test.item.countdown_candle.name"
+msgstr "倒数蜡烛"
+
+msgid "test.item.countdown_candle.description"
+msgstr "火焰从十开始沉默地计数。归零时房间不会变暗，只会少掉一件你记得的家具。"
+
+msgid "test.item.bedtime_overcoat.name"
+msgstr "睡前大衣"
+
+msgid "test.item.bedtime_overcoat.description"
+msgstr "衣领里藏着刚晒过的被单气味，袖口比手臂更早入睡。扣上最后一粒扣子，走廊就会缩短到床边。"
+
+msgid "test.recipe.base.book"
+msgstr "任何书"
+
+msgid "test.recipe.base.cd"
+msgstr "任何光盘"
+
+msgid "test.recipe.base.cassette"
+msgstr "任何磁带"
+
+msgid "test.recipe.base.toy"
+msgstr "任何玩具"
+
+msgid "test.recipe.base.food"
+msgstr "任何食物"
+
+msgid "test.recipe.base.drink"
+msgstr "任何饮料"
+
+msgid "test.recipe.base.flower"
+msgstr "任何花"
+
+msgid "test.recipe.base.candle"
+msgstr "任何蜡烛"
+
+msgid "test.recipe.base.clothing"
+msgstr "任何衣服"
+
+msgid "test.recipe.unborrowed_atlas.name"
+msgstr "无人借阅的地图册"
+msgid "test.recipe.unborrowed_atlas.process.1"
+msgstr "站名从纸上脱落，沿折痕排成新的道路。"
+msgid "test.recipe.unborrowed_atlas.process.2"
+msgstr "所有没有走完的夜路，在封底重新汇合。"
+
+msgid "test.recipe.four_am_live.name"
+msgstr "凌晨四点现场"
+msgid "test.recipe.four_am_live.process.1"
+msgstr "空白的刻槽开始记住一阵不存在的掌声。"
+msgid "test.recipe.four_am_live.process.2"
+msgstr "唱针落下时，录音棚外仍是深夜。"
+
+msgid "test.recipe.unsent_message.name"
+msgstr "没有寄出的留言"
+msgid "test.recipe.unsent_message.process.1"
+msgstr "两只轮子向相反方向转动，呼吸被重新缠紧。"
+msgid "test.recipe.unsent_message.process.2"
+msgstr "句尾先抵达，随后才找到说话的人。"
+
+msgid "test.recipe.blinking_satellite.name"
+msgstr "会眨眼的卫星"
+msgid "test.recipe.blinking_satellite.process.1"
+msgstr "发条把桌面推远，灯泡升成一颗小小恒星。"
+msgid "test.recipe.blinking_satellite.process.2"
+msgstr "第七圈结束，它第一次朝卧室眨眼。"
+
+msgid "test.recipe.counterclockwise_pudding.name"
+msgstr "逆时针布丁"
+msgid "test.recipe.counterclockwise_pudding.process.1"
+msgstr "焦糖沿盘沿逆流，勺痕一枚枚合拢。"
+msgid "test.recipe.counterclockwise_pudding.process.2"
+msgstr "最后一口回到杯中，夜宵才刚刚开始。"
+
+msgid "test.recipe.waiting_room_soda.name"
+msgstr "候车室汽水"
+msgid "test.recipe.waiting_room_soda.process.1"
+msgstr "水面升起细小气泡，排列成远去的车灯。"
+msgid "test.recipe.waiting_room_soda.process.2"
+msgstr "一张潮湿的站台票沉到杯底。"
+
+msgid "test.recipe.echo_violet.name"
+msgstr "回声紫罗兰"
+msgid "test.recipe.echo_violet.process.1"
+msgstr "花瓣吸收合书的声音，颜色逐渐变深。"
+msgid "test.recipe.echo_violet.process.2"
+msgstr "很久以前的房间，在花蕊里轻轻回应。"
+
+msgid "test.recipe.countdown_candle.name"
+msgstr "倒数蜡烛"
+msgid "test.recipe.countdown_candle.process.1"
+msgstr "熄灭的烛芯重新亮起，从十开始无声计数。"
+msgid "test.recipe.countdown_candle.process.2"
+msgstr "数字归零，房间里少了一件熟悉的家具。"
+
+msgid "test.recipe.bedtime_overcoat.name"
+msgstr "睡前大衣"
+msgid "test.recipe.bedtime_overcoat.process.1"
+msgstr "雨水从内衬退出，留下被阳光晒过的气味。"
+msgid "test.recipe.bedtime_overcoat.process.2"
+msgstr "最后一粒扣子扣好，走廊缩短到床边。"

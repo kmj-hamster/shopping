@@ -163,6 +163,7 @@ func test_self_care_history_and_pending_persona_reveals_survive_round_trip() -> 
 func _state_with_confirmed_self_care(item_id: StringName) -> QuestGameState:
 	var state := QuestGameState.new()
 	state.protagonist_persona_counts[&"dreamwalker"] = 0
+	state.protagonist_persona_counts[&"mourner"] = 0
 	_unlock_toy_shop(state)
 	var task := state.task_instance_for_definition(&"self_care")
 	var item := state.grant_item(item_id, &"test")
