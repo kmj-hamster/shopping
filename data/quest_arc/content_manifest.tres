@@ -93,47 +93,47 @@ id = &"persona"
 display_name_key = &"demo.property.persona.name"
 description_key = &"demo.property.persona.description"
 
-[sub_resource type="Resource" id="PropertyLamp"]
+[sub_resource type="Resource" id="PropertyNightwalker"]
 script = ExtResource("2_property")
-id = &"lamp"
-display_name_key = &"demo.property.lamp.name"
-description_key = &"demo.property.lamp.description"
+id = &"nightwalker"
+display_name_key = &"demo.mask.nightwalker.name"
+description_key = &"demo.mask.nightwalker.description"
 value_kind = 1
-is_night_aspect = true
+is_persona_value = true
 
-[sub_resource type="Resource" id="PropertyMirror"]
+[sub_resource type="Resource" id="PropertyMourner"]
 script = ExtResource("2_property")
-id = &"mirror"
-display_name_key = &"demo.property.mirror.name"
-description_key = &"demo.property.mirror.description"
+id = &"mourner"
+display_name_key = &"demo.mask.mourner.name"
+description_key = &"demo.mask.mourner.description"
 value_kind = 1
-is_night_aspect = true
+is_persona_value = true
 
-[sub_resource type="Resource" id="PropertyGauze"]
+[sub_resource type="Resource" id="PropertyDreamwalker"]
 script = ExtResource("2_property")
-id = &"gauze"
-display_name_key = &"demo.property.gauze.name"
-description_key = &"demo.property.gauze.description"
+id = &"dreamwalker"
+display_name_key = &"demo.mask.dreamwalker.name"
+description_key = &"demo.mask.dreamwalker.description"
 value_kind = 1
-is_night_aspect = true
+is_persona_value = true
 
-[sub_resource type="Resource" id="PropertyPillow"]
+[sub_resource type="Resource" id="PropertyHomecomer"]
 script = ExtResource("2_property")
-id = &"pillow"
-display_name_key = &"demo.property.pillow.name"
-description_key = &"demo.property.pillow.description"
+id = &"homecomer"
+display_name_key = &"demo.mask.homecomer.name"
+description_key = &"demo.mask.homecomer.description"
 value_kind = 1
-is_night_aspect = true
+is_persona_value = true
 
 [resource]
 script = ExtResource("1_manifest")
 initial_money = 0
 maximum_item_price = 40
 maximum_properties_per_item = 4
-maximum_aspects_per_item = 2
-initial_protagonist_stats = {&"clarity": 0, &"ease": 0, &"reminiscence": 0, &"reverie": 3}
+maximum_personas_per_item = 2
+initial_protagonist_stats = {&"nightwalker": 0, &"homecomer": 0, &"mourner": 0, &"dreamwalker": 3}
 starting_item_ids = Array[StringName]([&"fries", &"plastic_car", &"midnight_rose"])
-properties = Array[Resource]([SubResource("PropertyFood"), SubResource("PropertyFlower"), SubResource("PropertyToy"), SubResource("PropertyDrink"), SubResource("PropertyCd"), SubResource("PropertyMetal"), SubResource("PropertyRose"), SubResource("PropertyPersona"), SubResource("PropertyLamp"), SubResource("PropertyMirror"), SubResource("PropertyGauze"), SubResource("PropertyPillow")])
+properties = Array[Resource]([SubResource("PropertyFood"), SubResource("PropertyFlower"), SubResource("PropertyToy"), SubResource("PropertyDrink"), SubResource("PropertyCd"), SubResource("PropertyMetal"), SubResource("PropertyRose"), SubResource("PropertyPersona"), SubResource("PropertyNightwalker"), SubResource("PropertyMourner"), SubResource("PropertyDreamwalker"), SubResource("PropertyHomecomer")])
 items = Array[Resource]([ExtResource("3_item"), ExtResource("4_item"), ExtResource("5_item"), ExtResource("6_item"), ExtResource("7_item"), ExtResource("8_item"), ExtResource("9_item"), ExtResource("10_item"), ExtResource("11_item"), ExtResource("12_item"), ExtResource("13_item"), ExtResource("14_item"), ExtResource("15_item"), ExtResource("16_item")])
 tasks = Array[Resource]([ExtResource("17_task"), ExtResource("18_task"), ExtResource("19_task"), ExtResource("20_task"), ExtResource("21_task"), ExtResource("36_task"), ExtResource("37_task"), ExtResource("38_task"), ExtResource("39_task")])
 recipes = Array[Resource]([ExtResource("22_recipe")])

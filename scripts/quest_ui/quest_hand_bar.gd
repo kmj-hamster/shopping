@@ -95,7 +95,7 @@ func _visible_card_entries() -> Array:
 			entries.append([card, definition])
 	PersonaMaskCatalog.sync_selection(state.synthesis_persona_id)
 	for persona_id in mask_persona_order:
-		var amount := int(state.protagonist_aspect_counts.get(persona_id, 0))
+		var amount := int(state.protagonist_persona_counts.get(persona_id, 0))
 		if amount <= 0:
 			continue
 		var mask_card := PersonaMaskCatalog.card_for_persona(persona_id)

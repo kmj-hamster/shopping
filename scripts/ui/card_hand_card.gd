@@ -144,18 +144,18 @@ func _refresh() -> void:
 	title_label.add_theme_font_size_override("font_size", 11 if is_persona_mask else 13)
 	if is_persona_mask:
 		var amount := 0
-		for aspect in CardPropertySet.ASPECTS:
-			amount = maxi(amount, definition.property_value(aspect))
+		for persona_id in CardPropertySet.PERSONAS:
+			amount = maxi(amount, definition.property_value(persona_id))
 		value_label.text = str(amount)
 	_apply_card_style()
 
 
 func _border_color() -> Color:
-	if definition.has_property(CardPropertySet.ASPECT_LAMP):
+	if definition.has_property(CardPropertySet.PERSONA_NIGHTWALKER):
 		return Color("d5b66f")
-	if definition.has_property(CardPropertySet.ASPECT_MIRROR):
+	if definition.has_property(CardPropertySet.PERSONA_MOURNER):
 		return Color("7ca9bd")
-	if definition.has_property(CardPropertySet.ASPECT_GAUZE):
+	if definition.has_property(CardPropertySet.PERSONA_DREAMWALKER):
 		return Color("9a82bb")
 	return Color("bd8fa5")
 

@@ -4,7 +4,7 @@ extends GutTest
 func test_tag_properties_have_presence_without_fake_numeric_strength() -> void:
 	var properties := CardPropertySet.new()
 	properties.tags = [&"food", &"drink"]
-	properties.values = {&"relaxing": 3, &"pillow": 4}
+	properties.values = {&"relaxing": 3, &"homecomer": 4}
 	assert_true(properties.has(&"food"))
 	assert_eq(properties.value(&"food"), 0)
 	assert_eq(properties.value(&"relaxing"), 3)
@@ -14,19 +14,19 @@ func test_tag_properties_have_presence_without_fake_numeric_strength() -> void:
 
 func test_quest_item_rejects_more_than_four_properties_or_two_aspects() -> void:
 	var too_many := _item(&"too_many", [&"food", &"drink"], {
-		&"soft": 2, &"lamp": 1, &"mirror": 1,
+		&"soft": 2, &"nightwalker": 1, &"mourner": 1,
 	})
 	assert_true(_contains(too_many.validation_errors(), "more than four"))
 
 	var too_many_aspects := _item(&"too_many_aspects", [&"food"], {
-		&"lamp": 1, &"mirror": 1, &"gauze": 1,
+		&"nightwalker": 1, &"mourner": 1, &"dreamwalker": 1,
 	})
 	assert_true(_contains(too_many_aspects.validation_errors(), "more than two"))
 
 
 func test_tag_presence_and_scaled_threshold_are_evaluated_separately() -> void:
 	var item := _item(&"warm_milk", [&"food", &"drink"], {
-		&"relaxing": 3, &"pillow": 4,
+		&"relaxing": 3, &"homecomer": 4,
 	})
 	var requirement := SlotValueRequirement.new()
 	requirement.tags = [&"relaxing"]
@@ -63,10 +63,10 @@ func test_exact_item_rule_is_suitable_for_map_unlocks() -> void:
 	assert_false(QuestArcRules.store_unlock_accepts(unlock, _item(&"jasmine")))
 
 
-func test_task_outcome_uses_dominant_aspect_and_declared_tie_priority() -> void:
+func test_task_outcome_uses_dominant_persona_and_declared_tie_priority() -> void:
 	var gauze_condition := StoryCondition.new()
-	gauze_condition.kind = StoryCondition.Kind.DOMINANT_ASPECT
-	gauze_condition.key = &"gauze"
+	gauze_condition.kind = StoryCondition.Kind.DOMINANT_PERSONA
+	gauze_condition.key = &"dreamwalker"
 	var gauze_outcome := _outcome(&"tide", false, [gauze_condition])
 	var fallback := _outcome(&"plain", true)
 	var task := TaskDefinition.new()
@@ -75,8 +75,8 @@ func test_task_outcome_uses_dominant_aspect_and_declared_tie_priority() -> void:
 	task.body_text_key = &"task.radio.body"
 	task.slot_rules = [_simple_rule(&"sound")]
 	task.outcomes = [gauze_outcome, fallback]
-	task.tie_priority = [&"gauze", &"mirror", &"pillow", &"lamp"]
-	var tied_item := _item(&"rain_tape", [&"music"], {&"gauze": 3, &"pillow": 3})
+	task.persona_tie_priority = [&"dreamwalker", &"mourner", &"homecomer", &"nightwalker"]
+	var tied_item := _item(&"rain_tape", [&"music"], {&"dreamwalker": 3, &"homecomer": 3})
 	assert_eq(QuestArcRules.outcome_for(task, [tied_item]).id, &"tide")
 
 

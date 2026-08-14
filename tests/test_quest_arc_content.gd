@@ -17,8 +17,8 @@ func test_manifest_is_the_new_opening_whitelist() -> void:
 	assert_eq(manifest.stores.size(), 5)
 	assert_eq(manifest.store_unlocks.size(), 5)
 	assert_eq(manifest.owners.size(), 3)
-	for persona_id in CardPropertySet.PROTAGONIST_STATS:
-		var expected_level := 3 if persona_id == &"reverie" else 0
+	for persona_id in CardPropertySet.PERSONAS:
+		var expected_level := 3 if persona_id == &"dreamwalker" else 0
 		assert_eq(int(manifest.initial_protagonist_stats.get(persona_id, -1)), expected_level)
 	assert_true(manifest.validation_errors().is_empty(), str(manifest.validation_errors()))
 
@@ -44,36 +44,34 @@ func test_opening_items_are_runtime_visible_and_have_images() -> void:
 
 
 func test_opening_shelves_match_the_requested_prices_and_properties() -> void:
-	_assert_item(&"plastic_car", 8, [&"toy"], {&"lamp": 1})
-	_assert_item(&"kaleidoscope", 20, [&"toy"], {&"gauze": 2, &"mirror": 2})
-	_assert_item(&"lotus_candle", 40, [&"toy"], {&"mirror": 3})
-	_assert_item(&"mung_bean_cake", 8, [&"food"], {&"mirror": 1})
-	_assert_item(&"milkshake", 16, [&"drink"], {&"pillow": 2})
-	_assert_item(&"cola", 10, [&"drink"], {&"lamp": 1, &"pillow": 1})
-	_assert_item(&"fries", 8, [&"food"], {&"pillow": 1})
-	_assert_item(&"nuggets", 18, [&"food"], {&"gauze": 2, &"pillow": 1})
-	_assert_item(&"jasmine", 8, [&"flower"], {&"pillow": 1})
-	_assert_item(&"gardenia", 40, [&"flower"], {&"gauze": 3})
-	_assert_item(&"cactus", 16, [&"flower"], {&"lamp": 2})
-	_assert_item(&"plastic_orchid", 10, [&"flower", &"toy"], {&"gauze": 1, &"mirror": 1})
-	_assert_item(&"tin_frog", 0, [&"toy", &"metal"], {&"lamp": 2})
+	_assert_item(&"plastic_car", 8, [&"toy"], {&"nightwalker": 1})
+	_assert_item(&"kaleidoscope", 20, [&"toy"], {&"dreamwalker": 2, &"mourner": 2})
+	_assert_item(&"lotus_candle", 40, [&"toy"], {&"mourner": 3})
+	_assert_item(&"mung_bean_cake", 8, [&"food"], {&"mourner": 1})
+	_assert_item(&"milkshake", 16, [&"drink"], {&"homecomer": 2})
+	_assert_item(&"cola", 10, [&"drink"], {&"nightwalker": 1, &"homecomer": 1})
+	_assert_item(&"fries", 8, [&"food"], {&"homecomer": 1})
+	_assert_item(&"nuggets", 18, [&"food"], {&"dreamwalker": 2, &"homecomer": 1})
+	_assert_item(&"jasmine", 8, [&"flower"], {&"homecomer": 1})
+	_assert_item(&"gardenia", 40, [&"flower"], {&"dreamwalker": 3})
+	_assert_item(&"cactus", 16, [&"flower"], {&"nightwalker": 2})
+	_assert_item(&"plastic_orchid", 10, [&"flower", &"toy"], {&"dreamwalker": 1, &"mourner": 1})
+	_assert_item(&"tin_frog", 0, [&"toy", &"metal"], {&"nightwalker": 2})
 
 
-func test_night_aspect_icons_are_the_declared_solid_colors() -> void:
-	var expected_colors := {
-		&"lamp": "f2d14f",
-		&"mirror": "6faed9",
-		&"gauze": "f3c6d6",
-		&"pillow": "9a78c5",
+func test_persona_icons_use_the_confirmed_four_line_art_assets() -> void:
+	var expected_paths := {
+		&"nightwalker": "res://resources/ui/persona/nightwalker.png",
+		&"mourner": "res://resources/ui/persona/mourner.png",
+		&"dreamwalker": "res://resources/ui/persona/dreamwalker.png",
+		&"homecomer": "res://resources/ui/persona/homecomer.png",
 	}
-	for aspect_id in expected_colors:
-		var texture := ItemDetailPopup.property_icon_texture(aspect_id)
-		assert_not_null(texture, aspect_id)
-		assert_eq(
-			texture.get_image().get_pixel(48, 48).to_html(false),
-			expected_colors[aspect_id],
-			aspect_id,
-		)
+	for persona_id in expected_paths:
+		var texture := ItemDetailPopup.property_icon_texture(persona_id)
+		assert_not_null(texture, persona_id)
+		assert_eq(texture.resource_path, expected_paths[persona_id], persona_id)
+		assert_gt(texture.get_width(), 600, persona_id)
+		assert_gt(texture.get_height(), 300, persona_id)
 
 
 func test_store_unlocks_use_items_or_non_consuming_personas() -> void:
@@ -112,9 +110,9 @@ func test_new_game_starts_with_letters_pagination_tests_and_store_unlock_cards()
 			StringName("debug_todo_page_%d" % (index + 1))
 		))
 	assert_null(state.task_instance_for_definition(&"self_care"))
-	for persona_id in CardPropertySet.PROTAGONIST_STATS:
-		var expected_level := 3 if persona_id == &"reverie" else 0
-		assert_eq(int(state.protagonist_aspect_counts.get(persona_id, -1)), expected_level)
+	for persona_id in CardPropertySet.PERSONAS:
+		var expected_level := 3 if persona_id == &"dreamwalker" else 0
+		assert_eq(int(state.protagonist_persona_counts.get(persona_id, -1)), expected_level)
 
 
 func test_new_order_rewards_are_fixed() -> void:

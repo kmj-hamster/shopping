@@ -1,33 +1,17 @@
 class_name CardPropertySet
 extends Resource
 
-const ASPECT_LAMP := &"lamp"
-const ASPECT_MIRROR := &"mirror"
-const ASPECT_GAUZE := &"gauze"
-const ASPECT_PILLOW := &"pillow"
 const PROPERTY_PERSONA := &"persona"
-const ASPECTS: Array[StringName] = [
-	ASPECT_LAMP,
-	ASPECT_MIRROR,
-	ASPECT_GAUZE,
-	ASPECT_PILLOW,
+const PERSONA_NIGHTWALKER := &"nightwalker"
+const PERSONA_MOURNER := &"mourner"
+const PERSONA_DREAMWALKER := &"dreamwalker"
+const PERSONA_HOMECOMER := &"homecomer"
+const PERSONAS: Array[StringName] = [
+	PERSONA_NIGHTWALKER,
+	PERSONA_MOURNER,
+	PERSONA_DREAMWALKER,
+	PERSONA_HOMECOMER,
 ]
-const PERSONA_EASE := &"ease"
-const PERSONA_REVERIE := &"reverie"
-const PERSONA_REMINISCENCE := &"reminiscence"
-const PERSONA_CLARITY := &"clarity"
-const PROTAGONIST_STATS: Array[StringName] = [
-	PERSONA_EASE,
-	PERSONA_REVERIE,
-	PERSONA_REMINISCENCE,
-	PERSONA_CLARITY,
-]
-const PERSONA_ASPECTS := {
-	PERSONA_EASE: ASPECT_PILLOW,
-	PERSONA_REVERIE: ASPECT_GAUZE,
-	PERSONA_REMINISCENCE: ASPECT_MIRROR,
-	PERSONA_CLARITY: ASPECT_LAMP,
-}
 
 @export var values: Dictionary = {}
 @export var tags: Array[StringName] = []
@@ -56,16 +40,12 @@ func property_count() -> int:
 	return property_ids().size()
 
 
-func present_aspects() -> Array[StringName]:
+func present_personas() -> Array[StringName]:
 	var result: Array[StringName] = []
-	for aspect in ASPECTS:
-		if has(aspect):
-			result.append(aspect)
+	for persona_id in PERSONAS:
+		if has(persona_id):
+			result.append(persona_id)
 	return result
-
-
-static func aspect_for_persona(persona_id: StringName) -> StringName:
-	return StringName(PERSONA_ASPECTS.get(persona_id, &""))
 
 
 func validation_errors() -> PackedStringArray:
@@ -78,8 +58,8 @@ func validation_errors() -> PackedStringArray:
 			errors.append("Property tag %s cannot be repeated." % tag)
 		elif values.has(tag) or values.has(String(tag)):
 			errors.append("Property %s cannot be both a tag and a scaled value." % tag)
-		elif tag in ASPECTS:
-			errors.append("Night aspect %s must have a scaled value." % tag)
+		elif tag in PERSONAS:
+			errors.append("Persona %s must have a scaled value." % tag)
 		seen_tags[tag] = true
 	for raw_tag in values:
 		var tag := String(raw_tag)

@@ -41,7 +41,7 @@ func test_next_night_is_blocked_until_self_care_is_confirmed() -> void:
 
 func test_self_care_grows_each_persona_and_queues_first_reveals() -> void:
 	var state := QuestGameState.new()
-	state.protagonist_aspect_counts[&"reverie"] = 0
+	state.protagonist_persona_counts[&"dreamwalker"] = 0
 	_unlock_toy_shop(state)
 	var self_care := state.task_instance_for_definition(&"self_care")
 	var kaleidoscope := state.grant_item(&"kaleidoscope", &"test")
@@ -49,10 +49,10 @@ func test_self_care_grows_each_persona_and_queues_first_reveals() -> void:
 	assert_true(state.confirm_task(self_care.instance_id).ok)
 	assert_true(state.begin_next_day().ok)
 	assert_true(state.apply_arc_effects().ok)
-	assert_eq(int(state.protagonist_aspect_counts[&"reverie"]), 1)
-	assert_eq(int(state.protagonist_aspect_counts[&"reminiscence"]), 1)
-	assert_true(&"reverie" in state.pending_persona_reveal_ids)
-	assert_true(&"reminiscence" in state.pending_persona_reveal_ids)
+	assert_eq(int(state.protagonist_persona_counts[&"dreamwalker"]), 1)
+	assert_eq(int(state.protagonist_persona_counts[&"mourner"]), 1)
+	assert_true(&"dreamwalker" in state.pending_persona_reveal_ids)
+	assert_true(&"mourner" in state.pending_persona_reveal_ids)
 	assert_true(state.mark_arc_entry_shown())
 	assert_true(state.finish_arc().ok)
 	assert_not_null(state.task_instance_for_definition(&"self_care"))
@@ -61,14 +61,14 @@ func test_self_care_grows_each_persona_and_queues_first_reveals() -> void:
 func test_self_care_growth_uses_ceil_of_half_the_positive_difference() -> void:
 	var state := QuestGameState.new()
 	_unlock_toy_shop(state)
-	state.protagonist_aspect_counts[&"reverie"] = 1
+	state.protagonist_persona_counts[&"dreamwalker"] = 1
 	var self_care := state.task_instance_for_definition(&"self_care")
 	var rose := state.grant_item(&"midnight_rose", &"test")
 	assert_true(state.assign_card(self_care.instance_id, &"self_care_item", rose).ok)
 	assert_true(state.confirm_task(self_care.instance_id).ok)
 	assert_true(state.begin_next_day().ok)
 	assert_true(state.apply_arc_effects().ok)
-	assert_eq(int(state.protagonist_aspect_counts[&"reverie"]), 3)
+	assert_eq(int(state.protagonist_persona_counts[&"dreamwalker"]), 3)
 
 
 func test_self_care_blocks_every_category_used_in_the_previous_two_nights() -> void:
@@ -119,8 +119,8 @@ func test_store_visibility_and_persona_unlocks_follow_the_opening_chain() -> voi
 	assert_false(state.is_store_visible(&"bookstore"))
 	var food := state.grant_item(&"mung_bean_cake", &"test")
 	assert_true(state.unlock_store(&"fast_food", food).ok)
-	state.protagonist_aspect_counts[&"clarity"] = 1
-	var nightwalker := PersonaMaskCatalog.card_for_persona(&"clarity")
+	state.protagonist_persona_counts[&"nightwalker"] = 1
+	var nightwalker := PersonaMaskCatalog.card_for_persona(&"nightwalker")
 	PersonaMaskCatalog.sync_selection(&"")
 	var flower_unlock := state.unlock_store(&"flower", nightwalker)
 	assert_true(flower_unlock.ok)
@@ -133,11 +133,11 @@ func test_store_visibility_and_persona_unlocks_follow_the_opening_chain() -> voi
 func test_bookstore_needs_level_three_nightwalker_or_dreamwalker() -> void:
 	var state := QuestGameState.new()
 	state.unlocked_store_ids = {&"toy": true, &"fast_food": true, &"flower": true}
-	var nightwalker := PersonaMaskCatalog.card_for_persona(&"clarity")
+	var nightwalker := PersonaMaskCatalog.card_for_persona(&"nightwalker")
 	PersonaMaskCatalog.sync_selection(&"")
-	state.protagonist_aspect_counts[&"clarity"] = 2
+	state.protagonist_persona_counts[&"nightwalker"] = 2
 	assert_false(state.unlock_store(&"bookstore", nightwalker).ok)
-	state.protagonist_aspect_counts[&"clarity"] = 3
+	state.protagonist_persona_counts[&"nightwalker"] = 3
 	assert_true(state.unlock_store(&"bookstore", nightwalker).ok)
 	assert_eq(nightwalker.location, CardItemState.Location.HAND)
 

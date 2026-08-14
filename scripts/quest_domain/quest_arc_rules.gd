@@ -2,30 +2,32 @@ class_name QuestArcRules
 extends RefCounted
 
 
-static func dominant_aspect(
+static func dominant_persona(
 	items: Array[CardItemDefinition],
-	aspects: Array[StringName],
+	personas: Array[StringName],
 	tie_priority: Array[StringName] = [],
 ) -> StringName:
-	if aspects.is_empty():
+	if personas.is_empty():
 		return &""
 	var totals: Dictionary = {}
 	var highest := -1
-	for aspect in aspects:
-		totals[aspect] = 0
+	for persona_id in personas:
+		totals[persona_id] = 0
 	for item in items:
 		if item == null:
 			continue
-		for aspect in aspects:
-			totals[aspect] = int(totals[aspect]) + item.property_value(aspect)
-			highest = maxi(highest, int(totals[aspect]))
+		for persona_id in personas:
+			totals[persona_id] = (
+				int(totals[persona_id]) + item.property_value(persona_id)
+			)
+			highest = maxi(highest, int(totals[persona_id]))
 	var tied: Array[StringName] = []
-	for aspect in aspects:
-		if int(totals[aspect]) == highest:
-			tied.append(aspect)
-	for aspect in tie_priority:
-		if aspect in tied:
-			return aspect
+	for persona_id in personas:
+		if int(totals[persona_id]) == highest:
+			tied.append(persona_id)
+	for persona_id in tie_priority:
+		if persona_id in tied:
+			return persona_id
 	return tied[0] if not tied.is_empty() else &""
 
 
@@ -56,7 +58,11 @@ static func outcome_for(
 		"day": day,
 		"story_flags": story_flags,
 		"completed_tasks": completed_tasks,
-		"dominant_aspect": dominant_aspect(items, task.tie_priority, task.tie_priority),
+		"dominant_persona": dominant_persona(
+			items,
+			task.persona_tie_priority,
+			task.persona_tie_priority,
+		),
 	}
 	for outcome in sorted_outcomes:
 		if _conditions_match(outcome.conditions, context):
@@ -101,6 +107,6 @@ static func _condition_matches(condition: StoryCondition, context: Dictionary) -
 			return items.any(func(item: CardItemDefinition) -> bool:
 				return item != null and item.has_property(condition.key)
 			)
-		StoryCondition.Kind.DOMINANT_ASPECT:
-			return StringName(context.dominant_aspect) == condition.key
+		StoryCondition.Kind.DOMINANT_PERSONA:
+			return StringName(context.dominant_persona) == condition.key
 	return false

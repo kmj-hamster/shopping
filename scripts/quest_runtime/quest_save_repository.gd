@@ -1,8 +1,8 @@
 class_name QuestSaveRepository
 extends RefCounted
 
-const SAVE_VERSION := 8
-const CONTENT_VERSION := "opening-demo-1"
+const SAVE_VERSION := 9
+const CONTENT_VERSION := "persona-crafting-1"
 const DEFAULT_PATH := "user://save_shopping0807_v1.json"
 
 var save_path: String
@@ -96,9 +96,8 @@ func to_dictionary(state: QuestGameState) -> Dictionary:
 		"task_instances": tasks,
 		"task_history": _string_dictionary(state.task_history),
 		"story_flags": _string_dictionary(state.story_flags),
-		"protagonist_aspect_counts": _string_int_dictionary(state.protagonist_aspect_counts),
+		"protagonist_persona_counts": _string_int_dictionary(state.protagonist_persona_counts),
 		"unlocked_store_ids": _string_array(state.unlocked_store_ids.keys()),
-		"known_recipe_hint_ids": _string_array(state.known_recipe_hint_ids.keys()),
 		"discovered_recipe_ids": _string_array(state.discovered_recipe_ids.keys()),
 		"owner_states": _string_dictionary(state.owner_states),
 		"self_care_category_history": _serialize_category_history(
@@ -157,14 +156,13 @@ func _restore(state: QuestGameState, payload: Dictionary) -> bool:
 		state.task_instances.append(instance)
 	state.task_history = _name_dictionary(payload.get("task_history", {}))
 	state.story_flags = _name_dictionary(payload.get("story_flags", {}))
-	state.protagonist_aspect_counts = _name_int_dictionary(
-		payload.get("protagonist_aspect_counts", {})
+	state.protagonist_persona_counts = _name_int_dictionary(
+		payload.get("protagonist_persona_counts", {})
 	)
-	for stat_id in CardPropertySet.PROTAGONIST_STATS:
-		if not state.protagonist_aspect_counts.has(stat_id):
-			state.protagonist_aspect_counts[stat_id] = 0
+	for stat_id in CardPropertySet.PERSONAS:
+		if not state.protagonist_persona_counts.has(stat_id):
+			state.protagonist_persona_counts[stat_id] = 0
 	state.unlocked_store_ids = _name_set(payload.get("unlocked_store_ids", []))
-	state.known_recipe_hint_ids = _name_set(payload.get("known_recipe_hint_ids", []))
 	state.discovered_recipe_ids = _name_set(payload.get("discovered_recipe_ids", []))
 	state.owner_states = _name_dictionary(payload.get("owner_states", {}))
 	state.self_care_category_history = _restore_category_history(
@@ -180,7 +178,7 @@ func _restore(state: QuestGameState, payload: Dictionary) -> bool:
 	state.pending_arc = _restore_arc(payload.get("pending_arc", {}))
 	# Synthesis placement is a screen-local draft and never survives loading.
 	state.synthesis_base_instance_id = 0
-	state.synthesis_fuel_instance_id = 0
+	state.synthesis_helper_instance_id = 0
 	state.synthesis_persona_id = &""
 	state.synthesis_candidate_recipe_id = &""
 	for card in state.inventory:

@@ -18,8 +18,8 @@ func validation_errors() -> PackedStringArray:
 	if property_set != null:
 		if property_set.property_count() > 4:
 			errors.append("Item %s cannot have more than four properties." % id)
-		if property_set.present_aspects().size() > 2:
-			errors.append("Item %s cannot have more than two night aspects." % id)
+		if property_set.present_personas().size() > 2:
+			errors.append("Item %s cannot have more than two personas." % id)
 	if supply_mode == SupplyMode.CRAFT_ONLY and not is_crafted:
 		errors.append("Craft-only item %s must be marked crafted." % id)
 	if is_crafted and supply_mode != SupplyMode.CRAFT_ONLY:

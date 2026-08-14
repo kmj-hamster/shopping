@@ -386,7 +386,7 @@ func _show_next_persona_reveal() -> void:
 	persona_reveal_hint.text = TranslationServer.translate(&"opening.ui.persona.flip")
 	persona_reveal_back.visible = true
 	persona_reveal_card.visible = false
-	var amount := int(state.protagonist_aspect_counts.get(persona_reveal_persona_id, 0))
+	var amount := int(state.protagonist_persona_counts.get(persona_reveal_persona_id, 0))
 	persona_reveal_card.setup(
 		PersonaMaskCatalog.card_for_persona(persona_reveal_persona_id),
 		PersonaMaskCatalog.definition_for_persona(persona_reveal_persona_id, amount),
@@ -512,7 +512,8 @@ func _show_synthesis_immediate() -> void:
 		synthesis_interface.card_staging_changed.connect(_on_card_staging_changed)
 		synthesis_interface.details_cleared.connect(_close_detail_popups)
 		synthesis_interface.background_pressed.connect(_on_activity_background_pressed)
-		screen_host.add_child(synthesis_interface)
+		synthesis_interface.z_index = 1
+		art_canvas.add_child(synthesis_interface)
 		synthesis_interface.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_activate_screen(synthesis_interface)
 	synthesis_interface.refresh()
@@ -522,6 +523,16 @@ func _show_synthesis_immediate() -> void:
 
 func _set_global_frame(scene_id: StringName) -> void:
 	if global_frame == null:
+		return
+	var synthesis_scene := scene_id == &"synthesis"
+	global_frame.visible = not synthesis_scene
+	if task_dock != null:
+		task_dock.visible = not synthesis_scene
+		if synthesis_scene:
+			task_dock.close_open_task()
+	if task_popup_layer != null:
+		task_popup_layer.visible = not synthesis_scene
+	if synthesis_scene:
 		return
 	var texture_path := String(FRAME_TEXTURE_PATHS.get(scene_id, FRAME_TEXTURE_PATHS[&"map"]))
 	if global_frame.texture == null or global_frame.texture.resource_path != texture_path:

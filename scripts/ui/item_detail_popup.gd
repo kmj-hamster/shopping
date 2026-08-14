@@ -450,13 +450,13 @@ func _ensure_property_view(tag: StringName) -> Dictionary:
 
 func _ordered_property_tags(properties: CardPropertySet) -> Array[StringName]:
 	var result: Array[StringName] = []
-	for aspect in CardPropertySet.ASPECTS:
-		if properties.has(aspect):
-			result.append(aspect)
+	for persona_id in CardPropertySet.PERSONAS:
+		if properties.has(persona_id):
+			result.append(persona_id)
 	var remaining: Array[StringName] = []
 	for raw_tag in properties.property_ids():
 		var tag := StringName(raw_tag)
-		if tag not in CardPropertySet.ASPECTS and properties.has(tag):
+		if tag not in CardPropertySet.PERSONAS and properties.has(tag):
 			remaining.append(tag)
 	remaining.sort()
 	result.append_array(remaining)
@@ -593,10 +593,10 @@ static func property_icon_texture(tag: StringName) -> Texture2D:
 	var paths := {
 		&"food": "res://resources/ui/property-food.png",
 		&"salty": "res://resources/ui/property-salty.png",
-		&"lamp": "res://resources/ui/property-lamp.svg",
-		&"mirror": "res://resources/ui/property-mirror.svg",
-		&"gauze": "res://resources/ui/property-gauze.svg",
-		&"pillow": "res://resources/ui/property-pillow.svg",
+		&"nightwalker": "res://resources/ui/persona/nightwalker.png",
+		&"mourner": "res://resources/ui/persona/mourner.png",
+		&"dreamwalker": "res://resources/ui/persona/dreamwalker.png",
+		&"homecomer": "res://resources/ui/persona/homecomer.png",
 		&"plant": "res://resources/ui/property-plant.png",
 		&"flower": "res://resources/ui/property-plant.png",
 		&"rose": "res://resources/item-midnight-rose.svg",
@@ -612,10 +612,10 @@ static func property_icon_texture(tag: StringName) -> Texture2D:
 
 static func property_symbol(tag: StringName) -> String:
 	var symbols := {
-		&"lamp": "✦",
-		&"mirror": "◇",
-		&"gauze": "≋",
-		&"pillow": "▱",
+		&"nightwalker": "✦",
+		&"mourner": "◇",
+		&"dreamwalker": "▽",
+		&"homecomer": "▱",
 		&"food": "●",
 		&"salty": "≋",
 		&"plant": "♧",

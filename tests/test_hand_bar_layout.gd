@@ -63,14 +63,13 @@ func test_items_and_live_persona_cards_share_one_hand_without_entering_inventory
 	for persona_id in PersonaMaskCatalog.MASK_PERSONAS:
 		var card := PersonaMaskCatalog.card_for_persona(persona_id)
 		var view := hand.card_views[card.instance_id] as CardHandCard
-		var aspect := CardPropertySet.aspect_for_persona(persona_id)
 		assert_true(view.definition.has_property(CardPropertySet.PROPERTY_PERSONA))
 		assert_eq(
-			view.definition.property_value(aspect),
-			int(main.state.protagonist_aspect_counts[persona_id]),
+			view.definition.property_value(persona_id),
+			int(main.state.protagonist_persona_counts[persona_id]),
 		)
 		assert_true(view.value_label.visible)
-		assert_eq(view.value_label.text, str(main.state.protagonist_aspect_counts[persona_id]))
+		assert_eq(view.value_label.text, str(main.state.protagonist_persona_counts[persona_id]))
 	assert_eq(main.state.inventory.size(), inventory_count)
 	var first_persona := hand.mask_persona_order[0]
 	var first_mask_card := PersonaMaskCatalog.card_for_persona(first_persona)

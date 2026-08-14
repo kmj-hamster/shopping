@@ -4,8 +4,8 @@ extends Resource
 enum Kind {
 	ADD_MONEY,
 	SET_FLAG,
-	ADD_PROTAGONIST_ASPECT,
-	UNLOCK_RECIPE_HINT,
+	ADD_PROTAGONIST_PERSONA,
+	DISCOVER_RECIPE,
 	ACTIVATE_TASK,
 	SET_OWNER_STATE,
 	UNLOCK_STORE,
@@ -24,9 +24,9 @@ func validation_errors() -> PackedStringArray:
 		Kind.ADD_MONEY:
 			if amount < 0:
 				errors.append("Money effects cannot remove money in this content layer.")
-		Kind.ADD_PROTAGONIST_ASPECT:
-			if target_id not in CardPropertySet.PROTAGONIST_STATS or amount <= 0:
-				errors.append("Aspect effects need a known aspect and positive amount.")
+		Kind.ADD_PROTAGONIST_PERSONA:
+			if target_id not in CardPropertySet.PERSONAS or amount <= 0:
+				errors.append("Persona effects need a known persona and positive amount.")
 		Kind.SET_FLAG:
 			if target_id.is_empty() or text_value.is_empty():
 				errors.append("Flag effects need a key and value.")

@@ -40,6 +40,13 @@ const RUNTIME_UI_KEYS: Array[StringName] = [
 	&"demo.ui.synthesis.totals",
 	&"demo.ui.synthesis.unknown_candidate",
 	&"quest.ui.synthesis.action",
+	&"quest.ui.synthesis.strengthen",
+	&"quest.ui.synthesis.reinforcement",
+	&"quest.ui.synthesis.reinforcement.description",
+	&"quest.ui.synthesis.borrow_self",
+	&"quest.ui.synthesis.borrow_item",
+	&"quest.ui.synthesis.possibility.title",
+	&"quest.ui.synthesis.possibility.default",
 	&"quest.ui.synthesis.title",
 	&"quest.ui.task.gift",
 	&"quest.ui.task.not_ready",
@@ -87,13 +94,14 @@ func test_all_quest_arc_content_keys_exist_in_chinese_and_english() -> void:
 		var recipe := raw_recipe as SynthesisRecipeDefinition
 		keys.append(recipe.display_name_key)
 		keys.append(recipe.base_rule.display_name_key)
+		keys.append(recipe.possibility_hint_key)
 		for process_text_key in recipe.process_text_keys:
 			keys.append(process_text_key)
 	for persona_id in PersonaMaskCatalog.MASK_PERSONAS:
 		var mask := PersonaMaskCatalog.definition_for_persona(persona_id, 1)
 		keys.append(mask.display_name_key)
 		keys.append(mask.description_key)
-	for role_id in [&"base", &"fuel", &"mask"]:
+	for role_id in [&"base", &"helper", &"persona"]:
 		keys.append(StringName("demo.ui.synthesis.%s" % role_id))
 		keys.append(StringName("demo.ui.synthesis.%s.description" % role_id))
 	keys.append_array(RUNTIME_UI_KEYS)
@@ -122,27 +130,27 @@ func test_all_quest_arc_content_keys_exist_in_chinese_and_english() -> void:
 			assert_ne(TranslationServer.translate(key), String(key), "%s missing in %s" % [key, locale])
 
 
-func test_night_form_descriptions_match_each_sleepless_role() -> void:
+func test_persona_descriptions_match_each_confirmed_role() -> void:
 	var expected_descriptions := {
 		&"zh_CN": {
-			&"lamp": "交流电，明亮的街角，飞蛾噼啪作响。夜晚使我的头脑更加清醒。[夜之形，理性、好奇，致所有夜行者。]",
-			&"gauze": "远古鱼游过卧室的墙，湿漉漉的水泥枝条开满白花，夜晚使我的灵感无所遁形。[夜之形，幻觉、随想，致所有梦游者。]",
-			&"mirror": "看见我，你就看到了另一个自己。握住我，你就握住了自己的另一只手。夜晚使我想起忧伤之事。[夜之形，共情、怀旧，致所有悼念者。]",
-			&"pillow": "凉爽的鹅绒被，床头的薰衣草，天明前的片刻慰藉。祝你今夜好眠，今夜。[夜之形，享受、安歇，致所有倦归者。]",
+			&"nightwalker": "循着路灯走过长夜的面相：理性、好奇。",
+			&"dreamwalker": "举杯步入想象与随想的面相：幻觉、灵感。",
+			&"mourner": "在镜中守望失去之物的面相：共情、怀旧。",
+			&"homecomer": "倦意引领归途与安歇的面相：享受、慰藉。",
 		},
 		&"en": {
-			&"lamp": "Alternating current, a brightly lit street corner, moths crackling in the light. Night makes my mind clearer. [A form of the night: reason and curiosity, for all Nightwalkers.]",
-			&"gauze": "Ancient fish swim across the bedroom wall; damp concrete branches bloom with white flowers. Night leaves my inspiration nowhere to hide. [A form of the night: hallucination and reverie, for all Dreamwalkers.]",
-			&"mirror": "See me, and you see another you. Hold me, and you hold your own other hand. Night makes me remember sorrowful things. [A form of the night: empathy and nostalgia, for all Mourners.]",
-			&"pillow": "A cool goose-down duvet, lavender at the bedside, a moment of comfort before dawn. Sleep well tonight, tonight. [A form of the night: pleasure and repose, for all Homecomers.]",
+			&"nightwalker": "A Persona that follows streetlamps through the long night: reason and curiosity.",
+			&"dreamwalker": "A Persona that raises a glass to hallucination and inspiration.",
+			&"mourner": "A Persona that keeps watch over what was lost in the mirror: empathy and nostalgia.",
+			&"homecomer": "A Persona whom weariness guides home to rest: pleasure and comfort.",
 		},
 	}
 	for locale in expected_descriptions:
 		TranslationServer.set_locale(locale)
-		for aspect_id in expected_descriptions[locale]:
-			var property := QuestArcCatalog.property_by_id(aspect_id)
+		for persona_id in expected_descriptions[locale]:
+			var property := QuestArcCatalog.property_by_id(persona_id)
 			assert_eq(
 				TranslationServer.translate(property.description_key),
-				expected_descriptions[locale][aspect_id],
-				"%s description should match in %s" % [aspect_id, locale],
+				expected_descriptions[locale][persona_id],
+				"%s description should match in %s" % [persona_id, locale],
 			)

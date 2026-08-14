@@ -60,7 +60,7 @@ func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 	var persona_id := PersonaMaskCatalog.persona_for_card(card)
 	if not is_owned_item and (
 		persona_id.is_empty()
-		or int(state.protagonist_aspect_counts.get(persona_id, 0)) <= 0
+		or int(state.protagonist_persona_counts.get(persona_id, 0)) <= 0
 	):
 		return false
 	return CardRuleEvaluator.can_execute(rule, definition)

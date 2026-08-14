@@ -76,23 +76,6 @@ msgid "quest.property.warm.name"
 msgstr "温暖"
 msgid "quest.property.warm.description"
 msgstr "能留在手心或纸袋里的热度。"
-msgid "quest.property.lamp.name"
-msgstr "灯"
-msgid "quest.property.lamp.description"
-msgstr "交流电、夜晚街角与清醒的夜游者。"
-msgid "quest.property.mirror.name"
-msgstr "镜"
-msgid "quest.property.mirror.description"
-msgstr "静室、追忆、铭记与自省的忧伤。"
-msgid "quest.property.candle.name"
-msgstr "烛"
-msgid "quest.property.candle.description"
-msgstr "幻觉、随想，以及游过卧室墙壁的远古鱼。"
-msgid "quest.property.pillow.name"
-msgstr "枕"
-msgid "quest.property.pillow.description"
-msgstr "鹅绒被、薰衣草与天明前的片刻慰藉。"
-
 msgid "quest.item.book_bedtime_clipping.name"
 msgstr "睡前故事剪报"
 msgid "quest.item.book_bedtime_clipping.description"
@@ -445,6 +428,20 @@ msgid "quest.ui.synthesis.working"
 msgstr "纸袋深处传来很轻的摩擦声……"
 msgid "quest.ui.synthesis.action"
 msgstr "合成"
+msgid "quest.ui.synthesis.strengthen"
+msgstr "强化"
+msgid "quest.ui.synthesis.reinforcement"
+msgstr "强化"
+msgid "quest.ui.synthesis.reinforcement.description"
+msgstr "可以借助一种自己的面相、一件物品，或同时借助两者。"
+msgid "quest.ui.synthesis.borrow_self"
+msgstr "借助自己"
+msgid "quest.ui.synthesis.borrow_item"
+msgstr "借助物品"
+msgid "quest.ui.synthesis.possibility.title"
+msgstr "可能性"
+msgid "quest.ui.synthesis.possibility.default"
+msgstr "不是想象有什么，而是忘了没有什么。"
 msgid "quest.ui.synthesis.known_hint"
 msgstr "有人向你暗示过这种形状。"
 msgid "quest.ui.synthesis.unknown_hint"
@@ -473,14 +470,6 @@ msgid "demo.property.tool.name"
 msgstr "工具"
 msgid "demo.property.tool.description"
 msgstr "为了改变其他事物而被制造的东西。"
-msgid "demo.property.lamp.name"
-msgstr "灯"
-msgid "demo.property.lamp.description"
-msgstr "交流电，明亮的街角，飞蛾噼啪作响。夜晚使我的头脑更加清醒。[夜之形，理性、好奇，致所有夜行者。]"
-msgid "demo.property.mirror.name"
-msgstr "镜"
-msgid "demo.property.mirror.description"
-msgstr "看见我，你就看到了另一个自己。握住我，你就握住了自己的另一只手。夜晚使我想起忧伤之事。[夜之形，共情、怀旧，致所有悼念者。]"
 msgid "demo.stat.fantasy.name"
 msgstr "幻想"
 msgid "demo.stat.fantasy.description"
@@ -551,15 +540,6 @@ msgstr "红色天鹅绒窗帘透出留声机的影子。听说店主对人毫无
 msgid "demo.unlock.record.result"
 msgstr "唱片店已解锁。"
 
-msgid "demo.recipe.scissors.name"
-msgstr "剪刀"
-msgid "demo.recipe.scissors.slot.metal"
-msgstr "金属原料"
-msgid "demo.recipe.scissors.slot.lamp"
-msgstr "灯的影响"
-msgid "demo.recipe.scissors.preview"
-msgstr "咔嚓、咔嚓、咔嚓——【以金属为原料，加上灯的影响，可以合成剪刀。】"
-
 msgid "demo.property.flower.name"
 msgstr "花"
 
@@ -583,42 +563,6 @@ msgstr "泰迪熊"
 
 msgid "demo.property.teddy_bear.description"
 msgstr "一只熊形玩偶留下的特殊轮廓。"
-
-msgid "demo.property.gauze.name"
-msgstr "纱"
-
-msgid "demo.property.gauze.description"
-msgstr "远古鱼游过卧室的墙，湿漉漉的水泥枝条开满白花，夜晚使我的灵感无所遁形。[夜之形，幻觉、随想，致所有梦游者。]"
-
-msgid "demo.property.pillow.name"
-msgstr "枕"
-
-msgid "demo.property.pillow.description"
-msgstr "凉爽的鹅绒被，床头的薰衣草，天明前的片刻慰藉。祝你今夜好眠，今夜。[夜之形，享受、安歇，致所有倦归者。]"
-
-msgid "demo.persona.ease.name"
-msgstr "安逸"
-
-msgid "demo.persona.ease.description"
-msgstr "你对休息与被包裹的理解。它只提供枕。"
-
-msgid "demo.persona.reverie.name"
-msgstr "遐思"
-
-msgid "demo.persona.reverie.description"
-msgstr "你让不存在之物显形的想象。它只提供纱。"
-
-msgid "demo.persona.reminiscence.name"
-msgstr "追忆"
-
-msgid "demo.persona.reminiscence.description"
-msgstr "你从旧物中看见过去的能力。它只提供镜。"
-
-msgid "demo.persona.clarity.name"
-msgstr "清明"
-
-msgid "demo.persona.clarity.description"
-msgstr "你照亮并辨认轮廓的能力。它只提供灯。"
 
 msgid "demo.item.toy_block.name"
 msgstr "旧积木"
@@ -654,13 +598,13 @@ msgid "demo.item.soft_gauze.name"
 msgstr "柔软纱布"
 
 msgid "demo.item.soft_gauze.description"
-msgstr "一小块带着纱2与枕2的柔软布料，可以作为燃料在合成时提供性相。"
+msgstr "一小块轻得像从睡梦里剪下来的柔软布料。"
 
 msgid "demo.item.mirror_shard.name"
 msgstr "旧镜片"
 
 msgid "demo.item.mirror_shard.description"
-msgstr "一枚带着镜2与灯2的旧镜片，可以作为燃料在合成时提供性相。"
+msgstr "边缘已经磨钝的旧镜片，仍留着微弱的反光。"
 
 msgid "demo.recipe.base.flower"
 msgstr "任意花"
@@ -731,53 +675,53 @@ msgstr "原料"
 msgid "demo.ui.synthesis.base.description"
 msgstr "我需要一件确切的物品，以施加想象。[原料提供其全部属性]"
 
-msgid "demo.ui.synthesis.fuel"
-msgstr "引子"
+msgid "demo.ui.synthesis.helper"
+msgstr "借助物品"
 
-msgid "demo.ui.synthesis.fuel.description"
-msgstr "这件东西让我对夜晚更加了解，暂时。[引子仅提供夜之形，且会被消耗。]"
+msgid "demo.ui.synthesis.helper.description"
+msgstr "借助一件物品，将它的全部面相加入合成。合成成功后，这件物品会被消耗。"
 
-msgid "demo.ui.synthesis.mask"
-msgstr "我"
+msgid "demo.ui.synthesis.persona"
+msgstr "借助自己"
 
-msgid "demo.ui.synthesis.mask.description"
-msgstr "我是哪一种不眠者？[利用我的能力提供夜之形。面具不会被消耗。]"
+msgid "demo.ui.synthesis.persona.description"
+msgstr "选择自己的一种面相，将它当前的等级加入合成。面相不会被消耗。"
 
 msgid "quest.ui.hand.items"
 msgstr "物品"
 
 msgid "quest.ui.hand.masks"
-msgstr "面具"
+msgstr "面相"
 
 msgid "demo.property.persona.name"
-msgstr "面具"
+msgstr "面相"
 
 msgid "demo.property.persona.description"
-msgstr "标记你在夜里成为何种模样的面具。"
+msgstr "标记你如何感受并回应夜晚的面相。"
 
 msgid "demo.mask.nightwalker.name"
 msgstr "夜行者"
 
 msgid "demo.mask.nightwalker.description"
-msgstr "循着灯火走过长夜的面具。"
+msgstr "循着路灯走过长夜的面相：理性、好奇。"
 
 msgid "demo.mask.mourner.name"
 msgstr "悼念者"
 
 msgid "demo.mask.mourner.description"
-msgstr "在镜中守望失去之物的面具。"
+msgstr "在镜中守望失去之物的面相：共情、怀旧。"
 
 msgid "demo.mask.dreamwalker.name"
 msgstr "梦游者"
 
 msgid "demo.mask.dreamwalker.description"
-msgstr "沿着轻纱步入想象的面具。"
+msgstr "举杯步入想象与随想的面相：幻觉、灵感。"
 
 msgid "demo.mask.homecomer.name"
 msgstr "倦归者"
 
 msgid "demo.mask.homecomer.description"
-msgstr "倦意引领归途时戴上的面具。"
+msgstr "倦意引领归途与安歇的面相：享受、慰藉。"
 
 msgid "demo.ui.synthesis.candidates"
 msgstr "可能的形状"

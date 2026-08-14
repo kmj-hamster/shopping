@@ -17,7 +17,7 @@ func test_opening_ui_has_letters_pagination_tests_unlock_cards_and_three_visible
 	var main := await _spawn_main()
 	assert_eq(main.task_dock.bookmark_buttons.size(), 6)
 	assert_eq(main.state.inventory.size(), 3)
-	var dreamwalker := PersonaMaskCatalog.card_for_persona(&"reverie")
+	var dreamwalker := PersonaMaskCatalog.card_for_persona(&"dreamwalker")
 	assert_true(main.hand_bar.card_views.has(dreamwalker.instance_id))
 	for card in main.state.inventory:
 		assert_true(main.hand_bar.card_views.has(card.instance_id))
@@ -32,7 +32,7 @@ func test_opening_ui_has_letters_pagination_tests_unlock_cards_and_three_visible
 		assert_eq((hotspot as Button).tooltip_text, "")
 	main.hand_bar.show_tab(QuestHandBar.TAB_MASKS)
 	assert_eq(main.hand_bar.card_views.size(), 4)
-	assert_false(main.state.select_synthesis_persona(&"clarity"))
+	assert_false(main.state.select_synthesis_persona(&"nightwalker"))
 
 
 func test_money_letter_flips_to_plus_one_hundred_and_disappears_on_close() -> void:
@@ -233,7 +233,7 @@ func test_fast_food_bookstore_and_record_shop_show_lowered_owner_portraits() -> 
 func test_persona_first_acquisition_reveals_each_new_mask_after_arc() -> void:
 	var main := await _spawn_main()
 	var state := main.state
-	state.protagonist_aspect_counts[&"reverie"] = 0
+	state.protagonist_persona_counts[&"dreamwalker"] = 0
 	var frog := state.grant_item(&"tin_frog", &"test")
 	assert_true(state.unlock_store(&"toy", frog).ok)
 	var self_care := state.task_instance_for_definition(&"self_care")

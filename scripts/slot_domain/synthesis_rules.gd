@@ -2,23 +2,22 @@ class_name SynthesisRules
 extends RefCounted
 
 
-static func aspect_totals(
+static func persona_totals(
 	base_item: CardItemDefinition,
-	fuel_item: CardItemDefinition,
+	helper_item: CardItemDefinition,
 	selected_persona_id: StringName,
 	protagonist_counts: Dictionary,
 ) -> Dictionary:
 	var totals: Dictionary = {}
-	for aspect in CardPropertySet.ASPECTS:
-		totals[aspect] = 0
-	for item in [base_item, fuel_item]:
+	for persona_id in CardPropertySet.PERSONAS:
+		totals[persona_id] = 0
+	for item in [base_item, helper_item]:
 		if item == null:
 			continue
-		for aspect in CardPropertySet.ASPECTS:
-			totals[aspect] = int(totals[aspect]) + item.property_value(aspect)
-	var persona_aspect := CardPropertySet.aspect_for_persona(selected_persona_id)
-	if not persona_aspect.is_empty():
-		totals[persona_aspect] = int(totals[persona_aspect]) + int(
+		for persona_id in CardPropertySet.PERSONAS:
+			totals[persona_id] = int(totals[persona_id]) + item.property_value(persona_id)
+	if selected_persona_id in CardPropertySet.PERSONAS:
+		totals[selected_persona_id] = int(totals[selected_persona_id]) + int(
 			protagonist_counts.get(selected_persona_id, 0)
 		)
 	return totals
@@ -34,20 +33,18 @@ static func evaluate_candidate(
 	var base_evaluation := CardRuleEvaluator.evaluate(recipe.base_rule, base_item)
 	if not base_evaluation.can_execute:
 		return _result(false, false, {}, &"")
-	var has_corresponding_aspects := true
 	var requirements_met := true
 	var missing: Dictionary = {}
-	for raw_aspect in recipe.required_aspects:
-		var aspect := StringName(raw_aspect)
-		var required := recipe.required_value(aspect)
-		var actual := int(totals.get(aspect, 0))
-		has_corresponding_aspects = has_corresponding_aspects and actual > 0
+	for raw_persona in recipe.required_personas:
+		var persona_id := StringName(raw_persona)
+		var required := recipe.required_value(persona_id)
+		var actual := int(totals.get(persona_id, 0))
 		requirements_met = requirements_met and actual >= required
 		if actual < required:
-			missing[aspect] = required - actual
+			missing[persona_id] = required - actual
 	return _result(
-		has_corresponding_aspects,
-		has_corresponding_aspects and requirements_met,
+		true,
+		requirements_met,
 		missing,
 		recipe.output_id,
 	)
@@ -56,12 +53,12 @@ static func evaluate_candidate(
 static func _result(
 	is_visible: bool,
 	is_complete: bool,
-	missing_aspects: Dictionary,
+	missing_personas: Dictionary,
 	output_id: StringName,
 ) -> Dictionary:
 	return {
 		"is_visible": is_visible,
 		"is_complete": is_complete,
-		"missing_aspects": missing_aspects,
+		"missing_personas": missing_personas,
 		"output_id": output_id,
 	}

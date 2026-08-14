@@ -3,20 +3,20 @@ extends Resource
 
 @export var id: StringName
 @export var display_name_key: StringName
-@export var known_at_start := false
 @export var unlock_owner_id: StringName
 @export_range(0, 20, 1) var unlock_level := 0
 @export var unlock_story_flag: StringName
 @export var base_rule: CardSlotRule
-@export var required_aspects: Dictionary = {}
+@export var required_personas: Dictionary = {}
+@export var possibility_hint_key: StringName = &"quest.ui.synthesis.possibility.default"
 @export var output_id: StringName
 @export var process_text_keys: Array[StringName] = []
 
 
-func required_value(aspect_id: StringName) -> int:
-	if required_aspects.has(aspect_id):
-		return int(required_aspects[aspect_id])
-	return int(required_aspects.get(String(aspect_id), 0))
+func required_value(persona_id: StringName) -> int:
+	if required_personas.has(persona_id):
+		return int(required_personas[persona_id])
+	return int(required_personas.get(String(persona_id), 0))
 
 
 func validation_errors() -> PackedStringArray:
@@ -31,13 +31,13 @@ func validation_errors() -> PackedStringArray:
 		errors.append("Recipe %s needs a base material rule." % id)
 	else:
 		errors.append_array(base_rule.validation_errors())
-	if required_aspects.is_empty():
-		errors.append("Recipe %s needs at least one aspect threshold." % id)
-	for raw_aspect in required_aspects:
-		var aspect := StringName(raw_aspect)
-		var amount := int(required_aspects[raw_aspect])
-		if aspect not in CardPropertySet.ASPECTS or amount < 1 or amount > 20:
-			errors.append("Recipe %s has an invalid threshold for %s." % [id, aspect])
+	if required_personas.is_empty() or required_personas.size() > 2:
+		errors.append("Recipe %s needs one or two persona thresholds." % id)
+	for raw_persona in required_personas:
+		var persona_id := StringName(raw_persona)
+		var amount := int(required_personas[raw_persona])
+		if persona_id not in CardPropertySet.PERSONAS or amount < 1 or amount > 20:
+			errors.append("Recipe %s has an invalid threshold for %s." % [id, persona_id])
 	if output_id.is_empty():
 		errors.append("Recipe %s needs an output item." % id)
 	if process_text_keys.is_empty():

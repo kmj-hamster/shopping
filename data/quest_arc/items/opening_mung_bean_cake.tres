@@ -7,7 +7,7 @@
 [sub_resource type="Resource" id="Props"]
 script = ExtResource("2_props")
 tags = Array[StringName]([&"food"])
-values = {&"mirror": 1}
+values = {&"mourner": 1}
 
 [resource]
 script = ExtResource("1_item")

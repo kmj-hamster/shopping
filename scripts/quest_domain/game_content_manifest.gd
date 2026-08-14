@@ -4,7 +4,7 @@ extends Resource
 @export_range(0, 20, 1) var initial_money := 0
 @export_range(1, 999, 1) var maximum_item_price := 20
 @export_range(1, 8, 1) var maximum_properties_per_item := 4
-@export_range(1, 4, 1) var maximum_aspects_per_item := 2
+@export_range(1, 4, 1) var maximum_personas_per_item := 2
 @export var initial_protagonist_stats: Dictionary = {}
 @export var starting_item_ids: Array[StringName] = []
 @export var properties: Array[Resource] = []
@@ -27,7 +27,7 @@ func validation_errors() -> PackedStringArray:
 	for item_id in starting_item_ids:
 		if not items_by_id.has(item_id):
 			errors.append("Starting inventory references missing item %s." % item_id)
-	for stat_id in CardPropertySet.PROTAGONIST_STATS:
+	for stat_id in CardPropertySet.PERSONAS:
 		var amount := int(initial_protagonist_stats.get(stat_id, 0))
 		if amount < 0 or amount > 20:
 			errors.append("Initial protagonist stat %s must be between 0 and 20." % stat_id)
@@ -49,8 +49,8 @@ func validation_errors() -> PackedStringArray:
 			errors.append("Item %s exceeds manifest price limit." % item.id)
 		if item.property_set.property_count() > maximum_properties_per_item:
 			errors.append("Item %s exceeds manifest property limit." % item.id)
-		if item.property_set.present_aspects().size() > maximum_aspects_per_item:
-			errors.append("Item %s exceeds manifest aspect limit." % item.id)
+		if item.property_set.present_personas().size() > maximum_personas_per_item:
+			errors.append("Item %s exceeds manifest persona limit." % item.id)
 	for raw_task in tasks:
 		var task := raw_task as TaskDefinition
 		if task != null:

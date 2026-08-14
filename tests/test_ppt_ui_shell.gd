@@ -1169,7 +1169,7 @@ func test_item_detail_icons_append_without_overlap_and_close_outside() -> void:
 		main.detail_popup.property_panel.get_theme_stylebox("panel") as StyleBoxFlat
 	)
 	assert_almost_eq(property_panel_style.bg_color.a, 0.5, 0.001)
-	var lamp_view := main.detail_popup.property_views[&"lamp"] as Dictionary
+	var lamp_view := main.detail_popup.property_views[&"nightwalker"] as Dictionary
 	var property_root := lamp_view.root as Control
 	var property_button := lamp_view.button as Button
 	var property_value := lamp_view.value as Label
@@ -1203,7 +1203,7 @@ func test_item_detail_icons_append_without_overlap_and_close_outside() -> void:
 	var base_icon := property_button.get_child(0) as TextureRect
 	assert_not_null(base_icon)
 	assert_not_null(base_icon.texture)
-	main.detail_popup._show_property(&"lamp")
+	main.detail_popup._show_property(&"nightwalker")
 	await get_tree().process_frame
 	await get_tree().process_frame
 	assert_true(main.detail_popup.detail_panel.visible)
@@ -1241,9 +1241,9 @@ func test_item_detail_icons_append_without_overlap_and_close_outside() -> void:
 	property_click.position = property_button.get_global_rect().get_center()
 	main.detail_popup._input(property_click)
 	assert_true(main.detail_popup.property_panel.visible)
-	main.detail_popup._show_property(&"lamp")
+	main.detail_popup._show_property(&"nightwalker")
 	assert_false(main.detail_popup.property_panel.visible)
-	main.detail_popup._show_property(&"lamp")
+	main.detail_popup._show_property(&"nightwalker")
 	await get_tree().process_frame
 	await get_tree().process_frame
 	assert_true(main.detail_popup.property_panel.visible)
@@ -1260,8 +1260,8 @@ func test_item_detail_icons_append_without_overlap_and_close_outside() -> void:
 	assert_true(main.detail_popup.detail_panel.visible)
 	main._show_item(QuestArcCatalog.item_by_id(&"fries"))
 	main._show_item(QuestArcCatalog.item_by_id(&"mirror_shard"))
-	assert_same((main.detail_popup.property_views[&"lamp"] as Dictionary).root, property_root)
-	assert_same((main.detail_popup.property_views[&"lamp"] as Dictionary).button, property_button)
+	assert_same((main.detail_popup.property_views[&"nightwalker"] as Dictionary).root, property_root)
+	assert_same((main.detail_popup.property_views[&"nightwalker"] as Dictionary).button, property_button)
 
 
 func test_synthesis_bag_property_opens_primary_top_right_popup() -> void:
@@ -1273,29 +1273,28 @@ func test_synthesis_bag_property_opens_primary_top_right_popup() -> void:
 	var synthesis := main.current_screen as QuestSynthesisInterface
 	assert_true(synthesis.stage_card(&"base", jasmine))
 	await get_tree().process_frame
-	var pillow_chip := synthesis.total_chip_views[&"pillow"] as Dictionary
-	var pillow_button := pillow_chip.button as Button
-	assert_true((pillow_chip.root as Control).visible)
-	assert_eq(pillow_button.mouse_filter, Control.MOUSE_FILTER_STOP)
-	assert_false(pillow_button.toggle_mode)
-	pillow_button.pressed.emit()
+	var homecomer_button := synthesis.persona_buttons[&"homecomer"] as Button
+	assert_true(homecomer_button.visible)
+	assert_eq(homecomer_button.mouse_filter, Control.MOUSE_FILTER_STOP)
+	assert_false(homecomer_button.toggle_mode)
+	homecomer_button.pressed.emit()
 	await get_tree().process_frame
 	assert_true(main.detail_popup.visible)
 	assert_true(main.detail_popup.detail_panel.visible)
 	assert_false(main.detail_popup.property_panel.visible)
 	assert_false(main.rule_detail_popup.visible)
-	assert_eq(main.detail_popup.primary_property_id, &"pillow")
+	assert_eq(main.detail_popup.primary_property_id, &"homecomer")
 	assert_null(main.detail_popup.current_definition)
 	assert_eq(main.detail_popup.detail_panel.offset_top, ItemDetailPopup.DETAIL_TOP)
 	assert_eq(
 		main.detail_popup.title_label.text,
-		TranslationServer.translate(ItemDetailPopup.property_name_key(&"pillow")),
+		TranslationServer.translate(ItemDetailPopup.property_name_key(&"homecomer")),
 	)
 	assert_eq(
 		main.detail_popup.description_label.text,
-		TranslationServer.translate(ItemDetailPopup.property_description_key(&"pillow")),
+		TranslationServer.translate(ItemDetailPopup.property_description_key(&"homecomer")),
 	)
-	pillow_button.pressed.emit()
+	homecomer_button.pressed.emit()
 	assert_false(main.detail_popup.visible)
 
 
@@ -1316,9 +1315,9 @@ func test_synthesis_is_a_material_first_dedicated_space() -> void:
 	var soft_gauze := main.state.inventory.filter(
 		func(card: CardItemState) -> bool: return card.definition_id == &"soft_gauze"
 	)[0] as CardItemState
-	assert_true(synthesis.stage_card(&"fuel", soft_gauze))
+	assert_true(synthesis.stage_card(&"helper", soft_gauze))
 	assert_true(synthesis.stage_card(
-		&"mask", PersonaMaskCatalog.card_for_persona(&"reverie")
+		&"persona", PersonaMaskCatalog.card_for_persona(&"dreamwalker")
 	))
 	await get_tree().process_frame
 	assert_true(synthesis.candidate_buttons.has(&"recipe_midnight_rose"))
@@ -1346,8 +1345,8 @@ func test_synthesis_result_flip_reuses_views_without_freeing_signal_emitter() ->
 	var soft_gauze := main.state.inventory.filter(
 		func(card: CardItemState) -> bool: return card.definition_id == &"soft_gauze"
 	)[0] as CardItemState
-	assert_true(synthesis.stage_card(&"fuel", soft_gauze))
-	assert_true(main.state.select_synthesis_persona(&"reverie"))
+	assert_true(synthesis.stage_card(&"helper", soft_gauze))
+	assert_true(main.state.select_synthesis_persona(&"dreamwalker"))
 	synthesis._on_candidate_pressed(&"recipe_midnight_rose")
 	synthesis._on_action_pressed()
 	assert_not_null(synthesis.pending_output)
@@ -1419,12 +1418,16 @@ func test_primary_screens_are_reused_across_navigation() -> void:
 	main._show_synthesis()
 	await get_tree().process_frame
 	assert_eq(main.bgm_director.active_track_id, QuestBgmDirector.TRACK_DEBUSSY)
-	assert_eq(main.global_frame.texture.resource_path, QuestMain.FRAME_TEXTURE_PATHS[&"synthesis"])
+	assert_false(main.global_frame.visible)
+	assert_false(main.task_dock.visible)
 	var synthesis := main.current_screen as QuestSynthesisInterface
+	assert_same(synthesis.get_parent(), main.art_canvas)
 	main._return_from_synthesis()
 	await get_tree().process_frame
 	assert_eq(main.bgm_director.active_track_id, QuestBgmDirector.TRACK_EMPTY)
 	assert_same(main.current_screen, map)
+	assert_true(main.global_frame.visible)
+	assert_true(main.task_dock.visible)
 	assert_eq(main.global_frame.texture.resource_path, QuestMain.FRAME_TEXTURE_PATHS[&"map"])
 	main._show_synthesis()
 	await get_tree().process_frame

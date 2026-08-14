@@ -84,33 +84,44 @@ func test_pending_arc_preserves_dynamic_persona_growth_without_duplicate_reward(
 	assert_not_null(restored.pending_arc)
 	assert_eq(restored.pending_arc.entries[0].item_definition_ids, [&"kaleidoscope"])
 	assert_eq(restored.pending_arc.entries[0].persona_growth, {
-		&"reverie": 1,
-		&"reminiscence": 1,
+		&"dreamwalker": 1,
+		&"mourner": 1,
 	})
 	assert_true(restored.apply_arc_effects().ok)
-	assert_eq(int(restored.protagonist_aspect_counts[&"reverie"]), 1)
-	assert_eq(int(restored.protagonist_aspect_counts[&"reminiscence"]), 1)
+	assert_eq(int(restored.protagonist_persona_counts[&"dreamwalker"]), 1)
+	assert_eq(int(restored.protagonist_persona_counts[&"mourner"]), 1)
 	assert_true(restored.apply_arc_effects().already_applied)
-	assert_eq(int(restored.protagonist_aspect_counts[&"reverie"]), 1)
+	assert_eq(int(restored.protagonist_persona_counts[&"dreamwalker"]), 1)
 
 
 func test_synthesis_placement_is_not_persisted() -> void:
 	var source := QuestGameState.new()
 	var jasmine := source.grant_item(&"jasmine", &"test")
 	var gardenia := source.grant_item(&"gardenia", &"test")
-	source.protagonist_aspect_counts[&"clarity"] = 1
+	source.protagonist_persona_counts[&"nightwalker"] = 1
 	assert_true(source.assign_synthesis_base(jasmine).ok)
-	assert_true(source.assign_synthesis_fuel(gardenia).ok)
-	assert_true(source.select_synthesis_persona(&"clarity"))
+	assert_true(source.assign_synthesis_helper(gardenia).ok)
+	assert_true(source.select_synthesis_persona(&"nightwalker"))
 	assert_true(repository.save(source))
 
 	var restored := QuestGameState.new()
 	assert_true(repository.load_into(restored).ok)
 	assert_eq(restored.synthesis_base_instance_id, 0)
-	assert_eq(restored.synthesis_fuel_instance_id, 0)
+	assert_eq(restored.synthesis_helper_instance_id, 0)
 	assert_true(restored.synthesis_persona_id.is_empty())
 	assert_eq(_card_by_definition(restored, &"jasmine").location, CardItemState.Location.HAND)
 	assert_eq(_card_by_definition(restored, &"gardenia").location, CardItemState.Location.HAND)
+
+
+func test_discovered_recipe_is_persisted_without_draft_inputs() -> void:
+	var source := QuestGameState.new()
+	source.discovered_recipe_ids[&"recipe_midnight_rose"] = true
+	assert_true(repository.save(source))
+	var restored := QuestGameState.new()
+	assert_true(repository.load_into(restored).ok)
+	assert_true(restored.discovered_recipe_ids.has(&"recipe_midnight_rose"))
+	assert_eq(restored.synthesis_base_instance_id, 0)
+	assert_eq(restored.synthesis_helper_instance_id, 0)
 
 
 func test_item_and_money_gift_states_survive_round_trip() -> void:
@@ -145,13 +156,13 @@ func test_self_care_history_and_pending_persona_reveals_survive_round_trip() -> 
 	assert_true(repository.load_into(restored).ok)
 	assert_true(&"flower" in restored.self_care_category_history[0].category_ids)
 	assert_true(&"toy" in restored.self_care_category_history[0].category_ids)
-	assert_true(&"reverie" in restored.pending_persona_reveal_ids)
-	assert_true(&"reminiscence" in restored.pending_persona_reveal_ids)
+	assert_true(&"dreamwalker" in restored.pending_persona_reveal_ids)
+	assert_true(&"mourner" in restored.pending_persona_reveal_ids)
 
 
 func _state_with_confirmed_self_care(item_id: StringName) -> QuestGameState:
 	var state := QuestGameState.new()
-	state.protagonist_aspect_counts[&"reverie"] = 0
+	state.protagonist_persona_counts[&"dreamwalker"] = 0
 	_unlock_toy_shop(state)
 	var task := state.task_instance_for_definition(&"self_care")
 	var item := state.grant_item(item_id, &"test")

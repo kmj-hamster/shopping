@@ -28,9 +28,8 @@ var inventory: Array[CardItemState] = []
 var task_instances: Array[TaskInstanceState] = []
 var task_history: Dictionary = {}
 var story_flags: Dictionary = {}
-var protagonist_aspect_counts: Dictionary = {}
+var protagonist_persona_counts: Dictionary = {}
 var unlocked_store_ids: Dictionary = {}
-var known_recipe_hint_ids: Dictionary = {}
 var discovered_recipe_ids: Dictionary = {}
 var owner_states: Dictionary = {}
 var self_care_category_history: Array[Dictionary] = []
@@ -39,7 +38,7 @@ var visited_store_ids: Dictionary = {}
 var bgm_playback_positions: Dictionary = {}
 var pending_arc: ArcTransitionState
 var synthesis_base_instance_id := 0
-var synthesis_fuel_instance_id := 0
+var synthesis_helper_instance_id := 0
 var synthesis_persona_id: StringName
 var synthesis_candidate_recipe_id: StringName
 var store_transactions: Dictionary = {}
@@ -67,9 +66,9 @@ func reset() -> void:
 	task_instances = []
 	task_history = {}
 	story_flags = {&"flower_request_available": &"true"}
-	protagonist_aspect_counts = {}
-	for stat_id in CardPropertySet.PROTAGONIST_STATS:
-		protagonist_aspect_counts[stat_id] = int(
+	protagonist_persona_counts = {}
+	for stat_id in CardPropertySet.PERSONAS:
+		protagonist_persona_counts[stat_id] = int(
 			content.initial_protagonist_stats.get(stat_id, 0) if content != null else 0
 		)
 	unlocked_store_ids = {}
@@ -78,7 +77,6 @@ func reset() -> void:
 			var store := raw_store as StoreDefinition
 			if store != null and store.initially_unlocked:
 				unlocked_store_ids[store.id] = true
-	known_recipe_hint_ids = {}
 	discovered_recipe_ids = {}
 	owner_states = {}
 	self_care_category_history = []
@@ -87,7 +85,7 @@ func reset() -> void:
 	bgm_playback_positions = {}
 	pending_arc = null
 	synthesis_base_instance_id = 0
-	synthesis_fuel_instance_id = 0
+	synthesis_helper_instance_id = 0
 	synthesis_persona_id = &""
 	synthesis_candidate_recipe_id = &""
 	next_card_instance_id = 1
@@ -311,7 +309,7 @@ func definition_for_card(card: CardItemState) -> CardItemDefinition:
 	var definition := QuestArcCatalog.item_by_id(card.definition_id)
 	if definition != null:
 		return definition
-	return PersonaMaskCatalog.definition_for_card(card, protagonist_aspect_counts)
+	return PersonaMaskCatalog.definition_for_card(card, protagonist_persona_counts)
 
 
 func transaction_for_store(store_id: StringName) -> CardShopTransaction:
@@ -374,7 +372,7 @@ func interact_with_store_owner(store_id: StringName) -> Dictionary:
 
 	var recipe := QuestArcCatalog.recipe_by_id(owner.request_recipe_id)
 	if recipe != null:
-		known_recipe_hint_ids[recipe.id] = true
+		discovered_recipe_ids[recipe.id] = true
 		if not recipe.unlock_story_flag.is_empty():
 			story_flags[recipe.unlock_story_flag] = &"true"
 	var task := activate_task(owner.request_task_id)
@@ -644,19 +642,19 @@ func return_card_to_hand(card: CardItemState) -> bool:
 func clear_synthesis_draft() -> bool:
 	var changed := (
 		synthesis_base_instance_id > 0
-		or synthesis_fuel_instance_id > 0
+		or synthesis_helper_instance_id > 0
 		or not synthesis_persona_id.is_empty()
 		or not synthesis_candidate_recipe_id.is_empty()
 	)
 	var delta := QuestStateDelta.new().mark_synthesis_draft(&"synthesis_clear")
-	for card_id in [synthesis_base_instance_id, synthesis_fuel_instance_id]:
+	for card_id in [synthesis_base_instance_id, synthesis_helper_instance_id]:
 		var card := card_by_instance_id(card_id)
 		if card != null:
 			card.return_to_hand()
 			changed = true
 			delta.mark_hand_location(card.instance_id, &"synthesis_clear")
 	synthesis_base_instance_id = 0
-	synthesis_fuel_instance_id = 0
+	synthesis_helper_instance_id = 0
 	synthesis_persona_id = &""
 	synthesis_candidate_recipe_id = &""
 	if changed:
@@ -689,12 +687,14 @@ func assign_synthesis_base(card: CardItemState) -> Dictionary:
 	return _assign_synthesis_card(&"base", card)
 
 
-func assign_synthesis_fuel(card: CardItemState) -> Dictionary:
-	return _assign_synthesis_card(&"fuel", card)
+func assign_synthesis_helper(card: CardItemState) -> Dictionary:
+	if synthesis_base_instance_id <= 0 or card == null or card.instance_id == synthesis_base_instance_id:
+		return _result(false, RESULT_NOT_READY)
+	return _assign_synthesis_card(&"helper", card)
 
 
 func _assign_synthesis_card(role_id: StringName, card: CardItemState) -> Dictionary:
-	if role_id not in [&"base", &"fuel"]:
+	if role_id not in [&"base", &"helper"]:
 		return _result(false, RESULT_UNKNOWN_SLOT)
 	if card == null or not inventory.has(card):
 		return _result(false, RESULT_NOT_OWNED)
@@ -702,7 +702,12 @@ func _assign_synthesis_card(role_id: StringName, card: CardItemState) -> Diction
 	if previous_task != null and previous_task.confirmed:
 		return _result(false, RESULT_LOCKED)
 	var occupied_id := (
-		synthesis_base_instance_id if role_id == &"base" else synthesis_fuel_instance_id
+		synthesis_base_instance_id if role_id == &"base" else synthesis_helper_instance_id
+	)
+	var previous_helper := (
+		card_by_instance_id(synthesis_helper_instance_id)
+		if role_id == &"base" and synthesis_helper_instance_id > 0
+		else null
 	)
 	var replaced_card := (
 		card_by_instance_id(occupied_id)
@@ -711,6 +716,8 @@ func _assign_synthesis_card(role_id: StringName, card: CardItemState) -> Diction
 	)
 	if previous_task != null:
 		previous_task.clear_assignment_for_card(card.instance_id)
+	if role_id == &"base":
+		_clear_synthesis_reinforcement()
 	_clear_synthesis_assignment_for_card(card.instance_id)
 	if replaced_card != null:
 		_clear_synthesis_assignment_for_card(replaced_card.instance_id)
@@ -718,7 +725,7 @@ func _assign_synthesis_card(role_id: StringName, card: CardItemState) -> Diction
 	if role_id == &"base":
 		synthesis_base_instance_id = card.instance_id
 	else:
-		synthesis_fuel_instance_id = card.instance_id
+		synthesis_helper_instance_id = card.instance_id
 	card.assign_to(&"synthesis", role_id)
 	synthesis_candidate_recipe_id = &""
 	var delta := (
@@ -728,6 +735,8 @@ func _assign_synthesis_card(role_id: StringName, card: CardItemState) -> Diction
 	)
 	if replaced_card != null:
 		delta.mark_hand_location(replaced_card.instance_id, &"synthesis_card_replaced")
+	if previous_helper != null and previous_helper != card and previous_helper != replaced_card:
+		delta.mark_hand_location(previous_helper.instance_id, &"synthesis_helper_returned")
 	if previous_task != null:
 		delta.mark_task_instance(previous_task.instance_id, &"task_to_synthesis")
 		_mark_state_changed(delta)
@@ -738,8 +747,9 @@ func _assign_synthesis_card(role_id: StringName, card: CardItemState) -> Diction
 
 func select_synthesis_persona(persona_id: StringName) -> bool:
 	if (
-		persona_id not in CardPropertySet.PROTAGONIST_STATS
-		or int(protagonist_aspect_counts.get(persona_id, 0)) <= 0
+		synthesis_base_instance_id <= 0
+		or persona_id not in CardPropertySet.PERSONAS
+		or int(protagonist_persona_counts.get(persona_id, 0)) <= 0
 	):
 		return false
 	synthesis_persona_id = &"" if synthesis_persona_id == persona_id else persona_id
@@ -755,11 +765,11 @@ func synthesis_base_card() -> CardItemState:
 	return card_by_instance_id(synthesis_base_instance_id)
 
 
-func synthesis_fuel_card() -> CardItemState:
-	return card_by_instance_id(synthesis_fuel_instance_id)
+func synthesis_helper_card() -> CardItemState:
+	return card_by_instance_id(synthesis_helper_instance_id)
 
 
-func synthesis_aspect_totals() -> Dictionary:
+func synthesis_persona_totals() -> Dictionary:
 	return (synthesis_evaluation_snapshot().totals as Dictionary).duplicate()
 
 
@@ -767,15 +777,15 @@ func synthesis_evaluation_snapshot() -> Dictionary:
 	if _synthesis_snapshot_revision == _synthesis_input_revision:
 		return _cached_synthesis_snapshot
 	var base_card := synthesis_base_card()
-	var fuel_card := synthesis_fuel_card()
+	var helper_card := synthesis_helper_card()
 	var base_item := (
 		QuestArcCatalog.item_by_id(base_card.definition_id) if base_card != null else null
 	)
-	var totals := SynthesisRules.aspect_totals(
+	var totals := SynthesisRules.persona_totals(
 		base_item,
-		QuestArcCatalog.item_by_id(fuel_card.definition_id) if fuel_card != null else null,
+		QuestArcCatalog.item_by_id(helper_card.definition_id) if helper_card != null else null,
 		synthesis_persona_id,
-		protagonist_aspect_counts,
+		protagonist_persona_counts,
 	)
 	var candidates: Array[Dictionary] = []
 	if base_item != null:
@@ -784,11 +794,15 @@ func synthesis_evaluation_snapshot() -> Dictionary:
 			var evaluation := SynthesisRules.evaluate_candidate(recipe, base_item, totals)
 			if evaluation.is_visible:
 				evaluation["recipe_id"] = recipe.id
-				evaluation["required_aspects"] = recipe.required_aspects.duplicate()
+				evaluation["required_personas"] = recipe.required_personas.duplicate()
+				evaluation["is_discovered"] = discovered_recipe_ids.has(recipe.id)
+				evaluation["shows_output"] = (
+					evaluation.is_complete or discovered_recipe_ids.has(recipe.id)
+				)
 				candidates.append(evaluation)
 	_cached_synthesis_snapshot = {
 		"base_card": base_card,
-		"fuel_card": fuel_card,
+		"helper_card": helper_card,
 		"base_item": base_item,
 		"totals": totals,
 		"candidates": candidates,
@@ -805,12 +819,16 @@ func synthesis_candidates() -> Array[Dictionary]:
 
 func select_synthesis_candidate(recipe_id: StringName) -> bool:
 	for candidate in synthesis_candidates():
-		if StringName(candidate.recipe_id) == recipe_id and candidate.is_complete:
-			synthesis_candidate_recipe_id = recipe_id
-			_mark_transient_changed(
-				QuestStateDelta.new().mark_synthesis_candidate(&"synthesis_candidate")
-			)
-			return true
+		if StringName(candidate.recipe_id) != recipe_id:
+			continue
+		synthesis_candidate_recipe_id = recipe_id
+		var delta := QuestStateDelta.new().mark_synthesis_candidate(&"synthesis_candidate")
+		if candidate.is_complete and not discovered_recipe_ids.has(recipe_id):
+			discovered_recipe_ids[recipe_id] = true
+			_mark_state_changed(delta)
+		else:
+			_mark_transient_changed(delta)
+		return true
 	return false
 
 
@@ -826,8 +844,8 @@ func begin_synthesis() -> Dictionary:
 	if selected.is_empty() or not selected.is_complete:
 		return _result(false, RESULT_NOT_READY, selected)
 	var input_ids: Array[int] = [synthesis_base_instance_id]
-	if synthesis_fuel_instance_id > 0:
-		input_ids.append(synthesis_fuel_instance_id)
+	if synthesis_helper_instance_id > 0:
+		input_ids.append(synthesis_helper_instance_id)
 	for card_id in input_ids:
 		var card := card_by_instance_id(card_id)
 		if card == null or card.activity_id != &"synthesis":
@@ -843,7 +861,7 @@ func begin_synthesis() -> Dictionary:
 		delta.mark_hand_removed(card_id, &"synthesis_complete")
 	discovered_recipe_ids[recipe.id] = true
 	synthesis_base_instance_id = 0
-	synthesis_fuel_instance_id = 0
+	synthesis_helper_instance_id = 0
 	synthesis_persona_id = &""
 	synthesis_candidate_recipe_id = &""
 	var output := grant_item(recipe.output_id, &"synthesis")
@@ -998,20 +1016,21 @@ func _incomplete_required_task_definition() -> TaskDefinition:
 
 
 func _self_care_growth_for_items(item_definition_ids: Array[StringName]) -> Dictionary:
-	var aspect_totals: Dictionary = {}
-	for aspect in CardPropertySet.ASPECTS:
-		aspect_totals[aspect] = 0
+	var persona_totals: Dictionary = {}
+	for persona_id in CardPropertySet.PERSONAS:
+		persona_totals[persona_id] = 0
 	for item_definition_id in item_definition_ids:
 		var item := QuestArcCatalog.item_by_id(item_definition_id)
 		if item == null:
 			continue
-		for aspect in CardPropertySet.ASPECTS:
-			aspect_totals[aspect] = int(aspect_totals[aspect]) + item.property_value(aspect)
+		for persona_id in CardPropertySet.PERSONAS:
+			persona_totals[persona_id] = (
+				int(persona_totals[persona_id]) + item.property_value(persona_id)
+			)
 	var result: Dictionary = {}
-	for persona_id in CardPropertySet.PROTAGONIST_STATS:
-		var aspect := CardPropertySet.aspect_for_persona(persona_id)
-		var difference := int(aspect_totals.get(aspect, 0)) - int(
-			protagonist_aspect_counts.get(persona_id, 0)
+	for persona_id in CardPropertySet.PERSONAS:
+		var difference := int(persona_totals.get(persona_id, 0)) - int(
+			protagonist_persona_counts.get(persona_id, 0)
 		)
 		if difference > 0:
 			result[persona_id] = ceili(float(difference) / 2.0)
@@ -1059,7 +1078,7 @@ func begin_next_day() -> Dictionary:
 				continue
 			if effect.kind == StoryEffect.Kind.ADD_MONEY:
 				reward_money += effect.amount
-			elif effect.kind == StoryEffect.Kind.ADD_PROTAGONIST_ASPECT:
+			elif effect.kind == StoryEffect.Kind.ADD_PROTAGONIST_PERSONA:
 				reward_stats[effect.target_id] = int(
 					reward_stats.get(effect.target_id, 0)
 				) + effect.amount
@@ -1148,9 +1167,9 @@ func apply_arc_effects() -> Dictionary:
 			_apply_story_effect(raw_effect as StoryEffect, hand_delta)
 		for raw_persona_id in (entry.get("persona_growth", {}) as Dictionary):
 			var persona_id := StringName(raw_persona_id)
-			var previous_amount := int(protagonist_aspect_counts.get(persona_id, 0))
+			var previous_amount := int(protagonist_persona_counts.get(persona_id, 0))
 			var growth := int((entry.persona_growth as Dictionary)[raw_persona_id])
-			protagonist_aspect_counts[persona_id] = previous_amount + growth
+			protagonist_persona_counts[persona_id] = previous_amount + growth
 			if previous_amount <= 0 and growth > 0 and persona_id not in pending_persona_reveal_ids:
 				pending_persona_reveal_ids.append(persona_id)
 			if growth > 0:
@@ -1260,7 +1279,7 @@ func unlock_store(store_id: StringName, card: CardItemState) -> Dictionary:
 		return _result(false, RESULT_NOT_OWNED)
 	var item := definition_for_card(card)
 	var persona_id := PersonaMaskCatalog.persona_for_card(card)
-	if not persona_id.is_empty() and int(protagonist_aspect_counts.get(persona_id, 0)) <= 0:
+	if not persona_id.is_empty() and int(protagonist_persona_counts.get(persona_id, 0)) <= 0:
 		return _result(false, RESULT_REJECTED)
 	if unlock == null or not QuestArcRules.store_unlock_accepts(unlock, item):
 		return _result(false, RESULT_REJECTED)
@@ -1303,11 +1322,11 @@ func _apply_story_effect(effect: StoryEffect, delta: QuestStateDelta = null) -> 
 				delta.mark_wallet(&"story_effect")
 		StoryEffect.Kind.SET_FLAG:
 			story_flags[effect.target_id] = effect.text_value
-		StoryEffect.Kind.ADD_PROTAGONIST_ASPECT:
+		StoryEffect.Kind.ADD_PROTAGONIST_PERSONA:
 			var previous_amount := int(
-				protagonist_aspect_counts.get(effect.target_id, 0)
+				protagonist_persona_counts.get(effect.target_id, 0)
 			)
-			protagonist_aspect_counts[effect.target_id] = previous_amount + effect.amount
+			protagonist_persona_counts[effect.target_id] = previous_amount + effect.amount
 			if (
 				previous_amount <= 0
 				and effect.amount > 0
@@ -1316,8 +1335,8 @@ func _apply_story_effect(effect: StoryEffect, delta: QuestStateDelta = null) -> 
 				pending_persona_reveal_ids.append(effect.target_id)
 			if delta != null:
 				delta.mark_synthesis_persona(&"story_effect")
-		StoryEffect.Kind.UNLOCK_RECIPE_HINT:
-			known_recipe_hint_ids[effect.target_id] = true
+		StoryEffect.Kind.DISCOVER_RECIPE:
+			discovered_recipe_ids[effect.target_id] = true
 		StoryEffect.Kind.ACTIVATE_TASK:
 			activate_task(effect.target_id)
 		StoryEffect.Kind.SET_OWNER_STATE:
@@ -1473,7 +1492,7 @@ func _end_change_batch() -> void:
 
 
 func _mark_state_changed(delta: QuestStateDelta = null) -> void:
-	# Persistent changes may alter story gates or protagonist aspects used by
+	# Persistent changes may alter story gates or protagonist Personas used by
 	# synthesis, so invalidate its input cache conservatively. Transient draft
 	# changes use _mark_transient_changed() and never request autosave.
 	_synthesis_input_revision += 1
@@ -1523,29 +1542,25 @@ func _rule_by_id(definition: TaskDefinition, slot_id: StringName) -> CardSlotRul
 	return null
 
 
-func _recipe_rule_by_id(
-	recipe: SynthesisRecipeDefinition,
-	slot_id: StringName,
-) -> CardSlotRule:
-	if recipe == null:
-		return null
-	for raw_rule in recipe.slot_rules:
-		var rule := raw_rule as CardSlotRule
-		if rule != null and rule.id == slot_id:
-			return rule
-	return null
-
-
 func _clear_synthesis_assignment_for_card(card_instance_id: int) -> bool:
 	if synthesis_base_instance_id == card_instance_id:
 		synthesis_base_instance_id = 0
-		synthesis_candidate_recipe_id = &""
+		_clear_synthesis_reinforcement()
 		return true
-	if synthesis_fuel_instance_id == card_instance_id:
-		synthesis_fuel_instance_id = 0
+	if synthesis_helper_instance_id == card_instance_id:
+		synthesis_helper_instance_id = 0
 		synthesis_candidate_recipe_id = &""
 		return true
 	return false
+
+
+func _clear_synthesis_reinforcement() -> void:
+	var helper := synthesis_helper_card()
+	if helper != null:
+		helper.return_to_hand()
+	synthesis_helper_instance_id = 0
+	synthesis_persona_id = &""
+	synthesis_candidate_recipe_id = &""
 
 
 func _task_containing_card(card_instance_id: int) -> TaskInstanceState:

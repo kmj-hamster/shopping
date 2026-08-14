@@ -2,31 +2,31 @@ class_name PersonaMaskCatalog
 extends RefCounted
 
 const MASK_PERSONAS: Array[StringName] = [
-	CardPropertySet.PERSONA_CLARITY,
-	CardPropertySet.PERSONA_REMINISCENCE,
-	CardPropertySet.PERSONA_REVERIE,
-	CardPropertySet.PERSONA_EASE,
+	CardPropertySet.PERSONA_NIGHTWALKER,
+	CardPropertySet.PERSONA_MOURNER,
+	CardPropertySet.PERSONA_DREAMWALKER,
+	CardPropertySet.PERSONA_HOMECOMER,
 ]
 
 const MASK_IDS := {
-	CardPropertySet.PERSONA_CLARITY: &"mask_nightwalker",
-	CardPropertySet.PERSONA_REMINISCENCE: &"mask_mourner",
-	CardPropertySet.PERSONA_REVERIE: &"mask_dreamwalker",
-	CardPropertySet.PERSONA_EASE: &"mask_homecomer",
+	CardPropertySet.PERSONA_NIGHTWALKER: &"mask_nightwalker",
+	CardPropertySet.PERSONA_MOURNER: &"mask_mourner",
+	CardPropertySet.PERSONA_DREAMWALKER: &"mask_dreamwalker",
+	CardPropertySet.PERSONA_HOMECOMER: &"mask_homecomer",
 }
 
 const MASK_NAME_KEYS := {
-	CardPropertySet.PERSONA_CLARITY: &"demo.mask.nightwalker.name",
-	CardPropertySet.PERSONA_REMINISCENCE: &"demo.mask.mourner.name",
-	CardPropertySet.PERSONA_REVERIE: &"demo.mask.dreamwalker.name",
-	CardPropertySet.PERSONA_EASE: &"demo.mask.homecomer.name",
+	CardPropertySet.PERSONA_NIGHTWALKER: &"demo.mask.nightwalker.name",
+	CardPropertySet.PERSONA_MOURNER: &"demo.mask.mourner.name",
+	CardPropertySet.PERSONA_DREAMWALKER: &"demo.mask.dreamwalker.name",
+	CardPropertySet.PERSONA_HOMECOMER: &"demo.mask.homecomer.name",
 }
 
 const MASK_DESCRIPTION_KEYS := {
-	CardPropertySet.PERSONA_CLARITY: &"demo.mask.nightwalker.description",
-	CardPropertySet.PERSONA_REMINISCENCE: &"demo.mask.mourner.description",
-	CardPropertySet.PERSONA_REVERIE: &"demo.mask.dreamwalker.description",
-	CardPropertySet.PERSONA_EASE: &"demo.mask.homecomer.description",
+	CardPropertySet.PERSONA_NIGHTWALKER: &"demo.mask.nightwalker.description",
+	CardPropertySet.PERSONA_MOURNER: &"demo.mask.mourner.description",
+	CardPropertySet.PERSONA_DREAMWALKER: &"demo.mask.dreamwalker.description",
+	CardPropertySet.PERSONA_HOMECOMER: &"demo.mask.homecomer.description",
 }
 
 static var _definitions: Dictionary = {}
@@ -46,13 +46,11 @@ static func definition_for_persona(persona_id: StringName, amount: int) -> CardI
 		definition.can_recycle = false
 		definition.can_be_synthesis_base = false
 		definition.property_set = CardPropertySet.new()
-		definition.image = ItemDetailPopup.property_icon_texture(
-			CardPropertySet.aspect_for_persona(persona_id)
-		)
+		definition.image = ItemDetailPopup.property_icon_texture(persona_id)
 		_definitions[persona_id] = definition
 	definition.property_set.tags = [CardPropertySet.PROPERTY_PERSONA]
 	definition.property_set.values = {
-		CardPropertySet.aspect_for_persona(persona_id): maxi(amount, 0),
+		persona_id: maxi(amount, 0),
 	}
 	return definition
 
@@ -100,7 +98,7 @@ static func sync_selection(selected_persona_id: StringName) -> void:
 	for persona_id in MASK_PERSONAS:
 		var card := card_for_persona(persona_id)
 		if persona_id == selected_persona_id:
-			card.assign_to(&"synthesis", &"mask")
+			card.assign_to(&"synthesis", &"persona")
 		else:
 			card.return_to_hand()
 
