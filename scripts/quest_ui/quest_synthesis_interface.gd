@@ -20,34 +20,19 @@ enum NarrativeState {
 	HOLDING,
 }
 
-const BACKGROUND_TEXTURE := preload("res://resources/ui/synthesis/bg-inbag.png")
-const BACKGROUND_DIM_COLOR := Color("010308", 0.44)
 const NARRATIVE_FADE_SECONDS := 0.55
 const NARRATIVE_HOLD_SECONDS := 1.25
-const FIELD_CENTER := Vector2(640, 308)
+const FIELD_CENTER := PersonaStarChart.FIELD_CENTER
 const CANDIDATE_NODE_SIZE := Vector2(44, 44)
-const PERSONA_ICON_SIZE := Vector2(150, 84)
-const PERSONA_RAY_LEVEL_ONE_LENGTH := 48.0
-const PERSONA_RAY_FULL_LEVEL := 10
-const PERSONA_RAY_CARD_CLEARANCE := 2.0
-const PERSONA_RAY_ICON_OVERLAP := 2.0
-const PERSONA_DIRECTIONS := {
-	CardPropertySet.PERSONA_NIGHTWALKER: Vector2(-0.72, -0.69),
-	CardPropertySet.PERSONA_MOURNER: Vector2(-0.72, 0.69),
-	CardPropertySet.PERSONA_DREAMWALKER: Vector2(0.72, -0.69),
-	CardPropertySet.PERSONA_HOMECOMER: Vector2(0.72, 0.69),
-}
-const PERSONA_ICON_POSITIONS := {
-	CardPropertySet.PERSONA_NIGHTWALKER: Vector2(82, 55),
-	CardPropertySet.PERSONA_MOURNER: Vector2(82, 376),
-	CardPropertySet.PERSONA_DREAMWALKER: Vector2(1116, 55),
-	CardPropertySet.PERSONA_HOMECOMER: Vector2(1116, 376),
-}
+const PERSONA_ICON_SIZE := PersonaStarChart.PERSONA_ICON_SIZE
+const PERSONA_RAY_LEVEL_ONE_LENGTH := PersonaStarChart.LEVEL_ONE_LENGTH
+const PERSONA_RAY_FULL_LEVEL := PersonaStarChart.MAX_LEVEL
+const PERSONA_ICON_POSITIONS := PersonaStarChart.PERSONA_ICON_POSITIONS
 
 var state: QuestGameState
 var phase := Phase.DRAFT
 var draft_layer: Control
-var ray_layer: Control
+var star_chart: PersonaStarChart
 var candidate_layer: Control
 var base_slot_host: CenterContainer
 var base_slot: QuestSynthesisMaterialSlot
@@ -63,8 +48,8 @@ var candidate_views: Dictionary = {}
 var candidate_hover_tweens: Dictionary = {}
 var persona_buttons: Dictionary = {}
 var persona_value_labels: Dictionary = {}
-var persona_rays: Dictionary = {}
 var possibility_definitions: Dictionary = {}
+var candidate_ready_tweens: Dictionary = {}
 var action_button: Button
 var narrative_overlay: ColorRect
 var narrative_column: VBoxContainer
@@ -232,29 +217,14 @@ func cancel_pending_inputs() -> void:
 
 
 func _build_interface() -> void:
-	var background := TextureRect.new()
-	background.name = "InBagBackground"
-	background.texture = BACKGROUND_TEXTURE
-	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(background)
-	var background_dimmer := ColorRect.new()
-	background_dimmer.name = "SynthesisBackgroundDimmer"
-	background_dimmer.color = BACKGROUND_DIM_COLOR
-	background_dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	background_dimmer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(background_dimmer)
+	star_chart = PersonaStarChart.new()
+	star_chart.name = "PersonaStarChart"
+	add_child(star_chart)
 	draft_layer = Control.new()
 	draft_layer.name = "SynthesisDraft"
 	draft_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	draft_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(draft_layer)
-	ray_layer = Control.new()
-	ray_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	ray_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	draft_layer.add_child(ray_layer)
 	_build_persona_field()
 	_build_base_slot()
 	_build_candidate_layer()
@@ -266,13 +236,6 @@ func _build_interface() -> void:
 
 func _build_persona_field() -> void:
 	for persona_id in CardPropertySet.PERSONAS:
-		var ray := Line2D.new()
-		ray.width = 4.0
-		ray.default_color = Color("e6edf0", 0.34)
-		ray.begin_cap_mode = Line2D.LINE_CAP_ROUND
-		ray.end_cap_mode = Line2D.LINE_CAP_ROUND
-		ray_layer.add_child(ray)
-		persona_rays[persona_id] = ray
 		var button := Button.new()
 		button.name = "%sPersonaButton" % String(persona_id).to_pascal_case()
 		button.custom_minimum_size = PERSONA_ICON_SIZE
@@ -498,66 +461,22 @@ func _rebuild_material_slots(snapshot: Dictionary, force_refresh: bool = false) 
 func _rebuild_persona_field(snapshot: Dictionary) -> void:
 	_record_update(&"personas")
 	var totals := snapshot.get("totals", {}) as Dictionary
+	star_chart.set_totals(totals)
 	for persona_id in CardPropertySet.PERSONAS:
 		var amount := int(totals.get(persona_id, 0))
 		(persona_value_labels[persona_id] as Label).text = str(amount)
-		var ray := persona_rays[persona_id] as Line2D
-		ray.points = _persona_ray_points(persona_id, amount)
-		ray.default_color = (
-			Color("f0f1e8", 0.76) if amount > 0 else Color("9aabb0", 0.22)
-		)
 
 
 func _persona_ray_points(persona_id: StringName, amount: int) -> PackedVector2Array:
-	var button := persona_buttons.get(persona_id) as Button
-	if button == null:
+	if star_chart == null:
 		return PackedVector2Array([FIELD_CENTER, FIELD_CENTER])
-	var icon_center := button.position + button.size * 0.5
-	var center_offset := icon_center - FIELD_CENTER
-	if center_offset.is_zero_approx():
-		return PackedVector2Array([FIELD_CENTER, FIELD_CENTER])
-	var direction := center_offset.normalized()
-	var card_edge_distance := _center_to_rect_edge_distance(
-		QuestTaskSlot.CARD_SIZE,
-		direction,
-	)
-	var icon_edge_distance := _center_to_rect_edge_distance(PERSONA_ICON_SIZE, direction)
-	var start_distance := card_edge_distance + PERSONA_RAY_CARD_CLEARANCE
-	var full_end_distance := (
-		center_offset.length() - icon_edge_distance + PERSONA_RAY_ICON_OVERLAP
-	)
-	var available_length := maxf(full_end_distance - start_distance, 0.0)
-	var visible_length := 0.0
-	if amount > 0:
-		var growth := clampf(
-			float(amount - 1) / float(PERSONA_RAY_FULL_LEVEL - 1),
-			0.0,
-			1.0,
-		)
-		visible_length = lerpf(
-			minf(PERSONA_RAY_LEVEL_ONE_LENGTH, available_length),
-			available_length,
-			growth,
-		)
-	var start := FIELD_CENTER + direction * start_distance
-	return PackedVector2Array([start, start + direction * visible_length])
-
-
-func _center_to_rect_edge_distance(rect_size: Vector2, direction: Vector2) -> float:
-	var distance_x := (
-		INF if is_zero_approx(direction.x) else rect_size.x * 0.5 / absf(direction.x)
-	)
-	var distance_y := (
-		INF if is_zero_approx(direction.y) else rect_size.y * 0.5 / absf(direction.y)
-	)
-	return minf(distance_x, distance_y)
+	return star_chart.axis_progress_points(persona_id, float(amount))
 
 
 func _rebuild_candidates(snapshot: Dictionary) -> void:
 	_record_update(&"candidates")
 	var candidates := snapshot.get("candidates", []) as Array
 	var desired_ids: Array[StringName] = []
-	var occupied_positions: Dictionary = {}
 	for candidate in candidates:
 		desired_ids.append(StringName(candidate.recipe_id))
 	for raw_recipe_id in candidate_views:
@@ -570,21 +489,18 @@ func _rebuild_candidates(snapshot: Dictionary) -> void:
 			candidate_views[recipe_id] = _create_candidate_view(recipe)
 		var view := candidate_views[recipe_id] as Dictionary
 		var button := view.button as Button
-		var position := _candidate_position(recipe, occupied_positions)
+		var position := _candidate_position(recipe)
 		button.position = position - CANDIDATE_NODE_SIZE * 0.5
 		button.visible = true
 		button.disabled = false
 		button.button_pressed = state.synthesis_candidate_recipe_id == recipe_id
-		button.text = "◆" if candidate.is_complete else "◇"
-		button.add_theme_font_size_override("font_size", 31)
-		_apply_candidate_style(button, bool(candidate.is_complete))
-		button.add_theme_color_override(
-			"font_color", Color("152421") if candidate.is_complete else Color("b5c0c2")
-		)
-		button.add_theme_color_override(
-			"font_hover_color", Color("152421") if candidate.is_complete else Color("edf1ef")
-		)
-		button.add_theme_color_override("font_pressed_color", Color("152421"))
+		var was_initialized := bool(view.get("initialized", false))
+		var was_complete := bool(view.get("is_complete", false))
+		_apply_candidate_visual(button, bool(candidate.is_complete), button.button_pressed)
+		if bool(candidate.is_complete) and (not was_initialized or not was_complete):
+			_pulse_candidate_ready(recipe_id)
+		view["initialized"] = true
+		view["is_complete"] = bool(candidate.is_complete)
 		view["candidate"] = candidate
 		view["position"] = position
 	_update_candidate_hover_state(&"")
@@ -595,66 +511,62 @@ func _create_candidate_view(recipe: SynthesisRecipeDefinition) -> Dictionary:
 	button.name = "%sCandidate" % String(recipe.id).to_pascal_case()
 	button.custom_minimum_size = CANDIDATE_NODE_SIZE
 	button.size = CANDIDATE_NODE_SIZE
+	button.pivot_offset = CANDIDATE_NODE_SIZE * 0.5
 	button.toggle_mode = true
-	button.flat = false
+	button.flat = true
 	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	for state_name in ["normal", "hover", "pressed", "focus"]:
+		button.add_theme_stylebox_override(state_name, StyleBoxEmpty.new())
 	button.pressed.connect(_on_candidate_pressed.bind(recipe.id))
 	candidate_layer.add_child(button)
 	candidate_buttons[recipe.id] = button
-	return {"button": button, "candidate": {}, "position": Vector2.ZERO}
+	return {
+		"button": button,
+		"candidate": {},
+		"position": Vector2.ZERO,
+		"initialized": false,
+		"is_complete": false,
+	}
 
 
-func _apply_candidate_style(button: Button, is_complete: bool) -> void:
-	var normal_fill := Color("d8ddd3", 0.97) if is_complete else Color("172126", 0.97)
-	var normal_border := Color("f2f3e9", 0.94) if is_complete else Color("75878c", 0.92)
-	var hover_fill := Color("edf0e7") if is_complete else Color("29383e")
-	var hover_border := Color("ffffff", 0.98) if is_complete else Color("b8c6c8")
-	var pressed_fill := Color("f2dfad") if is_complete else Color("91a3a5")
-	var pressed_border := Color("fff2cc") if is_complete else Color("e1e8e6")
-	button.add_theme_stylebox_override("normal", _candidate_style(normal_fill, normal_border, 1))
-	button.add_theme_stylebox_override("hover", _candidate_style(hover_fill, hover_border, 2))
-	button.add_theme_stylebox_override("pressed", _candidate_style(pressed_fill, pressed_border, 2))
-	button.add_theme_stylebox_override("focus", _candidate_style(hover_fill, hover_border, 2))
+func _apply_candidate_visual(button: Button, is_complete: bool, is_selected: bool) -> void:
+	button.text = "◆" if is_complete else "◇"
+	button.add_theme_font_size_override("font_size", 31)
+	button.add_theme_color_override(
+		"font_color", Color("f4f6ed") if is_complete else Color("8495a8", 0.88)
+	)
+	button.add_theme_color_override(
+		"font_hover_color", Color("ffffff") if is_complete else Color("dce7ef")
+	)
+	button.add_theme_color_override("font_pressed_color", Color("f2d99a"))
+	button.add_theme_color_override("font_hover_pressed_color", Color("fff2c7"))
+	button.add_theme_color_override(
+		"font_outline_color", Color("f2d99a", 0.80) if is_selected else Color("bcd1e2", 0.42)
+	)
+	button.add_theme_constant_override("outline_size", 4 if is_complete or is_selected else 2)
 
 
-func _candidate_style(fill: Color, border: Color, border_width: int) -> StyleBoxFlat:
-	var style := UiPalette.panel_style(fill, border)
-	style.set_border_width_all(border_width)
-	style.corner_radius_top_left = 7
-	style.corner_radius_top_right = 7
-	style.corner_radius_bottom_left = 7
-	style.corner_radius_bottom_right = 7
-	style.content_margin_left = 0.0
-	style.content_margin_top = 0.0
-	style.content_margin_right = 0.0
-	style.content_margin_bottom = 0.0
-	return style
+func _pulse_candidate_ready(recipe_id: StringName) -> void:
+	var button := candidate_buttons.get(recipe_id) as Button
+	if button == null or not button.is_inside_tree():
+		return
+	var previous_tween := candidate_ready_tweens.get(recipe_id) as Tween
+	if previous_tween != null and previous_tween.is_valid():
+		previous_tween.kill()
+	button.scale = Vector2.ONE
+	var pulse := button.create_tween()
+	pulse.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	pulse.tween_property(button, "scale", Vector2.ONE * 1.30, 0.16)
+	pulse.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	pulse.tween_property(button, "scale", Vector2.ONE, 0.24)
+	candidate_ready_tweens[recipe_id] = pulse
 
 
 func _candidate_position(
 	recipe: SynthesisRecipeDefinition,
-	occupied_positions: Dictionary,
+	_occupied_positions: Dictionary = {},
 ) -> Vector2:
-	var offset := Vector2.ZERO
-	for raw_persona in recipe.required_personas:
-		var persona_id := StringName(raw_persona)
-		var amount := recipe.required_value(persona_id)
-		offset += (PERSONA_DIRECTIONS[persona_id] as Vector2) * (56.0 + amount * 18.0)
-	if recipe.required_personas.size() > 1:
-		offset *= 0.72
-	if offset.length() < 72.0:
-		var seed: int = absi(String(recipe.id).hash()) % 360
-		offset = Vector2.RIGHT.rotated(deg_to_rad(float(seed))) * 86.0
-	var position := FIELD_CENTER + offset
-	position.x = clampf(position.x, 392.0, 888.0)
-	position.y = clampf(position.y, 104.0, 480.0)
-	var key := Vector2i(roundi(position.x / 16.0), roundi(position.y / 16.0))
-	var overlap_index := int(occupied_positions.get(key, 0))
-	occupied_positions[key] = overlap_index + 1
-	if overlap_index > 0:
-		var angle := float((overlap_index - 1) % 8) * TAU / 8.0
-		position += Vector2.RIGHT.rotated(angle) * (16.0 + 8.0 * ((overlap_index - 1) / 8))
-	return position
+	return star_chart.candidate_position(recipe) if star_chart != null else FIELD_CENTER
 
 
 func _update_action_button(snapshot: Dictionary = {}) -> void:
@@ -685,12 +597,14 @@ func _on_persona_pressed(persona_id: StringName) -> void:
 
 
 func _on_persona_hovered(persona_id: StringName) -> void:
+	star_chart.set_hovered_persona(persona_id)
 	_update_candidate_hover_state(persona_id)
 
 
 func _on_persona_unhovered(persona_id: StringName) -> void:
 	var button := persona_buttons.get(persona_id) as Button
 	if button != null and not button.get_global_rect().has_point(get_global_mouse_position()):
+		star_chart.set_hovered_persona(&"")
 		_update_candidate_hover_state(&"")
 
 
@@ -709,6 +623,7 @@ func _update_candidate_hover_state(persona_id: StringName) -> void:
 		var recipe := QuestArcCatalog.recipe_by_id(recipe_id)
 		var output := QuestArcCatalog.item_by_id(recipe.output_id) if recipe != null else null
 		if output == null or not output.has_property(persona_id):
+			button.modulate = Color(0.46, 0.50, 0.55, 0.68)
 			continue
 		var pulse := button.create_tween().set_loops()
 		pulse.tween_property(button, "modulate", Color(1.38, 1.38, 1.38, 1.0), 0.34)
@@ -792,9 +707,11 @@ func _possibility_definition(recipe: SynthesisRecipeDefinition) -> CardItemDefin
 func _update_candidate_selection() -> void:
 	_record_update(&"candidate_selection")
 	for recipe_id in candidate_buttons:
-		(candidate_buttons[recipe_id] as Button).button_pressed = (
-			state.synthesis_candidate_recipe_id == recipe_id
-		)
+		var button := candidate_buttons[recipe_id] as Button
+		var selected: bool = state.synthesis_candidate_recipe_id == recipe_id
+		button.button_pressed = selected
+		var view := candidate_views.get(recipe_id) as Dictionary
+		_apply_candidate_visual(button, bool(view.get("is_complete", false)), selected)
 
 
 func _on_action_pressed() -> void:

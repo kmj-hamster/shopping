@@ -25,15 +25,13 @@ func test_synthesis_uses_full_screen_in_bag_shell() -> void:
 	assert_true(main.protagonist_button.visible)
 	assert_eq(synthesis.mouse_filter, Control.MOUSE_FILTER_IGNORE)
 	assert_null(synthesis.find_child("SynthesisBackgroundInput", true, false))
-	var background := synthesis.find_child("InBagBackground", true, false) as TextureRect
-	assert_not_null(background)
-	assert_eq(background.stretch_mode, TextureRect.STRETCH_KEEP_ASPECT_COVERED)
-	assert_eq(background.texture.resource_path, "res://resources/ui/synthesis/bg-inbag.png")
-	var dimmer := synthesis.find_child("SynthesisBackgroundDimmer", true, false) as ColorRect
-	assert_not_null(dimmer)
-	assert_eq(dimmer.color, QuestSynthesisInterface.BACKGROUND_DIM_COLOR)
-	assert_gt(dimmer.color.a, 0.4)
-	assert_lt(dimmer.get_index(), synthesis.draft_layer.get_index())
+	assert_null(synthesis.find_child("InBagBackground", true, false))
+	assert_null(synthesis.find_child("SynthesisBackgroundDimmer", true, false))
+	var star_chart := synthesis.find_child("PersonaStarChart", true, false) as PersonaStarChart
+	assert_not_null(star_chart)
+	assert_eq(PersonaStarChart.BACKGROUND_COLOR, Color("050a18"))
+	assert_lt(star_chart.get_index(), synthesis.draft_layer.get_index())
+	assert_eq(PersonaStarChart.MAX_LEVEL, 10)
 
 	main._show_map_immediate()
 	assert_true(main.global_frame.visible)
@@ -110,6 +108,32 @@ func test_persona_rays_clear_the_card_and_reach_distant_icons_at_level_ten() -> 
 	assert_gt(homecomer.get_rect().get_center().y + homecomer.position.y, 340.0)
 
 
+func test_recipe_nodes_keep_fixed_star_chart_coordinates_when_totals_change() -> void:
+	var main := await _spawn_synthesis_main()
+	var synthesis := main.current_screen as QuestSynthesisInterface
+	var single_recipe := QuestArcCatalog.recipe_by_id(&"recipe_midnight_rose")
+	var pair_recipe := SynthesisRecipeDefinition.new()
+	pair_recipe.id = &"star_chart_pair_probe"
+	pair_recipe.required_personas = {&"nightwalker": 5, &"dreamwalker": 5}
+	assert_not_null(single_recipe)
+	var single_position := synthesis._candidate_position(single_recipe)
+	var pair_position := synthesis._candidate_position(pair_recipe)
+	assert_eq(
+		single_position,
+		synthesis.star_chart.axis_point(&"dreamwalker", 5.0),
+	)
+	assert_true(PersonaStarChart.CANDIDATE_BOUNDS.has_point(pair_position))
+	assert_ne(pair_position, QuestSynthesisInterface.FIELD_CENTER)
+	synthesis.star_chart.set_totals({
+		&"nightwalker": 10,
+		&"mourner": 7,
+		&"dreamwalker": 9,
+		&"homecomer": 6,
+	})
+	assert_eq(synthesis._candidate_position(single_recipe), single_position)
+	assert_eq(synthesis._candidate_position(pair_recipe), pair_position)
+
+
 func test_base_type_alone_reveals_gray_candidate_and_helper_type_does_not_add_recipes() -> void:
 	var main := await _spawn_synthesis_main()
 	var synthesis := main.current_screen as QuestSynthesisInterface
@@ -123,10 +147,10 @@ func test_base_type_alone_reveals_gray_candidate_and_helper_type_does_not_add_re
 	assert_true((synthesis.candidate_buttons[&"recipe_midnight_rose"] as Button).visible)
 	var candidate_button := synthesis.candidate_buttons[&"recipe_midnight_rose"] as Button
 	assert_eq(candidate_button.text, "◇")
-	assert_false(candidate_button.flat)
-	var candidate_style := candidate_button.get_theme_stylebox("normal") as StyleBoxFlat
+	assert_true(candidate_button.flat)
+	var candidate_style := candidate_button.get_theme_stylebox("normal") as StyleBoxEmpty
 	assert_not_null(candidate_style)
-	assert_gt(candidate_style.bg_color.a, 0.95)
+	assert_eq(candidate_button.get_theme_constant("outline_size"), 2)
 
 	assert_true(synthesis.stage_card(&"helper", toy_block))
 	candidates = main.state.synthesis_candidates()
