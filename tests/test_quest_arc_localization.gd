@@ -24,6 +24,7 @@ const RUNTIME_UI_KEYS: Array[StringName] = [
 	&"quest.ui.hand.masks",
 	&"quest.ui.hand.title",
 	&"quest.ui.arc.empty",
+	&"quest.ui.arc.showcase.body",
 	&"quest.ui.arc.new_day",
 	&"quest.ui.arc.night",
 	&"quest.ui.synthesis.open",

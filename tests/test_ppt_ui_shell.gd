@@ -60,17 +60,23 @@ func test_main_uses_the_centered_art_shell_and_unified_hand() -> void:
 	)
 	assert_null(main.money_label)
 	assert_null(main.day_label)
-	assert_null(main.next_day_button)
+	assert_not_null(main.next_day_button)
 	assert_not_null(main.find_child("LanguageButton", true, false))
 	assert_not_null(main.find_child("ClearSaveButton", true, false))
 	assert_not_null(main.get_node_or_null("DebugButtonRow"))
 	assert_eq(main.language_button.get_parent(), main.debug_button_row)
 	assert_eq(main.clear_save_button.get_parent(), main.debug_button_row)
+	assert_eq(main.next_day_button.get_parent(), main.debug_button_row)
+	assert_eq(main.next_day_button.custom_minimum_size.x, 64.0)
+	assert_eq(main.next_day_button.get_theme_font_size("font_size"), 11)
 	assert_lt(main.debug_button_row.anchor_left, 0.02)
 	assert_gt(main.debug_button_row.anchor_top, 0.90)
 	assert_gt(main.debug_button_row.anchor_bottom, 0.98)
 	assert_true(main.clear_save_button.pressed.is_connected(
 		Callable(main, "_on_clear_save_pressed")
+	))
+	assert_true(main.next_day_button.pressed.is_connected(
+		Callable(main, "_on_next_day_showcase_pressed")
 	))
 	assert_not_null(main.forbidden_cursor_texture)
 	assert_eq(main.global_frame.texture.resource_path, QuestMain.FRAME_TEXTURE_PATHS[&"map"])
@@ -1570,6 +1576,45 @@ func test_arc_uses_item_strip_reward_summary_and_click_advance() -> void:
 	assert_false(main.transition_in_progress)
 	assert_eq(main.state.day, 2)
 	assert_eq(main.bgm_director.active_track_id, QuestBgmDirector.TRACK_EMPTY)
+
+
+func test_small_next_day_button_previews_arc_without_mutating_state() -> void:
+	var main := await _spawn_main()
+	var original_day := main.state.day
+	var original_money := main.state.wallet.money
+	var original_pending_arc = main.state.pending_arc
+	main.arc_fade_seconds = 0.0
+	main.arc_typewriter_char_seconds = 0.0
+	main.bgm_director.fade_seconds = 0.0
+	main.next_day_button.pressed.emit()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	assert_true(main.arc_overlay.visible)
+	assert_false(main.hand_bar.visible)
+	assert_true(main.transition_in_progress)
+	assert_true(main.arc_waiting_for_click)
+	assert_eq(
+		main.arc_result_label.text,
+		TranslationServer.translate(&"quest.ui.arc.showcase.body")
+	)
+	assert_eq(main.state.day, original_day)
+	assert_eq(main.state.wallet.money, original_money)
+	assert_same(main.state.pending_arc, original_pending_arc)
+	main._on_arc_advance_requested()
+	await get_tree().process_frame
+	assert_eq(
+		main.arc_day_label.text,
+		TranslationServer.translate(&"quest.ui.arc.new_day") % (original_day + 1)
+	)
+	main._on_arc_advance_requested()
+	for index in 6:
+		await get_tree().process_frame
+		if not main.transition_in_progress:
+			break
+	assert_false(main.transition_in_progress)
+	assert_eq(main.state.day, original_day)
+	assert_eq(main.state.wallet.money, original_money)
+	assert_same(main.state.pending_arc, original_pending_arc)
 
 
 func test_closing_location_popup_returns_unconfirmed_card() -> void:

@@ -215,7 +215,7 @@ func _build_shell() -> void:
 	debug_button_row.name = "DebugButtonRow"
 	debug_button_row.anchor_left = 0.008
 	debug_button_row.anchor_top = 0.945
-	debug_button_row.anchor_right = 0.145
+	debug_button_row.anchor_right = 0.205
 	debug_button_row.anchor_bottom = 0.992
 	debug_button_row.add_theme_constant_override("separation", 5)
 	debug_button_row.z_index = 60
@@ -232,6 +232,13 @@ func _build_shell() -> void:
 	clear_save_button.add_theme_font_size_override("font_size", 11)
 	clear_save_button.pressed.connect(_on_clear_save_pressed)
 	debug_button_row.add_child(clear_save_button)
+	next_day_button = Button.new()
+	next_day_button.name = "NextDayShowcaseButton"
+	next_day_button.custom_minimum_size = Vector2(64, 0)
+	next_day_button.add_theme_font_size_override("font_size", 11)
+	next_day_button.tooltip_text = ""
+	next_day_button.pressed.connect(_on_next_day_showcase_pressed)
+	debug_button_row.add_child(next_day_button)
 
 	next_day_dialog = ConfirmationDialog.new()
 	next_day_dialog.confirmed.connect(_on_next_day_requested)
@@ -771,13 +778,7 @@ func _on_clear_save_pressed() -> void:
 func _on_next_day_requested() -> void:
 	if transition_in_progress:
 		return
-	if current_screen is QuestSynthesisInterface:
-		(current_screen as QuestSynthesisInterface).cancel_pending_inputs()
-	elif current_screen is QuestMapScreen:
-		(current_screen as QuestMapScreen)._close_location_popup()
-	hand_bar.clear_temporarily_hidden_cards()
-	detail_popup.close()
-	rule_detail_popup.close()
+	_prepare_for_arc_display()
 	var result := state.begin_next_day()
 	if result.ok:
 		_run_arc()
@@ -787,6 +788,23 @@ func _on_next_day_requested() -> void:
 			&"opening.ui.next_day.self_care_required"
 		)
 		next_day_blocked_dialog.popup_centered(Vector2i(520, 190))
+
+
+func _on_next_day_showcase_pressed() -> void:
+	if transition_in_progress:
+		return
+	_prepare_for_arc_display()
+	_run_arc_showcase()
+
+
+func _prepare_for_arc_display() -> void:
+	if current_screen is QuestSynthesisInterface:
+		(current_screen as QuestSynthesisInterface).cancel_pending_inputs()
+	elif current_screen is QuestMapScreen:
+		(current_screen as QuestMapScreen)._close_location_popup()
+	hand_bar.clear_temporarily_hidden_cards()
+	detail_popup.close()
+	rule_detail_popup.close()
 
 
 func _resume_arc() -> void:
@@ -842,6 +860,36 @@ func _run_arc() -> void:
 	_show_map_immediate()
 	if not state.pending_persona_reveal_ids.is_empty():
 		_run_pending_persona_reveals()
+
+
+func _run_arc_showcase() -> void:
+	bgm_director.play_track(QuestBgmDirector.TRACK_DREAM)
+	transition_in_progress = true
+	hand_bar.visible = false
+	detail_popup.close()
+	rule_detail_popup.close()
+	arc_day_label.text = TranslationServer.translate(&"quest.ui.arc.night") % state.day
+	arc_result_label.text = ""
+	arc_reward_label.text = ""
+	arc_money_label.text = TranslationServer.translate(&"demo.ui.money") % state.wallet.money
+	arc_image.texture = load("res://resources/character/bag-head.png") as Texture2D
+	arc_overlay.visible = true
+	arc_overlay.modulate.a = 0.0
+	var fade := create_tween()
+	fade.tween_property(arc_overlay, "modulate:a", 1.0, arc_fade_seconds)
+	await fade.finished
+	await _present_arc_text(TranslationServer.translate(&"quest.ui.arc.showcase.body"))
+	arc_day_label.text = TranslationServer.translate(&"quest.ui.arc.new_day") % (state.day + 1)
+	arc_reward_label.text = ""
+	await _present_arc_text(TranslationServer.translate(&"demo.ui.arc.new_day.body"))
+	bgm_director.play_track(QuestBgmDirector.TRACK_EMPTY)
+	var fade_out := create_tween()
+	fade_out.tween_property(arc_overlay, "modulate:a", 0.0, arc_fade_seconds)
+	await fade_out.finished
+	arc_overlay.visible = false
+	transition_in_progress = false
+	hand_bar.visible = true
+	_show_map_immediate()
 
 
 func _build_arc_overlay() -> void:
