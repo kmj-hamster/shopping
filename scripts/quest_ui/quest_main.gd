@@ -4,13 +4,42 @@ extends Control
 signal arc_text_revealed
 signal arc_text_advanced
 
-const UI_THEME: Theme = preload("res://resources/fonts/shancha_ui_theme.tres")
+const ZH_UI_THEME: Theme = preload("res://resources/fonts/shancha_ui_theme.tres")
+const EN_UI_THEME: Theme = preload("res://resources/fonts/baker_ui_theme.tres")
+const EN_UI_FONT: FontFile = preload("res://resources/fonts/baker-signet-bt.ttf")
+const ZH_FALLBACK_FONT: FontFile = preload("res://resources/fonts/zpix.woff2")
+const ENGLISH_TRACKING_RATIO := 0.06
+const ENGLISH_FONT_META := &"quest_english_font_override"
+const FONT_COLOR_STATES: Array[StringName] = [
+	&"font_color",
+	&"font_hover_color",
+	&"font_pressed_color",
+	&"font_focus_color",
+	&"font_hover_pressed_color",
+	&"font_disabled_color",
+	&"font_readonly_color",
+	&"font_uneditable_color",
+	&"font_placeholder_color",
+	&"font_selected_color",
+	&"default_color",
+]
 const CONTENT_LEFT := 136.0 / 1920.0
 const CONTENT_TOP := 97.0 / 1080.0
 const CONTENT_RIGHT := 1780.0 / 1920.0
 const CONTENT_BOTTOM := 920.0 / 1080.0
+const BACKGROUND_OVERSCAN := 20.0
+const FRAME_TEXTURE_PATHS := {
+	&"map": "res://resources/ui/frames/frame-map.png",
+	&"toy": "res://resources/ui/frames/frame-toy.png",
+	&"fast_food": "res://resources/ui/frames/frame-fast-food.png",
+	&"flower": "res://resources/ui/frames/frame-flower.png",
+	&"record": "res://resources/ui/frames/frame-record.png",
+	&"bookstore": "res://resources/ui/frames/frame-bookstore.png",
+	&"synthesis": "res://resources/ui/frames/frame-synthesis.png",
+}
 
 var state: QuestGameState
+var bgm_director: QuestBgmDirector
 var current_screen: Control
 var art_canvas: Control
 var content_viewport_region: Control
@@ -46,7 +75,6 @@ var arc_cursor_label: Label
 var arc_cursor_tween: Tween
 var transition_in_progress := false
 var focused_rule: CardSlotRule
-var synthesis_return_store_id: StringName
 var arc_fade_seconds := 0.35
 var arc_typewriter_char_seconds := 0.028
 var arc_typing := false
@@ -66,23 +94,34 @@ var persona_reveal_card: CardHandCard
 var persona_reveal_hint: Label
 var persona_reveal_persona_id: StringName
 var persona_reveal_flipped := false
+var english_font_by_size: Dictionary = {}
 
 
 func _ready() -> void:
-	theme = UI_THEME
+	_apply_locale_theme()
 	state = GameState.quest_state
 	state.clear_synthesis_draft()
+	_build_bgm_director()
 	_configure_cursor()
 	_build_shell()
 	_build_global_interface()
 	_bind_state()
 	LocaleManager.locale_changed.connect(_on_locale_changed)
+	get_tree().node_added.connect(_on_scene_node_added)
 	_refresh_global_text()
 	_show_map_immediate()
+	call_deferred("_apply_locale_typography")
 	if state.pending_arc != null:
 		call_deferred("_resume_arc")
 	elif not state.pending_persona_reveal_ids.is_empty():
 		call_deferred("_run_pending_persona_reveals")
+
+
+func _build_bgm_director() -> void:
+	bgm_director = QuestBgmDirector.new()
+	bgm_director.name = "QuestBgmDirector"
+	bgm_director.setup(state)
+	add_child(bgm_director)
 
 
 func _build_shell() -> void:
@@ -106,13 +145,15 @@ func _build_shell() -> void:
 	content_viewport_region.anchor_right = CONTENT_RIGHT
 	content_viewport_region.anchor_bottom = CONTENT_BOTTOM
 	content_viewport_region.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	content_viewport_region.clip_contents = true
+	# Screen artwork may extend a few pixels beneath the decorative frame.
+	# Popup bounds still use this region, and their own layer remains clipped.
+	content_viewport_region.clip_contents = false
 	art_canvas.add_child(content_viewport_region)
 
 	screen_host = Control.new()
 	screen_host.name = "ContentViewport"
 	screen_host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	screen_host.clip_contents = true
+	screen_host.clip_contents = false
 	content_viewport_region.add_child(screen_host)
 	task_popup_layer = Control.new()
 	task_popup_layer.name = "TaskPopupLayer"
@@ -124,7 +165,7 @@ func _build_shell() -> void:
 
 	global_frame = TextureRect.new()
 	global_frame.name = "ContentViewportFrame"
-	global_frame.texture = load("res://resources/ui/shell/frame-global.png") as Texture2D
+	global_frame.texture = load(FRAME_TEXTURE_PATHS[&"map"]) as Texture2D
 	global_frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	global_frame.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	global_frame.stretch_mode = TextureRect.STRETCH_SCALE
@@ -135,16 +176,17 @@ func _build_shell() -> void:
 	protagonist_button = TextureButton.new()
 	protagonist_button.name = "SynthesisBagButton"
 	protagonist_button.texture_normal = load(
-		"res://resources/ui/shell/bag-synthesis.png"
+		"res://resources/character/bag-head.png"
 	) as Texture2D
-	protagonist_button.texture_hover = protagonist_button.texture_normal
-	protagonist_button.anchor_left = 0.79
-	protagonist_button.anchor_top = 0.62
-	protagonist_button.anchor_right = 0.985
-	protagonist_button.anchor_bottom = 1.0
+	protagonist_button.texture_hover = load(
+		"res://resources/character/bag-light.png"
+	) as Texture2D
+	protagonist_button.anchor_left = 0.745
+	protagonist_button.anchor_top = 0.60
+	protagonist_button.anchor_right = 0.99
+	protagonist_button.anchor_bottom = 1.08
 	protagonist_button.ignore_texture_size = true
 	protagonist_button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
-	protagonist_button.tooltip_text = TranslationServer.translate(&"quest.ui.synthesis.open")
 	protagonist_button.pressed.connect(_show_synthesis)
 	protagonist_button.z_index = 45
 	art_canvas.add_child(protagonist_button)
@@ -161,10 +203,10 @@ func _build_shell() -> void:
 
 	debug_button_row = HBoxContainer.new()
 	debug_button_row.name = "DebugButtonRow"
-	debug_button_row.anchor_left = 0.84
-	debug_button_row.anchor_top = 0.008
-	debug_button_row.anchor_right = 0.995
-	debug_button_row.anchor_bottom = 0.052
+	debug_button_row.anchor_left = 0.008
+	debug_button_row.anchor_top = 0.945
+	debug_button_row.anchor_right = 0.145
+	debug_button_row.anchor_bottom = 0.992
 	debug_button_row.add_theme_constant_override("separation", 5)
 	debug_button_row.z_index = 60
 	add_child(debug_button_row)
@@ -382,10 +424,13 @@ func _bind_state() -> void:
 
 
 func _show_map() -> void:
+	bgm_director.play_track(QuestBgmDirector.TRACK_EMPTY)
 	_run_screen_transition(Callable(self, "_show_map_immediate"), 0.16, 0.18)
 
 
 func _show_map_immediate() -> void:
+	bgm_director.play_track(QuestBgmDirector.TRACK_EMPTY)
+	_set_global_frame(&"map")
 	_deactivate_current_screen()
 	if map_screen == null:
 		map_screen = QuestMapScreen.new()
@@ -404,6 +449,7 @@ func _show_map_immediate() -> void:
 
 
 func _show_shop(store_id: StringName) -> void:
+	bgm_director.play_track(QuestBgmDirector.TRACK_EMPTY)
 	var first_visit := not state.has_visited_store(store_id)
 	_run_screen_transition(
 		Callable(self, "_show_shop_immediate").bind(store_id),
@@ -415,6 +461,8 @@ func _show_shop(store_id: StringName) -> void:
 
 
 func _show_shop_immediate(store_id: StringName) -> void:
+	bgm_director.play_track(QuestBgmDirector.TRACK_EMPTY)
+	_set_global_frame(store_id)
 	hand_bar.clear_temporarily_hidden_cards()
 	_deactivate_current_screen()
 	var shop := shop_screens.get(store_id) as QuestShopScreen
@@ -440,6 +488,7 @@ func _show_synthesis() -> void:
 	if current_screen is QuestSynthesisInterface:
 		_return_from_synthesis()
 		return
+	bgm_director.play_track(QuestBgmDirector.TRACK_DEBUSSY)
 	_run_screen_transition(
 		Callable(self, "_show_synthesis_immediate"),
 		0.15,
@@ -449,11 +498,8 @@ func _show_synthesis() -> void:
 
 
 func _show_synthesis_immediate() -> void:
-	synthesis_return_store_id = (
-		(current_screen as QuestShopScreen).store_id
-		if current_screen is QuestShopScreen
-		else &""
-	)
+	bgm_director.play_track(QuestBgmDirector.TRACK_DEBUSSY)
+	_set_global_frame(&"synthesis")
 	_deactivate_current_screen()
 	if synthesis_interface == null:
 		synthesis_interface = QuestSynthesisInterface.new()
@@ -474,13 +520,17 @@ func _show_synthesis_immediate() -> void:
 	hand_bar.visible = true
 
 
+func _set_global_frame(scene_id: StringName) -> void:
+	if global_frame == null:
+		return
+	var texture_path := String(FRAME_TEXTURE_PATHS.get(scene_id, FRAME_TEXTURE_PATHS[&"map"]))
+	if global_frame.texture == null or global_frame.texture.resource_path != texture_path:
+		global_frame.texture = load(texture_path) as Texture2D
+
+
 func _return_from_synthesis() -> void:
-	var switcher := (
-		Callable(self, "_show_shop_immediate").bind(synthesis_return_store_id)
-		if not synthesis_return_store_id.is_empty()
-		else Callable(self, "_show_map_immediate")
-	)
-	_run_screen_transition(switcher, 0.15, 0.15, Color("05090d"))
+	bgm_director.play_track(QuestBgmDirector.TRACK_EMPTY)
+	_run_screen_transition(Callable(self, "_show_map_immediate"), 0.15, 0.15, Color("05090d"))
 
 
 func _deactivate_current_screen() -> void:
@@ -661,6 +711,7 @@ func _resume_arc() -> void:
 
 
 func _run_arc() -> void:
+	bgm_director.play_track(QuestBgmDirector.TRACK_DREAM)
 	transition_in_progress = true
 	hand_bar.visible = false
 	detail_popup.close()
@@ -697,6 +748,7 @@ func _run_arc() -> void:
 	arc_image.texture = load("res://resources/character/bag-head.png") as Texture2D
 	arc_reward_label.text = ""
 	await _present_arc_text(TranslationServer.translate(&"demo.ui.arc.new_day.body"))
+	bgm_director.play_track(QuestBgmDirector.TRACK_EMPTY)
 	var fade_out := create_tween()
 	fade_out.tween_property(arc_overlay, "modulate:a", 0.0, arc_fade_seconds)
 	await fade_out.finished
@@ -900,8 +952,6 @@ func _refresh_global_text() -> void:
 	if clear_save_button != null:
 		clear_save_button.text = TranslationServer.translate(&"demo.ui.clear_save")
 		clear_save_button.tooltip_text = TranslationServer.translate(&"demo.ui.clear_save.tooltip")
-	if protagonist_button != null:
-		protagonist_button.tooltip_text = TranslationServer.translate(&"quest.ui.synthesis.open")
 	next_day_dialog.title = TranslationServer.translate(&"demo.ui.next_day")
 	next_day_dialog.dialog_text = TranslationServer.translate(&"demo.ui.next_day.question")
 	next_day_dialog.ok_button_text = TranslationServer.translate(&"demo.ui.confirm")
@@ -935,4 +985,82 @@ func _configure_cursor() -> void:
 
 
 func _on_locale_changed(_locale: String) -> void:
+	_apply_locale_theme()
+	_apply_locale_typography()
 	_refresh_global_text()
+
+
+func _apply_locale_theme() -> void:
+	theme = (
+		EN_UI_THEME
+		if LocaleManager.current_locale == LocaleManager.LOCALE_EN
+		else ZH_UI_THEME
+	)
+
+
+func _apply_locale_typography() -> void:
+	_apply_locale_typography_to_subtree(self)
+
+
+func _apply_locale_typography_to_subtree(node: Node) -> void:
+	if not is_instance_valid(node):
+		return
+	if node is Control:
+		_apply_locale_typography_to_control(node as Control)
+	for child in node.get_children():
+		_apply_locale_typography_to_subtree(child)
+
+
+func _apply_locale_typography_to_control(control: Control) -> void:
+	if not _is_text_control(control):
+		return
+	_replace_pure_black_font_colors(control)
+	if LocaleManager.current_locale == LocaleManager.LOCALE_EN:
+		var font_size := control.get_theme_font_size("font_size")
+		control.add_theme_font_override("font", _english_font_for_size(font_size))
+		control.set_meta(ENGLISH_FONT_META, true)
+	elif control.has_meta(ENGLISH_FONT_META):
+		control.remove_theme_font_override("font")
+		control.remove_meta(ENGLISH_FONT_META)
+
+
+func _english_font_for_size(font_size: int) -> FontVariation:
+	var tracking_pixels := maxi(1, roundi(font_size * ENGLISH_TRACKING_RATIO))
+	if english_font_by_size.has(tracking_pixels):
+		return english_font_by_size[tracking_pixels] as FontVariation
+	var tracked_font := FontVariation.new()
+	tracked_font.base_font = EN_UI_FONT
+	var fallbacks: Array[Font] = [ZH_FALLBACK_FONT]
+	tracked_font.fallbacks = fallbacks
+	tracked_font.spacing_glyph = tracking_pixels
+	english_font_by_size[tracking_pixels] = tracked_font
+	return tracked_font
+
+
+func _is_text_control(control: Control) -> bool:
+	return (
+		control is Label
+		or control is BaseButton
+		or control is LineEdit
+		or control is TextEdit
+		or control is RichTextLabel
+	)
+
+
+func _replace_pure_black_font_colors(control: Control) -> void:
+	for color_name in FONT_COLOR_STATES:
+		if (
+			control.has_theme_color(color_name)
+			and control.get_theme_color(color_name).is_equal_approx(Color.BLACK)
+		):
+			control.add_theme_color_override(color_name, UiPalette.INK_COLOR)
+
+
+func _on_scene_node_added(node: Node) -> void:
+	if (
+		not is_instance_valid(node)
+		or node == self
+		or not is_ancestor_of(node)
+	):
+		return
+	call_deferred("_apply_locale_typography_to_subtree", node)

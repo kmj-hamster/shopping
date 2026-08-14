@@ -36,6 +36,7 @@ var owner_states: Dictionary = {}
 var self_care_category_history: Array[Dictionary] = []
 var pending_persona_reveal_ids: Array[StringName] = []
 var visited_store_ids: Dictionary = {}
+var bgm_playback_positions: Dictionary = {}
 var pending_arc: ArcTransitionState
 var synthesis_base_instance_id := 0
 var synthesis_fuel_instance_id := 0
@@ -83,6 +84,7 @@ func reset() -> void:
 	self_care_category_history = []
 	pending_persona_reveal_ids = []
 	visited_store_ids = {}
+	bgm_playback_positions = {}
 	pending_arc = null
 	synthesis_base_instance_id = 0
 	synthesis_fuel_instance_id = 0
@@ -97,6 +99,21 @@ func reset() -> void:
 	activate_scheduled_tasks(day)
 	_mark_state_changed(QuestStateDelta.new().mark_full_reconcile(&"reset"))
 	_end_change_batch()
+
+
+func bgm_playback_position(track_id: StringName) -> float:
+	return maxf(0.0, float(bgm_playback_positions.get(track_id, 0.0)))
+
+
+func remember_bgm_playback_position(track_id: StringName, position: float) -> void:
+	if track_id.is_empty():
+		return
+	var safe_position := maxf(0.0, position)
+	if is_equal_approx(bgm_playback_position(track_id), safe_position):
+		return
+	bgm_playback_positions[track_id] = safe_position
+	# BGM progress only needs persistence; it does not invalidate gameplay UI.
+	state_changed.emit()
 
 
 func activate_scheduled_tasks(for_day: int) -> Array[TaskInstanceState]:

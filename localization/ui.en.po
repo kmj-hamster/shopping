@@ -39,12 +39,6 @@ msgstr "OR"
 msgid "demo.ui.price"
 msgstr "$%d"
 
-msgid "demo.ui.location.place_item"
-msgstr "Place a matching item in the slot."
-
-msgid "demo.ui.location.ready"
-msgstr "This item will be consumed when confirmed."
-
 msgid "demo.ui.rule.title"
 msgstr "Requirements"
 

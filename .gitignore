@@ -4,6 +4,7 @@
 /test-reports/*
 !/test-reports/.gdignore
 /builds/
+/.codex_tmp/
 
 # macOS Finder metadata
 .DS_Store

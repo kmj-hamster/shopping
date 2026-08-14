@@ -10,12 +10,13 @@ func after_all() -> void:
 
 
 func before_each() -> void:
+	LocaleManager.set_locale(LocaleManager.LOCALE_ZH, false)
 	GameState.reset_game()
 
 
 func test_main_uses_the_centered_art_shell_and_unified_hand() -> void:
 	var main := await _spawn_main()
-	assert_eq(main.theme, load("res://resources/fonts/shancha_ui_theme.tres"))
+	assert_eq(main.theme, QuestMain.ZH_UI_THEME)
 	var ui_font := main.theme.default_font as FontVariation
 	assert_not_null(ui_font)
 	assert_eq(ui_font.base_font, load("res://resources/fonts/VT323-Regular.ttf"))
@@ -29,7 +30,23 @@ func test_main_uses_the_centered_art_shell_and_unified_hand() -> void:
 	assert_same(main.task_popup_layer.get_parent(), main.content_viewport_region)
 	assert_not_null(main.find_child("ContentViewport", true, false))
 	assert_not_null(main.find_child("SynthesisBagButton", true, false))
-	assert_eq(main.protagonist_button.texture_normal.resource_path, "res://resources/ui/shell/bag-synthesis.png")
+	assert_eq(
+		main.protagonist_button.texture_normal.resource_path,
+		"res://resources/character/bag-head.png",
+	)
+	assert_eq(
+		main.protagonist_button.texture_hover.resource_path,
+		"res://resources/character/bag-light.png",
+	)
+	assert_almost_eq(main.protagonist_button.anchor_left, 0.745, 0.001)
+	assert_almost_eq(main.protagonist_button.anchor_top, 0.60, 0.001)
+	assert_almost_eq(main.protagonist_button.anchor_right, 0.99, 0.001)
+	assert_almost_eq(main.protagonist_button.anchor_bottom, 1.08, 0.001)
+	assert_eq(main.protagonist_button.tooltip_text, "")
+	assert_gt(
+		main.protagonist_button.get_global_rect().end.y,
+		main.art_canvas.get_global_rect().end.y,
+	)
 	assert_null(main.money_label)
 	assert_null(main.day_label)
 	assert_null(main.next_day_button)
@@ -38,12 +55,14 @@ func test_main_uses_the_centered_art_shell_and_unified_hand() -> void:
 	assert_not_null(main.get_node_or_null("DebugButtonRow"))
 	assert_eq(main.language_button.get_parent(), main.debug_button_row)
 	assert_eq(main.clear_save_button.get_parent(), main.debug_button_row)
-	assert_lt(main.debug_button_row.anchor_top, 0.10)
+	assert_lt(main.debug_button_row.anchor_left, 0.02)
+	assert_gt(main.debug_button_row.anchor_top, 0.90)
+	assert_gt(main.debug_button_row.anchor_bottom, 0.98)
 	assert_true(main.clear_save_button.pressed.is_connected(
 		Callable(main, "_on_clear_save_pressed")
 	))
 	assert_not_null(main.forbidden_cursor_texture)
-	assert_eq(main.global_frame.texture.resource_path, "res://resources/ui/shell/frame-global.png")
+	assert_eq(main.global_frame.texture.resource_path, QuestMain.FRAME_TEXTURE_PATHS[&"map"])
 	assert_eq(main.global_shadow.texture.resource_path, "res://resources/ui/shell/shadow-global.png")
 	assert_eq(main.global_shadow.mouse_filter, Control.MOUSE_FILTER_IGNORE)
 	assert_gt(main.task_popup_layer.z_index, main.global_shadow.z_index)
@@ -51,23 +70,85 @@ func test_main_uses_the_centered_art_shell_and_unified_hand() -> void:
 	assert_almost_eq(main.content_viewport_region.anchor_top, QuestMain.CONTENT_TOP, 0.001)
 	assert_almost_eq(main.content_viewport_region.anchor_right, QuestMain.CONTENT_RIGHT, 0.001)
 	assert_almost_eq(main.content_viewport_region.anchor_bottom, QuestMain.CONTENT_BOTTOM, 0.001)
+	assert_false(main.content_viewport_region.clip_contents)
+	assert_false(main.screen_host.clip_contents)
 	assert_true(main.current_screen is QuestMapScreen)
+	var map_background := main.current_screen.get_node("MapBackground") as TextureRect
+	_assert_background_overscans_frame(map_background)
 	assert_eq((main.current_screen as QuestMapScreen).store_hotspots.size(), 2)
 	assert_eq(main.task_dock.bookmark_column.get_child_count(), 4)
+	assert_eq(main.task_dock.receipt_title.get_theme_color("font_color"), UiPalette.INK_COLOR)
+	assert_eq(
+		main.task_dock.receipt_title.horizontal_alignment,
+		HORIZONTAL_ALIGNMENT_LEFT,
+	)
+	assert_eq(
+		main.task_dock.receipt_money_label.text,
+		TranslationServer.translate(&"demo.ui.money") % main.state.wallet.money,
+	)
+	assert_eq(
+		main.task_dock.receipt_money_label.horizontal_alignment,
+		HORIZONTAL_ALIGNMENT_LEFT,
+	)
 	assert_false(main.task_dock.is_expanded)
-	assert_false(main.task_dock.task_scroll.visible)
-	assert_true(main.task_dock.task_scroll.clip_contents)
-	assert_almost_eq(main.task_dock.task_scroll.get_v_scroll_bar().self_modulate.a, 0.0, 0.001)
+	assert_false(main.task_dock.bookmark_column.visible)
+	assert_false(main.task_dock.page_navigation.visible)
+	assert_null(main.task_dock.find_child("TodoTaskScroll", true, false))
 	for bookmark in main.task_dock.bookmark_column.get_children():
 		var bookmark_button := bookmark as Button
 		assert_eq(bookmark_button.tooltip_text, "")
 		assert_true(bookmark_button.clip_text)
 		assert_eq(bookmark_button.get_theme_font_size("font_size"), 11)
+		assert_eq(bookmark_button.get_theme_color("font_color"), UiPalette.INK_COLOR)
+		assert_true(bookmark_button.get_theme_stylebox("normal") is StyleBoxEmpty)
+		assert_lt(bookmark_button.size.y, QuestTaskDock.TASK_LINE_HEIGHT)
 	assert_eq(main.hand_bar.card_views.size(), 10)
 	var fries_card := main.hand_bar.card_views.values()[0] as CardHandCard
 	assert_eq(fries_card.definition.id, &"fries")
+	assert_eq(fries_card.title_label.get_theme_color("font_color"), UiPalette.INK_COLOR)
 	assert_not_null(fries_card.item_image.texture)
 	assert_eq(fries_card.custom_minimum_size, CardHandCard.CARD_SIZE)
+
+
+func test_english_locale_uses_baker_signet_with_six_percent_tracking_live() -> void:
+	var main := await _spawn_main()
+	var task := main.state.task_instance_for_definition(&"girl_order")
+	main.task_dock._toggle_task(task.instance_id)
+	await get_tree().process_frame
+	var popup := main.task_dock.task_window
+
+	LocaleManager.set_locale(LocaleManager.LOCALE_EN, false)
+	await get_tree().process_frame
+	assert_eq(main.theme, QuestMain.EN_UI_THEME)
+	assert_eq(main.task_dock.receipt_money_label.text, "Money: %d" % main.state.wallet.money)
+	var theme_font := main.theme.default_font as FontVariation
+	assert_not_null(theme_font)
+	assert_eq(theme_font.base_font.resource_path, "res://resources/fonts/baker-signet-bt.ttf")
+	var title_font := popup.title_label.get_theme_font("font") as FontVariation
+	assert_not_null(title_font)
+	assert_eq(title_font.base_font.resource_path, "res://resources/fonts/baker-signet-bt.ttf")
+	assert_eq(
+		title_font.spacing_glyph,
+		maxi(1, roundi(
+			popup.title_label.get_theme_font_size("font_size")
+			* QuestMain.ENGLISH_TRACKING_RATIO
+		)),
+	)
+
+	LocaleManager.set_locale(LocaleManager.LOCALE_ZH, false)
+	await get_tree().process_frame
+	assert_eq(main.theme, QuestMain.ZH_UI_THEME)
+	assert_false(popup.title_label.has_theme_font_override("font"))
+
+
+func test_dynamic_pure_black_text_is_replaced_with_night_ink() -> void:
+	var main := await _spawn_main()
+	var label := Label.new()
+	label.text = "Ink"
+	label.add_theme_color_override("font_color", Color.BLACK)
+	main.add_child(label)
+	await get_tree().process_frame
+	assert_eq(label.get_theme_color("font_color"), UiPalette.INK_COLOR)
 
 
 func test_flower_shop_starts_as_scene_and_opens_shelf_on_request() -> void:
@@ -76,6 +157,7 @@ func test_flower_shop_starts_as_scene_and_opens_shelf_on_request() -> void:
 	await get_tree().process_frame
 	var shop := main.current_screen as QuestShopScreen
 	assert_not_null(shop)
+	_assert_background_overscans_frame(shop.get_node("StoreBackground") as TextureRect)
 	assert_false(shop.shelf_popup.visible)
 	assert_not_null(shop.get_node_or_null("StoreOwnerPortrait"))
 	assert_not_null(shop.find_child("ShelfButton", true, false))
@@ -84,7 +166,31 @@ func test_flower_shop_starts_as_scene_and_opens_shelf_on_request() -> void:
 	assert_null(shop.title_label)
 	assert_lt(shop.shelf_popup.anchor_right, shop.owner_portrait.anchor_left)
 	assert_lt(shop.shelf_popup.anchor_right, shop.dialogue_panel.anchor_left)
+	assert_almost_eq(shop.shelf_popup.anchor_left, 0.18, 0.001)
+	assert_almost_eq(shop.shelf_popup.anchor_right, 0.385, 0.001)
+	assert_gt(
+		shop.shelf_popup.get_global_rect().position.x,
+		main.task_dock.receipt_host.get_global_rect().end.x + 16.0,
+	)
 	assert_lt(shop.owner_portrait.anchor_right, shop.navigation_column.anchor_left)
+	assert_almost_eq(shop.owner_portrait.anchor_left, 0.595, 0.001)
+	assert_almost_eq(shop.owner_portrait.anchor_top, 0.18, 0.001)
+	assert_almost_eq(shop.owner_portrait.anchor_bottom, 1.035, 0.001)
+	assert_gt(main.global_frame.z_index, shop.owner_portrait.z_index)
+	assert_eq(shop.shelf_nav_button.custom_minimum_size, Vector2(82, 38))
+	assert_almost_eq(shop.owner_name_label.anchor_left, 0.10, 0.001)
+	assert_almost_eq(shop.owner_dialogue_label.anchor_left, 0.055, 0.001)
+	assert_true(shop.dialogue_panel.get_theme_stylebox("panel") is StyleBoxEmpty)
+	assert_almost_eq(shop.dialogue_glass.anchor_top, 0.20, 0.001)
+	assert_eq(shop.dialogue_glass.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+	assert_eq(
+		shop.owner_dialogue_label.get_theme_color("font_color"),
+		QuestShopScreen.DIALOGUE_TEXT_COLOR,
+	)
+	assert_eq(
+		shop.owner_name_label.get_theme_color("font_color"),
+		QuestShopScreen.DIALOGUE_TEXT_COLOR,
+	)
 	assert_eq(shop.owner_dialogue_voice_players.size(), 3)
 	assert_eq(shop.owner_dialogue_label.mouse_filter, Control.MOUSE_FILTER_PASS)
 	shop._toggle_shelf_popup()
@@ -261,7 +367,7 @@ func test_checkout_closes_the_top_right_popup() -> void:
 	assert_false(main.rule_detail_popup.visible)
 
 
-func test_opening_synthesis_clears_shop_checkout_and_comment() -> void:
+func test_opening_synthesis_clears_shop_checkout_and_comment_before_returning_to_map() -> void:
 	var main := await _spawn_main()
 	main._show_shop(&"flower")
 	await get_tree().process_frame
@@ -275,11 +381,11 @@ func test_opening_synthesis_clears_shop_checkout_and_comment() -> void:
 	assert_false(transaction.has_selection())
 	main.protagonist_button.pressed.emit()
 	await get_tree().process_frame
-	var returned_shop := main.current_screen as QuestShopScreen
-	assert_not_null(returned_shop)
-	assert_false(returned_shop.checkout_button.visible)
-	assert_true(returned_shop.owner_dialogue_override_key.is_empty())
-	assert_true(returned_shop.owner_dialogue_item_name.is_empty())
+	assert_true(main.current_screen is QuestMapScreen)
+	var previous_shop := main.shop_screens[&"flower"] as QuestShopScreen
+	assert_false(previous_shop.checkout_button.visible)
+	assert_true(previous_shop.owner_dialogue_override_key.is_empty())
+	assert_true(previous_shop.owner_dialogue_item_name.is_empty())
 
 
 func test_locked_location_uses_confirmed_popup_then_enters_shop() -> void:
@@ -297,6 +403,11 @@ func test_locked_location_uses_confirmed_popup_then_enters_shop() -> void:
 	assert_almost_eq(map.location_popup.anchor_top, PaperActivityPopup.PAPER_ANCHOR_TOP, 0.001)
 	assert_almost_eq(map.location_popup.anchor_bottom, PaperActivityPopup.PAPER_ANCHOR_BOTTOM, 0.001)
 	assert_almost_eq(
+		map.location_popup.position.y,
+		map.size.y * PaperActivityPopup.PAPER_ANCHOR_TOP,
+		0.5,
+	)
+	assert_almost_eq(
 		map.location_popup.size.y,
 		maxf(
 			map.size.y * (
@@ -309,13 +420,21 @@ func test_locked_location_uses_confirmed_popup_then_enters_shop() -> void:
 	assert_lte(map.location_popup.size.y, map.size.y * 0.65)
 	assert_eq(
 		map.location_popup.title_label.horizontal_alignment,
-		HORIZONTAL_ALIGNMENT_CENTER,
+		HORIZONTAL_ALIGNMENT_LEFT,
 	)
 	assert_eq(
 		map.location_popup.body_label.horizontal_alignment,
 		HORIZONTAL_ALIGNMENT_LEFT,
 	)
 	assert_eq(map.location_popup.slots_row.alignment, BoxContainer.ALIGNMENT_CENTER)
+	assert_eq(map.location_popup.slots_row.get_child_count(), 1)
+	assert_true(map.location_popup.action_button.disabled)
+	assert_eq(map.location_popup.feedback_label.text, "")
+	assert_not_null(map.location_popup.action_button.get_theme_stylebox("disabled"))
+	assert_eq(
+		map.location_popup.slot_prompt_label.text,
+		TranslationServer.translate(map.location_popup.unlock_definition.slot_rule.display_name_key),
+	)
 	assert_eq(
 		map.location_popup.slots_row.size_flags_vertical,
 		Control.SIZE_SHRINK_CENTER,
@@ -357,6 +476,7 @@ func test_locked_location_uses_confirmed_popup_then_enters_shop() -> void:
 	assert_null(map.location_popup.unlock_slot.find_child("RemoveStagedCardButton"))
 	assert_false(main.hand_bar.card_views.has(jasmine.instance_id))
 	assert_false(map.location_popup.action_button.disabled)
+	assert_eq(map.location_popup.feedback_label.text, "")
 	map.location_popup._on_action_pressed()
 	await get_tree().process_frame
 	assert_true(main.state.is_store_unlocked(&"record"))
@@ -511,22 +631,31 @@ func test_task_popup_uses_horizontal_letter_and_slot_columns() -> void:
 	assert_almost_eq(popup.anchor_right, PaperActivityPopup.PAPER_ANCHOR_RIGHT, 0.001)
 	assert_almost_eq(popup.anchor_top, PaperActivityPopup.PAPER_ANCHOR_TOP, 0.001)
 	assert_almost_eq(popup.anchor_bottom, PaperActivityPopup.PAPER_ANCHOR_BOTTOM, 0.001)
+	assert_almost_eq(
+		popup.position.y,
+		main.task_popup_layer.size.y * PaperActivityPopup.PAPER_ANCHOR_TOP,
+		0.5,
+	)
 	var anchored_height := main.task_popup_layer.size.y * (
 		PaperActivityPopup.PAPER_ANCHOR_BOTTOM - PaperActivityPopup.PAPER_ANCHOR_TOP
 	)
 	assert_gte(popup.size.y, anchored_height)
 	assert_lte(popup.size.y, main.task_popup_layer.size.y)
-	assert_eq(popup.title_label.horizontal_alignment, HORIZONTAL_ALIGNMENT_CENTER)
+	assert_eq(popup.title_label.horizontal_alignment, HORIZONTAL_ALIGNMENT_LEFT)
 	assert_eq(popup.body_label.horizontal_alignment, HORIZONTAL_ALIGNMENT_LEFT)
 	assert_eq(popup.body_label.vertical_alignment, VERTICAL_ALIGNMENT_TOP)
-	assert_same(popup.text_column.get_parent(), popup.content_row)
+	assert_same(popup.letter_panel.get_parent(), popup.content_row)
+	assert_true(popup.letter_panel.is_ancestor_of(popup.text_column))
 	assert_same(popup.interaction_column.get_parent(), popup.content_row)
-	assert_lt(popup.text_column.global_position.x, popup.interaction_column.global_position.x)
+	assert_lt(popup.letter_panel.global_position.x, popup.interaction_column.global_position.x)
 	assert_same(popup.body_viewport.get_parent(), popup.text_column)
 	assert_same(popup.slots_row.get_parent(), popup.interaction_column)
-	assert_eq(popup.body_margin.get_theme_constant("margin_left"), 12)
-	assert_eq(popup.body_margin.get_theme_constant("margin_right"), 12)
+	assert_eq(popup.body_margin.get_theme_constant("margin_left"), 2)
+	assert_eq(popup.body_margin.get_theme_constant("margin_right"), 2)
 	assert_true(popup.body_viewport.clip_contents)
+	assert_same(popup.body_page_row.get_parent(), popup.text_column)
+	assert_null(popup.get_node_or_null("BodyPageLabel"))
+	assert_eq(popup.body_page_spacer.size_flags_horizontal, Control.SIZE_EXPAND_FILL)
 	assert_almost_eq(
 		popup.body_viewport.custom_minimum_size.y,
 		PaperActivityPopup.BODY_HEIGHT,
@@ -535,6 +664,18 @@ func test_task_popup_uses_horizontal_letter_and_slot_columns() -> void:
 	assert_eq(popup.lower_spacer.size_flags_vertical, Control.SIZE_EXPAND_FILL)
 	assert_eq(popup.slots_row.alignment, BoxContainer.ALIGNMENT_CENTER)
 	assert_eq(popup.slots_row.size_flags_vertical, Control.SIZE_SHRINK_CENTER)
+	assert_eq(popup.slots_row.get_child_count(), 1)
+	assert_true(popup.action_button.disabled)
+	assert_same(popup.action_button.get_parent(), popup.interaction_footer_row)
+	assert_almost_eq(
+		popup.action_button.get_global_rect().get_center().x,
+		popup.slots_row.get_global_rect().get_center().x,
+		0.5,
+	)
+	assert_gte(
+		popup.action_button.get_global_rect().position.y,
+		popup.slots_row.get_global_rect().end.y,
+	)
 	var slot := popup.slot_views.values()[0] as QuestTaskSlot
 	_assert_slot_contains_no_instruction_copy(slot)
 	var fries := main.state.inventory[0] as CardItemState
@@ -569,6 +710,39 @@ func test_task_popup_uses_horizontal_letter_and_slot_columns() -> void:
 		TranslationServer.translate(&"quest.ui.task.deliver_tomorrow"),
 	)
 	assert_eq(popup.feedback_label.text, "")
+
+
+func test_shared_paper_popup_pages_long_body_without_growing_the_window() -> void:
+	var main := await _spawn_main()
+	var task := main.state.task_instance_for_definition(&"girl_order")
+	main.task_dock._toggle_task(task.instance_id)
+	await get_tree().process_frame
+	var popup := main.task_dock.task_window
+	var initial_height := popup.size.y
+	var long_copy := ""
+	for index in 40:
+		long_copy += "This is page copy %d. " % index
+	popup.set_body_copy(long_copy, PaperActivityPopup.BODY_HEIGHT, 4)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	assert_gt(popup.body_pages.size(), 1)
+	assert_eq(popup.body_page_index, 0)
+	assert_true(popup.body_previous_button.disabled)
+	assert_false(popup.body_next_button.disabled)
+	var first_page := popup.body_label.text
+	popup._on_next_body_page_pressed()
+	assert_eq(popup.body_page_index, 1)
+	assert_ne(popup.body_label.text, first_page)
+	assert_false(popup.body_previous_button.disabled)
+	assert_almost_eq(popup.size.y, initial_height, 0.5)
+
+
+func _assert_background_overscans_frame(background: TextureRect) -> void:
+	assert_not_null(background)
+	assert_almost_eq(background.offset_left, -QuestMain.BACKGROUND_OVERSCAN, 0.01)
+	assert_almost_eq(background.offset_top, -QuestMain.BACKGROUND_OVERSCAN, 0.01)
+	assert_almost_eq(background.offset_right, QuestMain.BACKGROUND_OVERSCAN, 0.01)
+	assert_almost_eq(background.offset_bottom, QuestMain.BACKGROUND_OVERSCAN, 0.01)
 
 
 func test_task_popup_drags_from_paper_and_stays_inside_content_viewport() -> void:
@@ -802,19 +976,33 @@ func test_self_and_owner_tasks_use_deferred_actions_and_owner_rule_titles() -> v
 	assert_eq(popup.feedback_label.text, "")
 	var owner_slots := popup.slot_views.values()
 	assert_eq(owner_slots.size(), 2)
-	for raw_slot in owner_slots:
-		var owner_slot := raw_slot as QuestTaskSlot
-		_assert_slot_contains_no_instruction_copy(owner_slot)
-		assert_true(popup.get_global_rect().encloses(owner_slot.get_global_rect()))
+	assert_same(owner_slots[0], owner_slots[1])
+	assert_same(owner_slots[0], popup.submission_slot)
+	assert_eq(popup.slots_row.get_child_count(), 1)
+	_assert_slot_contains_no_instruction_copy(popup.submission_slot)
+	assert_true(popup.get_global_rect().encloses(popup.submission_slot.get_global_rect()))
 	var owner_definition := QuestArcCatalog.task_by_id(owner_task.definition_id)
 	var owner_rule := owner_definition.slot_rules[0] as CardSlotRule
+	var expected_prompts := PackedStringArray()
 	for raw_rule in owner_definition.slot_rules:
 		var rule := raw_rule as CardSlotRule
-		var slot_label := popup.owner_slot_labels.get(rule.id) as Label
-		assert_not_null(slot_label)
-		assert_eq(slot_label.text, TranslationServer.translate(rule.display_name_key))
-		assert_lt(slot_label.global_position.y, (popup.slot_views[rule.id] as Control).global_position.y)
-	(owner_slots[0] as QuestTaskSlot).rule_focused.emit(owner_rule)
+		expected_prompts.append(TranslationServer.translate(rule.display_name_key))
+		assert_same(popup.slot_views[rule.id], popup.submission_slot)
+	assert_eq(popup.slot_prompt_label.text, " / ".join(expected_prompts))
+	assert_lt(popup.slot_prompt_label.global_position.y, popup.submission_slot.global_position.y)
+	var alternative_item := main.state.grant_item(&"agave", &"test")
+	assert_true(popup.submission_slot._can_drop_data(
+		Vector2.ZERO,
+		{"kind": &"card_item", "card": alternative_item},
+	))
+	popup.submission_slot._drop_data(
+		Vector2.ZERO,
+		{"kind": &"card_item", "card": alternative_item},
+	)
+	assert_eq(scissors.location, CardItemState.Location.HAND)
+	assert_same(popup.submission_slot.card_view.card, alternative_item)
+	owner_rule = popup.submission_slot.rule
+	popup.submission_slot.rule_focused.emit(owner_rule)
 	assert_eq(
 		main.rule_detail_popup.title_label.text,
 		TranslationServer.translate(owner_rule.display_name_key),
@@ -831,6 +1019,7 @@ func test_self_and_owner_tasks_use_deferred_actions_and_owner_rule_titles() -> v
 	assert_true(owner_task.confirmed)
 	assert_false(main.state.owner_states.has(&"flower_owner"))
 	assert_true(scissors in main.state.inventory)
+	assert_true(alternative_item in main.state.inventory)
 
 
 func test_fries_detail_uses_ppt_food_and_salty_icons() -> void:
@@ -1194,7 +1383,7 @@ func test_leaving_synthesis_discards_unconfirmed_placement() -> void:
 	assert_eq(main.state.synthesis_base_instance_id, 0)
 
 
-func test_protagonist_button_toggles_synthesis_back_to_previous_shop() -> void:
+func test_protagonist_button_returns_from_synthesis_to_map_even_when_entered_from_shop() -> void:
 	var main := await _spawn_main()
 	main._show_shop(&"flower")
 	await get_tree().process_frame
@@ -1203,29 +1392,43 @@ func test_protagonist_button_toggles_synthesis_back_to_previous_shop() -> void:
 	assert_true(main.current_screen is QuestSynthesisInterface)
 	main.protagonist_button.pressed.emit()
 	await get_tree().process_frame
-	assert_true(main.current_screen is QuestShopScreen)
-	assert_eq((main.current_screen as QuestShopScreen).store_id, &"flower")
+	assert_true(main.current_screen is QuestMapScreen)
+	assert_eq(main.global_frame.texture.resource_path, QuestMain.FRAME_TEXTURE_PATHS[&"map"])
 
 
 func test_primary_screens_are_reused_across_navigation() -> void:
 	var main := await _spawn_main()
+	main.bgm_director.fade_seconds = 0.0
+	assert_eq(main.bgm_director.active_track_id, QuestBgmDirector.TRACK_EMPTY)
+	assert_eq(main.global_frame.texture.resource_path, QuestMain.FRAME_TEXTURE_PATHS[&"map"])
+	var shared_empty_player := main.bgm_director.active_player
 	var map := main.current_screen as QuestMapScreen
 	main._show_shop(&"flower")
 	await get_tree().process_frame
+	assert_eq(main.bgm_director.active_track_id, QuestBgmDirector.TRACK_EMPTY)
+	assert_eq(main.global_frame.texture.resource_path, QuestMain.FRAME_TEXTURE_PATHS[&"flower"])
+	assert_same(main.bgm_director.active_player, shared_empty_player)
 	var shop := main.current_screen as QuestShopScreen
 	main._show_map()
 	await get_tree().process_frame
 	assert_same(main.current_screen, map)
+	assert_eq(main.global_frame.texture.resource_path, QuestMain.FRAME_TEXTURE_PATHS[&"map"])
 	main._show_shop(&"flower")
 	await get_tree().process_frame
 	assert_same(main.current_screen, shop)
 	main._show_synthesis()
 	await get_tree().process_frame
+	assert_eq(main.bgm_director.active_track_id, QuestBgmDirector.TRACK_DEBUSSY)
+	assert_eq(main.global_frame.texture.resource_path, QuestMain.FRAME_TEXTURE_PATHS[&"synthesis"])
 	var synthesis := main.current_screen as QuestSynthesisInterface
 	main._return_from_synthesis()
 	await get_tree().process_frame
+	assert_eq(main.bgm_director.active_track_id, QuestBgmDirector.TRACK_EMPTY)
+	assert_same(main.current_screen, map)
+	assert_eq(main.global_frame.texture.resource_path, QuestMain.FRAME_TEXTURE_PATHS[&"map"])
 	main._show_synthesis()
 	await get_tree().process_frame
+	assert_eq(main.bgm_director.active_track_id, QuestBgmDirector.TRACK_DEBUSSY)
 	assert_same(main.current_screen, synthesis)
 	assert_eq(synthesis.phase, QuestSynthesisInterface.Phase.DRAFT)
 	assert_true(synthesis.draft_layer.visible)
@@ -1272,7 +1475,9 @@ func test_arc_uses_item_strip_reward_summary_and_click_advance() -> void:
 	assert_true(main.state.begin_next_day().ok)
 	main.arc_fade_seconds = 0.0
 	main.arc_typewriter_char_seconds = 0.0
+	main.bgm_director.fade_seconds = 0.0
 	main._run_arc()
+	assert_eq(main.bgm_director.active_track_id, QuestBgmDirector.TRACK_DREAM)
 	await get_tree().process_frame
 	await get_tree().process_frame
 	assert_true(main.arc_overlay.visible)
@@ -1286,6 +1491,7 @@ func test_arc_uses_item_strip_reward_summary_and_click_advance() -> void:
 			break
 	assert_false(main.transition_in_progress)
 	assert_eq(main.state.day, 2)
+	assert_eq(main.bgm_director.active_track_id, QuestBgmDirector.TRACK_EMPTY)
 
 
 func test_closing_location_popup_returns_unconfirmed_card() -> void:

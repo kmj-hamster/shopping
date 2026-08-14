@@ -10,6 +10,7 @@ const DROP_MARGIN := Vector2(18, 26)
 var state: QuestGameState
 var task: TaskInstanceState
 var rule: CardSlotRule
+var rules: Array[CardSlotRule] = []
 var card_holder: CenterContainer
 var card_view: CardHandCard
 
@@ -19,9 +20,21 @@ func setup(
 	task_instance: TaskInstanceState,
 	slot_rule: CardSlotRule,
 ) -> void:
+	var selected_rules: Array[CardSlotRule] = []
+	if slot_rule != null:
+		selected_rules.append(slot_rule)
+	setup_choices(game_state, task_instance, selected_rules)
+
+
+func setup_choices(
+	game_state: QuestGameState,
+	task_instance: TaskInstanceState,
+	slot_rules: Array[CardSlotRule],
+) -> void:
 	state = game_state
 	task = task_instance
-	rule = slot_rule
+	rules = slot_rules.duplicate()
+	rule = rules[0] if not rules.is_empty() else null
 	if is_node_ready():
 		refresh()
 
@@ -50,9 +63,17 @@ func _ready() -> void:
 
 
 func refresh() -> void:
-	if rule == null or card_holder == null:
+	if rules.is_empty() or card_holder == null:
 		return
-	var card := state.card_by_instance_id(task.assigned_instance_id(rule.id))
+	var card: CardItemState
+	for candidate_rule in rules:
+		var candidate := state.card_by_instance_id(task.assigned_instance_id(candidate_rule.id))
+		if candidate != null:
+			rule = candidate_rule
+			card = candidate
+			break
+	if card == null:
+		rule = rules[0]
 	var item := QuestArcCatalog.item_by_id(card.definition_id) if card != null else null
 	if card != null and item != null:
 		card_view.setup(card, item, not task.confirmed)
@@ -70,7 +91,8 @@ func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 	return (
 		data.get("kind") == &"card_item"
 		and card != null
-		and state.can_assign_card_to_task(task.instance_id, rule.id, card)
+		and card != _assigned_card()
+		and _matching_rule(card) != null
 	)
 
 
@@ -80,14 +102,42 @@ func _has_point(point: Vector2) -> bool:
 
 func _drop_data(_at_position: Vector2, data: Variant) -> void:
 	var card := data.get("card") as CardItemState
-	if card != null:
-		state.assign_card(task.instance_id, rule.id, card)
+	var matching_rule := _matching_rule(card)
+	if card == null or matching_rule == null:
+		return
+	# The presentation has one physical slot even when content declares several
+	# alternative rules. Return any previous alternative before assigning the
+	# replacement so the task can never hold more than one submitted card.
+	for assigned_id in task.assigned_instance_ids().duplicate():
+		var assigned_card := state.card_by_instance_id(assigned_id)
+		if assigned_card != null and assigned_card != card:
+			state.return_card_to_hand(assigned_card)
+	state.assign_card(task.instance_id, matching_rule.id, card)
 
 
 func _on_gui_input(event: InputEvent) -> void:
 	var click := event as InputEventMouseButton
 	if click != null and click.button_index == MOUSE_BUTTON_LEFT and click.pressed:
 		rule_focused.emit(rule)
+
+
+func _assigned_card() -> CardItemState:
+	if state == null or task == null:
+		return null
+	for candidate_rule in rules:
+		var card := state.card_by_instance_id(task.assigned_instance_id(candidate_rule.id))
+		if card != null:
+			return card
+	return null
+
+
+func _matching_rule(card: CardItemState) -> CardSlotRule:
+	if state == null or task == null or card == null:
+		return null
+	for candidate_rule in rules:
+		if state.can_assign_card_to_task(task.instance_id, candidate_rule.id, card):
+			return candidate_rule
+	return null
 
 
 static func make_card_slot_style() -> StyleBoxFlat:

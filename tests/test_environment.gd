@@ -19,6 +19,7 @@ func test_runtime_art_assets_exist() -> void:
 	assert_true(FileAccess.file_exists("res://resources/background/musicstore.png"))
 	assert_true(FileAccess.file_exists("res://resources/background/bookstore.png"))
 	assert_true(FileAccess.file_exists("res://resources/character/bag.png"))
+	assert_true(FileAccess.file_exists("res://resources/character/bag-head.png"))
 	assert_true(FileAccess.file_exists("res://resources/character/bag-light.png"))
 	assert_true(FileAccess.file_exists("res://resources/character/balloon-head.png"))
 	assert_true(FileAccess.file_exists("res://resources/character/flower-head.png"))
@@ -30,7 +31,6 @@ func test_runtime_art_assets_exist() -> void:
 		"todo-collapsed.png",
 		"todo-expanded.png",
 		"shadow-global.png",
-		"bag-synthesis.png",
 		"hand-card.png",
 		"shop-dialogue-toy.png",
 		"shop-back.png",
@@ -38,6 +38,17 @@ func test_runtime_art_assets_exist() -> void:
 		"shop-talk.png",
 	]:
 		assert_true(FileAccess.file_exists("res://resources/ui/shell/%s" % shell_asset))
+	for frame_asset in [
+		"frame-map.png",
+		"frame-toy.png",
+		"frame-fast-food.png",
+		"frame-flower.png",
+		"frame-record.png",
+		"frame-bookstore.png",
+		"frame-synthesis.png",
+	]:
+		assert_true(FileAccess.file_exists("res://resources/ui/frames/%s" % frame_asset))
+	assert_true(FileAccess.file_exists("res://resources/shaders/frosted_dialogue.gdshader"))
 	assert_eq(ProjectSettings.get_setting("display/window/stretch/aspect"), "keep")
 
 

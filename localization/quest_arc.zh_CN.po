@@ -367,8 +367,6 @@ msgstr "向日葵填进徽记。门内亮起一盏像白昼的灯。"
 
 msgid "quest.ui.hand.title"
 msgstr "手中的东西"
-msgid "quest.ui.hand.empty"
-msgstr "纸袋很轻。"
 msgid "quest.ui.back"
 msgstr "返回"
 msgid "quest.ui.money"
@@ -425,6 +423,8 @@ msgid "quest.ui.task.confirm"
 msgstr "确认"
 msgid "quest.ui.task.deliver_tomorrow"
 msgstr "明天送货"
+msgid "quest.ui.task.gift"
+msgstr "获得"
 msgid "quest.ui.task.enjoy_tonight"
 msgstr "今晚回家后享用"
 msgid "quest.ui.task.cancel_confirm"
@@ -1064,3 +1064,24 @@ msgstr "老板正在给已经睡着的花浇水。"
 
 msgid "opening.owner.flower.item"
 msgstr "“%s。夜里别问它究竟是真是假。”"
+
+msgid "debug.task.todo_page_1.name"
+msgstr "清单测试：第一封"
+
+msgid "debug.task.todo_page_2.name"
+msgstr "清单测试：第二封"
+
+msgid "debug.task.todo_page_3.name"
+msgstr "清单测试：第三封"
+
+msgid "debug.task.todo_page_4.name"
+msgstr "清单测试：第四封"
+
+msgid "debug.task.todo_page.body"
+msgstr "这是一封临时委托，用来检查待办清单的翻页、悬停和打开功能。"
+
+msgid "debug.task.todo_page.slot"
+msgstr "任何物品"
+
+msgid "debug.task.todo_page.result"
+msgstr "测试物品已记录。这项委托没有报酬。"

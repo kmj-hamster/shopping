@@ -6,8 +6,7 @@ signal item_inspected(definition: CardItemDefinition)
 var state: QuestGameState
 var task_instance_id: int
 var slot_views: Dictionary = {}
-var owner_slot_labels: Dictionary = {}
-var or_labels: Array[Label] = []
+var submission_slot: QuestTaskSlot
 var gift_slot: QuestTaskGiftSlot
 
 
@@ -48,6 +47,7 @@ func refresh() -> void:
 			LETTER_BODY_MAX_LINES,
 		)
 		_ensure_gift_slot()
+		set_slot_prompt(TranslationServer.translate(&"quest.ui.task.gift"))
 		gift_slot.setup(state, task.instance_id)
 		feedback_label.text = ""
 		if not task.gift_claimed:
@@ -66,16 +66,6 @@ func refresh() -> void:
 	)
 	action_button.visible = true
 	_ensure_slot_views(task, definition)
-	for label in or_labels:
-		label.text = TranslationServer.translate(&"demo.ui.or")
-	for raw_rule in definition.slot_rules:
-		var rule := state.effective_task_rule(task, raw_rule as CardSlotRule)
-		var owner_slot_label := owner_slot_labels.get(rule.id) as Label
-		if owner_slot_label != null:
-			owner_slot_label.text = TranslationServer.translate(rule.display_name_key)
-		var slot := slot_views.get(rule.id) as QuestTaskSlot
-		if slot != null:
-			slot.setup(state, task, rule)
 	var evaluation := state.task_evaluation(task.instance_id)
 	feedback_label.text = ""
 	_update_action_state(task, definition, evaluation)
@@ -90,46 +80,25 @@ func _ensure_gift_slot() -> void:
 
 
 func _ensure_slot_views(task: TaskInstanceState, definition: TaskDefinition) -> void:
-	if not slot_views.is_empty():
-		return
-	for rule_index in definition.slot_rules.size():
-		if rule_index > 0 and definition.slot_mode == TaskDefinition.SlotMode.ANY:
-			var or_label := Label.new()
-			or_label.text = TranslationServer.translate(&"demo.ui.or")
-			or_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-			or_label.add_theme_font_size_override("font_size", 14)
-			or_label.add_theme_color_override("font_color", Color("6d5a3d"))
-			slots_row.add_child(or_label)
-			or_labels.append(or_label)
-		var raw_rule := definition.slot_rules[rule_index]
-		var slot := QuestTaskSlot.new()
+	var effective_rules: Array[CardSlotRule] = []
+	var prompt_parts: PackedStringArray = []
+	for raw_rule in definition.slot_rules:
 		var rule := state.effective_task_rule(task, raw_rule as CardSlotRule)
-		slot.setup(state, task, rule)
-		slot.rule_focused.connect(rule_focused.emit)
-		slot.item_inspected.connect(item_inspected.emit)
-		if definition.category == TaskDefinition.Category.OWNER_REQUEST:
-			var slot_column := VBoxContainer.new()
-			slot_column.name = "%sOwnerSlot" % String(rule.id).to_pascal_case()
-			slot_column.mouse_filter = Control.MOUSE_FILTER_PASS
-			slot_column.alignment = BoxContainer.ALIGNMENT_CENTER
-			slot_column.add_theme_constant_override("separation", 5)
-			slots_row.add_child(slot_column)
-			var slot_label := Label.new()
-			slot_label.name = "OwnerSlotLabel"
-			slot_label.custom_minimum_size = Vector2(112, 20)
-			slot_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			slot_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			slot_label.clip_text = true
-			slot_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-			slot_label.add_theme_font_size_override("font_size", 13)
-			slot_label.add_theme_color_override("font_color", Color("594a36"))
-			slot_label.text = TranslationServer.translate(rule.display_name_key)
-			slot_column.add_child(slot_label)
-			slot_column.add_child(slot)
-			owner_slot_labels[rule.id] = slot_label
-		else:
-			slots_row.add_child(slot)
-		slot_views[rule.id] = slot
+		if rule == null:
+			continue
+		effective_rules.append(rule)
+		prompt_parts.append(TranslationServer.translate(rule.display_name_key))
+	if submission_slot == null:
+		submission_slot = QuestTaskSlot.new()
+		submission_slot.name = "TaskSubmissionSlot"
+		submission_slot.rule_focused.connect(rule_focused.emit)
+		submission_slot.item_inspected.connect(item_inspected.emit)
+		slots_row.add_child(submission_slot)
+	submission_slot.setup_choices(state, task, effective_rules)
+	slot_views.clear()
+	for rule in effective_rules:
+		slot_views[rule.id] = submission_slot
+	set_slot_prompt(" / ".join(prompt_parts))
 
 
 func _update_action_state(

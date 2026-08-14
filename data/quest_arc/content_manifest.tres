@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="GameContentManifest" load_steps=48 format=3]
+[gd_resource type="Resource" script_class="GameContentManifest" load_steps=52 format=3]
 
 [ext_resource type="Script" path="res://scripts/quest_domain/game_content_manifest.gd" id="1_manifest"]
 [ext_resource type="Script" path="res://scripts/quest_domain/property_definition.gd" id="2_property"]
@@ -21,6 +21,10 @@
 [ext_resource type="Resource" path="res://data/quest_arc/tasks/opening_tin_boy_toy.tres" id="19_task"]
 [ext_resource type="Resource" path="res://data/quest_arc/tasks/opening_self_care.tres" id="20_task"]
 [ext_resource type="Resource" path="res://data/quest_arc/tasks/opening_aquarium_drink.tres" id="21_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/debug_todo_page_1.tres" id="36_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/debug_todo_page_2.tres" id="37_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/debug_todo_page_3.tres" id="38_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/debug_todo_page_4.tres" id="39_task"]
 [ext_resource type="Resource" path="res://data/quest_arc/recipes/demo_recipe_midnight_rose.tres" id="22_recipe"]
 [ext_resource type="Resource" path="res://data/quest_arc/stores/opening_toy.tres" id="23_store"]
 [ext_resource type="Resource" path="res://data/quest_arc/stores/opening_fast_food.tres" id="24_store"]
@@ -127,11 +131,11 @@ initial_money = 0
 maximum_item_price = 40
 maximum_properties_per_item = 4
 maximum_aspects_per_item = 2
-initial_protagonist_stats = {&"clarity": 0, &"ease": 0, &"reminiscence": 0, &"reverie": 0}
-starting_item_ids = Array[StringName]([])
+initial_protagonist_stats = {&"clarity": 0, &"ease": 0, &"reminiscence": 0, &"reverie": 3}
+starting_item_ids = Array[StringName]([&"fries", &"plastic_car", &"midnight_rose"])
 properties = Array[Resource]([SubResource("PropertyFood"), SubResource("PropertyFlower"), SubResource("PropertyToy"), SubResource("PropertyDrink"), SubResource("PropertyCd"), SubResource("PropertyMetal"), SubResource("PropertyRose"), SubResource("PropertyPersona"), SubResource("PropertyLamp"), SubResource("PropertyMirror"), SubResource("PropertyGauze"), SubResource("PropertyPillow")])
 items = Array[Resource]([ExtResource("3_item"), ExtResource("4_item"), ExtResource("5_item"), ExtResource("6_item"), ExtResource("7_item"), ExtResource("8_item"), ExtResource("9_item"), ExtResource("10_item"), ExtResource("11_item"), ExtResource("12_item"), ExtResource("13_item"), ExtResource("14_item"), ExtResource("15_item"), ExtResource("16_item")])
-tasks = Array[Resource]([ExtResource("17_task"), ExtResource("18_task"), ExtResource("19_task"), ExtResource("20_task"), ExtResource("21_task")])
+tasks = Array[Resource]([ExtResource("17_task"), ExtResource("18_task"), ExtResource("19_task"), ExtResource("20_task"), ExtResource("21_task"), ExtResource("36_task"), ExtResource("37_task"), ExtResource("38_task"), ExtResource("39_task")])
 recipes = Array[Resource]([ExtResource("22_recipe")])
 stores = Array[Resource]([ExtResource("23_store"), ExtResource("24_store"), ExtResource("25_store"), ExtResource("26_store"), ExtResource("27_store")])
 store_unlocks = Array[Resource]([ExtResource("28_unlock"), ExtResource("29_unlock"), ExtResource("30_unlock"), ExtResource("31_unlock"), ExtResource("32_unlock")])

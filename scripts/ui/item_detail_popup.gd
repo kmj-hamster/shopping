@@ -553,7 +553,7 @@ static func make_property_icon_button(tag: StringName, side: int = 30) -> Button
 	button.text = "" if texture != null else property_symbol(tag)
 	button.tooltip_text = TranslationServer.translate(property_name_key(tag))
 	button.add_theme_font_size_override("font_size", maxi(13, int(side / 2)))
-	button.add_theme_color_override("font_color", Color("151819"))
+	button.add_theme_color_override("font_color", UiPalette.INK_COLOR)
 	button.add_theme_stylebox_override(
 		"normal", panel_style(Color("f1eee5"), Color("8c7a52"), 1)
 	)

@@ -7,19 +7,30 @@ signal item_inspected(definition: CardItemDefinition)
 const RECEIPT_WIDTH := 264.0
 const RECEIPT_COLLAPSED_HEIGHT := 186.0
 const RECEIPT_EXPANDED_HEIGHT := 477.0
+const TASKS_PER_PAGE := 5
+const TASK_LINE_HEIGHT := 42.0
+const TASK_HIT_HEIGHT := 24.0
+const TASK_TEXT_MAX_WIDTH := 174.0
+const RECEIPT_TEXT_SHIFT_Y := 7.0
+const TASK_HOVER_COLOR := Color("446979")
+const TASK_GLOW_COLOR := Color("789cab", 0.55)
 
 var state: QuestGameState
 var receipt_host: Control
 var receipt_background: TextureRect
 var receipt_title: Label
-var task_scroll: ScrollContainer
-var receipt_toggle: Button
-var bookmark_column: VBoxContainer
+var receipt_money_label: Label
+var bookmark_column: Control
+var page_navigation: HBoxContainer
+var page_previous_button: Button
+var page_next_button: Button
 var popup_host: Control
 var task_window: QuestTaskWindow
 var open_task_instance_id := 0
 var bookmark_buttons: Dictionary = {}
 var task_windows: Dictionary = {}
+var ordered_task_instance_ids: Array[int] = []
+var task_page_index := 0
 var is_expanded := false
 
 
@@ -41,67 +52,74 @@ func _ready() -> void:
 	receipt_host = Control.new()
 	receipt_host.name = "TodoReceipt"
 	receipt_host.position = Vector2.ZERO
-	receipt_host.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	receipt_host.size = Vector2(RECEIPT_WIDTH, RECEIPT_EXPANDED_HEIGHT)
+	receipt_host.mouse_filter = Control.MOUSE_FILTER_STOP
 	receipt_host.clip_contents = false
+	receipt_host.gui_input.connect(_on_receipt_gui_input)
 	add_child(receipt_host)
 
 	receipt_background = TextureRect.new()
 	receipt_background.name = "TodoReceiptBackground"
-	receipt_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	receipt_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	receipt_background.stretch_mode = TextureRect.STRETCH_SCALE
 	receipt_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	receipt_host.add_child(receipt_background)
 
+	receipt_money_label = Label.new()
+	receipt_money_label.name = "TodoReceiptMoney"
+	receipt_money_label.position = Vector2(46, 16 + RECEIPT_TEXT_SHIFT_Y)
+	receipt_money_label.size = Vector2(160, 28)
+	receipt_money_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	receipt_money_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	receipt_money_label.add_theme_font_size_override("font_size", 15)
+	receipt_money_label.add_theme_color_override("font_color", UiPalette.INK_COLOR)
+	receipt_money_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	receipt_host.add_child(receipt_money_label)
+
 	receipt_title = Label.new()
 	receipt_title.name = "TodoReceiptTitle"
-	receipt_title.position = Vector2(46, 48)
+	receipt_title.position = Vector2(46, 48 + RECEIPT_TEXT_SHIFT_Y)
 	receipt_title.size = Vector2(160, 44)
-	receipt_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	receipt_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	receipt_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	receipt_title.add_theme_font_size_override("font_size", 22)
-	receipt_title.add_theme_color_override("font_color", Color("16272a"))
+	receipt_title.add_theme_color_override("font_color", UiPalette.INK_COLOR)
 	receipt_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	receipt_host.add_child(receipt_title)
 
-	task_scroll = ScrollContainer.new()
-	task_scroll.name = "TodoTaskScroll"
-	task_scroll.position = Vector2(22, 104)
-	task_scroll.size = Vector2(174, 306)
-	task_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	task_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	task_scroll.mouse_filter = Control.MOUSE_FILTER_PASS
-	task_scroll.clip_contents = true
-	receipt_host.add_child(task_scroll)
-	bookmark_column = VBoxContainer.new()
+	bookmark_column = Control.new()
 	bookmark_column.name = "TodoTaskColumn"
-	bookmark_column.custom_minimum_size = Vector2(174, 0)
-	bookmark_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bookmark_column.add_theme_constant_override("separation", 5)
-	bookmark_column.clip_contents = false
-	bookmark_column.mouse_filter = Control.MOUSE_FILTER_PASS
-	task_scroll.add_child(bookmark_column)
+	bookmark_column.position = Vector2(22, 93 + RECEIPT_TEXT_SHIFT_Y)
+	bookmark_column.size = Vector2(TASK_TEXT_MAX_WIDTH, TASKS_PER_PAGE * TASK_LINE_HEIGHT)
+	bookmark_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	receipt_host.add_child(bookmark_column)
 
-	receipt_toggle = Button.new()
-	receipt_toggle.name = "TodoReceiptToggle"
-	receipt_toggle.flat = true
-	receipt_toggle.focus_mode = Control.FOCUS_NONE
-	receipt_toggle.tooltip_text = ""
-	receipt_toggle.pressed.connect(_toggle_receipt)
-	for state_name in ["normal", "hover", "pressed", "focus", "disabled"]:
-		receipt_toggle.add_theme_stylebox_override(state_name, StyleBoxEmpty.new())
-	receipt_host.add_child(receipt_toggle)
+	page_navigation = HBoxContainer.new()
+	page_navigation.name = "TodoPageNavigation"
+	page_navigation.position = Vector2(52, 324)
+	page_navigation.size = Vector2(130, 28)
+	page_navigation.alignment = BoxContainer.ALIGNMENT_CENTER
+	page_navigation.add_theme_constant_override("separation", 30)
+	receipt_host.add_child(page_navigation)
+	page_previous_button = _create_page_button("←")
+	page_previous_button.name = "TodoPreviousPage"
+	page_previous_button.pressed.connect(_on_previous_page_pressed)
+	page_navigation.add_child(page_previous_button)
+	page_next_button = _create_page_button("→")
+	page_next_button.name = "TodoNextPage"
+	page_next_button.pressed.connect(_on_next_page_pressed)
+	page_navigation.add_child(page_next_button)
 
 	LocaleManager.locale_changed.connect(_on_locale_changed)
 	receipt_title.text = TranslationServer.translate(&"quest.ui.todo.title")
 	_set_expanded(false)
-	call_deferred("_hide_scrollbar_art")
 	refresh()
 
 
 func refresh() -> void:
 	if state == null or bookmark_column == null:
 		return
+	_refresh_money()
 	var active_tasks := state.active_tasks()
 	var desired_ids: Array[int] = []
 	for task in active_tasks:
@@ -124,6 +142,8 @@ func refresh() -> void:
 		_update_bookmark(bookmark, task)
 		if bookmark.get_index() != index:
 			bookmark_column.move_child(bookmark, index)
+	ordered_task_instance_ids = desired_ids
+	_refresh_task_page()
 	_reconcile_task_windows(desired_ids)
 	if open_task_instance_id > 0:
 		var open_task := state.task_instance(open_task_instance_id)
@@ -133,16 +153,28 @@ func refresh() -> void:
 			task_window.refresh()
 
 
+func _refresh_money() -> void:
+	if state == null or receipt_money_label == null:
+		return
+	receipt_money_label.text = TranslationServer.translate(&"demo.ui.money") % state.wallet.money
+
+
 func _create_bookmark(instance_id: int) -> Button:
 	var bookmark := Button.new()
-	bookmark.custom_minimum_size = Vector2(0, 43)
-	bookmark.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bookmark.custom_minimum_size = Vector2(0, TASK_HIT_HEIGHT)
+	bookmark.mouse_filter = Control.MOUSE_FILTER_STOP
+	bookmark.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	bookmark.clip_text = true
 	bookmark.tooltip_text = ""
 	bookmark.focus_mode = Control.FOCUS_NONE
+	bookmark.flat = true
 	bookmark.add_theme_font_size_override("font_size", 11)
-	bookmark.add_theme_color_override("font_color", Color("243236"))
-	bookmark.add_theme_color_override("font_hover_color", Color("071013"))
+	var empty_style := StyleBoxEmpty.new()
+	for style_name in [&"normal", &"hover", &"pressed", &"focus", &"disabled", &"hover_pressed"]:
+		bookmark.add_theme_stylebox_override(style_name, empty_style)
+	_set_bookmark_hovered(bookmark, false)
+	bookmark.mouse_entered.connect(_set_bookmark_hovered.bind(bookmark, true))
+	bookmark.mouse_exited.connect(_set_bookmark_hovered.bind(bookmark, false))
 	bookmark.pressed.connect(_toggle_task.bind(instance_id))
 	bookmark_column.add_child(bookmark)
 	return bookmark
@@ -151,20 +183,107 @@ func _create_bookmark(instance_id: int) -> Button:
 func _update_bookmark(bookmark: Button, task: TaskInstanceState) -> void:
 	var definition := QuestArcCatalog.task_by_id(task.definition_id)
 	bookmark.text = TranslationServer.translate(definition.display_name_key)
-	var border := Color("647a72", 0.84) if task.confirmed else Color("686d68", 0.64)
-	bookmark.add_theme_stylebox_override(
-		"normal", UiPalette.panel_style(Color("d7d9ce", 0.32), border)
+	_resize_bookmark_to_text(bookmark)
+
+
+func _resize_bookmark_to_text(bookmark: Button) -> void:
+	var font := bookmark.get_theme_font("font")
+	var font_size := bookmark.get_theme_font_size("font_size")
+	var text_width := font.get_string_size(
+		bookmark.text,
+		HORIZONTAL_ALIGNMENT_LEFT,
+		-1.0,
+		font_size,
+	).x
+	bookmark.size = Vector2(minf(ceilf(text_width) + 4.0, TASK_TEXT_MAX_WIDTH), TASK_HIT_HEIGHT)
+
+
+func _set_bookmark_hovered(bookmark: Button, hovered: bool) -> void:
+	if bookmark == null:
+		return
+	var text_color := TASK_HOVER_COLOR if hovered else UiPalette.INK_COLOR
+	for color_name in [
+		&"font_color",
+		&"font_hover_color",
+		&"font_pressed_color",
+		&"font_focus_color",
+		&"font_hover_pressed_color",
+	]:
+		bookmark.add_theme_color_override(color_name, text_color)
+	bookmark.add_theme_color_override(
+		"font_outline_color",
+		TASK_GLOW_COLOR if hovered else Color.TRANSPARENT,
 	)
-	bookmark.add_theme_stylebox_override(
-		"hover", UiPalette.panel_style(Color("e9e8dc", 0.68), Color("405d58", 0.9))
-	)
-	bookmark.add_theme_stylebox_override(
-		"pressed", UiPalette.panel_style(Color("c9cdc3", 0.72), Color("314b47", 0.95))
-	)
+	bookmark.add_theme_constant_override("outline_size", 3 if hovered else 0)
+
+
+func _create_page_button(label_text: String) -> Button:
+	var button := Button.new()
+	button.text = label_text
+	button.custom_minimum_size = Vector2(32, 24)
+	button.focus_mode = Control.FOCUS_NONE
+	button.flat = true
+	button.tooltip_text = ""
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	button.add_theme_font_size_override("font_size", 18)
+	button.add_theme_color_override("font_color", UiPalette.INK_COLOR)
+	button.add_theme_color_override("font_hover_color", UiPalette.INK_COLOR)
+	button.add_theme_color_override("font_pressed_color", UiPalette.INK_COLOR)
+	button.add_theme_color_override("font_disabled_color", UiPalette.INK_COLOR)
+	var empty_style := StyleBoxEmpty.new()
+	for style_name in [&"normal", &"hover", &"pressed", &"focus", &"disabled"]:
+		button.add_theme_stylebox_override(style_name, empty_style)
+	return button
+
+
+func _refresh_task_page() -> void:
+	var page_count := maxi(1, ceili(float(ordered_task_instance_ids.size()) / TASKS_PER_PAGE))
+	task_page_index = clampi(task_page_index, 0, page_count - 1)
+	var first_index := task_page_index * TASKS_PER_PAGE
+	var last_index := mini(first_index + TASKS_PER_PAGE, ordered_task_instance_ids.size())
+	for index in ordered_task_instance_ids.size():
+		var instance_id := ordered_task_instance_ids[index]
+		var bookmark := bookmark_buttons.get(instance_id) as Button
+		if bookmark == null:
+			continue
+		var visible_on_page := index >= first_index and index < last_index
+		bookmark.visible = visible_on_page
+		if visible_on_page:
+			_resize_bookmark_to_text(bookmark)
+			var line_index := index - first_index
+			bookmark.position = Vector2(
+				0,
+				line_index * TASK_LINE_HEIGHT + (TASK_LINE_HEIGHT - TASK_HIT_HEIGHT) * 0.5,
+			)
+	page_previous_button.disabled = task_page_index <= 0
+	page_next_button.disabled = task_page_index >= page_count - 1
+
+
+func _on_previous_page_pressed() -> void:
+	if task_page_index <= 0:
+		return
+	task_page_index -= 1
+	_refresh_task_page()
+
+
+func _on_next_page_pressed() -> void:
+	var page_count := maxi(1, ceili(float(ordered_task_instance_ids.size()) / TASKS_PER_PAGE))
+	if task_page_index >= page_count - 1:
+		return
+	task_page_index += 1
+	_refresh_task_page()
 
 
 func _toggle_receipt() -> void:
 	_set_expanded(not is_expanded)
+
+
+func _on_receipt_gui_input(event: InputEvent) -> void:
+	var click := event as InputEventMouseButton
+	if click == null or click.button_index != MOUSE_BUTTON_LEFT or not click.pressed:
+		return
+	_toggle_receipt()
+	receipt_host.accept_event()
 
 
 func _set_expanded(expanded: bool) -> void:
@@ -174,34 +293,17 @@ func _set_expanded(expanded: bool) -> void:
 	var receipt_height := (
 		RECEIPT_EXPANDED_HEIGHT if is_expanded else RECEIPT_COLLAPSED_HEIGHT
 	)
-	receipt_host.size = Vector2(RECEIPT_WIDTH, receipt_height)
+	# The interactive receipt footprint always keeps the expanded height. This lets
+	# the folded receipt reopen from the otherwise invisible paper area below it.
+	receipt_host.size = Vector2(RECEIPT_WIDTH, RECEIPT_EXPANDED_HEIGHT)
+	receipt_background.size = Vector2(RECEIPT_WIDTH, receipt_height)
 	receipt_background.texture = load(
 		"res://resources/ui/shell/todo-expanded.png"
 		if is_expanded
 		else "res://resources/ui/shell/todo-collapsed.png"
 	) as Texture2D
-	task_scroll.visible = is_expanded
-	receipt_toggle.position = (
-		Vector2(62, receipt_height - 65)
-		if is_expanded
-		else Vector2(32, 42)
-	)
-	receipt_toggle.size = (
-		Vector2(132, 56)
-		if is_expanded
-		else Vector2(196, 126)
-	)
-	call_deferred("_hide_scrollbar_art")
-
-
-func _hide_scrollbar_art() -> void:
-	if task_scroll == null:
-		return
-	var scroll_bar := task_scroll.get_v_scroll_bar()
-	if scroll_bar == null:
-		return
-	scroll_bar.self_modulate = Color(1, 1, 1, 0)
-	scroll_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bookmark_column.visible = is_expanded
+	page_navigation.visible = is_expanded
 
 
 func _toggle_task(instance_id: int) -> void:
@@ -260,7 +362,11 @@ func _reconcile_task_windows(desired_ids: Array[int]) -> void:
 
 
 func _on_state_delta(delta: QuestStateDelta) -> void:
-	if delta == null or not delta.affects_tasks():
+	if delta == null:
+		return
+	if delta.full_reconcile or delta.wallet_changed:
+		_refresh_money()
+	if not delta.affects_tasks():
 		return
 	if delta.full_reconcile or delta.task_list_changed:
 		refresh()
@@ -277,4 +383,6 @@ func _on_state_delta(delta: QuestStateDelta) -> void:
 func _on_locale_changed(_locale: String) -> void:
 	if receipt_title != null:
 		receipt_title.text = TranslationServer.translate(&"quest.ui.todo.title")
+	_refresh_money()
 	refresh()
+	call_deferred("_refresh_task_page")

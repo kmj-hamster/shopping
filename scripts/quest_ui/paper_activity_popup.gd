@@ -6,17 +6,17 @@ signal closed
 const BODY_HEIGHT := 112.0
 const LETTER_BODY_HEIGHT := 144.0
 const BODY_FONT_SIZE := 15
-const BODY_MIN_FONT_SIZE := 11
 const BODY_MAX_LINES := 5
 const LETTER_BODY_MAX_LINES := 7
-const PAPER_ANCHOR_LEFT := 0.035
-const PAPER_ANCHOR_TOP := 0.05
-const PAPER_ANCHOR_RIGHT := 0.91
-const PAPER_ANCHOR_BOTTOM := 0.58
+const PAPER_ANCHOR_LEFT := 0.28
+const PAPER_ANCHOR_TOP := 0.22
+const PAPER_ANCHOR_RIGHT := 0.79
+const PAPER_ANCHOR_BOTTOM := 0.80
 
 var title_label: Label
 var drag_handle: HBoxContainer
 var content_row: HBoxContainer
+var letter_panel: PanelContainer
 var text_column: VBoxContainer
 var interaction_column: VBoxContainer
 var interaction_footer_row: HBoxContainer
@@ -24,6 +24,11 @@ var body_viewport: Control
 var body_margin: MarginContainer
 var body_label: Label
 var footer_label: Label
+var body_page_row: HBoxContainer
+var body_previous_button: Button
+var body_page_spacer: Control
+var body_next_button: Button
+var slot_prompt_label: Label
 var lower_spacer: Control
 var slots_row: HBoxContainer
 var feedback_label: Label
@@ -31,10 +36,15 @@ var action_button: Button
 var body_fit_queued := false
 var body_max_lines := BODY_MAX_LINES
 var body_requested_height := BODY_HEIGHT
+var body_full_text := ""
+var body_pages: Array[String] = []
+var body_page_index := 0
+var body_layout_width := -1.0
 var dragging := false
 var drag_bounds_control: Control
 var drag_grab_offset := Vector2.ZERO
 var applying_preferred_size := false
+var preferred_position_initialized := false
 
 
 func _ready() -> void:
@@ -67,18 +77,13 @@ func _ready() -> void:
 	drag_handle.name = "PopupHeader"
 	drag_handle.mouse_filter = Control.MOUSE_FILTER_PASS
 	paper_column.add_child(drag_handle)
-	var title_balance := Control.new()
-	title_balance.name = "TitleBalance"
-	title_balance.custom_minimum_size = Vector2(38, 34)
-	title_balance.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	drag_handle.add_child(title_balance)
 	title_label = Label.new()
 	title_label.name = "PopupTitle"
 	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	title_label.add_theme_font_size_override("font_size", 23)
+	title_label.add_theme_font_size_override("font_size", 25)
 	title_label.add_theme_color_override("font_color", Color("302a22"))
 	drag_handle.add_child(title_label)
 	var close_button := Button.new()
@@ -95,13 +100,28 @@ func _ready() -> void:
 	content_row.add_theme_constant_override("separation", 18)
 	paper_column.add_child(content_row)
 
+	letter_panel = PanelContainer.new()
+	letter_panel.name = "PopupLetterPanel"
+	letter_panel.mouse_filter = Control.MOUSE_FILTER_PASS
+	letter_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	letter_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	letter_panel.size_flags_stretch_ratio = 1.35
+	letter_panel.add_theme_stylebox_override(
+		"panel", UiPalette.panel_style(Color("e7e1d5", 0.72), Color("746c60", 0.82))
+	)
+	content_row.add_child(letter_panel)
+	var letter_margin := MarginContainer.new()
+	letter_margin.mouse_filter = Control.MOUSE_FILTER_PASS
+	letter_margin.add_theme_constant_override("margin_left", 10)
+	letter_margin.add_theme_constant_override("margin_right", 10)
+	letter_margin.add_theme_constant_override("margin_top", 8)
+	letter_margin.add_theme_constant_override("margin_bottom", 8)
+	letter_panel.add_child(letter_margin)
 	text_column = VBoxContainer.new()
 	text_column.name = "PopupLetterColumn"
 	text_column.mouse_filter = Control.MOUSE_FILTER_PASS
-	text_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	text_column.size_flags_stretch_ratio = 1.35
-	text_column.add_theme_constant_override("separation", 6)
-	content_row.add_child(text_column)
+	text_column.add_theme_constant_override("separation", 4)
+	letter_margin.add_child(text_column)
 
 	body_viewport = Control.new()
 	body_viewport.name = "PopupBodyViewport"
@@ -109,12 +129,13 @@ func _ready() -> void:
 	body_viewport.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body_viewport.clip_contents = true
 	body_viewport.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	body_viewport.resized.connect(_on_body_viewport_resized)
 	text_column.add_child(body_viewport)
 	body_margin = MarginContainer.new()
 	body_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	body_margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	body_margin.add_theme_constant_override("margin_left", 12)
-	body_margin.add_theme_constant_override("margin_right", 12)
+	body_margin.add_theme_constant_override("margin_left", 2)
+	body_margin.add_theme_constant_override("margin_right", 2)
 	body_viewport.add_child(body_margin)
 	body_label = Label.new()
 	body_label.name = "PopupBody"
@@ -134,6 +155,30 @@ func _ready() -> void:
 	footer_label.add_theme_color_override("font_color", Color("6f5d42"))
 	footer_label.visible = false
 	text_column.add_child(footer_label)
+	body_page_row = HBoxContainer.new()
+	body_page_row.name = "PopupBodyPager"
+	body_page_row.mouse_filter = Control.MOUSE_FILTER_PASS
+	body_page_row.add_theme_constant_override("separation", 6)
+	text_column.add_child(body_page_row)
+	body_previous_button = Button.new()
+	body_previous_button.name = "PreviousBodyPageButton"
+	body_previous_button.text = "<"
+	body_previous_button.custom_minimum_size = Vector2(32, 24)
+	body_previous_button.focus_mode = Control.FOCUS_NONE
+	body_previous_button.pressed.connect(_on_previous_body_page_pressed)
+	body_page_row.add_child(body_previous_button)
+	body_page_spacer = Control.new()
+	body_page_spacer.name = "BodyPageSpacer"
+	body_page_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body_page_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	body_page_row.add_child(body_page_spacer)
+	body_next_button = Button.new()
+	body_next_button.name = "NextBodyPageButton"
+	body_next_button.text = ">"
+	body_next_button.custom_minimum_size = Vector2(32, 24)
+	body_next_button.focus_mode = Control.FOCUS_NONE
+	body_next_button.pressed.connect(_on_next_body_page_pressed)
+	body_page_row.add_child(body_next_button)
 
 	var divider := ColorRect.new()
 	divider.name = "PopupColumnDivider"
@@ -146,8 +191,18 @@ func _ready() -> void:
 	interaction_column.name = "PopupInteractionColumn"
 	interaction_column.mouse_filter = Control.MOUSE_FILTER_PASS
 	interaction_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	interaction_column.add_theme_constant_override("separation", 8)
+	interaction_column.add_theme_constant_override("separation", 4)
 	content_row.add_child(interaction_column)
+	slot_prompt_label = Label.new()
+	slot_prompt_label.name = "PopupSlotPrompt"
+	slot_prompt_label.custom_minimum_size = Vector2(0, 22)
+	slot_prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	slot_prompt_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	slot_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	slot_prompt_label.add_theme_font_size_override("font_size", 13)
+	slot_prompt_label.add_theme_color_override("font_color", Color("554b3e"))
+	slot_prompt_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	interaction_column.add_child(slot_prompt_label)
 
 	slots_row = HBoxContainer.new()
 	slots_row.name = "PopupSlots"
@@ -158,34 +213,47 @@ func _ready() -> void:
 	slots_row.add_theme_constant_override("separation", 14)
 	interaction_column.add_child(slots_row)
 
+	interaction_footer_row = HBoxContainer.new()
+	interaction_footer_row.name = "PopupInteractionFooter"
+	interaction_footer_row.mouse_filter = Control.MOUSE_FILTER_PASS
+	interaction_footer_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	interaction_column.add_child(interaction_footer_row)
+	var action_left_spacer := Control.new()
+	action_left_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	action_left_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	interaction_footer_row.add_child(action_left_spacer)
+
+	action_button = Button.new()
+	action_button.name = "PopupActionButton"
+	action_button.custom_minimum_size = Vector2(124, 38)
+	action_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	action_button.add_theme_stylebox_override(
+		"disabled", UiPalette.panel_style(Color("777b78", 0.72), Color("9b9e9b", 0.72))
+	)
+	action_button.add_theme_color_override("font_disabled_color", Color("d0d2cf", 0.76))
+	interaction_footer_row.add_child(action_button)
+	var action_right_spacer := Control.new()
+	action_right_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	action_right_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	interaction_footer_row.add_child(action_right_spacer)
+
+	feedback_label = Label.new()
+	feedback_label.name = "PopupFeedback"
+	feedback_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	feedback_label.custom_minimum_size = Vector2(0, 20)
+	feedback_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	feedback_label.add_theme_color_override("font_color", Color("76592f"))
+	feedback_label.add_theme_font_size_override("font_size", 11)
+	feedback_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	feedback_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	interaction_column.add_child(feedback_label)
+
 	lower_spacer = Control.new()
 	lower_spacer.name = "PopupLowerSpacer"
 	lower_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	lower_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	interaction_column.add_child(lower_spacer)
-
-	interaction_footer_row = HBoxContainer.new()
-	interaction_footer_row.name = "PopupInteractionFooter"
-	interaction_footer_row.mouse_filter = Control.MOUSE_FILTER_PASS
-	interaction_footer_row.add_theme_constant_override("separation", 10)
-	interaction_column.add_child(interaction_footer_row)
-
-	feedback_label = Label.new()
-	feedback_label.name = "PopupFeedback"
-	feedback_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	feedback_label.custom_minimum_size = Vector2(0, 24)
-	feedback_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	feedback_label.add_theme_color_override("font_color", Color("76592f"))
-	feedback_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	feedback_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	interaction_footer_row.add_child(feedback_label)
-
-	action_button = Button.new()
-	action_button.name = "PopupActionButton"
-	action_button.custom_minimum_size = Vector2(180, 42)
-	action_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	interaction_footer_row.add_child(action_button)
 	var window := get_window()
 	if window != null:
 		window.focus_exited.connect(_stop_dragging)
@@ -219,6 +287,12 @@ func _apply_preferred_size() -> void:
 		return
 	applying_preferred_size = true
 	var local_position := _canvas_position_in(bounds, global_position)
+	if not preferred_position_initialized:
+		local_position = Vector2(
+			bounds.size.x * PAPER_ANCHOR_LEFT,
+			bounds.size.y * PAPER_ANCHOR_TOP,
+		)
+		preferred_position_initialized = true
 	var anchored_size := Vector2(
 		bounds.size.x * (PAPER_ANCHOR_RIGHT - PAPER_ANCHOR_LEFT),
 		bounds.size.y * (PAPER_ANCHOR_BOTTOM - PAPER_ANCHOR_TOP),
@@ -327,10 +401,23 @@ func set_body_height(height: float) -> void:
 
 
 func set_body_copy(text: String, height: float, maximum_lines: int) -> void:
+	var content_changed := body_full_text != text or body_max_lines != maximum_lines
 	set_body_height(height)
 	body_max_lines = maximum_lines
-	body_label.text = text
+	body_full_text = text
 	body_label.add_theme_font_size_override("font_size", BODY_FONT_SIZE)
+	body_label.max_lines_visible = body_max_lines
+	if content_changed:
+		body_page_index = 0
+	_queue_body_pagination()
+
+
+func set_slot_prompt(text: String) -> void:
+	if slot_prompt_label != null:
+		slot_prompt_label.text = text
+
+
+func _queue_body_pagination() -> void:
 	if body_fit_queued:
 		return
 	body_fit_queued = true
@@ -346,18 +433,93 @@ func set_footer_copy(text: String) -> void:
 
 func _fit_body_copy_after_layout() -> void:
 	await get_tree().process_frame
-	ItemDetailPopup.fit_label_font(
-		body_label,
-		BODY_FONT_SIZE,
-		BODY_MIN_FONT_SIZE,
-		body_max_lines,
-	)
-	await get_tree().process_frame
-	var font_size := body_label.get_theme_font_size("font_size")
-	var font := body_label.get_theme_font("font")
-	var overflow_lines := maxi(0, body_label.get_line_count() - body_max_lines)
-	body_viewport.custom_minimum_size.y = (
-		body_requested_height + ceilf(overflow_lines * font.get_height(font_size))
-	)
+	if not is_instance_valid(body_label):
+		return
+	body_pages = _paginate_body_copy(body_full_text)
+	body_page_index = clampi(body_page_index, 0, maxi(0, body_pages.size() - 1))
+	_update_body_page()
 	body_fit_queued = false
 	call_deferred("_apply_preferred_size")
+
+
+func _paginate_body_copy(text: String) -> Array[String]:
+	var pages: Array[String] = []
+	var remaining := text.strip_edges()
+	if remaining.is_empty():
+		pages.append("")
+		return pages
+	if body_label.size.x <= 1.0:
+		pages.append(remaining)
+		return pages
+	while not remaining.is_empty():
+		var page_length := _longest_fitting_body_prefix(remaining)
+		if page_length <= 0:
+			page_length = 1
+		page_length = _prefer_body_page_break(remaining, page_length)
+		var page_text := remaining.substr(0, page_length).strip_edges()
+		if page_text.is_empty():
+			page_text = remaining.substr(0, page_length)
+		pages.append(page_text)
+		remaining = remaining.substr(page_length).strip_edges()
+	return pages
+
+
+func _longest_fitting_body_prefix(text: String) -> int:
+	var previous_text := body_label.text
+	var previous_max_lines := body_label.max_lines_visible
+	body_label.max_lines_visible = -1
+	var low := 1
+	var high := text.length()
+	var best := 0
+	while low <= high:
+		var midpoint := int((low + high) * 0.5)
+		body_label.text = text.substr(0, midpoint)
+		if body_label.get_line_count() <= body_max_lines:
+			best = midpoint
+			low = midpoint + 1
+		else:
+			high = midpoint - 1
+	body_label.text = previous_text
+	body_label.max_lines_visible = previous_max_lines
+	return best
+
+
+func _prefer_body_page_break(text: String, fitted_length: int) -> int:
+	if fitted_length >= text.length():
+		return fitted_length
+	var earliest_break := maxi(1, int(fitted_length * 0.62))
+	for index in range(fitted_length - 1, earliest_break - 1, -1):
+		var character := text.substr(index, 1)
+		if character in " \t\r\n，。！？、；：,.!?;:…—-）)":
+			return index + 1
+	return fitted_length
+
+
+func _update_body_page() -> void:
+	if body_pages.is_empty():
+		body_pages = [""]
+	body_page_index = clampi(body_page_index, 0, body_pages.size() - 1)
+	body_label.text = body_pages[body_page_index]
+	body_previous_button.disabled = body_page_index <= 0
+	body_next_button.disabled = body_page_index >= body_pages.size() - 1
+
+
+func _on_previous_body_page_pressed() -> void:
+	if body_page_index <= 0:
+		return
+	body_page_index -= 1
+	_update_body_page()
+
+
+func _on_next_body_page_pressed() -> void:
+	if body_page_index >= body_pages.size() - 1:
+		return
+	body_page_index += 1
+	_update_body_page()
+
+
+func _on_body_viewport_resized() -> void:
+	if not is_node_ready() or is_equal_approx(body_layout_width, body_viewport.size.x):
+		return
+	body_layout_width = body_viewport.size.x
+	_queue_body_pagination()

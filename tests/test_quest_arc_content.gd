@@ -5,17 +5,21 @@ func test_manifest_is_the_new_opening_whitelist() -> void:
 	var manifest := QuestArcCatalog.manifest()
 	assert_not_null(manifest)
 	assert_eq(manifest.initial_money, 0)
-	assert_true(manifest.starting_item_ids.is_empty())
+	assert_eq(
+		manifest.starting_item_ids,
+		[&"fries", &"plastic_car", &"midnight_rose"],
+	)
 	assert_eq(manifest.maximum_item_price, 40)
 	assert_eq(manifest.properties.size(), 12)
 	assert_eq(manifest.items.size(), 14)
-	assert_eq(manifest.tasks.size(), 5)
+	assert_eq(manifest.tasks.size(), 9)
 	assert_eq(manifest.recipes.size(), 1)
 	assert_eq(manifest.stores.size(), 5)
 	assert_eq(manifest.store_unlocks.size(), 5)
 	assert_eq(manifest.owners.size(), 3)
 	for persona_id in CardPropertySet.PROTAGONIST_STATS:
-		assert_eq(int(manifest.initial_protagonist_stats.get(persona_id, -1)), 0)
+		var expected_level := 3 if persona_id == &"reverie" else 0
+		assert_eq(int(manifest.initial_protagonist_stats.get(persona_id, -1)), expected_level)
 	assert_true(manifest.validation_errors().is_empty(), str(manifest.validation_errors()))
 
 
@@ -89,17 +93,28 @@ func test_store_unlocks_use_items_or_non_consuming_personas() -> void:
 	assert_false(QuestArcCatalog.store_unlock_for_store(&"bookstore").consume_item)
 
 
-func test_new_game_starts_with_only_the_two_opening_letters() -> void:
+func test_new_game_starts_with_letters_pagination_tests_and_store_unlock_cards() -> void:
 	var state := QuestGameState.new()
 	assert_eq(state.wallet.money, 0)
-	assert_true(state.inventory.is_empty())
+	var starting_definition_ids: Array[StringName] = []
+	for card in state.inventory:
+		starting_definition_ids.append(card.definition_id)
+	assert_eq(
+		starting_definition_ids,
+		[&"fries", &"plastic_car", &"midnight_rose"],
+	)
 	assert_true(state.unlocked_store_ids.is_empty())
-	assert_eq(state.active_tasks().size(), 2)
+	assert_eq(state.active_tasks().size(), 6)
 	assert_not_null(state.task_instance_for_definition(&"remittance"))
 	assert_not_null(state.task_instance_for_definition(&"tin_boy_gift"))
+	for index in 4:
+		assert_not_null(state.task_instance_for_definition(
+			StringName("debug_todo_page_%d" % (index + 1))
+		))
 	assert_null(state.task_instance_for_definition(&"self_care"))
 	for persona_id in CardPropertySet.PROTAGONIST_STATS:
-		assert_eq(int(state.protagonist_aspect_counts.get(persona_id, -1)), 0)
+		var expected_level := 3 if persona_id == &"reverie" else 0
+		assert_eq(int(state.protagonist_aspect_counts.get(persona_id, -1)), expected_level)
 
 
 func test_new_order_rewards_are_fixed() -> void:

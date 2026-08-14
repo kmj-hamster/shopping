@@ -51,13 +51,10 @@ func refresh() -> void:
 		BODY_HEIGHT,
 		BODY_MAX_LINES,
 	)
+	set_slot_prompt(TranslationServer.translate(unlock_definition.slot_rule.display_name_key))
 	action_button.text = TranslationServer.translate(&"demo.ui.confirm")
 	action_button.disabled = unlock_slot == null or unlock_slot.pending_card == null
-	feedback_label.text = (
-		TranslationServer.translate(&"demo.ui.location.ready")
-		if not action_button.disabled
-		else TranslationServer.translate(&"demo.ui.location.place_item")
-	)
+	feedback_label.text = ""
 
 
 func release_pending_card() -> void:

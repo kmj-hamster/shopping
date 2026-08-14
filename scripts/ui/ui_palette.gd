@@ -1,6 +1,8 @@
 class_name UiPalette
 extends RefCounted
 
+const INK_COLOR := Color("152421")
+
 
 static func panel_style(color: Color = Color("18212d"), border_color: Color = Color("304052")) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()

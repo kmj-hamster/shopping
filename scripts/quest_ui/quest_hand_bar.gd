@@ -19,7 +19,6 @@ var state: QuestGameState
 var highlight_rule: CardSlotRule
 var card_scroll: ScrollContainer
 var card_row: Control
-var empty_label: Label
 var active_tab: StringName = TAB_ITEMS
 var mask_persona_order: Array[StringName] = PersonaMaskCatalog.MASK_PERSONAS.duplicate()
 var card_views: Dictionary = {}
@@ -136,7 +135,6 @@ func _reconcile_cards(refresh_existing: bool = false) -> void:
 			(card_views[card.instance_id] as CardHandCard).setup(card, definition)
 	rebuilding_cards = false
 	_layout_cards_for_rule()
-	_sync_empty_label()
 	_queue_card_layout()
 
 
@@ -180,24 +178,6 @@ func _remove_card_view(instance_id: int) -> void:
 		wrapper.visible = false
 		wrapper.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		wrapper.queue_free()
-
-
-func _sync_empty_label() -> void:
-	if not card_views.is_empty():
-		if empty_label != null and is_instance_valid(empty_label):
-			empty_label.visible = false
-			empty_label.queue_free()
-		empty_label = null
-		return
-	if empty_label == null or not is_instance_valid(empty_label):
-		empty_label = Label.new()
-		empty_label.custom_minimum_size = Vector2(260, 126)
-		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		empty_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		empty_label.add_theme_color_override("font_color", Color("60736f"))
-		empty_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		card_row.add_child(empty_label)
-	empty_label.text = TranslationServer.translate(&"quest.ui.hand.empty")
 
 
 func set_highlight_rule(rule: CardSlotRule) -> void:

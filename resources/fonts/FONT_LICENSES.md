@@ -1,5 +1,14 @@
 # Font sources and licenses
 
+## Baker Signet BT
+
+- File: `baker-signet-bt.ttf`
+- Source: user-provided font asset
+- License: proprietary; not covered by the open-font licenses in this folder
+
+Confirm that the intended release has the required application embedding and
+distribution rights before shipping a build that contains this font file.
+
 ## Bree Serif
 
 - File: `BreeSerif-Regular.ttf`

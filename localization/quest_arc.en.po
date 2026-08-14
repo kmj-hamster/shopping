@@ -367,8 +367,6 @@ msgstr "The sunflower completes it. A daylight-colored lamp wakes inside."
 
 msgid "quest.ui.hand.title"
 msgstr "Things in hand"
-msgid "quest.ui.hand.empty"
-msgstr "The paper bag feels light."
 msgid "quest.ui.back"
 msgstr "Back"
 msgid "quest.ui.money"
@@ -425,6 +423,8 @@ msgid "quest.ui.task.confirm"
 msgstr "Confirm"
 msgid "quest.ui.task.deliver_tomorrow"
 msgstr "Deliver tomorrow"
+msgid "quest.ui.task.gift"
+msgstr "Receive"
 msgid "quest.ui.task.enjoy_tonight"
 msgstr "Enjoy at home tonight"
 msgid "quest.ui.task.cancel_confirm"
@@ -1064,3 +1064,24 @@ msgstr "The florist is watering flowers that have already fallen asleep."
 
 msgid "opening.owner.flower.item"
 msgstr "“%s. At night, do not ask whether it is real.”"
+
+msgid "debug.task.todo_page_1.name"
+msgstr "List Test: First Letter"
+
+msgid "debug.task.todo_page_2.name"
+msgstr "List Test: Second Letter"
+
+msgid "debug.task.todo_page_3.name"
+msgstr "List Test: Third Letter"
+
+msgid "debug.task.todo_page_4.name"
+msgstr "List Test: Fourth Letter"
+
+msgid "debug.task.todo_page.body"
+msgstr "This temporary request checks the to-do list's paging, hover, and opening behavior."
+
+msgid "debug.task.todo_page.slot"
+msgstr "Any item"
+
+msgid "debug.task.todo_page.result"
+msgstr "The test item has been recorded. This request gives no reward."

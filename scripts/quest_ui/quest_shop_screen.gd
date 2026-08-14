@@ -9,12 +9,22 @@ signal background_pressed
 const DIALOGUE_SILENT_CHARACTERS := " \t\r\n，。！？、；：,.!?;:…—-（）()“”\"'"
 const DIALOGUE_VOICE_PLAYER_COUNT := 3
 const DIALOGUE_MAX_VISIBLE_LINES := 2
+const DIALOGUE_TEXT_COLOR := Color("edf2ee")
+const DIALOGUE_FEEDBACK_COLOR := Color("f0d8ce")
 const SHOP_BACK_TEXTURE: Texture2D = preload("res://resources/ui/shell/shop-back.png")
 const SHOP_SHELF_TEXTURE: Texture2D = preload("res://resources/ui/shell/shop-shelf.png")
 const SHOP_TALK_TEXTURE: Texture2D = preload("res://resources/ui/shell/shop-talk.png")
-const TOY_DIALOGUE_TEXTURE: Texture2D = preload(
-	"res://resources/ui/shell/shop-dialogue-toy.png"
+const FROSTED_DIALOGUE_SHADER: Shader = preload(
+	"res://resources/shaders/frosted_dialogue.gdshader"
 )
+const OWNER_TEXTURE_PATHS := {
+	&"toy": "res://resources/character/balloon-head.png",
+	&"fast_food": "res://resources/character/rat-head.png",
+	&"flower": "res://resources/character/flower-head.png",
+	&"record": "res://resources/character/phonograph-head.png",
+	&"bookstore": "res://resources/character/manga-head.png",
+}
+const LOWERED_OWNER_STORES: Array[StringName] = [&"fast_food", &"record", &"bookstore"]
 
 var state: QuestGameState
 var store_id: StringName
@@ -25,6 +35,9 @@ var title_label: Label
 var owner_portrait: TextureRect
 var navigation_column: VBoxContainer
 var dialogue_panel: PanelContainer
+var dialogue_back_buffer: BackBufferCopy
+var dialogue_glass: ColorRect
+var owner_name_background: Panel
 var checkout_button: Button
 var feedback_label: Label
 var owner_name_label: Label
@@ -104,11 +117,19 @@ func _build_interface() -> void:
 	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	background.offset_left = -QuestMain.BACKGROUND_OVERSCAN
+	background.offset_top = -QuestMain.BACKGROUND_OVERSCAN
+	background.offset_right = QuestMain.BACKGROUND_OVERSCAN
+	background.offset_bottom = QuestMain.BACKGROUND_OVERSCAN
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(background)
 	var night_filter := ColorRect.new()
 	night_filter.color = Color("031014", 0.28)
 	night_filter.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	night_filter.offset_left = -QuestMain.BACKGROUND_OVERSCAN
+	night_filter.offset_top = -QuestMain.BACKGROUND_OVERSCAN
+	night_filter.offset_right = QuestMain.BACKGROUND_OVERSCAN
+	night_filter.offset_bottom = QuestMain.BACKGROUND_OVERSCAN
 	night_filter.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(night_filter)
 	background_input = Control.new()
@@ -121,10 +142,10 @@ func _build_interface() -> void:
 	owner_portrait = TextureRect.new()
 	owner_portrait.name = "StoreOwnerPortrait"
 	owner_portrait.texture = _owner_texture()
-	owner_portrait.anchor_left = 0.46
-	owner_portrait.anchor_top = 0.035
-	owner_portrait.anchor_right = 0.80
-	owner_portrait.anchor_bottom = 0.80
+	owner_portrait.anchor_left = 0.595
+	owner_portrait.anchor_top = 0.18
+	owner_portrait.anchor_right = 0.87
+	owner_portrait.anchor_bottom = 1.10 if store_id in LOWERED_OWNER_STORES else 1.035
 	owner_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	owner_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	owner_portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -132,11 +153,11 @@ func _build_interface() -> void:
 
 	navigation_column = VBoxContainer.new()
 	navigation_column.name = "ShopNavigation"
-	navigation_column.anchor_left = 0.86
-	navigation_column.anchor_top = 0.34
-	navigation_column.anchor_right = 0.965
-	navigation_column.anchor_bottom = 0.76
-	navigation_column.add_theme_constant_override("separation", 10)
+	navigation_column.anchor_left = 0.88
+	navigation_column.anchor_top = 0.36
+	navigation_column.anchor_right = 0.957
+	navigation_column.anchor_bottom = 0.66
+	navigation_column.add_theme_constant_override("separation", 6)
 	add_child(navigation_column)
 	shelf_nav_button = Button.new()
 	shelf_nav_button.name = "ShelfButton"
@@ -154,66 +175,113 @@ func _build_interface() -> void:
 	leave_nav_button.pressed.connect(leave_requested.emit)
 	navigation_column.add_child(leave_nav_button)
 
+	dialogue_back_buffer = BackBufferCopy.new()
+	dialogue_back_buffer.name = "DialogueBackBuffer"
+	dialogue_back_buffer.copy_mode = BackBufferCopy.COPY_MODE_VIEWPORT
+	add_child(dialogue_back_buffer)
+
 	dialogue_panel = PanelContainer.new()
 	dialogue_panel.name = "OwnerDialoguePanel"
 	dialogue_panel.anchor_left = 0.405
 	dialogue_panel.anchor_top = 0.735
 	dialogue_panel.anchor_right = 0.815
 	dialogue_panel.anchor_bottom = 0.97
-	dialogue_panel.add_theme_stylebox_override(
-		"panel", UiPalette.panel_style(Color("050b0e", 0.92), Color("837659", 0.86))
-	)
-	if store_id == &"toy":
-		var dialogue_style := StyleBoxTexture.new()
-		dialogue_style.texture = TOY_DIALOGUE_TEXTURE
-		dialogue_panel.add_theme_stylebox_override("panel", dialogue_style)
+	dialogue_panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	dialogue_panel.clip_contents = true
 	dialogue_panel.gui_input.connect(_on_dialogue_panel_gui_input)
 	add_child(dialogue_panel)
-	var dialogue_margin := MarginContainer.new()
-	dialogue_margin.mouse_filter = Control.MOUSE_FILTER_PASS
-	for side in ["left", "right", "top", "bottom"]:
-		dialogue_margin.add_theme_constant_override("margin_%s" % side, 10)
-	dialogue_panel.add_child(dialogue_margin)
-	var dialogue_row := HBoxContainer.new()
-	dialogue_row.mouse_filter = Control.MOUSE_FILTER_PASS
-	dialogue_row.add_theme_constant_override("separation", 12)
-	dialogue_margin.add_child(dialogue_row)
-	var dialogue_text := VBoxContainer.new()
-	dialogue_text.mouse_filter = Control.MOUSE_FILTER_PASS
-	dialogue_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	dialogue_text.add_theme_constant_override("separation", 2)
-	dialogue_row.add_child(dialogue_text)
+	var dialogue_stack := Control.new()
+	dialogue_stack.name = "OwnerDialogueStack"
+	dialogue_stack.mouse_filter = Control.MOUSE_FILTER_PASS
+	dialogue_panel.add_child(dialogue_stack)
+	dialogue_glass = ColorRect.new()
+	dialogue_glass.name = "FrostedDialogueGlass"
+	dialogue_glass.anchor_top = 0.20
+	dialogue_glass.anchor_right = 1.0
+	dialogue_glass.anchor_bottom = 1.0
+	dialogue_glass.color = Color.WHITE
+	dialogue_glass.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var glass_material := ShaderMaterial.new()
+	glass_material.shader = FROSTED_DIALOGUE_SHADER
+	dialogue_glass.material = glass_material
+	dialogue_glass.resized.connect(_update_dialogue_glass_size)
+	dialogue_stack.add_child(dialogue_glass)
+	var dialogue_content := Control.new()
+	dialogue_content.name = "OwnerDialogueContent"
+	dialogue_content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dialogue_content.mouse_filter = Control.MOUSE_FILTER_PASS
+	dialogue_stack.add_child(dialogue_content)
+	owner_name_background = Panel.new()
+	owner_name_background.name = "OwnerNameBackground"
+	owner_name_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	owner_name_background.anchor_left = 0.10
+	owner_name_background.anchor_right = 0.42
+	owner_name_background.anchor_bottom = 0.22
+	var owner_name_style := StyleBoxFlat.new()
+	owner_name_style.bg_color = (
+		Color("9a914b", 0.96) if store_id == &"toy" else Color("a6534b", 0.96)
+	)
+	owner_name_style.corner_radius_top_left = 8
+	owner_name_style.corner_radius_top_right = 8
+	owner_name_style.corner_radius_bottom_left = 3
+	owner_name_style.corner_radius_bottom_right = 3
+	owner_name_background.add_theme_stylebox_override("panel", owner_name_style)
+	dialogue_content.add_child(owner_name_background)
 	owner_name_label = Label.new()
 	owner_name_label.mouse_filter = Control.MOUSE_FILTER_PASS
+	owner_name_label.anchor_left = 0.10
+	owner_name_label.anchor_top = 0.0
+	owner_name_label.anchor_right = 0.42
+	owner_name_label.anchor_bottom = 0.22
+	owner_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	owner_name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	owner_name_label.add_theme_font_size_override("font_size", 14)
-	owner_name_label.add_theme_color_override("font_color", Color("d9c582"))
-	dialogue_text.add_child(owner_name_label)
+	owner_name_label.add_theme_color_override("font_color", DIALOGUE_TEXT_COLOR)
+	dialogue_content.add_child(owner_name_label)
 	owner_dialogue_label = Label.new()
 	owner_dialogue_label.mouse_filter = Control.MOUSE_FILTER_PASS
-	owner_dialogue_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	owner_dialogue_label.anchor_left = 0.055
+	owner_dialogue_label.anchor_top = 0.28
+	owner_dialogue_label.anchor_right = 0.77
+	owner_dialogue_label.anchor_bottom = 0.73
+	owner_dialogue_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	owner_dialogue_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	owner_dialogue_label.max_lines_visible = DIALOGUE_MAX_VISIBLE_LINES
 	owner_dialogue_label.clip_text = true
-	owner_dialogue_label.add_theme_color_override("font_color", Color("c8d0ca"))
+	owner_dialogue_label.add_theme_color_override("font_color", DIALOGUE_TEXT_COLOR)
 	owner_dialogue_label.resized.connect(_on_owner_dialogue_label_resized)
-	dialogue_text.add_child(owner_dialogue_label)
+	dialogue_content.add_child(owner_dialogue_label)
 	feedback_label = Label.new()
 	feedback_label.mouse_filter = Control.MOUSE_FILTER_PASS
+	feedback_label.anchor_left = 0.055
+	feedback_label.anchor_top = 0.74
+	feedback_label.anchor_right = 0.77
+	feedback_label.anchor_bottom = 0.95
 	feedback_label.add_theme_font_size_override("font_size", 12)
-	feedback_label.add_theme_color_override("font_color", Color("e0bd72"))
-	dialogue_text.add_child(feedback_label)
+	feedback_label.add_theme_color_override("font_color", DIALOGUE_FEEDBACK_COLOR)
+	dialogue_content.add_child(feedback_label)
 	checkout_button = Button.new()
-	checkout_button.custom_minimum_size = Vector2(120, 48)
+	checkout_button.anchor_left = 0.79
+	checkout_button.anchor_top = 0.35
+	checkout_button.anchor_right = 0.97
+	checkout_button.anchor_bottom = 0.82
 	checkout_button.pressed.connect(_on_checkout_pressed)
-	dialogue_row.add_child(checkout_button)
+	dialogue_content.add_child(checkout_button)
 
 	_build_dialogue_voice_players()
 	_build_shelf_popup()
+	call_deferred("_update_dialogue_glass_size")
+
+
+func _update_dialogue_glass_size() -> void:
+	if dialogue_glass == null or not (dialogue_glass.material is ShaderMaterial):
+		return
+	var glass_material := dialogue_glass.material as ShaderMaterial
+	glass_material.set_shader_parameter("panel_size_px", dialogue_glass.size)
 
 
 func _configure_navigation_button(button: Button, texture: Texture2D) -> void:
-	button.custom_minimum_size = Vector2(115, 54)
+	button.custom_minimum_size = Vector2(82, 38)
 	button.focus_mode = Control.FOCUS_NONE
 	button.icon = texture
 	button.expand_icon = true
@@ -233,9 +301,9 @@ func _build_dialogue_voice_players() -> void:
 func _build_shelf_popup() -> void:
 	shelf_popup = PanelContainer.new()
 	shelf_popup.name = "ShelfPopup"
-	shelf_popup.anchor_left = 0.035
+	shelf_popup.anchor_left = 0.18
 	shelf_popup.anchor_top = 0.16
-	shelf_popup.anchor_right = 0.39
+	shelf_popup.anchor_right = 0.385
 	shelf_popup.anchor_bottom = 0.755
 	shelf_popup.add_theme_stylebox_override(
 		"panel", UiPalette.panel_style(Color("071217", 0.98), Color("8c805d", 0.92))
@@ -294,11 +362,11 @@ func _build_shelf_popup() -> void:
 func _build_shelf_views() -> void:
 	for view_index in CardShopTransaction.PAGE_SIZE:
 		var holder := VBoxContainer.new()
-		holder.custom_minimum_size = Vector2(104, 70)
+		holder.custom_minimum_size = Vector2(92, 70)
 		holder.add_theme_constant_override("separation", 3)
 		shelf_grid.add_child(holder)
 		var button := Button.new()
-		button.custom_minimum_size = Vector2(104, 52)
+		button.custom_minimum_size = Vector2(92, 52)
 		button.toggle_mode = true
 		button.pressed.connect(_on_shelf_view_pressed.bind(view_index))
 		holder.add_child(button)
@@ -319,7 +387,7 @@ func refresh() -> void:
 		return
 	var owner := QuestArcCatalog.owner_for_store(store_id)
 	owner_name_label.text = TranslationServer.translate(owner.display_name_key) if owner != null else ""
-	owner_portrait.visible = owner != null and owner_portrait.texture != null
+	owner_portrait.visible = owner_portrait.texture != null
 	talk_nav_button.visible = owner != null
 	dialogue_panel.visible = owner != null
 	shelf_nav_button.text = ""
@@ -718,12 +786,7 @@ func _on_checkout_pressed() -> void:
 
 
 func _owner_texture() -> Texture2D:
-	var paths := {
-		&"toy": "res://resources/character/balloon-head.png",
-		&"flower": "res://resources/character/flower-head.png",
-		&"record": "res://resources/character/phonograph-head.png",
-	}
-	var path := String(paths.get(store_id, ""))
+	var path := String(OWNER_TEXTURE_PATHS.get(store_id, ""))
 	return load(path) as Texture2D if not path.is_empty() else null
 
 

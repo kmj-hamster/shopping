@@ -112,7 +112,7 @@ func _ready() -> void:
 	title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title_label.add_theme_font_size_override("font_size", 13)
-	title_label.add_theme_color_override("font_color", Color("172629"))
+	title_label.add_theme_color_override("font_color", UiPalette.INK_COLOR)
 	title_host.add_child(title_label)
 	highlight_outline = Panel.new()
 	highlight_outline.name = "CardRuleHighlight"

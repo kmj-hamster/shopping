@@ -39,12 +39,6 @@ msgstr "或"
 msgid "demo.ui.price"
 msgstr "%d元"
 
-msgid "demo.ui.location.place_item"
-msgstr "将符合条件的物品放入槽位。"
-
-msgid "demo.ui.location.ready"
-msgstr "确认后将消耗这件物品。"
-
 msgid "demo.ui.rule.title"
 msgstr "需要"
 

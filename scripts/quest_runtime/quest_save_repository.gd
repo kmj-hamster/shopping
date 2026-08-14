@@ -1,7 +1,7 @@
 class_name QuestSaveRepository
 extends RefCounted
 
-const SAVE_VERSION := 7
+const SAVE_VERSION := 8
 const CONTENT_VERSION := "opening-demo-1"
 const DEFAULT_PATH := "user://save_shopping0807_v1.json"
 
@@ -106,6 +106,7 @@ func to_dictionary(state: QuestGameState) -> Dictionary:
 		),
 		"pending_persona_reveal_ids": _string_array(state.pending_persona_reveal_ids),
 		"visited_store_ids": _string_array(state.visited_store_ids.keys()),
+		"bgm_playback_positions": _string_float_dictionary(state.bgm_playback_positions),
 		"pending_arc": _serialize_arc(state.pending_arc),
 		"commerce": state.commerce_snapshot(),
 	}
@@ -173,6 +174,9 @@ func _restore(state: QuestGameState, payload: Dictionary) -> bool:
 		payload.get("pending_persona_reveal_ids", [])
 	)
 	state.visited_store_ids = _name_set(payload.get("visited_store_ids", []))
+	state.bgm_playback_positions = _name_float_dictionary(
+		payload.get("bgm_playback_positions", {})
+	)
 	state.pending_arc = _restore_arc(payload.get("pending_arc", {}))
 	# Synthesis placement is a screen-local draft and never survives loading.
 	state.synthesis_base_instance_id = 0
@@ -321,6 +325,13 @@ func _string_int_dictionary(values: Dictionary) -> Dictionary:
 	return result
 
 
+func _string_float_dictionary(values: Dictionary) -> Dictionary:
+	var result: Dictionary = {}
+	for key in values:
+		result[String(key)] = maxf(0.0, float(values[key]))
+	return result
+
+
 func _name_dictionary(values: Dictionary) -> Dictionary:
 	var result: Dictionary = {}
 	for key in values:
@@ -332,6 +343,13 @@ func _name_int_dictionary(values: Dictionary) -> Dictionary:
 	var result: Dictionary = {}
 	for key in values:
 		result[StringName(key)] = int(values[key])
+	return result
+
+
+func _name_float_dictionary(values: Dictionary) -> Dictionary:
+	var result: Dictionary = {}
+	for key in values:
+		result[StringName(key)] = maxf(0.0, float(values[key]))
 	return result
 
 

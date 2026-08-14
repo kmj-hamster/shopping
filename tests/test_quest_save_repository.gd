@@ -30,7 +30,36 @@ func test_round_trip_preserves_opening_tasks_cards_and_map_state() -> void:
 	assert_true(restored.task_instance_for_definition(&"self_care").confirmed)
 	assert_true(restored.is_store_unlocked(&"toy"))
 	assert_true(restored.has_visited_store(&"toy"))
-	assert_eq(_card_by_definition(restored, &"plastic_car").location, CardItemState.Location.ACTIVITY_SLOT)
+	assert_eq(
+		restored.card_by_instance_id(car.instance_id).location,
+		CardItemState.Location.ACTIVITY_SLOT,
+	)
+
+
+func test_round_trip_preserves_each_bgm_playback_position() -> void:
+	var source := QuestGameState.new()
+	source.remember_bgm_playback_position(QuestBgmDirector.TRACK_EMPTY, 12.5)
+	source.remember_bgm_playback_position(QuestBgmDirector.TRACK_DEBUSSY, 37.25)
+	source.remember_bgm_playback_position(QuestBgmDirector.TRACK_DREAM, 4.75)
+	assert_true(repository.save(source))
+
+	var restored := QuestGameState.new()
+	assert_true(repository.load_into(restored).ok)
+	assert_almost_eq(
+		restored.bgm_playback_position(QuestBgmDirector.TRACK_EMPTY),
+		12.5,
+		0.001,
+	)
+	assert_almost_eq(
+		restored.bgm_playback_position(QuestBgmDirector.TRACK_DEBUSSY),
+		37.25,
+		0.001,
+	)
+	assert_almost_eq(
+		restored.bgm_playback_position(QuestBgmDirector.TRACK_DREAM),
+		4.75,
+		0.001,
+	)
 
 
 func test_round_trip_preserves_fixed_shelf_stock() -> void:
@@ -122,6 +151,7 @@ func test_self_care_history_and_pending_persona_reveals_survive_round_trip() -> 
 
 func _state_with_confirmed_self_care(item_id: StringName) -> QuestGameState:
 	var state := QuestGameState.new()
+	state.protagonist_aspect_counts[&"reverie"] = 0
 	_unlock_toy_shop(state)
 	var task := state.task_instance_for_definition(&"self_care")
 	var item := state.grant_item(item_id, &"test")

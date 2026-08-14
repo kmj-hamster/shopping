@@ -61,15 +61,24 @@ func show_notice(message_key: StringName) -> void:
 
 func _build_interface() -> void:
 	var background := TextureRect.new()
+	background.name = "MapBackground"
 	background.texture = load("res://resources/background/map.png") as Texture2D
 	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	background.offset_left = -QuestMain.BACKGROUND_OVERSCAN
+	background.offset_top = -QuestMain.BACKGROUND_OVERSCAN
+	background.offset_right = QuestMain.BACKGROUND_OVERSCAN
+	background.offset_bottom = QuestMain.BACKGROUND_OVERSCAN
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(background)
 	var night_filter := ColorRect.new()
 	night_filter.color = Color(0.012, 0.04, 0.06, 0.38)
 	night_filter.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	night_filter.offset_left = -QuestMain.BACKGROUND_OVERSCAN
+	night_filter.offset_top = -QuestMain.BACKGROUND_OVERSCAN
+	night_filter.offset_right = QuestMain.BACKGROUND_OVERSCAN
+	night_filter.offset_bottom = QuestMain.BACKGROUND_OVERSCAN
 	night_filter.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(night_filter)
 	background_input = Control.new()
