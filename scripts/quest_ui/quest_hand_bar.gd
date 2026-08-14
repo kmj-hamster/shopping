@@ -12,6 +12,7 @@ const HOVER_Z_INDEX := 1000
 const CARD_REFLOW_SECONDS := 0.12
 const REORDER_DROP_MARGIN := Vector2(32, 38)
 const REORDER_OVERLAP_SLOP := 12.0
+const HAND_HEIGHT := CardHandCard.CARD_SIZE.y + 8.0
 const TAB_ITEMS := &"items"
 const TAB_MASKS := &"masks"
 
@@ -45,12 +46,12 @@ func setup(game_state: QuestGameState) -> void:
 
 
 func _ready() -> void:
-	custom_minimum_size = Vector2(0, 154)
+	custom_minimum_size = Vector2(0, HAND_HEIGHT)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	card_scroll = ScrollContainer.new()
 	card_scroll.mouse_filter = Control.MOUSE_FILTER_PASS
-	card_scroll.custom_minimum_size = Vector2(0, 154)
+	card_scroll.custom_minimum_size = Vector2(0, HAND_HEIGHT)
 	card_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	card_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	card_scroll.clip_contents = false

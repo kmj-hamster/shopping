@@ -38,7 +38,7 @@ func _ready() -> void:
 	back_button.custom_minimum_size = CARD_SIZE
 	back_button.text = "◇\n◇\n◇"
 	back_button.focus_mode = Control.FOCUS_NONE
-	back_button.add_theme_font_size_override("font_size", 24)
+	back_button.add_theme_font_size_override("font_size", 18)
 	back_button.add_theme_color_override("font_color", Color("b9c7bd"))
 	back_button.add_theme_stylebox_override(
 		"normal", UiPalette.panel_style(Color("071013", 0.99), Color("71867f", 0.88))
@@ -66,7 +66,7 @@ func _ready() -> void:
 	money_label = Label.new()
 	money_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	money_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	money_label.add_theme_font_size_override("font_size", 32)
+	money_label.add_theme_font_size_override("font_size", 24)
 	money_label.add_theme_color_override("font_color", Color("8b6730"))
 	money_face.add_child(money_label)
 	money_face.visible = false

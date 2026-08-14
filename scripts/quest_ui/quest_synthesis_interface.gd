@@ -30,9 +30,9 @@ const PERSONA_ICON_SIZE := PersonaStarChart.PERSONA_ICON_SIZE
 const PERSONA_RAY_LEVEL_ONE_LENGTH := PersonaStarChart.LEVEL_ONE_LENGTH
 const PERSONA_RAY_FULL_LEVEL := PersonaStarChart.MAX_LEVEL
 const PERSONA_ICON_POSITIONS := PersonaStarChart.PERSONA_ICON_POSITIONS
-const REINFORCEMENT_SLOT_GAP := 18.0
-const REINFORCEMENT_TOP_GAP := 14.0
-const REINFORCEMENT_LABEL_HEIGHT := 24.0
+const REINFORCEMENT_SLOT_GAP := 14.0
+const REINFORCEMENT_TOP_GAP := 12.0
+const REINFORCEMENT_LABEL_HEIGHT := 20.0
 
 var state: QuestGameState
 var phase := Phase.DRAFT
@@ -55,6 +55,7 @@ var persona_buttons: Dictionary = {}
 var persona_value_labels: Dictionary = {}
 var possibility_definitions: Dictionary = {}
 var candidate_ready_tweens: Dictionary = {}
+var candidate_breath_tweens: Dictionary = {}
 var action_button: Button
 var narrative_overlay: ColorRect
 var narrative_column: VBoxContainer
@@ -230,7 +231,7 @@ func cancel_pending_inputs() -> void:
 	if result_layer != null:
 		result_layer.visible = false
 	if reinforcement_group != null:
-		reinforcement_group.visible = false
+		reinforcement_group.visible = true
 
 
 func _build_interface() -> void:
@@ -359,7 +360,7 @@ func _build_reinforcement_slots() -> void:
 			persona_slot = slot
 		else:
 			helper_slot = slot
-	reinforcement_group.visible = false
+	reinforcement_group.visible = true
 
 
 func _build_narrative_overlay() -> void:
@@ -398,13 +399,13 @@ func _build_result_layer() -> void:
 	column.add_theme_constant_override("separation", 16)
 	center.add_child(column)
 	result_holder = CenterContainer.new()
-	result_holder.custom_minimum_size = Vector2(190, 190)
+	result_holder.custom_minimum_size = Vector2(150, 150)
 	column.add_child(result_holder)
 	result_back_button = Button.new()
 	result_back_button.name = "SynthesisResultBack"
 	result_back_button.custom_minimum_size = CardHandCard.CARD_SIZE
 	result_back_button.text = "◇\n◇\n◇"
-	result_back_button.add_theme_font_size_override("font_size", 24)
+	result_back_button.add_theme_font_size_override("font_size", 18)
 	result_back_button.pressed.connect(_reveal_result)
 	result_holder.add_child(result_back_button)
 	result_card_view = CardHandCard.new()
@@ -462,9 +463,9 @@ func _rebuild_material_slots(snapshot: Dictionary, force_refresh: bool = false) 
 	)
 
 
-func _update_reinforcement_visibility(snapshot: Dictionary) -> void:
+func _update_reinforcement_visibility(_snapshot: Dictionary) -> void:
 	if reinforcement_group != null:
-		reinforcement_group.visible = snapshot.get("base_card") != null
+		reinforcement_group.visible = true
 
 
 func _rebuild_persona_field(snapshot: Dictionary) -> void:
@@ -486,36 +487,68 @@ func _rebuild_candidates(snapshot: Dictionary) -> void:
 	_record_update(&"candidates")
 	var candidates := snapshot.get("candidates", []) as Array
 	var desired_ids: Array[StringName] = []
+	var active_recipes: Array[SynthesisRecipeDefinition] = []
 	for candidate in candidates:
 		desired_ids.append(StringName(candidate.recipe_id))
 	for raw_recipe_id in candidate_views:
+		var old_recipe_id := StringName(raw_recipe_id)
 		var old_view := candidate_views[raw_recipe_id] as Dictionary
-		(old_view.button as Button).visible = desired_ids.has(StringName(raw_recipe_id))
+		var remains_visible := desired_ids.has(old_recipe_id)
+		(old_view.button as Button).visible = remains_visible
+		(old_view.halo as Label).visible = remains_visible
+		if not remains_visible:
+			_set_candidate_breathing(old_recipe_id, old_view, false)
 	for candidate in candidates:
 		var recipe_id := StringName(candidate.recipe_id)
 		var recipe := QuestArcCatalog.recipe_by_id(recipe_id)
+		if recipe == null:
+			continue
+		active_recipes.append(recipe)
 		if not candidate_views.has(recipe_id):
 			candidate_views[recipe_id] = _create_candidate_view(recipe)
 		var view := candidate_views[recipe_id] as Dictionary
 		var button := view.button as Button
 		var position := _candidate_position(recipe)
 		button.position = position - CANDIDATE_NODE_SIZE * 0.5
+		var halo := view.halo as Label
+		halo.position = button.position
+		halo.visible = true
 		button.visible = true
 		button.disabled = false
 		button.button_pressed = state.synthesis_candidate_recipe_id == recipe_id
 		var was_initialized := bool(view.get("initialized", false))
 		var was_complete := bool(view.get("is_complete", false))
-		_apply_candidate_visual(button, bool(candidate.is_complete), button.button_pressed)
+		_apply_candidate_visual(
+			recipe_id,
+			view,
+			bool(candidate.is_complete),
+			button.button_pressed,
+		)
 		if bool(candidate.is_complete) and (not was_initialized or not was_complete):
 			_pulse_candidate_ready(recipe_id)
 		view["initialized"] = true
 		view["is_complete"] = bool(candidate.is_complete)
 		view["candidate"] = candidate
 		view["position"] = position
+	star_chart.set_candidate_recipes(active_recipes)
 	_update_candidate_hover_state(&"")
 
 
 func _create_candidate_view(recipe: SynthesisRecipeDefinition) -> Dictionary:
+	var halo := Label.new()
+	halo.name = "%sCandidateHalo" % String(recipe.id).to_pascal_case()
+	halo.custom_minimum_size = CANDIDATE_NODE_SIZE
+	halo.size = CANDIDATE_NODE_SIZE
+	halo.pivot_offset = CANDIDATE_NODE_SIZE * 0.5
+	halo.text = "◆"
+	halo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	halo.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	halo.add_theme_font_size_override("font_size", 39)
+	halo.add_theme_color_override("font_color", Color("8ba2b7", 0.52))
+	halo.add_theme_color_override("font_outline_color", Color("8ba2b7", 0.18))
+	halo.add_theme_constant_override("outline_size", 5)
+	halo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	candidate_layer.add_child(halo)
 	var button := Button.new()
 	button.name = "%sCandidate" % String(recipe.id).to_pascal_case()
 	button.custom_minimum_size = CANDIDATE_NODE_SIZE
@@ -530,6 +563,7 @@ func _create_candidate_view(recipe: SynthesisRecipeDefinition) -> Dictionary:
 	candidate_layer.add_child(button)
 	candidate_buttons[recipe.id] = button
 	return {
+		"halo": halo,
 		"button": button,
 		"candidate": {},
 		"position": Vector2.ZERO,
@@ -538,11 +572,18 @@ func _create_candidate_view(recipe: SynthesisRecipeDefinition) -> Dictionary:
 	}
 
 
-func _apply_candidate_visual(button: Button, is_complete: bool, is_selected: bool) -> void:
-	button.text = "◆" if is_complete else "◇"
-	button.add_theme_font_size_override("font_size", 31)
+func _apply_candidate_visual(
+	recipe_id: StringName,
+	view: Dictionary,
+	is_complete: bool,
+	is_selected: bool,
+) -> void:
+	var button := view.button as Button
+	var halo := view.halo as Label
+	button.text = "◆"
+	button.add_theme_font_size_override("font_size", 29)
 	button.add_theme_color_override(
-		"font_color", Color("f4f6ed") if is_complete else Color("8495a8", 0.88)
+		"font_color", Color("f4f6ed") if is_complete else Color("71869c", 0.98)
 	)
 	button.add_theme_color_override(
 		"font_hover_color", Color("ffffff") if is_complete else Color("dce7ef")
@@ -550,9 +591,41 @@ func _apply_candidate_visual(button: Button, is_complete: bool, is_selected: boo
 	button.add_theme_color_override("font_pressed_color", Color("f2d99a"))
 	button.add_theme_color_override("font_hover_pressed_color", Color("fff2c7"))
 	button.add_theme_color_override(
-		"font_outline_color", Color("f2d99a", 0.80) if is_selected else Color("bcd1e2", 0.42)
+		"font_outline_color",
+		Color("f2d99a", 0.88) if is_selected else Color("bcd1e2", 0.60),
 	)
-	button.add_theme_constant_override("outline_size", 4 if is_complete or is_selected else 2)
+	button.add_theme_constant_override("outline_size", 5 if is_complete or is_selected else 3)
+	if is_complete:
+		halo.add_theme_color_override("font_color", Color("f2d99a", 0.62))
+		halo.add_theme_color_override("font_outline_color", Color("fff2c7", 0.24))
+		halo.modulate = Color.WHITE
+		_set_candidate_breathing(recipe_id, view, false)
+	else:
+		halo.add_theme_color_override("font_color", Color("8ba2b7", 0.52))
+		halo.add_theme_color_override("font_outline_color", Color("8ba2b7", 0.18))
+		_set_candidate_breathing(recipe_id, view, true)
+
+
+func _set_candidate_breathing(
+	recipe_id: StringName,
+	view: Dictionary,
+	enabled: bool,
+) -> void:
+	var previous := candidate_breath_tweens.get(recipe_id) as Tween
+	if previous != null and previous.is_valid():
+		previous.kill()
+	candidate_breath_tweens.erase(recipe_id)
+	var halo := view.get("halo") as Label
+	if halo == null:
+		return
+	halo.modulate = Color(1.0, 1.0, 1.0, 0.48 if enabled else 1.0)
+	if not enabled or not halo.visible or not halo.is_inside_tree():
+		return
+	var breathe := halo.create_tween().set_loops()
+	breathe.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	breathe.tween_property(halo, "modulate:a", 0.96, 1.35)
+	breathe.tween_property(halo, "modulate:a", 0.48, 1.35)
+	candidate_breath_tweens[recipe_id] = breathe
 
 
 func _pulse_candidate_ready(recipe_id: StringName) -> void:
@@ -703,7 +776,12 @@ func _update_candidate_selection() -> void:
 		var selected: bool = state.synthesis_candidate_recipe_id == recipe_id
 		button.button_pressed = selected
 		var view := candidate_views.get(recipe_id) as Dictionary
-		_apply_candidate_visual(button, bool(view.get("is_complete", false)), selected)
+		_apply_candidate_visual(
+			StringName(recipe_id),
+			view,
+			bool(view.get("is_complete", false)),
+			selected,
+		)
 
 
 func _on_action_pressed() -> void:

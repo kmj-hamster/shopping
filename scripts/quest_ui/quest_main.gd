@@ -249,7 +249,7 @@ func _build_global_interface() -> void:
 	hand_bar = QuestHandBar.new()
 	hand_bar.name = "QuestHandBar"
 	hand_bar.anchor_left = 0.15
-	hand_bar.anchor_top = 0.775
+	hand_bar.anchor_top = 0.825
 	hand_bar.anchor_right = 0.82
 	hand_bar.anchor_bottom = 0.998
 	hand_bar.offset_top = HAND_VERTICAL_OFFSET
@@ -353,12 +353,12 @@ func _build_persona_reveal_overlay() -> void:
 	persona_reveal_title.add_theme_color_override("font_color", Color("d8c480"))
 	column.add_child(persona_reveal_title)
 	var holder := CenterContainer.new()
-	holder.custom_minimum_size = Vector2(220, 260)
+	holder.custom_minimum_size = CardHandCard.CARD_SIZE * 1.5 + Vector2(30, 30)
 	column.add_child(holder)
 	persona_reveal_back = Button.new()
-	persona_reveal_back.custom_minimum_size = Vector2(170, 230)
+	persona_reveal_back.custom_minimum_size = CardHandCard.CARD_SIZE * 1.5
 	persona_reveal_back.text = "◇\n◇\n◇"
-	persona_reveal_back.add_theme_font_size_override("font_size", 30)
+	persona_reveal_back.add_theme_font_size_override("font_size", 23)
 	persona_reveal_back.add_theme_stylebox_override(
 		"normal", UiPalette.panel_style(Color("071013"), Color("8ba19a"))
 	)

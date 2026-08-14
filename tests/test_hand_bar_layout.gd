@@ -14,9 +14,10 @@ func before_each() -> void:
 
 
 func test_all_cards_and_slots_use_the_new_paper_proportion() -> void:
-	assert_eq(CardHandCard.CARD_SIZE, Vector2(120, 146))
+	assert_eq(CardHandCard.CARD_SIZE, Vector2(90, 110))
 	assert_eq(QuestTaskSlot.CARD_SIZE, CardHandCard.CARD_SIZE)
 	var main := await _spawn_main()
+	assert_eq(main.hand_bar.custom_minimum_size.y, QuestHandBar.HAND_HEIGHT)
 	for view in main.hand_bar.card_views.values():
 		var card_view := view as CardHandCard
 		assert_eq(card_view.size, CardHandCard.CARD_SIZE)
@@ -24,6 +25,12 @@ func test_all_cards_and_slots_use_the_new_paper_proportion() -> void:
 			card_view.card_background.texture.resource_path,
 			"res://resources/ui/shell/hand-card.png",
 		)
+	var first_card := main.hand_bar.card_views.values()[0] as CardHandCard
+	assert_almost_eq(
+		first_card.get_global_rect().end.y,
+		get_viewport().get_visible_rect().end.y,
+		1.0,
+	)
 	var task := main.state.task_instance_for_definition(&"girl_order")
 	var rule := QuestArcCatalog.task_by_id(task.definition_id).slot_rules[0] as CardSlotRule
 	var fries := main.state.inventory[0] as CardItemState

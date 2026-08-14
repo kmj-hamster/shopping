@@ -2,41 +2,39 @@ class_name PersonaStarChart
 extends Control
 
 const BACKGROUND_COLOR := Color("050a18")
-const FIELD_CENTER := Vector2(590, 258)
-const CARD_SIZE := Vector2(120, 146)
+const FIELD_CENTER := Vector2(650, 292)
+const CARD_SIZE := CardHandCard.CARD_SIZE
 const PERSONA_ICON_SIZE := Vector2(150, 84)
 const MAX_LEVEL := 10
 const LEVEL_ONE_LENGTH := 48.0
 const CARD_CLEARANCE := 2.0
 const ICON_OVERLAP := 2.0
 const TOTAL_TWEEN_SECONDS := 0.32
-const CANDIDATE_BOUNDS := Rect2(310, 38, 560, 408)
-const PERSONA_DIRECTIONS := {
-	CardPropertySet.PERSONA_NIGHTWALKER: Vector2(-0.72, -0.69),
-	CardPropertySet.PERSONA_MOURNER: Vector2(-0.72, 0.69),
-	CardPropertySet.PERSONA_DREAMWALKER: Vector2(0.72, -0.69),
-	CardPropertySet.PERSONA_HOMECOMER: Vector2(0.72, 0.69),
-}
+const CANDIDATE_BOUNDS := Rect2(180, 80, 930, 500)
+const POPUP_SAFE_RECT := Rect2(860, 0, 420, 132)
+const PAIR_TRACK_CURVE_SEGMENTS := 32
+const PAIR_TRACK_CONTROL_PULL := 0.78
 const PERSONA_ICON_POSITIONS := {
-	CardPropertySet.PERSONA_NIGHTWALKER: Vector2(32, 5),
-	CardPropertySet.PERSONA_MOURNER: Vector2(32, 326),
-	CardPropertySet.PERSONA_DREAMWALKER: Vector2(1066, 5),
-	CardPropertySet.PERSONA_HOMECOMER: Vector2(1066, 326),
+	CardPropertySet.PERSONA_NIGHTWALKER: Vector2(32, 40),
+	CardPropertySet.PERSONA_MOURNER: Vector2(32, 380),
+	CardPropertySet.PERSONA_DREAMWALKER: Vector2(1066, 142),
+	CardPropertySet.PERSONA_HOMECOMER: Vector2(1066, 380),
 }
 const PERSONA_COLORS := PersonaVisuals.COLORS
-const PAIR_DIRECTIONS := {
-	&"nightwalker|mourner": Vector2.LEFT,
-	&"nightwalker|dreamwalker": Vector2.UP,
-	&"nightwalker|homecomer": Vector2(-0.38, -0.92),
-	&"mourner|dreamwalker": Vector2(0.92, 0.39),
-	&"mourner|homecomer": Vector2(-0.92, 0.39),
-	&"dreamwalker|homecomer": Vector2.RIGHT,
+const PAIR_TRACK_ANCHORS := {
+	&"nightwalker|mourner": Vector2(220, 286),
+	&"nightwalker|dreamwalker": Vector2(650, 88),
+	&"nightwalker|homecomer": Vector2(952, 500),
+	&"mourner|dreamwalker": Vector2(330, 510),
+	&"mourner|homecomer": Vector2(650, 590),
+	&"dreamwalker|homecomer": Vector2(1085, 326),
 }
 
 var target_totals: Dictionary = {}
 var displayed_totals: Dictionary = {}
 var total_tweens: Dictionary = {}
 var pulse_strengths: Dictionary = {}
+var active_pair_recipes: Array[SynthesisRecipeDefinition] = []
 var hovered_persona_id: StringName
 var totals_initialized := false
 
@@ -88,6 +86,14 @@ func set_hovered_persona(persona_id: StringName) -> void:
 	queue_redraw()
 
 
+func set_candidate_recipes(recipes: Array[SynthesisRecipeDefinition]) -> void:
+	active_pair_recipes.clear()
+	for recipe in recipes:
+		if _ordered_recipe_personas(recipe).size() == 2:
+			active_pair_recipes.append(recipe)
+	queue_redraw()
+
+
 func persona_color(persona_id: StringName) -> Color:
 	return PersonaVisuals.color(persona_id)
 
@@ -117,28 +123,37 @@ func candidate_position(recipe: SynthesisRecipeDefinition) -> Vector2:
 		return axis_point(persona_id, float(recipe.required_value(persona_id)))
 	if personas.size() != 2:
 		return FIELD_CENTER
-	var pair_id := _pair_id(personas[0], personas[1])
-	var direction := (PAIR_DIRECTIONS.get(pair_id, Vector2.UP) as Vector2).normalized()
-	var first_amount := float(recipe.required_value(personas[0]))
-	var second_amount := float(recipe.required_value(personas[1]))
-	var average_amount := (first_amount + second_amount) * 0.5
-	var minimum_radius := 134.0
-	var maximum_radius := _maximum_candidate_radius(direction)
-	var growth := clampf((average_amount - 1.0) / float(MAX_LEVEL - 1), 0.0, 1.0)
-	var radius := lerpf(minimum_radius, maximum_radius, growth)
-	var normal := Vector2(-direction.y, direction.x)
-	var requirement_bias := clampf(
-		(first_amount - second_amount) / float(MAX_LEVEL), -1.0, 1.0
-	)
-	var stable_jitter := float(absi(String(recipe.id).hash()) % 13 - 6)
-	var position := (
-		FIELD_CENTER
-		+ direction * radius
-		+ normal * (requirement_bias * 34.0 + stable_jitter)
-	)
-	position.x = clampf(position.x, CANDIDATE_BOUNDS.position.x, CANDIDATE_BOUNDS.end.x)
-	position.y = clampf(position.y, CANDIDATE_BOUNDS.position.y, CANDIDATE_BOUNDS.end.y)
-	return position
+	var track_points := pair_track_points(recipe)
+	if track_points.is_empty():
+		return FIELD_CENTER
+	var stable_offset := absi(String(recipe.id).hash()) % 5 - 2
+	var midpoint := clampi(track_points.size() / 2 + stable_offset, 0, track_points.size() - 1)
+	return track_points[midpoint]
+
+
+func pair_track_points(recipe: SynthesisRecipeDefinition) -> PackedVector2Array:
+	var personas := _ordered_recipe_personas(recipe)
+	if personas.size() != 2:
+		return PackedVector2Array()
+	var first_id := personas[0]
+	var second_id := personas[1]
+	var start := axis_point(first_id, float(recipe.required_value(first_id)))
+	var end := axis_point(second_id, float(recipe.required_value(second_id)))
+	var pair_id := _pair_id(first_id, second_id)
+	var anchor := PAIR_TRACK_ANCHORS.get(pair_id, FIELD_CENTER) as Vector2
+	var first_control := start.lerp(anchor, PAIR_TRACK_CONTROL_PULL)
+	var second_control := end.lerp(anchor, PAIR_TRACK_CONTROL_PULL)
+	var points := PackedVector2Array()
+	for step in range(PAIR_TRACK_CURVE_SEGMENTS + 1):
+		var t := float(step) / float(PAIR_TRACK_CURVE_SEGMENTS)
+		var inverse := 1.0 - t
+		points.append(
+			start * inverse * inverse * inverse
+			+ first_control * 3.0 * inverse * inverse * t
+			+ second_control * 3.0 * inverse * t * t
+			+ end * t * t * t
+		)
+	return points
 
 
 func _process(delta: float) -> void:
@@ -157,7 +172,41 @@ func _draw() -> void:
 	_draw_orbit_rings()
 	for persona_id in CardPropertySet.PERSONAS:
 		_draw_persona_axis(persona_id)
+	_draw_pair_tracks()
 	_draw_center_ornament()
+
+
+func _draw_pair_tracks() -> void:
+	for recipe in active_pair_recipes:
+		var personas := _ordered_recipe_personas(recipe)
+		var points := pair_track_points(recipe)
+		if personas.size() != 2 or points.size() < 2:
+			continue
+		var includes_hover := hovered_persona_id in personas
+		var muted_by_hover := not hovered_persona_id.is_empty() and not includes_hover
+		var pulse := maxf(
+			float(pulse_strengths.get(personas[0], 0.0)),
+			float(pulse_strengths.get(personas[1], 0.0)),
+		)
+		var alpha := 0.22 + pulse * 0.24
+		if includes_hover:
+			alpha = maxf(alpha, 0.46)
+		elif muted_by_hover:
+			alpha = 0.07
+		for index in range(points.size() - 1):
+			if index % 2 != 0:
+				continue
+			var segment_persona := personas[0] if index < (points.size() - 1) / 2 else personas[1]
+			draw_line(
+				points[index],
+				points[index + 1],
+				Color(persona_color(segment_persona), alpha),
+				1.55 if includes_hover else 1.2,
+				true,
+			)
+		var endpoint_alpha := minf(alpha + 0.20, 1.0)
+		draw_circle(points[0], 3.2, Color(persona_color(personas[0]), endpoint_alpha))
+		draw_circle(points[-1], 3.2, Color(persona_color(personas[1]), endpoint_alpha))
 
 
 func _draw_orbit_rings() -> void:
@@ -222,7 +271,7 @@ func _draw_persona_axis(persona_id: StringName) -> void:
 
 
 func _draw_center_ornament() -> void:
-	for radius in [82.0, 88.0]:
+	for radius in [60.0, 66.0]:
 		draw_arc(
 			FIELD_CENTER,
 			radius,
@@ -241,17 +290,21 @@ func _set_displayed_total(value: float, persona_id: StringName) -> void:
 
 
 func _axis_start(persona_id: StringName) -> Vector2:
-	var direction := (PERSONA_DIRECTIONS.get(persona_id, Vector2.RIGHT) as Vector2).normalized()
+	var direction := (_persona_icon_center(persona_id) - FIELD_CENTER).normalized()
 	var distance := _center_to_rect_edge_distance(CARD_SIZE, direction) + CARD_CLEARANCE
 	return FIELD_CENTER + direction * distance
 
 
 func _axis_end(persona_id: StringName) -> Vector2:
-	var icon_position := PERSONA_ICON_POSITIONS.get(persona_id, Vector2.ZERO) as Vector2
-	var icon_center := icon_position + PERSONA_ICON_SIZE * 0.5
+	var icon_center := _persona_icon_center(persona_id)
 	var direction := (icon_center - FIELD_CENTER).normalized()
 	var icon_edge_distance := _center_to_rect_edge_distance(PERSONA_ICON_SIZE, direction)
 	return icon_center - direction * (icon_edge_distance - ICON_OVERLAP)
+
+
+func _persona_icon_center(persona_id: StringName) -> Vector2:
+	var icon_position := PERSONA_ICON_POSITIONS.get(persona_id, Vector2.ZERO) as Vector2
+	return icon_position + PERSONA_ICON_SIZE * 0.5
 
 
 func _level_length(amount: float, available_length: float) -> float:
@@ -261,19 +314,6 @@ func _level_length(amount: float, available_length: float) -> float:
 	var first_length := minf(LEVEL_ONE_LENGTH, available_length)
 	var growth := (clamped_amount - 1.0) / float(MAX_LEVEL - 1)
 	return lerpf(first_length, available_length, growth)
-
-
-func _maximum_candidate_radius(direction: Vector2) -> float:
-	var distance := INF
-	if direction.x > 0.001:
-		distance = minf(distance, (CANDIDATE_BOUNDS.end.x - FIELD_CENTER.x) / direction.x)
-	elif direction.x < -0.001:
-		distance = minf(distance, (CANDIDATE_BOUNDS.position.x - FIELD_CENTER.x) / direction.x)
-	if direction.y > 0.001:
-		distance = minf(distance, (CANDIDATE_BOUNDS.end.y - FIELD_CENTER.y) / direction.y)
-	elif direction.y < -0.001:
-		distance = minf(distance, (CANDIDATE_BOUNDS.position.y - FIELD_CENTER.y) / direction.y)
-	return maxf(distance - 18.0, 152.0)
 
 
 func _ordered_recipe_personas(recipe: SynthesisRecipeDefinition) -> Array[StringName]:

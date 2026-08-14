@@ -5,7 +5,7 @@ signal inspect_requested(definition: CardItemDefinition)
 signal drag_started(card: CardItemState)
 signal drag_finished(card: CardItemState, succeeded: bool)
 
-const CARD_SIZE := Vector2(120, 146)
+const CARD_SIZE := Vector2(90, 110)
 const CARD_BACKGROUND: Texture2D = preload("res://resources/ui/shell/hand-card.png")
 const FROSTED_DIALOGUE_SHADER: Shader = preload(
 	"res://resources/shaders/frosted_dialogue.gdshader"
@@ -71,8 +71,8 @@ func _ready() -> void:
 	glass_material.set_shader_parameter("brightness", 1.04)
 	glass_material.set_shader_parameter("distortion_px", 0.75)
 	glass_material.set_shader_parameter("dispersion_px", 0.60)
-	glass_material.set_shader_parameter("corner_radius_px", 8.0)
-	glass_material.set_shader_parameter("edge_depth_px", 8.0)
+	glass_material.set_shader_parameter("corner_radius_px", 6.0)
+	glass_material.set_shader_parameter("edge_depth_px", 6.0)
 	persona_glass.material = glass_material
 	persona_glass.resized.connect(_update_persona_glass_size)
 	add_child(persona_glass)
@@ -86,27 +86,27 @@ func _ready() -> void:
 	add_child(card_background)
 	var margin := MarginContainer.new()
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	margin.add_theme_constant_override("margin_left", 10)
-	margin.add_theme_constant_override("margin_right", 10)
-	margin.add_theme_constant_override("margin_top", 9)
-	margin.add_theme_constant_override("margin_bottom", 8)
+	margin.add_theme_constant_override("margin_left", 8)
+	margin.add_theme_constant_override("margin_right", 8)
+	margin.add_theme_constant_override("margin_top", 7)
+	margin.add_theme_constant_override("margin_bottom", 6)
 	add_child(margin)
 	var column := VBoxContainer.new()
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_theme_constant_override("separation", 3)
+	column.add_theme_constant_override("separation", 2)
 	margin.add_child(column)
 	var image_host := Control.new()
-	image_host.custom_minimum_size = Vector2(100, 94)
+	image_host.custom_minimum_size = Vector2(74, 70)
 	image_host.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	image_host.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(image_host)
 	persona_icon_background = Panel.new()
 	persona_icon_background.name = "PersonaIconColor"
 	persona_icon_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	persona_icon_background.offset_left = 5.0
-	persona_icon_background.offset_top = 5.0
-	persona_icon_background.offset_right = -5.0
-	persona_icon_background.offset_bottom = -5.0
+	persona_icon_background.offset_left = 4.0
+	persona_icon_background.offset_top = 4.0
+	persona_icon_background.offset_right = -4.0
+	persona_icon_background.offset_bottom = -4.0
 	persona_icon_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	image_host.add_child(persona_icon_background)
 	item_image = TextureRect.new()
@@ -120,22 +120,22 @@ func _ready() -> void:
 	value_label.anchor_top = 1.0
 	value_label.anchor_right = 1.0
 	value_label.anchor_bottom = 1.0
-	value_label.offset_left = -34.0
-	value_label.offset_top = -34.0
-	value_label.offset_right = -2.0
-	value_label.offset_bottom = -3.0
+	value_label.offset_left = -26.0
+	value_label.offset_top = -26.0
+	value_label.offset_right = -1.0
+	value_label.offset_bottom = -2.0
 	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	value_label.add_theme_font_size_override("font_size", 23)
+	value_label.add_theme_font_size_override("font_size", 18)
 	value_label.add_theme_color_override("font_color", Color("f4ead1"))
 	value_label.add_theme_color_override("font_outline_color", Color("102126"))
-	value_label.add_theme_constant_override("outline_size", 4)
+	value_label.add_theme_constant_override("outline_size", 3)
 	value_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	image_host.add_child(value_label)
 	# Keep localized names out of the VBox minimum-width calculation. The
 	# fixed host owns layout; the label can ellipsize inside it in either locale.
 	title_host = Control.new()
-	title_host.custom_minimum_size = Vector2(100, 20)
+	title_host.custom_minimum_size = Vector2(74, 15)
 	title_host.clip_contents = true
 	column.add_child(title_host)
 	title_label = Label.new()
@@ -145,7 +145,7 @@ func _ready() -> void:
 	title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title_label.add_theme_font_size_override("font_size", 13)
+	title_label.add_theme_font_size_override("font_size", 10)
 	title_label.add_theme_color_override("font_color", UiPalette.INK_COLOR)
 	title_host.add_child(title_label)
 	highlight_outline = Panel.new()
@@ -180,16 +180,16 @@ func _refresh() -> void:
 	card_background.self_modulate = (
 		Color(1.0, 1.0, 1.0, PERSONA_PAPER_ALPHA) if is_persona_mask else Color.WHITE
 	)
-	item_image.offset_left = -16.0 if is_persona_mask else 0.0
-	item_image.offset_right = 16.0 if is_persona_mask else 0.0
+	item_image.offset_left = -12.0 if is_persona_mask else 0.0
+	item_image.offset_right = 12.0 if is_persona_mask else 0.0
 	_apply_persona_visuals(persona_id)
 	value_label.visible = is_persona_mask
-	title_host.custom_minimum_size.y = 32.0 if is_persona_mask else 20.0
+	title_host.custom_minimum_size.y = 24.0 if is_persona_mask else 15.0
 	title_label.autowrap_mode = (
 		TextServer.AUTOWRAP_WORD_SMART if is_persona_mask else TextServer.AUTOWRAP_OFF
 	)
 	title_label.max_lines_visible = 2 if is_persona_mask else 1
-	title_label.add_theme_font_size_override("font_size", 11 if is_persona_mask else 13)
+	title_label.add_theme_font_size_override("font_size", 9 if is_persona_mask else 10)
 	title_label.add_theme_color_override(
 		"font_color", Color("f4f7f2") if is_persona_mask else UiPalette.INK_COLOR
 	)
@@ -224,10 +224,10 @@ func _apply_persona_visuals(persona_id: StringName) -> void:
 	icon_style.bg_color = persona_color
 	icon_style.border_color = Color(1.0, 1.0, 1.0, 0.26)
 	icon_style.set_border_width_all(1)
-	icon_style.corner_radius_top_left = 7
-	icon_style.corner_radius_top_right = 7
-	icon_style.corner_radius_bottom_left = 7
-	icon_style.corner_radius_bottom_right = 7
+	icon_style.corner_radius_top_left = 5
+	icon_style.corner_radius_top_right = 5
+	icon_style.corner_radius_bottom_left = 5
+	icon_style.corner_radius_bottom_right = 5
 	persona_icon_background.add_theme_stylebox_override("panel", icon_style)
 	var glass_material := persona_glass.material as ShaderMaterial
 	if glass_material != null:
@@ -276,15 +276,15 @@ func _apply_card_style() -> void:
 		return
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color.TRANSPARENT
-	style.corner_radius_top_left = 8
-	style.corner_radius_top_right = 8
-	style.corner_radius_bottom_left = 8
-	style.corner_radius_bottom_right = 8
+	style.corner_radius_top_left = 6
+	style.corner_radius_top_right = 6
+	style.corner_radius_bottom_left = 6
+	style.corner_radius_bottom_right = 6
 	if rule_match_highlighted:
 		style.border_color = _border_color().lerp(Color.WHITE, 0.78)
 		style.set_border_width_all(2)
 		style.shadow_color = Color(0.9, 1.0, 0.97, 0.32)
-		style.shadow_size = 6
+		style.shadow_size = 5
 	highlight_outline.add_theme_stylebox_override("panel", style)
 
 

@@ -169,9 +169,14 @@ func test_persona_rays_clear_the_card_and_reach_distant_icons_at_level_ten() -> 
 	assert_gt(dreamwalker.get_rect().get_center().x + dreamwalker.position.x, 1040.0)
 	assert_gt(homecomer.get_rect().get_center().x + homecomer.position.x, 1040.0)
 	assert_lt(nightwalker.get_rect().get_center().y + nightwalker.position.y, 180.0)
-	assert_lt(dreamwalker.get_rect().get_center().y + dreamwalker.position.y, 180.0)
+	assert_gt(dreamwalker.position.y, PersonaStarChart.POPUP_SAFE_RECT.end.y)
+	assert_false(PersonaStarChart.POPUP_SAFE_RECT.intersects(
+		Rect2(dreamwalker.position, dreamwalker.size)
+	))
 	assert_gt(mourner.get_rect().get_center().y + mourner.position.y, 340.0)
 	assert_gt(homecomer.get_rect().get_center().y + homecomer.position.y, 340.0)
+	assert_gt(QuestSynthesisInterface.FIELD_CENTER.x, 640.0)
+	assert_gt(QuestSynthesisInterface.FIELD_CENTER.y, 280.0)
 
 
 func test_recipe_nodes_keep_fixed_star_chart_coordinates_when_totals_change() -> void:
@@ -194,6 +199,22 @@ func test_recipe_nodes_keep_fixed_star_chart_coordinates_when_totals_change() ->
 	)
 	assert_true(PersonaStarChart.CANDIDATE_BOUNDS.has_point(pair_position))
 	assert_ne(pair_position, QuestSynthesisInterface.FIELD_CENTER)
+	var pair_track := synthesis.star_chart.pair_track_points(pair_recipe)
+	assert_eq(
+		pair_track[0],
+		synthesis.star_chart.axis_point(&"nightwalker", 5.0),
+	)
+	assert_eq(
+		pair_track[-1],
+		synthesis.star_chart.axis_point(&"dreamwalker", 5.0),
+	)
+	assert_true(pair_position in pair_track)
+	var visible_pair_recipes: Array[SynthesisRecipeDefinition] = [
+		pair_recipe,
+		lower_pair_recipe,
+	]
+	synthesis.star_chart.set_candidate_recipes(visible_pair_recipes)
+	assert_eq(synthesis.star_chart.active_pair_recipes, visible_pair_recipes)
 	var lower_pair_rect := Rect2(
 		lower_pair_position - QuestSynthesisInterface.CANDIDATE_NODE_SIZE * 0.5,
 		QuestSynthesisInterface.CANDIDATE_NODE_SIZE,
@@ -229,11 +250,14 @@ func test_base_type_alone_reveals_gray_candidate_and_helper_type_does_not_add_re
 	assert_false(candidates[0].is_complete)
 	assert_true((synthesis.candidate_buttons[&"recipe_midnight_rose"] as Button).visible)
 	var candidate_button := synthesis.candidate_buttons[&"recipe_midnight_rose"] as Button
-	assert_eq(candidate_button.text, "◇")
+	assert_eq(candidate_button.text, "◆")
 	assert_true(candidate_button.flat)
 	var candidate_style := candidate_button.get_theme_stylebox("normal") as StyleBoxEmpty
 	assert_not_null(candidate_style)
-	assert_eq(candidate_button.get_theme_constant("outline_size"), 2)
+	assert_eq(candidate_button.get_theme_constant("outline_size"), 3)
+	var candidate_view := synthesis.candidate_views[&"recipe_midnight_rose"] as Dictionary
+	assert_true((candidate_view.halo as Label).visible)
+	assert_true(synthesis.candidate_breath_tweens.has(&"recipe_midnight_rose"))
 
 	assert_true(synthesis.stage_card(&"helper", toy_block))
 	candidates = main.state.synthesis_candidates()
@@ -241,12 +265,12 @@ func test_base_type_alone_reveals_gray_candidate_and_helper_type_does_not_add_re
 	assert_eq(candidates[0].recipe_id, &"recipe_midnight_rose")
 
 
-func test_reinforcement_slots_appear_below_base_and_accept_one_card_each() -> void:
+func test_three_material_slots_stay_visible_with_base_at_the_center() -> void:
 	var main := await _spawn_synthesis_main()
 	var synthesis := main.current_screen as QuestSynthesisInterface
 	var helper := _card_by_definition(main.state, &"soft_gauze")
 	var dreamwalker := PersonaMaskCatalog.card_for_persona(&"dreamwalker")
-	assert_false(synthesis.reinforcement_group.visible)
+	assert_true(synthesis.reinforcement_group.visible)
 	assert_false(synthesis.stage_card(&"helper", helper))
 	assert_false(synthesis.stage_card(&"persona", dreamwalker))
 
@@ -307,7 +331,9 @@ func test_replacing_or_removing_base_clears_reinforcement_and_returns_helper() -
 	assert_eq(main.state.synthesis_base_instance_id, 0)
 	assert_eq(main.state.synthesis_helper_instance_id, 0)
 	assert_eq(helper.location, CardItemState.Location.HAND)
-	assert_false(synthesis.reinforcement_group.visible)
+	assert_true(synthesis.reinforcement_group.visible)
+	assert_null(synthesis.persona_slot.card)
+	assert_null(synthesis.helper_slot.card)
 
 
 func test_unknown_gray_candidate_opens_possibility_with_types_and_requirements() -> void:
