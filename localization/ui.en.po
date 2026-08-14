@@ -69,7 +69,7 @@ msgid "demo.ui.rule.recently_used"
 msgstr "Used in the last two nights"
 
 msgid "opening.ui.next_day.self_care_required"
-msgstr "You have not taken care of yourself tonight. Claim the Tin Frog, unlock the toy shop, and complete “Me: Take Care of Yourself.”"
+msgstr "You have not taken care of yourself tonight. Claim the Tin Frog, unlock Joy Joy Toys, and complete “Me: Take Care of Yourself.”"
 
 msgid "opening.ui.persona.reveal"
 msgstr "Another Shape of Me"

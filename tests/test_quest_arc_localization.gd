@@ -154,3 +154,54 @@ func test_persona_descriptions_match_each_confirmed_role() -> void:
 				expected_descriptions[locale][persona_id],
 				"%s description should match in %s" % [persona_id, locale],
 			)
+
+
+func test_store_and_owner_names_match_confirmed_copy() -> void:
+	var expected_names := {
+		&"zh_CN": {
+			&"opening.store.toy.name": "欣欣玩具店",
+			&"opening.store.fast_food.name": "老鼠厨房",
+			&"opening.store.flower.name": "花店",
+			&"opening.store.record.name": "夜曲",
+			&"opening.store.bookstore.name": "日月光书店",
+			&"demo.store.flower.name": "花店",
+			&"demo.store.record.name": "夜曲",
+			&"opening.owner.toy.name": "气球叔叔",
+			&"opening.owner.fast_food.name": "大老鼠",
+			&"opening.owner.flower.name": "向日葵先生",
+			&"quest.owner.balloon.name": "气球叔叔",
+			&"quest.owner.mouse.name": "大老鼠",
+			&"quest.owner.sunflower.name": "向日葵先生",
+			&"quest.owner.gramophone.name": "留声机女士",
+			&"quest.owner.magical_girl.name": "千花",
+			&"demo.owner.flower.name": "向日葵先生",
+			&"demo.owner.record.name": "留声机女士",
+		},
+		&"en": {
+			&"opening.store.toy.name": "Joy Joy Toys",
+			&"opening.store.fast_food.name": "Ratty’s Kitchen",
+			&"opening.store.flower.name": "Flower Shop",
+			&"opening.store.record.name": "Nocturne",
+			&"opening.store.bookstore.name": "Sun & Moon Books",
+			&"demo.store.flower.name": "Flower Shop",
+			&"demo.store.record.name": "Nocturne",
+			&"opening.owner.toy.name": "Uncle Balloon",
+			&"opening.owner.fast_food.name": "Ratty",
+			&"opening.owner.flower.name": "Mr. Sunflower",
+			&"quest.owner.balloon.name": "Uncle Balloon",
+			&"quest.owner.mouse.name": "Ratty",
+			&"quest.owner.sunflower.name": "Mr. Sunflower",
+			&"quest.owner.gramophone.name": "Miss Gramophone",
+			&"quest.owner.magical_girl.name": "Chika",
+			&"demo.owner.flower.name": "Mr. Sunflower",
+			&"demo.owner.record.name": "Miss Gramophone",
+		},
+	}
+	for locale in expected_names:
+		TranslationServer.set_locale(locale)
+		for key in expected_names[locale]:
+			assert_eq(
+				TranslationServer.translate(key),
+				expected_names[locale][key],
+				"%s should match in %s" % [key, locale],
+			)
