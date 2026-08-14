@@ -19,6 +19,12 @@ const PROPERTY_VALUE_MIN_WIDTH := 30
 const PROPERTY_ICON_VALUE_GAP := 8
 const PROPERTY_GROUP_GAP := 3
 const POPUP_BACKGROUND := Color("020304", 0.5)
+const PERSONA_POPUP_ICON_PATHS := {
+	&"nightwalker": "res://resources/ui/property-lamp.svg",
+	&"mourner": "res://resources/ui/property-mirror.svg",
+	&"dreamwalker": "res://resources/ui/property-gauze.svg",
+	&"homecomer": "res://resources/ui/property-pillow.svg",
+}
 
 var current_definition: CardItemDefinition
 var primary_property_id: StringName
@@ -339,8 +345,8 @@ func _refresh() -> void:
 	description_label.text = current_definition.localized_description()
 	description_label.add_theme_font_size_override("font_size", DESCRIPTION_FONT_SIZE)
 	close_button.tooltip_text = TranslationServer.translate(&"slot.item_detail.close")
-	item_image.texture = current_definition.image
-	item_frame.visible = current_definition.image != null
+	item_image.texture = popup_item_texture(current_definition)
+	item_frame.visible = item_image.texture != null
 	property_band.visible = (
 		current_definition.property_set != null
 		and current_definition.property_set.property_count() > 0
@@ -359,7 +365,7 @@ func _refresh_primary_property() -> void:
 	)
 	description_label.add_theme_font_size_override("font_size", DESCRIPTION_FONT_SIZE)
 	close_button.tooltip_text = TranslationServer.translate(&"slot.item_detail.close")
-	item_image.texture = property_icon_texture(primary_property_id)
+	item_image.texture = popup_property_icon_texture(primary_property_id)
 	item_frame.visible = item_image.texture != null
 	property_band.visible = false
 	property_panel.visible = false
@@ -478,7 +484,7 @@ func _show_property(tag: StringName) -> void:
 
 
 func _update_property_panel(tag: StringName) -> void:
-	var texture := property_icon_texture(tag)
+	var texture := popup_property_icon_texture(tag)
 	property_icon_image.texture = texture
 	property_icon_image.visible = texture != null
 	property_icon_fallback.text = property_symbol(tag)
@@ -549,7 +555,7 @@ static func make_property_icon_button(tag: StringName, side: int = 30) -> Button
 	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	button.focus_mode = Control.FOCUS_NONE
 	button.toggle_mode = true
-	var texture := property_icon_texture(tag)
+	var texture := popup_property_icon_texture(tag)
 	button.text = "" if texture != null else property_symbol(tag)
 	button.tooltip_text = TranslationServer.translate(property_name_key(tag))
 	button.add_theme_font_size_override("font_size", maxi(13, int(side / 2)))
@@ -608,6 +614,25 @@ static func property_icon_texture(tag: StringName) -> Texture2D:
 	}
 	var path := String(paths.get(tag, ""))
 	return load(path) as Texture2D if not path.is_empty() and ResourceLoader.exists(path) else null
+
+
+static func popup_property_icon_texture(tag: StringName) -> Texture2D:
+	var path := String(PERSONA_POPUP_ICON_PATHS.get(tag, ""))
+	if not path.is_empty() and ResourceLoader.exists(path):
+		return load(path) as Texture2D
+	return property_icon_texture(tag)
+
+
+static func popup_item_texture(definition: CardItemDefinition) -> Texture2D:
+	if (
+		definition != null
+		and definition.property_set != null
+		and definition.property_set.has(CardPropertySet.PROPERTY_PERSONA)
+	):
+		for persona_id in CardPropertySet.PERSONAS:
+			if definition.property_set.has(persona_id):
+				return popup_property_icon_texture(persona_id)
+	return definition.image if definition != null else null
 
 
 static func property_symbol(tag: StringName) -> String:

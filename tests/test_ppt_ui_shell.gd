@@ -1212,6 +1212,10 @@ func test_item_detail_icons_append_without_overlap_and_close_outside() -> void:
 		main.detail_popup.property_description.text,
 		TranslationServer.translate(ItemDetailPopup.property_description_key(&"nightwalker")),
 	)
+	assert_eq(
+		main.detail_popup.property_icon_image.texture.resource_path,
+		"res://resources/ui/property-lamp.svg",
+	)
 	var first_item_property_font_size := (
 		main.detail_popup.property_description.get_theme_font_size("font_size")
 	)
@@ -1297,6 +1301,10 @@ func test_synthesis_bag_property_opens_primary_top_right_popup() -> void:
 	assert_eq(
 		main.detail_popup.description_label.text,
 		TranslationServer.translate(ItemDetailPopup.property_description_key(&"homecomer")),
+	)
+	assert_eq(
+		main.detail_popup.item_image.texture.resource_path,
+		"res://resources/ui/property-pillow.svg",
 	)
 	homecomer_button.pressed.emit()
 	assert_false(main.detail_popup.visible)
