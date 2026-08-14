@@ -30,11 +30,17 @@ func test_synthesis_uses_full_screen_in_bag_shell() -> void:
 	)
 	assert_eq(synthesis.background_input.mouse_filter, Control.MOUSE_FILTER_STOP)
 	assert_lt(synthesis.background_input.get_index(), synthesis.draft_layer.get_index())
-	assert_null(synthesis.find_child("InBagBackground", true, false))
+	var background := synthesis.find_child("InBagBackground", true, false) as TextureRect
+	assert_same(background, synthesis.in_bag_background)
+	assert_not_null(background.texture)
+	assert_eq(background.texture.resource_path, "res://resources/ui/synthesis/bg-inbag.png")
+	assert_eq(background.stretch_mode, TextureRect.STRETCH_KEEP_ASPECT_COVERED)
 	assert_null(synthesis.find_child("SynthesisBackgroundDimmer", true, false))
 	var star_chart := synthesis.find_child("PersonaStarChart", true, false) as PersonaStarChart
 	assert_not_null(star_chart)
 	assert_eq(PersonaStarChart.BACKGROUND_COLOR, Color("050a18"))
+	assert_false(star_chart.paints_background)
+	assert_lt(background.get_index(), star_chart.get_index())
 	assert_lt(star_chart.get_index(), synthesis.draft_layer.get_index())
 	assert_eq(PersonaStarChart.MAX_LEVEL, 10)
 
