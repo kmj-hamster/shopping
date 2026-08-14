@@ -29,6 +29,11 @@ func test_synthesis_uses_full_screen_in_bag_shell() -> void:
 	assert_not_null(background)
 	assert_eq(background.stretch_mode, TextureRect.STRETCH_KEEP_ASPECT_COVERED)
 	assert_eq(background.texture.resource_path, "res://resources/ui/synthesis/bg-inbag.png")
+	var dimmer := synthesis.find_child("SynthesisBackgroundDimmer", true, false) as ColorRect
+	assert_not_null(dimmer)
+	assert_eq(dimmer.color, QuestSynthesisInterface.BACKGROUND_DIM_COLOR)
+	assert_gt(dimmer.color.a, 0.4)
+	assert_lt(dimmer.get_index(), synthesis.draft_layer.get_index())
 
 	main._show_map_immediate()
 	assert_true(main.global_frame.visible)
@@ -116,7 +121,12 @@ func test_base_type_alone_reveals_gray_candidate_and_helper_type_does_not_add_re
 	assert_eq(candidates[0].recipe_id, &"recipe_midnight_rose")
 	assert_false(candidates[0].is_complete)
 	assert_true((synthesis.candidate_buttons[&"recipe_midnight_rose"] as Button).visible)
-	assert_eq((synthesis.candidate_buttons[&"recipe_midnight_rose"] as Button).text, "◇")
+	var candidate_button := synthesis.candidate_buttons[&"recipe_midnight_rose"] as Button
+	assert_eq(candidate_button.text, "◇")
+	assert_false(candidate_button.flat)
+	var candidate_style := candidate_button.get_theme_stylebox("normal") as StyleBoxFlat
+	assert_not_null(candidate_style)
+	assert_gt(candidate_style.bg_color.a, 0.95)
 
 	assert_true(synthesis.stage_card(&"helper", toy_block))
 	candidates = main.state.synthesis_candidates()

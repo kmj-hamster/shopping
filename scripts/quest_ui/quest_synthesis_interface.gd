@@ -21,6 +21,7 @@ enum NarrativeState {
 }
 
 const BACKGROUND_TEXTURE := preload("res://resources/ui/synthesis/bg-inbag.png")
+const BACKGROUND_DIM_COLOR := Color("010308", 0.44)
 const NARRATIVE_FADE_SECONDS := 0.55
 const NARRATIVE_HOLD_SECONDS := 1.25
 const FIELD_CENTER := Vector2(640, 308)
@@ -239,6 +240,12 @@ func _build_interface() -> void:
 	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(background)
+	var background_dimmer := ColorRect.new()
+	background_dimmer.name = "SynthesisBackgroundDimmer"
+	background_dimmer.color = BACKGROUND_DIM_COLOR
+	background_dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	background_dimmer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(background_dimmer)
 	draft_layer = Control.new()
 	draft_layer.name = "SynthesisDraft"
 	draft_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -570,12 +577,14 @@ func _rebuild_candidates(snapshot: Dictionary) -> void:
 		button.button_pressed = state.synthesis_candidate_recipe_id == recipe_id
 		button.text = "◆" if candidate.is_complete else "◇"
 		button.add_theme_font_size_override("font_size", 31)
+		_apply_candidate_style(button, bool(candidate.is_complete))
 		button.add_theme_color_override(
-			"font_color", Color("f5f1e2") if candidate.is_complete else Color("657278")
+			"font_color", Color("152421") if candidate.is_complete else Color("b5c0c2")
 		)
 		button.add_theme_color_override(
-			"font_hover_color", Color("ffffff") if candidate.is_complete else Color("9ca9ad")
+			"font_hover_color", Color("152421") if candidate.is_complete else Color("edf1ef")
 		)
+		button.add_theme_color_override("font_pressed_color", Color("152421"))
 		view["candidate"] = candidate
 		view["position"] = position
 	_update_candidate_hover_state(&"")
@@ -587,12 +596,39 @@ func _create_candidate_view(recipe: SynthesisRecipeDefinition) -> Dictionary:
 	button.custom_minimum_size = CANDIDATE_NODE_SIZE
 	button.size = CANDIDATE_NODE_SIZE
 	button.toggle_mode = true
-	button.flat = true
+	button.flat = false
 	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	button.pressed.connect(_on_candidate_pressed.bind(recipe.id))
 	candidate_layer.add_child(button)
 	candidate_buttons[recipe.id] = button
 	return {"button": button, "candidate": {}, "position": Vector2.ZERO}
+
+
+func _apply_candidate_style(button: Button, is_complete: bool) -> void:
+	var normal_fill := Color("d8ddd3", 0.97) if is_complete else Color("172126", 0.97)
+	var normal_border := Color("f2f3e9", 0.94) if is_complete else Color("75878c", 0.92)
+	var hover_fill := Color("edf0e7") if is_complete else Color("29383e")
+	var hover_border := Color("ffffff", 0.98) if is_complete else Color("b8c6c8")
+	var pressed_fill := Color("f2dfad") if is_complete else Color("91a3a5")
+	var pressed_border := Color("fff2cc") if is_complete else Color("e1e8e6")
+	button.add_theme_stylebox_override("normal", _candidate_style(normal_fill, normal_border, 1))
+	button.add_theme_stylebox_override("hover", _candidate_style(hover_fill, hover_border, 2))
+	button.add_theme_stylebox_override("pressed", _candidate_style(pressed_fill, pressed_border, 2))
+	button.add_theme_stylebox_override("focus", _candidate_style(hover_fill, hover_border, 2))
+
+
+func _candidate_style(fill: Color, border: Color, border_width: int) -> StyleBoxFlat:
+	var style := UiPalette.panel_style(fill, border)
+	style.set_border_width_all(border_width)
+	style.corner_radius_top_left = 7
+	style.corner_radius_top_right = 7
+	style.corner_radius_bottom_left = 7
+	style.corner_radius_bottom_right = 7
+	style.content_margin_left = 0.0
+	style.content_margin_top = 0.0
+	style.content_margin_right = 0.0
+	style.content_margin_bottom = 0.0
+	return style
 
 
 func _candidate_position(
