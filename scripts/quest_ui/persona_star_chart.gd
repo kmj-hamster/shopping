@@ -2,7 +2,7 @@ class_name PersonaStarChart
 extends Control
 
 const BACKGROUND_COLOR := Color("050a18")
-const FIELD_CENTER := Vector2(640, 308)
+const FIELD_CENTER := Vector2(590, 258)
 const CARD_SIZE := Vector2(120, 146)
 const PERSONA_ICON_SIZE := Vector2(150, 84)
 const MAX_LEVEL := 10
@@ -10,7 +10,7 @@ const LEVEL_ONE_LENGTH := 48.0
 const CARD_CLEARANCE := 2.0
 const ICON_OVERLAP := 2.0
 const TOTAL_TWEEN_SECONDS := 0.32
-const CANDIDATE_BOUNDS := Rect2(360, 88, 560, 408)
+const CANDIDATE_BOUNDS := Rect2(310, 38, 560, 408)
 const PERSONA_DIRECTIONS := {
 	CardPropertySet.PERSONA_NIGHTWALKER: Vector2(-0.72, -0.69),
 	CardPropertySet.PERSONA_MOURNER: Vector2(-0.72, 0.69),
@@ -18,10 +18,10 @@ const PERSONA_DIRECTIONS := {
 	CardPropertySet.PERSONA_HOMECOMER: Vector2(0.72, 0.69),
 }
 const PERSONA_ICON_POSITIONS := {
-	CardPropertySet.PERSONA_NIGHTWALKER: Vector2(82, 55),
-	CardPropertySet.PERSONA_MOURNER: Vector2(82, 376),
-	CardPropertySet.PERSONA_DREAMWALKER: Vector2(1116, 55),
-	CardPropertySet.PERSONA_HOMECOMER: Vector2(1116, 376),
+	CardPropertySet.PERSONA_NIGHTWALKER: Vector2(32, 5),
+	CardPropertySet.PERSONA_MOURNER: Vector2(32, 326),
+	CardPropertySet.PERSONA_DREAMWALKER: Vector2(1066, 5),
+	CardPropertySet.PERSONA_HOMECOMER: Vector2(1066, 326),
 }
 const PERSONA_COLORS := {
 	CardPropertySet.PERSONA_NIGHTWALKER: Color("f2d14f"),
@@ -33,8 +33,8 @@ const PAIR_DIRECTIONS := {
 	&"nightwalker|mourner": Vector2.LEFT,
 	&"nightwalker|dreamwalker": Vector2.UP,
 	&"nightwalker|homecomer": Vector2(-0.38, -0.92),
-	&"mourner|dreamwalker": Vector2(0.38, 0.92),
-	&"mourner|homecomer": Vector2.DOWN,
+	&"mourner|dreamwalker": Vector2(0.92, 0.39),
+	&"mourner|homecomer": Vector2(-0.92, 0.39),
 	&"dreamwalker|homecomer": Vector2.RIGHT,
 }
 

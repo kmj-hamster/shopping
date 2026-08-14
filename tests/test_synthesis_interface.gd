@@ -115,15 +115,32 @@ func test_recipe_nodes_keep_fixed_star_chart_coordinates_when_totals_change() ->
 	var pair_recipe := SynthesisRecipeDefinition.new()
 	pair_recipe.id = &"star_chart_pair_probe"
 	pair_recipe.required_personas = {&"nightwalker": 5, &"dreamwalker": 5}
+	var lower_pair_recipe := SynthesisRecipeDefinition.new()
+	lower_pair_recipe.id = &"star_chart_lower_pair_probe"
+	lower_pair_recipe.required_personas = {&"mourner": 5, &"dreamwalker": 5}
 	assert_not_null(single_recipe)
 	var single_position := synthesis._candidate_position(single_recipe)
 	var pair_position := synthesis._candidate_position(pair_recipe)
+	var lower_pair_position := synthesis._candidate_position(lower_pair_recipe)
 	assert_eq(
 		single_position,
 		synthesis.star_chart.axis_point(&"dreamwalker", 5.0),
 	)
 	assert_true(PersonaStarChart.CANDIDATE_BOUNDS.has_point(pair_position))
 	assert_ne(pair_position, QuestSynthesisInterface.FIELD_CENTER)
+	var lower_pair_rect := Rect2(
+		lower_pair_position - QuestSynthesisInterface.CANDIDATE_NODE_SIZE * 0.5,
+		QuestSynthesisInterface.CANDIDATE_NODE_SIZE,
+	)
+	for role_id in [&"persona", &"helper"]:
+		var reinforcement_column := (
+			synthesis.reinforcement_columns[role_id] as VBoxContainer
+		)
+		var reinforcement_slot_rect := Rect2(
+			reinforcement_column.position,
+			QuestTaskSlot.CARD_SIZE,
+		)
+		assert_false(lower_pair_rect.intersects(reinforcement_slot_rect))
 	synthesis.star_chart.set_totals({
 		&"nightwalker": 10,
 		&"mourner": 7,
@@ -158,18 +175,37 @@ func test_base_type_alone_reveals_gray_candidate_and_helper_type_does_not_add_re
 	assert_eq(candidates[0].recipe_id, &"recipe_midnight_rose")
 
 
-func test_strengthen_popup_accepts_one_persona_and_one_helper_after_base() -> void:
+func test_reinforcement_slots_appear_below_base_and_accept_one_card_each() -> void:
 	var main := await _spawn_synthesis_main()
 	var synthesis := main.current_screen as QuestSynthesisInterface
 	var helper := _card_by_definition(main.state, &"soft_gauze")
 	var dreamwalker := PersonaMaskCatalog.card_for_persona(&"dreamwalker")
+	assert_false(synthesis.reinforcement_group.visible)
 	assert_false(synthesis.stage_card(&"helper", helper))
 	assert_false(synthesis.stage_card(&"persona", dreamwalker))
 
 	assert_true(synthesis.stage_card(&"base", _card_by_definition(main.state, &"jasmine")))
-	assert_true(synthesis.strengthen_button.visible)
-	synthesis.strengthen_button.pressed.emit()
-	assert_true(synthesis.reinforcement_popup.visible)
+	assert_true(synthesis.reinforcement_group.visible)
+	var persona_column := synthesis.reinforcement_columns[&"persona"] as VBoxContainer
+	var helper_column := synthesis.reinforcement_columns[&"helper"] as VBoxContainer
+	var base_center_x := synthesis.base_slot_host.position.x + synthesis.base_slot_host.size.x * 0.5
+	var reinforcement_center_x := (
+		persona_column.position.x
+		+ helper_column.position.x
+		+ QuestTaskSlot.CARD_SIZE.x
+	) * 0.5
+	assert_almost_eq(base_center_x, reinforcement_center_x, 0.01)
+	assert_gt(persona_column.position.y, synthesis.base_slot_host.position.y + synthesis.base_slot_host.size.y)
+	assert_eq(persona_column.position.y, helper_column.position.y)
+	assert_almost_eq(
+		helper_column.position.x - persona_column.position.x - QuestTaskSlot.CARD_SIZE.x,
+		QuestSynthesisInterface.REINFORCEMENT_SLOT_GAP,
+		0.01,
+	)
+	assert_lt(
+		persona_column.position.y + persona_column.custom_minimum_size.y,
+		560.0,
+	)
 	assert_true(synthesis.stage_card(&"helper", helper))
 	assert_true(synthesis.stage_card(&"persona", dreamwalker))
 	assert_same(synthesis.helper_slot.card, helper)
@@ -205,7 +241,7 @@ func test_replacing_or_removing_base_clears_reinforcement_and_returns_helper() -
 	assert_eq(main.state.synthesis_base_instance_id, 0)
 	assert_eq(main.state.synthesis_helper_instance_id, 0)
 	assert_eq(helper.location, CardItemState.Location.HAND)
-	assert_false(synthesis.reinforcement_popup.visible)
+	assert_false(synthesis.reinforcement_group.visible)
 
 
 func test_unknown_gray_candidate_opens_possibility_with_types_and_requirements() -> void:
@@ -303,7 +339,7 @@ func test_success_consumes_base_and_helper_but_returns_persona_then_preserves_re
 	assert_true(main.hand_bar.card_views.has(output.instance_id))
 
 
-func test_drop_highlights_follow_closed_and_open_reinforcement_popup() -> void:
+func test_drop_highlights_follow_visible_inline_reinforcement_slots() -> void:
 	var main := await _spawn_synthesis_main()
 	var synthesis := main.current_screen as QuestSynthesisInterface
 	var jasmine := _card_by_definition(main.state, &"jasmine")
@@ -313,24 +349,19 @@ func test_drop_highlights_follow_closed_and_open_reinforcement_popup() -> void:
 
 	assert_true(synthesis.stage_card(&"base", jasmine))
 	synthesis.show_drop_targets_for_card(_card_by_definition(main.state, &"soft_gauze"))
-	_assert_drop_highlights(synthesis, {})
-	synthesis._open_reinforcement_popup()
-	synthesis.show_drop_targets_for_card(_card_by_definition(main.state, &"soft_gauze"))
 	_assert_drop_highlights(synthesis, {&"helper": true})
 	synthesis.show_drop_targets_for_card(PersonaMaskCatalog.card_for_persona(&"dreamwalker"))
 	_assert_drop_highlights(synthesis, {&"persona": true})
 
 
-func test_reinforcement_copy_switches_live_between_chinese_and_english() -> void:
+func test_inline_reinforcement_copy_switches_live_between_chinese_and_english() -> void:
 	var original_locale := LocaleManager.current_locale
 	var main := await _spawn_synthesis_main()
 	var synthesis := main.current_screen as QuestSynthesisInterface
 	LocaleManager.set_locale(LocaleManager.LOCALE_EN, false)
-	assert_eq(synthesis.strengthen_button.text, "Strengthen")
-	assert_eq((synthesis.reinforcement_labels[&"persona"] as Label).text, "Borrow Myself")
-	assert_eq((synthesis.reinforcement_labels[&"helper"] as Label).text, "Borrow an Item")
+	assert_eq((synthesis.reinforcement_labels[&"persona"] as Label).text, "borrow myself")
+	assert_eq((synthesis.reinforcement_labels[&"helper"] as Label).text, "borrow an item")
 	LocaleManager.set_locale(LocaleManager.LOCALE_ZH, false)
-	assert_eq(synthesis.strengthen_button.text, "强化")
 	assert_eq((synthesis.reinforcement_labels[&"persona"] as Label).text, "借助自己")
 	assert_eq((synthesis.reinforcement_labels[&"helper"] as Label).text, "借助物品")
 	LocaleManager.set_locale(original_locale, false)

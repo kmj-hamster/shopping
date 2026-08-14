@@ -28,6 +28,9 @@ const PERSONA_ICON_SIZE := PersonaStarChart.PERSONA_ICON_SIZE
 const PERSONA_RAY_LEVEL_ONE_LENGTH := PersonaStarChart.LEVEL_ONE_LENGTH
 const PERSONA_RAY_FULL_LEVEL := PersonaStarChart.MAX_LEVEL
 const PERSONA_ICON_POSITIONS := PersonaStarChart.PERSONA_ICON_POSITIONS
+const REINFORCEMENT_SLOT_GAP := 18.0
+const REINFORCEMENT_TOP_GAP := 14.0
+const REINFORCEMENT_LABEL_HEIGHT := 24.0
 
 var state: QuestGameState
 var phase := Phase.DRAFT
@@ -39,9 +42,8 @@ var base_slot: QuestSynthesisMaterialSlot
 var persona_slot: QuestSynthesisMaterialSlot
 var helper_slot: QuestSynthesisMaterialSlot
 var material_slots: Array[QuestSynthesisMaterialSlot] = []
-var strengthen_button: Button
-var reinforcement_popup: PanelContainer
-var reinforcement_title: Label
+var reinforcement_group: Control
+var reinforcement_columns: Dictionary = {}
 var reinforcement_labels: Dictionary = {}
 var candidate_buttons: Dictionary = {}
 var candidate_views: Dictionary = {}
@@ -102,9 +104,7 @@ func refresh() -> void:
 	_rebuild_persona_field(snapshot)
 	_rebuild_candidates(snapshot)
 	_update_action_button(snapshot)
-	strengthen_button.visible = snapshot.get("base_card") != null
-	if snapshot.get("base_card") == null:
-		reinforcement_popup.visible = false
+	_update_reinforcement_visibility(snapshot)
 
 
 func reset_debug_update_counts() -> void:
@@ -181,7 +181,9 @@ func request_hand_tab_for_role(role_id: StringName) -> void:
 func show_drop_targets_for_card(card: CardItemState) -> void:
 	var is_persona := not PersonaMaskCatalog.persona_for_card(card).is_empty()
 	for slot in material_slots:
-		var visible_target := slot == base_slot or reinforcement_popup.visible
+		var visible_target := slot == base_slot or (
+			reinforcement_group != null and reinforcement_group.visible
+		)
 		var should_highlight := visible_target and slot.card == null
 		if is_persona:
 			should_highlight = should_highlight and slot.role_id == &"persona"
@@ -212,8 +214,8 @@ func cancel_pending_inputs() -> void:
 		narrative_overlay.visible = false
 	if result_layer != null:
 		result_layer.visible = false
-	if reinforcement_popup != null:
-		reinforcement_popup.visible = false
+	if reinforcement_group != null:
+		reinforcement_group.visible = false
 
 
 func _build_interface() -> void:
@@ -228,7 +230,7 @@ func _build_interface() -> void:
 	_build_persona_field()
 	_build_base_slot()
 	_build_candidate_layer()
-	_build_reinforcement_popup()
+	_build_reinforcement_slots()
 	_build_narrative_overlay()
 	_build_result_layer()
 	_layout_draft()
@@ -282,12 +284,6 @@ func _build_base_slot() -> void:
 	base_slot.help_requested.connect(_on_material_help_requested)
 	base_slot_host.add_child(base_slot)
 	material_slots.append(base_slot)
-	strengthen_button = Button.new()
-	strengthen_button.name = "StrengthenButton"
-	strengthen_button.custom_minimum_size = Vector2(136, 34)
-	strengthen_button.position = Vector2(FIELD_CENTER.x - 68, FIELD_CENTER.y + 84)
-	strengthen_button.pressed.connect(_open_reinforcement_popup)
-	draft_layer.add_child(strengthen_button)
 
 
 func _build_candidate_layer() -> void:
@@ -303,73 +299,45 @@ func _build_candidate_layer() -> void:
 	action_button.visible = false
 
 
-func _build_reinforcement_popup() -> void:
-	reinforcement_popup = PanelContainer.new()
-	reinforcement_popup.name = "ReinforcementPopup"
-	reinforcement_popup.anchor_left = 0.33
-	reinforcement_popup.anchor_top = 0.10
-	reinforcement_popup.anchor_right = 0.67
-	reinforcement_popup.anchor_bottom = 0.70
-	reinforcement_popup.mouse_filter = Control.MOUSE_FILTER_STOP
-	reinforcement_popup.z_index = 40
-	reinforcement_popup.add_theme_stylebox_override(
-		"panel", UiPalette.panel_style(Color("071117", 0.94), Color("b9c7c8", 0.35))
-	)
-	draft_layer.add_child(reinforcement_popup)
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 22)
-	margin.add_theme_constant_override("margin_right", 22)
-	margin.add_theme_constant_override("margin_top", 16)
-	margin.add_theme_constant_override("margin_bottom", 18)
-	reinforcement_popup.add_child(margin)
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 12)
-	margin.add_child(column)
-	var header := HBoxContainer.new()
-	column.add_child(header)
-	reinforcement_title = Label.new()
-	reinforcement_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	reinforcement_title.add_theme_font_size_override("font_size", 22)
-	reinforcement_title.add_theme_color_override("font_color", Color("eef0e8"))
-	header.add_child(reinforcement_title)
-	var close_button := Button.new()
-	close_button.text = "×"
-	close_button.custom_minimum_size = Vector2(34, 34)
-	close_button.pressed.connect(_close_reinforcement_popup)
-	header.add_child(close_button)
-	var explanation := Label.new()
-	explanation.name = "ReinforcementExplanation"
-	explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	explanation.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	explanation.add_theme_font_size_override("font_size", 14)
-	explanation.add_theme_color_override("font_color", Color("c7d1d0"))
-	column.add_child(explanation)
-	var slots := HBoxContainer.new()
-	slots.alignment = BoxContainer.ALIGNMENT_CENTER
-	slots.add_theme_constant_override("separation", 38)
-	slots.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	column.add_child(slots)
+func _build_reinforcement_slots() -> void:
+	reinforcement_group = Control.new()
+	reinforcement_group.name = "ReinforcementSlots"
+	reinforcement_group.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	reinforcement_group.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	draft_layer.add_child(reinforcement_group)
 	for role_id in [&"persona", &"helper"]:
 		var slot_column := VBoxContainer.new()
+		slot_column.name = "%sReinforcementColumn" % String(role_id).to_pascal_case()
 		slot_column.alignment = BoxContainer.ALIGNMENT_CENTER
-		slot_column.add_theme_constant_override("separation", 5)
-		slots.add_child(slot_column)
-		var label := Label.new()
-		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		label.add_theme_color_override("font_color", Color("e5d6a5"))
-		slot_column.add_child(label)
-		reinforcement_labels[role_id] = label
+		slot_column.add_theme_constant_override("separation", 6)
+		slot_column.custom_minimum_size = Vector2(
+			QuestTaskSlot.CARD_SIZE.x,
+			QuestTaskSlot.CARD_SIZE.y + REINFORCEMENT_LABEL_HEIGHT + 6.0,
+		)
+		slot_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		reinforcement_group.add_child(slot_column)
+		reinforcement_columns[role_id] = slot_column
 		var slot := QuestSynthesisMaterialSlot.new()
 		slot.setup(self, role_id, null)
 		slot.item_inspected.connect(item_inspected.emit)
-		slot.help_requested.connect(_on_material_help_requested)
 		slot_column.add_child(slot)
 		material_slots.append(slot)
+		var label := Label.new()
+		label.custom_minimum_size = Vector2(
+			QuestTaskSlot.CARD_SIZE.x, REINFORCEMENT_LABEL_HEIGHT
+		)
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		label.add_theme_font_size_override("font_size", 14)
+		label.add_theme_color_override("font_color", Color("d7d4c8"))
+		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		slot_column.add_child(label)
+		reinforcement_labels[role_id] = label
 		if role_id == &"persona":
 			persona_slot = slot
 		else:
 			helper_slot = slot
-	reinforcement_popup.visible = false
+	reinforcement_group.visible = false
 
 
 func _build_narrative_overlay() -> void:
@@ -436,7 +404,21 @@ func _layout_draft() -> void:
 	if draft_layer == null:
 		return
 	base_slot_host.position = FIELD_CENTER - QuestTaskSlot.CARD_SIZE * 0.5
-	strengthen_button.position = Vector2(FIELD_CENTER.x - 68, FIELD_CENTER.y + 84)
+	var total_width := QuestTaskSlot.CARD_SIZE.x * 2.0 + REINFORCEMENT_SLOT_GAP
+	var first_x := FIELD_CENTER.x - total_width * 0.5
+	var slots_y := (
+		FIELD_CENTER.y
+		+ QuestTaskSlot.CARD_SIZE.y * 0.5
+		+ REINFORCEMENT_TOP_GAP
+	)
+	for index in range(2):
+		var role_id: StringName = [&"persona", &"helper"][index]
+		var column := reinforcement_columns.get(role_id) as VBoxContainer
+		if column != null:
+			column.position = Vector2(
+				first_x + index * (QuestTaskSlot.CARD_SIZE.x + REINFORCEMENT_SLOT_GAP),
+				slots_y,
+			)
 	for persona_id in persona_buttons:
 		(persona_buttons[persona_id] as Button).position = PERSONA_ICON_POSITIONS[persona_id]
 
@@ -456,6 +438,11 @@ func _rebuild_material_slots(snapshot: Dictionary, force_refresh: bool = false) 
 	helper_slot.setup(
 		self, &"helper", snapshot.get("helper_card") as CardItemState, force_refresh
 	)
+
+
+func _update_reinforcement_visibility(snapshot: Dictionary) -> void:
+	if reinforcement_group != null:
+		reinforcement_group.visible = snapshot.get("base_card") != null
 
 
 func _rebuild_persona_field(snapshot: Dictionary) -> void:
@@ -631,18 +618,6 @@ func _update_candidate_hover_state(persona_id: StringName) -> void:
 		candidate_hover_tweens[recipe_id] = pulse
 
 
-func _open_reinforcement_popup() -> void:
-	if state == null or state.synthesis_base_instance_id <= 0:
-		return
-	reinforcement_popup.visible = true
-	reinforcement_popup.move_to_front()
-
-
-func _close_reinforcement_popup() -> void:
-	reinforcement_popup.visible = false
-	clear_drop_target_highlights()
-
-
 func _on_material_help_requested(role_id: StringName) -> void:
 	var definition := _material_help_definition(role_id)
 	if definition != null:
@@ -721,7 +696,6 @@ func _on_action_pressed() -> void:
 	pending_output = result.output as CardItemState
 	card_staging_changed.emit(pending_output, true)
 	details_cleared.emit()
-	reinforcement_popup.visible = false
 	_start_narrative(result.process_text_keys)
 
 
@@ -838,9 +812,7 @@ func _on_state_delta(delta: QuestStateDelta) -> void:
 		_rebuild_persona_field(snapshot)
 		_rebuild_candidates(snapshot)
 		_update_action_button(snapshot)
-		strengthen_button.visible = snapshot.get("base_card") != null
-		if snapshot.get("base_card") == null:
-			reinforcement_popup.visible = false
+		_update_reinforcement_visibility(snapshot)
 	elif delta.synthesis_candidate_changed:
 		_update_candidate_selection()
 		_update_action_button()
@@ -849,11 +821,6 @@ func _on_state_delta(delta: QuestStateDelta) -> void:
 
 
 func _on_locale_changed(_locale: String) -> void:
-	strengthen_button.text = TranslationServer.translate(&"quest.ui.synthesis.strengthen")
-	reinforcement_title.text = TranslationServer.translate(&"quest.ui.synthesis.reinforcement")
-	var explanation := reinforcement_popup.find_child("ReinforcementExplanation", true, false) as Label
-	if explanation != null:
-		explanation.text = TranslationServer.translate(&"quest.ui.synthesis.reinforcement.description")
 	(reinforcement_labels[&"persona"] as Label).text = TranslationServer.translate(
 		&"quest.ui.synthesis.borrow_self"
 	)
