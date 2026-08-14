@@ -129,6 +129,35 @@ func test_clicking_material_and_borrow_slots_lifts_only_cards_they_accept() -> v
 	assert_almost_eq(helper_view.offset_top, 0.0, 0.01)
 
 
+func test_empty_material_slots_open_localized_help_in_the_item_popup() -> void:
+	var original_locale := LocaleManager.current_locale
+	var main := await _spawn_synthesis_main()
+	var synthesis := main.current_screen as QuestSynthesisInterface
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+
+	LocaleManager.set_locale(LocaleManager.LOCALE_ZH, false)
+	synthesis.base_slot._on_gui_input(click)
+	assert_true(main.detail_popup.visible)
+	assert_eq(main.detail_popup.current_definition.id, &"synthesis_base_help")
+	assert_eq(main.detail_popup.title_label.text, "原料")
+	assert_true(main.detail_popup.description_label.text.contains("[放入一件物品作为原料"))
+
+	assert_true(synthesis.stage_card(&"base", _card_by_definition(main.state, &"jasmine")))
+	synthesis.persona_slot._on_gui_input(click)
+	assert_eq(main.detail_popup.current_definition.id, &"synthesis_persona_help")
+	assert_eq(main.detail_popup.title_label.text, "借助自己")
+	assert_true(main.detail_popup.description_label.text.contains("[拖入一张面相卡"))
+
+	LocaleManager.set_locale(LocaleManager.LOCALE_EN, false)
+	synthesis.helper_slot._on_gui_input(click)
+	assert_eq(main.detail_popup.current_definition.id, &"synthesis_helper_help")
+	assert_eq(main.detail_popup.title_label.text, "borrow an item")
+	assert_true(main.detail_popup.description_label.text.contains("[Drag in one item"))
+	LocaleManager.set_locale(original_locale, false)
+
+
 func test_persona_rays_clear_the_card_and_reach_distant_icons_at_level_ten() -> void:
 	var main := await _spawn_synthesis_main()
 	var synthesis := main.current_screen as QuestSynthesisInterface
@@ -265,12 +294,12 @@ func test_base_type_alone_reveals_gray_candidate_and_helper_type_does_not_add_re
 	assert_eq(candidates[0].recipe_id, &"recipe_midnight_rose")
 
 
-func test_three_material_slots_stay_visible_with_base_at_the_center() -> void:
+func test_reinforcement_slots_appear_only_after_material_is_placed() -> void:
 	var main := await _spawn_synthesis_main()
 	var synthesis := main.current_screen as QuestSynthesisInterface
 	var helper := _card_by_definition(main.state, &"soft_gauze")
 	var dreamwalker := PersonaMaskCatalog.card_for_persona(&"dreamwalker")
-	assert_true(synthesis.reinforcement_group.visible)
+	assert_false(synthesis.reinforcement_group.visible)
 	assert_false(synthesis.stage_card(&"helper", helper))
 	assert_false(synthesis.stage_card(&"persona", dreamwalker))
 
@@ -331,7 +360,7 @@ func test_replacing_or_removing_base_clears_reinforcement_and_returns_helper() -
 	assert_eq(main.state.synthesis_base_instance_id, 0)
 	assert_eq(main.state.synthesis_helper_instance_id, 0)
 	assert_eq(helper.location, CardItemState.Location.HAND)
-	assert_true(synthesis.reinforcement_group.visible)
+	assert_false(synthesis.reinforcement_group.visible)
 	assert_null(synthesis.persona_slot.card)
 	assert_null(synthesis.helper_slot.card)
 

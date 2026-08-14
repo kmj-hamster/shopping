@@ -48,6 +48,7 @@ var material_slots: Array[QuestSynthesisMaterialSlot] = []
 var reinforcement_group: Control
 var reinforcement_columns: Dictionary = {}
 var reinforcement_labels: Dictionary = {}
+var slot_help_definitions: Dictionary = {}
 var candidate_buttons: Dictionary = {}
 var candidate_views: Dictionary = {}
 var candidate_hover_tweens: Dictionary = {}
@@ -231,7 +232,7 @@ func cancel_pending_inputs() -> void:
 	if result_layer != null:
 		result_layer.visible = false
 	if reinforcement_group != null:
-		reinforcement_group.visible = true
+		reinforcement_group.visible = false
 
 
 func _build_interface() -> void:
@@ -303,6 +304,7 @@ func _build_base_slot() -> void:
 	base_slot = QuestSynthesisMaterialSlot.new()
 	base_slot.setup(self, &"base", null)
 	base_slot.item_inspected.connect(item_inspected.emit)
+	base_slot.help_requested.connect(_on_material_help_requested)
 	base_slot_host.add_child(base_slot)
 	material_slots.append(base_slot)
 
@@ -341,6 +343,7 @@ func _build_reinforcement_slots() -> void:
 		var slot := QuestSynthesisMaterialSlot.new()
 		slot.setup(self, role_id, null)
 		slot.item_inspected.connect(item_inspected.emit)
+		slot.help_requested.connect(_on_material_help_requested)
 		slot_column.add_child(slot)
 		material_slots.append(slot)
 		var label := Label.new()
@@ -360,7 +363,7 @@ func _build_reinforcement_slots() -> void:
 			persona_slot = slot
 		else:
 			helper_slot = slot
-	reinforcement_group.visible = true
+	reinforcement_group.visible = false
 
 
 func _build_narrative_overlay() -> void:
@@ -463,9 +466,9 @@ func _rebuild_material_slots(snapshot: Dictionary, force_refresh: bool = false) 
 	)
 
 
-func _update_reinforcement_visibility(_snapshot: Dictionary) -> void:
+func _update_reinforcement_visibility(snapshot: Dictionary) -> void:
 	if reinforcement_group != null:
-		reinforcement_group.visible = true
+		reinforcement_group.visible = snapshot.get("base_card") != null
 
 
 func _rebuild_persona_field(snapshot: Dictionary) -> void:
@@ -727,6 +730,39 @@ func _on_reinforcement_label_gui_input(event: InputEvent, role_id: StringName) -
 	var click := event as InputEventMouseButton
 	if click != null and click.button_index == MOUSE_BUTTON_LEFT and click.pressed:
 		request_hand_tab_for_role(role_id)
+
+
+func _on_material_help_requested(role_id: StringName) -> void:
+	var definition := _material_help_definition(role_id)
+	if definition != null:
+		item_inspected.emit(definition)
+
+
+func _material_help_definition(role_id: StringName) -> CardItemDefinition:
+	if role_id not in [&"base", &"helper", &"persona"]:
+		return null
+	var definition := slot_help_definitions.get(role_id) as CardItemDefinition
+	if definition != null:
+		return definition
+	var title_keys := {
+		&"base": &"quest.ui.synthesis.material",
+		&"persona": &"quest.ui.synthesis.borrow_self",
+		&"helper": &"quest.ui.synthesis.borrow_item",
+	}
+	var description_keys := {
+		&"base": &"quest.ui.synthesis.material.description",
+		&"persona": &"quest.ui.synthesis.borrow_self.description",
+		&"helper": &"quest.ui.synthesis.borrow_item.description",
+	}
+	definition = CardItemDefinition.new()
+	definition.id = StringName("synthesis_%s_help" % role_id)
+	definition.display_name_key = title_keys[role_id]
+	definition.description_key = description_keys[role_id]
+	definition.can_recycle = false
+	definition.can_be_synthesis_base = false
+	definition.property_set = CardPropertySet.new()
+	slot_help_definitions[role_id] = definition
+	return definition
 
 
 func _on_candidate_pressed(recipe_id: StringName) -> void:

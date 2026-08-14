@@ -2,6 +2,7 @@ class_name QuestSynthesisMaterialSlot
 extends PanelContainer
 
 signal item_inspected(definition: CardItemDefinition)
+signal help_requested(role_id: StringName)
 
 const SLOT_SIZE := QuestTaskSlot.CARD_SIZE
 const DROP_MARGIN := QuestTaskSlot.DROP_MARGIN
@@ -141,3 +142,5 @@ func _on_gui_input(event: InputEvent) -> void:
 		and click.pressed
 	):
 		controller.request_hand_tab_for_role(role_id)
+		if card == null:
+			help_requested.emit(role_id)
