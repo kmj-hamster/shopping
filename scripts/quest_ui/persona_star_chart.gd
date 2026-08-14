@@ -23,12 +23,7 @@ const PERSONA_ICON_POSITIONS := {
 	CardPropertySet.PERSONA_DREAMWALKER: Vector2(1066, 5),
 	CardPropertySet.PERSONA_HOMECOMER: Vector2(1066, 326),
 }
-const PERSONA_COLORS := {
-	CardPropertySet.PERSONA_NIGHTWALKER: Color("f2d14f"),
-	CardPropertySet.PERSONA_MOURNER: Color("6faed9"),
-	CardPropertySet.PERSONA_DREAMWALKER: Color("f3c6d6"),
-	CardPropertySet.PERSONA_HOMECOMER: Color("9a78c5"),
-}
+const PERSONA_COLORS := PersonaVisuals.COLORS
 const PAIR_DIRECTIONS := {
 	&"nightwalker|mourner": Vector2.LEFT,
 	&"nightwalker|dreamwalker": Vector2.UP,
@@ -94,7 +89,7 @@ func set_hovered_persona(persona_id: StringName) -> void:
 
 
 func persona_color(persona_id: StringName) -> Color:
-	return PERSONA_COLORS.get(persona_id, Color("dce7ef")) as Color
+	return PersonaVisuals.color(persona_id)
 
 
 func axis_progress_points(persona_id: StringName, amount: float) -> PackedVector2Array:

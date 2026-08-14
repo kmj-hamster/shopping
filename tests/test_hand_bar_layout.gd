@@ -100,6 +100,50 @@ func test_items_and_live_persona_cards_share_one_hand_without_entering_inventory
 	assert_eq(hand.active_tab, QuestHandBar.TAB_ITEMS)
 
 
+func test_persona_cards_use_colored_symbols_on_frosted_glass() -> void:
+	var main := await _spawn_main()
+	var hand := main.hand_bar
+	var expected_symbols := {
+		CardPropertySet.PERSONA_NIGHTWALKER: "res://resources/ui/persona/nightwalker.png",
+		CardPropertySet.PERSONA_MOURNER: "res://resources/ui/persona/mourner.png",
+		CardPropertySet.PERSONA_DREAMWALKER: "res://resources/ui/persona/dreamwalker.png",
+		CardPropertySet.PERSONA_HOMECOMER: "res://resources/ui/persona/homecomer.png",
+	}
+	for persona_id in PersonaMaskCatalog.MASK_PERSONAS:
+		var card := PersonaMaskCatalog.card_for_persona(persona_id)
+		var view := hand.card_views[card.instance_id] as CardHandCard
+		assert_true(view.persona_glass.visible, persona_id)
+		assert_true(view.persona_glass.material is ShaderMaterial, persona_id)
+		assert_eq(
+			(view.persona_glass.material as ShaderMaterial).shader.resource_path,
+			"res://resources/shaders/frosted_dialogue.gdshader",
+			persona_id,
+		)
+		assert_almost_eq(
+			view.persona_glass.self_modulate.a,
+			CardHandCard.PERSONA_GLASS_ALPHA,
+			0.001,
+			persona_id,
+		)
+		assert_almost_eq(
+			view.card_background.self_modulate.a,
+			CardHandCard.PERSONA_PAPER_ALPHA,
+			0.001,
+			persona_id,
+		)
+		assert_true(view.persona_icon_background.visible, persona_id)
+		assert_eq(view.item_image.texture.resource_path, expected_symbols[persona_id], persona_id)
+		var icon_style := view.persona_icon_background.get_theme_stylebox("panel") as StyleBoxFlat
+		assert_not_null(icon_style, persona_id)
+		assert_eq(icon_style.bg_color, PersonaVisuals.COLORS[persona_id], persona_id)
+
+	var item_card := main.state.inventory[0] as CardItemState
+	var item_view := hand.card_views[item_card.instance_id] as CardHandCard
+	assert_false(item_view.persona_glass.visible)
+	assert_false(item_view.persona_icon_background.visible)
+	assert_eq(item_view.card_background.self_modulate, Color.WHITE)
+
+
 func test_overflowing_hand_overlaps_and_hovered_card_receives_full_space() -> void:
 	var main := await _spawn_main()
 	for index in 10:
