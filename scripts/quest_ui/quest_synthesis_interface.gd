@@ -36,9 +36,11 @@ const REINFORCEMENT_LABEL_HEIGHT := 20.0
 const BASE_TYPE_ICON_SIDE := 30
 const BASE_TYPE_ROW_WIDTH := 210.0
 const BASE_TYPE_BOTTOM_GAP := 8.0
+const BAG_BACKGROUND_PATH := "res://resources/ui/synthesis/bg-inbag.png"
 
 var state: QuestGameState
 var phase := Phase.DRAFT
+var background_image: TextureRect
 var background_input: QuestSynthesisBackgroundInput
 var draft_layer: Control
 var star_chart: PersonaStarChart
@@ -81,6 +83,7 @@ var result_revealed := false
 var debug_update_counts: Dictionary = {}
 var last_delta_update_usec := 0
 var max_delta_update_usec := 0
+var image_background_enabled := false
 
 
 func setup(game_state: QuestGameState) -> void:
@@ -96,6 +99,11 @@ func setup(game_state: QuestGameState) -> void:
 func set_background_passthrough_controls(controls: Array) -> void:
 	if background_input != null:
 		background_input.set_passthrough_controls(controls)
+
+
+func set_image_background_enabled(enabled: bool) -> void:
+	image_background_enabled = enabled
+	_apply_background_mode()
 
 
 func _ready() -> void:
@@ -242,6 +250,14 @@ func cancel_pending_inputs() -> void:
 
 
 func _build_interface() -> void:
+	background_image = TextureRect.new()
+	background_image.name = "BagBackground"
+	background_image.texture = load(BAG_BACKGROUND_PATH) as Texture2D
+	background_image.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	background_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	background_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	background_image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(background_image)
 	star_chart = PersonaStarChart.new()
 	star_chart.name = "PersonaStarChart"
 	add_child(star_chart)
@@ -262,7 +278,15 @@ func _build_interface() -> void:
 	_build_reinforcement_slots()
 	_build_narrative_overlay()
 	_build_result_layer()
+	_apply_background_mode()
 	_layout_draft()
+
+
+func _apply_background_mode() -> void:
+	if background_image != null:
+		background_image.visible = image_background_enabled
+	if star_chart != null:
+		star_chart.set_background_visible(not image_background_enabled)
 
 
 func _build_persona_field() -> void:

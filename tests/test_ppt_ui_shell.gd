@@ -67,7 +67,9 @@ func test_main_uses_the_centered_art_shell_and_unified_hand() -> void:
 	assert_eq(main.language_button.get_parent(), main.debug_button_row)
 	assert_eq(main.clear_save_button.get_parent(), main.debug_button_row)
 	assert_eq(main.next_day_button.get_parent(), main.debug_button_row)
+	assert_eq(main.synthesis_background_button.get_parent(), main.debug_button_row)
 	assert_eq(main.next_day_button.custom_minimum_size.x, 64.0)
+	assert_eq(main.synthesis_background_button.custom_minimum_size.x, 78.0)
 	assert_eq(main.next_day_button.get_theme_font_size("font_size"), 11)
 	assert_lt(main.debug_button_row.anchor_left, 0.02)
 	assert_gt(main.debug_button_row.anchor_top, 0.90)
@@ -77,6 +79,9 @@ func test_main_uses_the_centered_art_shell_and_unified_hand() -> void:
 	))
 	assert_true(main.next_day_button.pressed.is_connected(
 		Callable(main, "_on_next_day_showcase_pressed")
+	))
+	assert_true(main.synthesis_background_button.pressed.is_connected(
+		Callable(main, "_on_synthesis_background_pressed")
 	))
 	assert_not_null(main.forbidden_cursor_texture)
 	assert_eq(main.global_frame.texture.resource_path, QuestMain.FRAME_TEXTURE_PATHS[&"map"])
@@ -1413,6 +1418,35 @@ func test_synthesis_is_a_material_first_dedicated_space() -> void:
 	))
 	assert_eq(synthesis.phase, QuestSynthesisInterface.Phase.NARRATIVE)
 	assert_eq(main.state.synthesis_base_instance_id, 0)
+
+
+func test_debug_button_toggles_synthesis_bag_and_deep_blue_backgrounds() -> void:
+	var main := await _spawn_main()
+	main._show_synthesis_immediate()
+	var synthesis := main.current_screen as QuestSynthesisInterface
+	assert_false(main.synthesis_uses_image_background)
+	assert_false(synthesis.background_image.visible)
+	assert_true(synthesis.star_chart.background_visible)
+	assert_eq(
+		main.synthesis_background_button.text,
+		TranslationServer.translate(&"debug.ui.synthesis_background.blue")
+	)
+	main.synthesis_background_button.pressed.emit()
+	assert_true(main.synthesis_uses_image_background)
+	assert_true(synthesis.background_image.visible)
+	assert_false(synthesis.star_chart.background_visible)
+	assert_eq(
+		synthesis.background_image.texture.resource_path,
+		QuestSynthesisInterface.BAG_BACKGROUND_PATH,
+	)
+	assert_eq(
+		main.synthesis_background_button.text,
+		TranslationServer.translate(&"debug.ui.synthesis_background.bag")
+	)
+	main.synthesis_background_button.pressed.emit()
+	assert_false(main.synthesis_uses_image_background)
+	assert_false(synthesis.background_image.visible)
+	assert_true(synthesis.star_chart.background_visible)
 
 
 func test_synthesis_result_flip_reuses_views_without_freeing_signal_emitter() -> void:

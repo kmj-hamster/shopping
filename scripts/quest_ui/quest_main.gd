@@ -66,6 +66,7 @@ var next_day_button: Button
 var debug_button_row: HBoxContainer
 var language_button: Button
 var clear_save_button: Button
+var synthesis_background_button: Button
 var forbidden_cursor_texture: Texture2D
 var next_day_dialog: ConfirmationDialog
 var next_day_blocked_dialog: AcceptDialog
@@ -82,6 +83,7 @@ var arc_cursor_tween: Tween
 var transition_in_progress := false
 var focused_rule: CardSlotRule
 var synthesis_highlight_role: StringName
+var synthesis_uses_image_background := false
 var arc_fade_seconds := 0.35
 var arc_typewriter_char_seconds := 0.028
 var arc_typing := false
@@ -215,7 +217,7 @@ func _build_shell() -> void:
 	debug_button_row.name = "DebugButtonRow"
 	debug_button_row.anchor_left = 0.008
 	debug_button_row.anchor_top = 0.945
-	debug_button_row.anchor_right = 0.205
+	debug_button_row.anchor_right = 0.265
 	debug_button_row.anchor_bottom = 0.992
 	debug_button_row.add_theme_constant_override("separation", 5)
 	debug_button_row.z_index = 60
@@ -239,6 +241,13 @@ func _build_shell() -> void:
 	next_day_button.tooltip_text = ""
 	next_day_button.pressed.connect(_on_next_day_showcase_pressed)
 	debug_button_row.add_child(next_day_button)
+	synthesis_background_button = Button.new()
+	synthesis_background_button.name = "SynthesisBackgroundButton"
+	synthesis_background_button.custom_minimum_size = Vector2(78, 0)
+	synthesis_background_button.add_theme_font_size_override("font_size", 11)
+	synthesis_background_button.tooltip_text = ""
+	synthesis_background_button.pressed.connect(_on_synthesis_background_pressed)
+	debug_button_row.add_child(synthesis_background_button)
 
 	next_day_dialog = ConfirmationDialog.new()
 	next_day_dialog.confirmed.connect(_on_next_day_requested)
@@ -547,6 +556,7 @@ func _show_synthesis_immediate() -> void:
 		protagonist_button,
 		debug_button_row,
 	])
+	synthesis_interface.set_image_background_enabled(synthesis_uses_image_background)
 	_activate_screen(synthesis_interface)
 	synthesis_interface.refresh()
 	_on_rule_focused(null)
@@ -773,6 +783,13 @@ func _on_clear_save_pressed() -> void:
 		return
 	GameState.start_new_game()
 	get_tree().reload_current_scene()
+
+
+func _on_synthesis_background_pressed() -> void:
+	synthesis_uses_image_background = not synthesis_uses_image_background
+	if synthesis_interface != null:
+		synthesis_interface.set_image_background_enabled(synthesis_uses_image_background)
+	_refresh_synthesis_background_button_text()
 
 
 func _on_next_day_requested() -> void:
@@ -1084,11 +1101,23 @@ func _refresh_global_text() -> void:
 	if clear_save_button != null:
 		clear_save_button.text = TranslationServer.translate(&"demo.ui.clear_save")
 		clear_save_button.tooltip_text = TranslationServer.translate(&"demo.ui.clear_save.tooltip")
+	_refresh_synthesis_background_button_text()
 	next_day_dialog.title = TranslationServer.translate(&"demo.ui.next_day")
 	next_day_dialog.dialog_text = TranslationServer.translate(&"demo.ui.next_day.question")
 	next_day_dialog.ok_button_text = TranslationServer.translate(&"demo.ui.confirm")
 	next_day_dialog.cancel_button_text = TranslationServer.translate(&"demo.ui.cancel")
 	next_day_blocked_dialog.ok_button_text = TranslationServer.translate(&"demo.ui.confirm")
+
+
+func _refresh_synthesis_background_button_text() -> void:
+	if synthesis_background_button == null:
+		return
+	var key := (
+		&"debug.ui.synthesis_background.bag"
+		if synthesis_uses_image_background
+		else &"debug.ui.synthesis_background.blue"
+	)
+	synthesis_background_button.text = TranslationServer.translate(key)
 
 
 func _refresh_hud_state() -> void:
