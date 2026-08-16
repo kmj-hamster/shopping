@@ -126,7 +126,7 @@ func test_todo_countdown_updates_from_three_to_two_without_widening_the_title_hi
 	assert_eq(countdown.text, "2")
 
 
-func test_offer_overlay_builds_three_roguelike_cards_and_activates_the_chosen_task() -> void:
+func test_offer_overlay_prebuilds_three_cards_and_reuses_them_between_rounds() -> void:
 	var state := QuestGameState.new()
 	state.day = 2
 	state.pending_task_offer_rounds = [{
@@ -135,6 +135,13 @@ func test_offer_overlay_builds_three_roguelike_cards_and_activates_the_chosen_ta
 			&"daily_midnight_radio",
 			&"daily_rain_librarian",
 			&"daily_rooftop_thermos",
+		],
+	}, {
+		"kind": QuestGameState.OFFER_KIND_DAILY,
+		"candidate_ids": [
+			&"daily_moth_rehearsal",
+			&"daily_paper_crown",
+			&"daily_last_festival",
 		],
 	}]
 	var overlay := QuestTaskOfferOverlay.new()
@@ -148,9 +155,16 @@ func test_offer_overlay_builds_three_roguelike_cards_and_activates_the_chosen_ta
 		overlay.heading_label.text,
 		TranslationServer.translate(&"quest.ui.offer.daily.heading"),
 	)
+	var original_buttons := overlay.cards_row.get_children()
 	overlay._select_candidate(&"daily_rain_librarian")
-	assert_false(overlay.visible)
+	assert_true(overlay.visible)
 	assert_not_null(state.task_instance_for_definition(&"daily_rain_librarian"))
+	for index in original_buttons.size():
+		assert_same(overlay.cards_row.get_child(index), original_buttons[index])
+	assert_eq(
+		(overlay.offer_card_views[0].title as Label).text,
+		TranslationServer.translate(&"task.daily.moth_rehearsal.name"),
+	)
 
 
 func _select_directly(

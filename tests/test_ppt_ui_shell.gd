@@ -78,7 +78,7 @@ func test_main_uses_the_centered_art_shell_and_unified_hand() -> void:
 		Callable(main, "_on_clear_save_pressed")
 	))
 	assert_true(main.next_day_button.pressed.is_connected(
-		Callable(main, "_on_next_day_showcase_pressed")
+		Callable(main, "_on_next_day_pressed")
 	))
 	assert_true(main.synthesis_background_button.pressed.is_connected(
 		Callable(main, "_on_synthesis_background_pressed")
@@ -1632,11 +1632,16 @@ func test_arc_uses_item_strip_reward_summary_and_click_advance() -> void:
 	assert_eq(main.bgm_director.active_track_id, QuestBgmDirector.TRACK_EMPTY)
 
 
-func test_small_next_day_button_previews_arc_without_mutating_state() -> void:
+func test_small_next_day_button_runs_the_real_confirmed_task_arc() -> void:
 	var main := await _spawn_main()
 	var original_day := main.state.day
 	var original_money := main.state.wallet.money
-	var original_pending_arc = main.state.pending_arc
+	var task := main.state.task_instance_for_definition(&"girl_order")
+	var fries := main.state.inventory.filter(
+		func(card: CardItemState) -> bool: return card.definition_id == &"fries"
+	)[0] as CardItemState
+	assert_true(main.state.assign_card(task.instance_id, &"food", fries).ok)
+	assert_true(main.state.confirm_task(task.instance_id).ok)
 	main.arc_fade_seconds = 0.0
 	main.arc_typewriter_char_seconds = 0.0
 	main.bgm_director.fade_seconds = 0.0
@@ -1647,14 +1652,14 @@ func test_small_next_day_button_previews_arc_without_mutating_state() -> void:
 	assert_false(main.hand_bar.visible)
 	assert_true(main.transition_in_progress)
 	assert_true(main.arc_waiting_for_click)
-	assert_false(main.arc_task_source_row.visible)
-	assert_eq(
-		main.arc_result_label.text,
-		TranslationServer.translate(&"quest.ui.arc.showcase.body")
-	)
+	assert_true(main.arc_task_source_row.visible)
+	assert_eq(main.arc_used_card.definition.id, &"fries")
+	assert_not_null(main.state.pending_arc)
+	assert_eq(main.state.pending_arc.entries.size(), 1)
+	assert_true(main.state.pending_arc.effects_applied)
+	assert_true(task.settled)
 	assert_eq(main.state.day, original_day)
-	assert_eq(main.state.wallet.money, original_money)
-	assert_same(main.state.pending_arc, original_pending_arc)
+	assert_eq(main.state.wallet.money, original_money + 12)
 	main._on_arc_advance_requested()
 	await get_tree().process_frame
 	assert_eq(
@@ -1667,9 +1672,9 @@ func test_small_next_day_button_previews_arc_without_mutating_state() -> void:
 		if not main.transition_in_progress:
 			break
 	assert_false(main.transition_in_progress)
-	assert_eq(main.state.day, original_day)
-	assert_eq(main.state.wallet.money, original_money)
-	assert_same(main.state.pending_arc, original_pending_arc)
+	assert_eq(main.state.day, original_day + 1)
+	assert_eq(main.state.wallet.money, original_money + 12)
+	assert_null(main.state.pending_arc)
 
 
 func test_closing_location_popup_returns_unconfirmed_card() -> void:

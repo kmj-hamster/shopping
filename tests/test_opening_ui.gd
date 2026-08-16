@@ -266,6 +266,54 @@ func test_opening_shop_owners_share_the_flower_voice_effect_and_play_it() -> voi
 		assert_true(player.playing, store_id)
 
 
+func test_demo_next_day_button_builds_arc_from_all_three_confirmed_opening_tasks() -> void:
+	var main := await _spawn_main()
+	var state := main.state
+	var frog := state.grant_item(&"tin_frog", &"test")
+	assert_true(state.unlock_store(&"toy", frog).ok)
+	var tin_task := state.task_instance_for_definition(&"tin_boy_toy")
+	var self_care := state.task_instance_for_definition(&"self_care")
+	var drink_task := state.task_instance_for_definition(&"girl_order")
+	var plastic_car := state.inventory.filter(
+		func(card: CardItemState) -> bool: return card.definition_id == &"plastic_car"
+	)[0] as CardItemState
+	var fries := state.inventory.filter(
+		func(card: CardItemState) -> bool: return card.definition_id == &"fries"
+	)[0] as CardItemState
+	var water := state.inventory.filter(
+		func(card: CardItemState) -> bool: return (
+			card.definition_id == &"test_paper_cup_water"
+		)
+	)[0] as CardItemState
+	assert_true(state.assign_card(tin_task.instance_id, &"toy", plastic_car).ok)
+	assert_true(state.assign_card(self_care.instance_id, &"self_care_item", fries).ok)
+	assert_true(state.assign_card(drink_task.instance_id, &"drink", water).ok)
+	assert_true(state.confirm_task(tin_task.instance_id).ok)
+	assert_true(state.confirm_task(self_care.instance_id).ok)
+	assert_true(state.confirm_task(drink_task.instance_id).ok)
+	main.arc_fade_seconds = 0.0
+	main.arc_typewriter_char_seconds = 0.0
+	main.bgm_director.fade_seconds = 0.0
+	main.next_day_button.pressed.emit()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	assert_not_null(state.pending_arc)
+	assert_eq(state.pending_arc.entries.size(), 3)
+	assert_eq(
+		state.pending_arc.entries.map(
+			func(entry: Dictionary) -> StringName: return StringName(entry.task_definition_id)
+		),
+		[&"tin_boy_toy", &"self_care", &"girl_order"],
+	)
+	assert_true(state.pending_arc.effects_applied)
+	assert_true(tin_task.settled)
+	assert_true(self_care.settled)
+	assert_true(drink_task.settled)
+	assert_eq(state.wallet.money, 35)
+	assert_eq(main.arc_used_card.definition.id, &"plastic_car")
+	assert_true(main.arc_task_source_row.visible)
+
+
 func test_persona_first_acquisition_reveals_each_new_mask_after_arc() -> void:
 	var main := await _spawn_main()
 	var state := main.state

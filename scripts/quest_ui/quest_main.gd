@@ -69,7 +69,6 @@ var language_button: Button
 var clear_save_button: Button
 var synthesis_background_button: Button
 var forbidden_cursor_texture: Texture2D
-var next_day_dialog: ConfirmationDialog
 var next_day_blocked_dialog: AcceptDialog
 var screen_transition_layer: CanvasLayer
 var screen_transition_overlay: ColorRect
@@ -248,7 +247,7 @@ func _build_shell() -> void:
 	next_day_button.custom_minimum_size = Vector2(64, 0)
 	next_day_button.add_theme_font_size_override("font_size", 11)
 	next_day_button.tooltip_text = ""
-	next_day_button.pressed.connect(_on_next_day_showcase_pressed)
+	next_day_button.pressed.connect(_on_next_day_pressed)
 	debug_button_row.add_child(next_day_button)
 	synthesis_background_button = Button.new()
 	synthesis_background_button.name = "SynthesisBackgroundButton"
@@ -258,9 +257,6 @@ func _build_shell() -> void:
 	synthesis_background_button.pressed.connect(_on_synthesis_background_pressed)
 	debug_button_row.add_child(synthesis_background_button)
 
-	next_day_dialog = ConfirmationDialog.new()
-	next_day_dialog.confirmed.connect(_on_next_day_requested)
-	add_child(next_day_dialog)
 	next_day_blocked_dialog = AcceptDialog.new()
 	next_day_blocked_dialog.ok_button_text = TranslationServer.translate(&"demo.ui.confirm")
 	add_child(next_day_blocked_dialog)
@@ -793,7 +789,16 @@ func _task_definition_for_rule(rule: CardSlotRule) -> TaskDefinition:
 func _on_next_day_pressed() -> void:
 	if transition_in_progress:
 		return
-	next_day_dialog.popup_centered(Vector2i(400, 180))
+	_prepare_for_arc_display()
+	var result := state.begin_next_day()
+	if result.ok:
+		_run_arc()
+	elif result.reason == QuestGameState.RESULT_REQUIRED_TASK_INCOMPLETE:
+		next_day_blocked_dialog.title = TranslationServer.translate(&"demo.ui.next_day")
+		next_day_blocked_dialog.dialog_text = TranslationServer.translate(
+			&"opening.ui.next_day.self_care_required"
+		)
+		next_day_blocked_dialog.popup_centered(Vector2i(520, 190))
 
 
 func _on_clear_save_pressed() -> void:
@@ -808,28 +813,6 @@ func _on_synthesis_background_pressed() -> void:
 	if synthesis_interface != null:
 		synthesis_interface.set_image_background_enabled(synthesis_uses_image_background)
 	_refresh_synthesis_background_button_text()
-
-
-func _on_next_day_requested() -> void:
-	if transition_in_progress:
-		return
-	_prepare_for_arc_display()
-	var result := state.begin_next_day()
-	if result.ok:
-		_run_arc()
-	elif result.reason == QuestGameState.RESULT_REQUIRED_TASK_INCOMPLETE:
-		next_day_blocked_dialog.title = TranslationServer.translate(&"demo.ui.next_day")
-		next_day_blocked_dialog.dialog_text = TranslationServer.translate(
-			&"opening.ui.next_day.self_care_required"
-		)
-		next_day_blocked_dialog.popup_centered(Vector2i(520, 190))
-
-
-func _on_next_day_showcase_pressed() -> void:
-	if transition_in_progress:
-		return
-	_prepare_for_arc_display()
-	_run_arc_showcase()
 
 
 func _prepare_for_arc_display() -> void:
@@ -919,38 +902,6 @@ func _run_arc() -> void:
 	arc_money_label.text = TranslationServer.translate(&"demo.ui.money") % state.wallet.money
 	arc_image.texture = load("res://resources/character/bag-head.png") as Texture2D
 	arc_used_card.visible = false
-	arc_reward_label.text = ""
-	await _present_arc_text(TranslationServer.translate(&"demo.ui.arc.new_day.body"))
-	bgm_director.play_track(QuestBgmDirector.TRACK_EMPTY)
-	var fade_out := create_tween()
-	fade_out.tween_property(arc_overlay, "modulate:a", 0.0, arc_fade_seconds)
-	await fade_out.finished
-	arc_overlay.visible = false
-	transition_in_progress = false
-	hand_bar.visible = true
-	_show_map_immediate()
-
-
-func _run_arc_showcase() -> void:
-	bgm_director.play_track(QuestBgmDirector.TRACK_DREAM)
-	transition_in_progress = true
-	hand_bar.visible = false
-	detail_popup.close()
-	rule_detail_popup.close()
-	arc_day_label.text = TranslationServer.translate(&"quest.ui.arc.night") % state.day
-	arc_result_label.text = ""
-	arc_reward_label.text = ""
-	arc_used_card.visible = false
-	_clear_arc_task_source()
-	arc_money_label.text = TranslationServer.translate(&"demo.ui.money") % state.wallet.money
-	arc_image.texture = load("res://resources/character/bag-head.png") as Texture2D
-	arc_overlay.visible = true
-	arc_overlay.modulate.a = 0.0
-	var fade := create_tween()
-	fade.tween_property(arc_overlay, "modulate:a", 1.0, arc_fade_seconds)
-	await fade.finished
-	await _present_arc_text(TranslationServer.translate(&"quest.ui.arc.showcase.body"))
-	arc_day_label.text = TranslationServer.translate(&"quest.ui.arc.new_day") % (state.day + 1)
 	arc_reward_label.text = ""
 	await _present_arc_text(TranslationServer.translate(&"demo.ui.arc.new_day.body"))
 	bgm_director.play_track(QuestBgmDirector.TRACK_EMPTY)
@@ -1252,10 +1203,6 @@ func _refresh_global_text() -> void:
 		arc_task_source_tag_label.text = TranslationServer.translate(&"quest.ui.arc.task_source")
 	if arc_task_source_name_label != null and not arc_task_source_name_key.is_empty():
 		arc_task_source_name_label.text = TranslationServer.translate(arc_task_source_name_key)
-	next_day_dialog.title = TranslationServer.translate(&"demo.ui.next_day")
-	next_day_dialog.dialog_text = TranslationServer.translate(&"demo.ui.next_day.question")
-	next_day_dialog.ok_button_text = TranslationServer.translate(&"demo.ui.confirm")
-	next_day_dialog.cancel_button_text = TranslationServer.translate(&"demo.ui.cancel")
 	next_day_blocked_dialog.ok_button_text = TranslationServer.translate(&"demo.ui.confirm")
 
 
