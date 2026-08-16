@@ -27,6 +27,7 @@ const RUNTIME_UI_KEYS: Array[StringName] = [
 	&"quest.ui.arc.showcase.body",
 	&"quest.ui.arc.new_day",
 	&"quest.ui.arc.night",
+	&"quest.ui.arc.task_source",
 	&"quest.ui.synthesis.open",
 	&"debug.ui.synthesis_background.blue",
 	&"debug.ui.synthesis_background.bag",

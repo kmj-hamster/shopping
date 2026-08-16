@@ -1601,6 +1601,21 @@ func test_arc_uses_item_strip_reward_summary_and_click_advance() -> void:
 	assert_true(main.arc_overlay.visible)
 	assert_eq(main.arc_image.texture, QuestArcCatalog.item_by_id(&"fries").image)
 	assert_true(main.arc_reward_label.text.contains("12"))
+	var task_definition := QuestArcCatalog.task_by_id(task.definition_id)
+	assert_true(main.arc_task_source_row.visible)
+	assert_almost_eq(main.arc_task_source_row.modulate.a, 0.68, 0.001)
+	assert_eq(
+		main.arc_task_source_tag_label.text,
+		TranslationServer.translate(&"quest.ui.arc.task_source"),
+	)
+	assert_eq(
+		main.arc_task_source_name_label.text,
+		TranslationServer.translate(task_definition.display_name_key),
+	)
+	assert_lt(
+		main.arc_task_source_name_label.get_theme_font_size("font_size"),
+		main.arc_result_label.get_theme_font_size("font_size"),
+	)
 	assert_true(main.arc_cursor_label.visible)
 	for index in 8:
 		main._on_arc_advance_requested()
@@ -1608,6 +1623,7 @@ func test_arc_uses_item_strip_reward_summary_and_click_advance() -> void:
 		if not main.transition_in_progress:
 			break
 	assert_false(main.transition_in_progress)
+	assert_false(main.arc_task_source_row.visible)
 	assert_eq(main.state.day, 2)
 	assert_eq(main.bgm_director.active_track_id, QuestBgmDirector.TRACK_EMPTY)
 
@@ -1627,6 +1643,7 @@ func test_small_next_day_button_previews_arc_without_mutating_state() -> void:
 	assert_false(main.hand_bar.visible)
 	assert_true(main.transition_in_progress)
 	assert_true(main.arc_waiting_for_click)
+	assert_false(main.arc_task_source_row.visible)
 	assert_eq(
 		main.arc_result_label.text,
 		TranslationServer.translate(&"quest.ui.arc.showcase.body")

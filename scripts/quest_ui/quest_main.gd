@@ -76,6 +76,10 @@ var arc_overlay: ColorRect
 var arc_day_label: Label
 var arc_result_label: Label
 var arc_money_label: Label
+var arc_task_source_row: HBoxContainer
+var arc_task_source_tag_label: Label
+var arc_task_source_name_label: Label
+var arc_task_source_name_key: StringName
 var arc_image: TextureRect
 var arc_reward_label: Label
 var arc_cursor_label: Label
@@ -837,6 +841,7 @@ func _run_arc() -> void:
 	arc_day_label.text = TranslationServer.translate(&"quest.ui.arc.night") % state.day
 	arc_result_label.text = ""
 	arc_reward_label.text = ""
+	_clear_arc_task_source()
 	arc_money_label.text = TranslationServer.translate(&"demo.ui.money") % state.wallet.money
 	arc_overlay.visible = true
 	arc_overlay.modulate.a = 0.0
@@ -863,6 +868,7 @@ func _run_arc() -> void:
 		transition_in_progress = false
 		return
 	arc_day_label.text = TranslationServer.translate(&"quest.ui.arc.new_day") % state.day
+	_clear_arc_task_source()
 	arc_money_label.text = TranslationServer.translate(&"demo.ui.money") % state.wallet.money
 	arc_image.texture = load("res://resources/character/bag-head.png") as Texture2D
 	arc_reward_label.text = ""
@@ -888,6 +894,7 @@ func _run_arc_showcase() -> void:
 	arc_day_label.text = TranslationServer.translate(&"quest.ui.arc.night") % state.day
 	arc_result_label.text = ""
 	arc_reward_label.text = ""
+	_clear_arc_task_source()
 	arc_money_label.text = TranslationServer.translate(&"demo.ui.money") % state.wallet.money
 	arc_image.texture = load("res://resources/character/bag-head.png") as Texture2D
 	arc_overlay.visible = true
@@ -931,6 +938,39 @@ func _build_arc_overlay() -> void:
 	arc_money_label.add_theme_font_size_override("font_size", 23)
 	arc_money_label.add_theme_color_override("font_color", Color("e4c978"))
 	arc_overlay.add_child(arc_money_label)
+	arc_task_source_row = HBoxContainer.new()
+	arc_task_source_row.name = "ArcTaskSource"
+	arc_task_source_row.anchor_left = 0.035
+	arc_task_source_row.anchor_top = 0.112
+	arc_task_source_row.anchor_right = 0.41
+	arc_task_source_row.anchor_bottom = 0.164
+	arc_task_source_row.add_theme_constant_override("separation", 10)
+	arc_task_source_row.modulate.a = 0.68
+	arc_task_source_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	arc_task_source_row.visible = false
+	arc_overlay.add_child(arc_task_source_row)
+	var source_tag_panel := PanelContainer.new()
+	source_tag_panel.custom_minimum_size = Vector2(54, 28)
+	source_tag_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	source_tag_panel.add_theme_stylebox_override(
+		"panel", UiPalette.panel_style(Color("254048", 0.56), Color("89a09c", 0.42))
+	)
+	arc_task_source_row.add_child(source_tag_panel)
+	arc_task_source_tag_label = Label.new()
+	arc_task_source_tag_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	arc_task_source_tag_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	arc_task_source_tag_label.add_theme_font_size_override("font_size", 12)
+	arc_task_source_tag_label.add_theme_color_override("font_color", Color("d5dfd9"))
+	arc_task_source_tag_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	source_tag_panel.add_child(arc_task_source_tag_label)
+	arc_task_source_name_label = Label.new()
+	arc_task_source_name_label.custom_minimum_size = Vector2(390, 28)
+	arc_task_source_name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	arc_task_source_name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	arc_task_source_name_label.add_theme_font_size_override("font_size", 17)
+	arc_task_source_name_label.add_theme_color_override("font_color", Color("bdc9c4"))
+	arc_task_source_name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	arc_task_source_row.add_child(arc_task_source_name_label)
 	var center := CenterContainer.new()
 	center.anchor_left = 0.18
 	center.anchor_top = 0.08
@@ -985,6 +1025,7 @@ func _build_arc_overlay() -> void:
 
 func _prepare_arc_entry(entry: Dictionary) -> void:
 	arc_image.texture = null
+	_set_arc_task_source(StringName(entry.get("task_definition_id", "")))
 	var item_ids := entry.get("item_definition_ids", []) as Array
 	if not item_ids.is_empty():
 		var definition := QuestArcCatalog.item_by_id(StringName(item_ids[0]))
@@ -1012,6 +1053,24 @@ func _prepare_arc_entry(entry: Dictionary) -> void:
 			]
 		)
 	arc_reward_label.text = "  ·  ".join(reward_parts)
+
+
+func _set_arc_task_source(task_definition_id: StringName) -> void:
+	var definition := QuestArcCatalog.task_by_id(task_definition_id)
+	if definition == null:
+		_clear_arc_task_source()
+		return
+	arc_task_source_name_key = definition.display_name_key
+	arc_task_source_name_label.text = TranslationServer.translate(arc_task_source_name_key)
+	arc_task_source_row.visible = true
+
+
+func _clear_arc_task_source() -> void:
+	arc_task_source_name_key = &""
+	if arc_task_source_name_label != null:
+		arc_task_source_name_label.text = ""
+	if arc_task_source_row != null:
+		arc_task_source_row.visible = false
 
 
 func _present_arc_text(full_text: String) -> void:
@@ -1102,6 +1161,10 @@ func _refresh_global_text() -> void:
 		clear_save_button.text = TranslationServer.translate(&"demo.ui.clear_save")
 		clear_save_button.tooltip_text = TranslationServer.translate(&"demo.ui.clear_save.tooltip")
 	_refresh_synthesis_background_button_text()
+	if arc_task_source_tag_label != null:
+		arc_task_source_tag_label.text = TranslationServer.translate(&"quest.ui.arc.task_source")
+	if arc_task_source_name_label != null and not arc_task_source_name_key.is_empty():
+		arc_task_source_name_label.text = TranslationServer.translate(arc_task_source_name_key)
 	next_day_dialog.title = TranslationServer.translate(&"demo.ui.next_day")
 	next_day_dialog.dialog_text = TranslationServer.translate(&"demo.ui.next_day.question")
 	next_day_dialog.ok_button_text = TranslationServer.translate(&"demo.ui.confirm")
