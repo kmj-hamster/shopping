@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="TaskDefinition" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/task_definition.gd" id="1_task"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_slot_rule.gd" id="2_rule"]
+[ext_resource type="Script" path="res://scripts/quest_domain/task_outcome_definition.gd" id="3_outcome"]
+[ext_resource type="Script" path="res://scripts/quest_domain/story_effect.gd" id="4_effect"]
+
+[sub_resource type="Resource" id="Rule"]
+script = ExtResource("2_rule")
+id = &"item"
+display_name_key = &"task.daily.rooftop_thermos.slot"
+required_all = Array[StringName]([&"drink"])
+
+[sub_resource type="Resource" id="Money"]
+script = ExtResource("4_effect")
+kind = 0
+amount = 12
+
+[sub_resource type="Resource" id="Outcome"]
+script = ExtResource("3_outcome")
+id = &"complete"
+result_text_key = &"task.daily.rooftop_thermos.result"
+is_fallback = true
+effects = Array[Resource]([SubResource("Money")])
+
+[resource]
+script = ExtResource("1_task")
+id = &"daily_rooftop_thermos"
+display_name_key = &"task.daily.rooftop_thermos.name"
+body_text_key = &"task.daily.rooftop_thermos.body"
+slot_rules = Array[Resource]([SubResource("Rule")])
+outcomes = Array[Resource]([SubResource("Outcome")])
+selection_pool = 1
+counts_toward_daily_limit = true
+offer_title_key = &"task.daily.rooftop_thermos.name"
+offer_subtitle_key = &"task.daily.rooftop_thermos.subtitle"
+offer_body_key = &"task.daily.rooftop_thermos.body"
+expiration_text_key = &"task.daily.rooftop_thermos.expired"
+active_night_count = 3
+completion_cooldown_nights = 7
+expiration_cooldown_nights = 3

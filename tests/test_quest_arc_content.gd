@@ -34,7 +34,7 @@ func test_manifest_is_the_new_opening_whitelist() -> void:
 	assert_eq(manifest.maximum_item_price, 40)
 	assert_eq(manifest.properties.size(), 16)
 	assert_eq(manifest.items.size(), 32)
-	assert_eq(manifest.tasks.size(), 9)
+	assert_eq(manifest.tasks.size(), 30)
 	assert_eq(manifest.recipes.size(), 10)
 	assert_eq(manifest.stores.size(), 5)
 	assert_eq(manifest.store_unlocks.size(), 5)

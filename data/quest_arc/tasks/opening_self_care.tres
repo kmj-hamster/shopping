@@ -8,6 +8,7 @@
 script = ExtResource("2_rule")
 id = &"self_care_item"
 display_name_key = &"opening.task.self_care.slot"
+forbidden_any = Array[StringName]([&"persona"])
 
 [sub_resource type="Resource" id="Outcome"]
 script = ExtResource("3_outcome")
@@ -23,7 +24,6 @@ body_text_key = &"opening.task.self_care.body"
 footer_text_key = &"opening.task.self_care.footer"
 category = 1
 activation_day = 1
-repeat_interval_days = 1
 activation_store_id = &"toy"
 required_before_next_day = true
 slot_rules = Array[Resource]([SubResource("Rule")])

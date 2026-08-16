@@ -56,10 +56,14 @@ func test_self_care_grows_each_persona_and_queues_first_reveals() -> void:
 	assert_true(&"mourner" in state.pending_persona_reveal_ids)
 	assert_true(state.mark_arc_entry_shown())
 	assert_true(state.finish_arc().ok)
-	assert_not_null(state.task_instance_for_definition(&"self_care"))
+	assert_true(state.has_pending_task_offers())
+	assert_eq(
+		StringName(state.pending_task_offer_rounds[-1].kind),
+		QuestGameState.OFFER_KIND_SELF_CARE,
+	)
 
 
-func test_self_care_growth_uses_ceil_of_half_the_positive_difference() -> void:
+func test_self_care_growth_adds_only_one_when_the_item_is_stronger() -> void:
 	var state := QuestGameState.new()
 	_unlock_toy_shop(state)
 	state.protagonist_persona_counts[&"dreamwalker"] = 1
@@ -69,10 +73,10 @@ func test_self_care_growth_uses_ceil_of_half_the_positive_difference() -> void:
 	assert_true(state.confirm_task(self_care.instance_id).ok)
 	assert_true(state.begin_next_day().ok)
 	assert_true(state.apply_arc_effects().ok)
-	assert_eq(int(state.protagonist_persona_counts[&"dreamwalker"]), 3)
+	assert_eq(int(state.protagonist_persona_counts[&"dreamwalker"]), 2)
 
 
-func test_self_care_blocks_every_category_used_in_the_previous_two_nights() -> void:
+func test_self_care_no_longer_inherits_category_bans_from_previous_nights() -> void:
 	var state := QuestGameState.new()
 	_unlock_toy_shop(state)
 	var first_task := state.task_instance_for_definition(&"self_care")
@@ -84,19 +88,22 @@ func test_self_care_blocks_every_category_used_in_the_previous_two_nights() -> v
 	assert_true(state.mark_arc_entry_shown())
 	assert_true(state.finish_arc().ok)
 
-	var second_task := state.task_instance_for_definition(&"self_care")
+	state.pending_task_offer_rounds = [{
+		"kind": QuestGameState.OFFER_KIND_SELF_CARE,
+		"candidate_ids": [&"self_care_play"],
+	}]
+	var selected := state.choose_current_task_offer(&"self_care_play")
+	assert_true(selected.ok)
+	var second_task := state.task_instance(int(selected.task_instance_id))
 	var toy := state.grant_item(&"plastic_car", &"test")
-	var flower := state.grant_item(&"jasmine", &"test")
-	var food := state.grant_item(&"fries", &"test")
-	assert_false(state.can_assign_card_to_task(second_task.instance_id, &"self_care_item", toy))
-	assert_false(state.can_assign_card_to_task(second_task.instance_id, &"self_care_item", flower))
-	assert_true(state.can_assign_card_to_task(second_task.instance_id, &"self_care_item", food))
+	assert_true(state.can_assign_card_to_task(second_task.instance_id, &"item", toy))
 	var effective := state.effective_task_rule(
 		second_task,
-		QuestArcCatalog.task_by_id(&"self_care").slot_rules[0],
+		QuestArcCatalog.task_by_id(&"self_care_play").slot_rules[0],
 	)
-	assert_true(&"toy" in effective.forbidden_any)
-	assert_true(&"flower" in effective.forbidden_any)
+	assert_false(&"toy" in effective.forbidden_any)
+	assert_false(&"flower" in effective.forbidden_any)
+	assert_eq(int(state.self_care_type_available_days[&"toy"]), state.day + 3)
 
 
 func test_remittance_repeats_on_nights_one_and_eight_without_stacking() -> void:

@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="TaskDefinition" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/task_definition.gd" id="1_task"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_slot_rule.gd" id="2_rule"]
+[ext_resource type="Script" path="res://scripts/quest_domain/task_outcome_definition.gd" id="3_outcome"]
+
+[sub_resource type="Resource" id="Rule"]
+script = ExtResource("2_rule")
+id = &"item"
+display_name_key = &"task.self_care.change_clothes.slot"
+required_all = Array[StringName]([&"clothing"])
+allowed_any = Array[StringName]([&"dreamwalker", &"homecomer"])
+
+[sub_resource type="Resource" id="Outcome"]
+script = ExtResource("3_outcome")
+id = &"complete"
+result_text_key = &"task.self_care.change_clothes.result"
+is_fallback = true
+
+[resource]
+script = ExtResource("1_task")
+id = &"self_care_change_clothes"
+display_name_key = &"task.self_care.change_clothes.name"
+body_text_key = &"task.self_care.change_clothes.body"
+footer_text_key = &"task.self_care.footer"
+category = 1
+required_before_next_day = true
+slot_rules = Array[Resource]([SubResource("Rule")])
+outcomes = Array[Resource]([SubResource("Outcome")])
+selection_pool = 2
+offer_title_key = &"task.self_care.change_clothes.name"
+offer_subtitle_key = &"task.self_care.change_clothes.subtitle"
+offer_body_key = &"task.self_care.change_clothes.body"
+completion_cooldown_nights = 3
+cooldown_group_id = &"clothing"

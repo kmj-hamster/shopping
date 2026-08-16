@@ -1600,6 +1600,10 @@ func test_arc_uses_item_strip_reward_summary_and_click_advance() -> void:
 	await get_tree().process_frame
 	assert_true(main.arc_overlay.visible)
 	assert_eq(main.arc_image.texture, QuestArcCatalog.item_by_id(&"fries").image)
+	assert_true(main.arc_used_card.visible)
+	assert_eq(main.arc_used_card.definition.id, &"fries")
+	assert_eq(main.arc_used_card.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+	assert_almost_eq(main.arc_used_card.modulate.a, 0.48, 0.001)
 	assert_true(main.arc_reward_label.text.contains("12"))
 	var task_definition := QuestArcCatalog.task_by_id(task.definition_id)
 	assert_true(main.arc_task_source_row.visible)

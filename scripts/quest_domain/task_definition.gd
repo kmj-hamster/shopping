@@ -18,6 +18,12 @@ enum SlotMode {
 	ANY,
 }
 
+enum SelectionPool {
+	NONE,
+	DAILY,
+	SELF_CARE,
+}
+
 @export var id: StringName
 @export var display_name_key: StringName
 @export var body_text_key: StringName
@@ -36,6 +42,17 @@ enum SlotMode {
 @export var slot_rules: Array[Resource] = []
 @export var outcomes: Array[Resource] = []
 @export var persona_tie_priority: Array[StringName] = []
+@export var selection_pool := SelectionPool.NONE
+@export var counts_toward_daily_limit := false
+@export var offer_title_key: StringName
+@export var offer_subtitle_key: StringName
+@export var offer_body_key: StringName
+@export var expiration_text_key: StringName
+@export_range(0, 30, 1) var active_night_count := 0
+@export_range(0, 30, 1) var completion_cooldown_nights := 0
+@export_range(0, 30, 1) var expiration_cooldown_nights := 0
+@export var cooldown_group_id: StringName
+@export_range(0.1, 10.0, 0.1) var offer_weight := 1.0
 
 
 func outcome_by_id(outcome_id: StringName) -> TaskOutcomeDefinition:
@@ -44,6 +61,21 @@ func outcome_by_id(outcome_id: StringName) -> TaskOutcomeDefinition:
 		if outcome != null and outcome.id == outcome_id:
 			return outcome
 	return null
+
+
+func reward_money() -> int:
+	var result := 0
+	for raw_outcome in outcomes:
+		var outcome := raw_outcome as TaskOutcomeDefinition
+		if outcome == null:
+			continue
+		var outcome_reward := 0
+		for raw_effect in outcome.effects:
+			var effect := raw_effect as StoryEffect
+			if effect != null and effect.kind == StoryEffect.Kind.ADD_MONEY:
+				outcome_reward += effect.amount
+		result = maxi(result, outcome_reward)
+	return result
 
 
 func validation_errors() -> PackedStringArray:
@@ -89,6 +121,19 @@ func validation_errors() -> PackedStringArray:
 	for persona_id in persona_tie_priority:
 		if persona_id not in CardPropertySet.PERSONAS:
 			errors.append("Task %s has unknown tie-priority persona %s." % [id, persona_id])
-	if required_before_next_day and repeat_interval_days <= 0:
-		errors.append("Required task %s must have a repeat interval." % id)
+	if selection_pool != SelectionPool.NONE:
+		if offer_title_key.is_empty() or offer_subtitle_key.is_empty() or offer_body_key.is_empty():
+			errors.append("Pooled task %s needs complete offer copy." % id)
+		if selection_pool == SelectionPool.DAILY:
+			if not counts_toward_daily_limit:
+				errors.append("Daily pooled task %s must count toward the daily limit." % id)
+			if active_night_count <= 0 or expiration_text_key.is_empty():
+				errors.append("Daily pooled task %s needs a duration and expiration text." % id)
+			if completion_cooldown_nights <= 0 or expiration_cooldown_nights <= 0:
+				errors.append("Daily pooled task %s needs both cooldown durations." % id)
+		elif selection_pool == SelectionPool.SELF_CARE:
+			if category != Category.SELF_CARE or cooldown_group_id.is_empty():
+				errors.append("Self-care pooled task %s needs a category cooldown group." % id)
+			if not required_before_next_day:
+				errors.append("Self-care pooled task %s must be required tonight." % id)
 	return errors

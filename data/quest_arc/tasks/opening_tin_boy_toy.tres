@@ -30,5 +30,6 @@ display_name_key = &"opening.task.tin_toy.name"
 body_text_key = &"opening.task.tin_toy.body"
 footer_text_key = &"opening.task.tin_toy.footer"
 activation_store_id = &"toy"
+counts_toward_daily_limit = true
 slot_rules = Array[Resource]([SubResource("Rule")])
 outcomes = Array[Resource]([SubResource("Outcome")])

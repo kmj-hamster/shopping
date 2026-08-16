@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="GameContentManifest" load_steps=83 format=3]
+[gd_resource type="Resource" script_class="GameContentManifest" load_steps=104 format=3]
 
 [ext_resource type="Script" path="res://scripts/quest_domain/game_content_manifest.gd" id="1_manifest"]
 [ext_resource type="Script" path="res://scripts/quest_domain/property_definition.gd" id="2_property"]
@@ -66,6 +66,27 @@
 [ext_resource type="Resource" path="res://data/quest_arc/owners/opening_toy_owner.tres" id="33_owner"]
 [ext_resource type="Resource" path="res://data/quest_arc/owners/opening_fast_food_owner.tres" id="34_owner"]
 [ext_resource type="Resource" path="res://data/quest_arc/owners/opening_flower_owner.tres" id="35_owner"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/daily_midnight_radio.tres" id="67_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/daily_rain_librarian.tres" id="68_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/daily_moth_rehearsal.tres" id="69_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/daily_paper_crown.tres" id="70_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/daily_last_festival.tres" id="71_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/daily_rooftop_thermos.tres" id="72_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/daily_unopened_apology.tres" id="73_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/daily_blackout_vigil.tres" id="74_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/daily_borrowed_coat.tres" id="75_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/daily_window_audience.tres" id="76_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/daily_afterimage_album.tres" id="77_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/daily_dawn_picnic.tres" id="78_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/self_care_read.tres" id="79_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/self_care_listen_cd.tres" id="80_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/self_care_old_dream.tres" id="81_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/self_care_play.tres" id="82_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/self_care_eat.tres" id="83_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/self_care_drink.tres" id="84_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/self_care_flowers.tres" id="85_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/self_care_candle.tres" id="86_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/tasks/self_care_change_clothes.tres" id="87_task"]
 
 [sub_resource type="Resource" id="PropertyFood"]
 script = ExtResource("2_property")
@@ -190,7 +211,7 @@ initial_protagonist_stats = {&"nightwalker": 1, &"homecomer": 3, &"mourner": 3, 
 starting_item_ids = Array[StringName]([&"fries", &"plastic_car", &"midnight_rose", &"test_late_train_timetable", &"test_blank_disc", &"test_rewound_tape", &"test_clockwork_moon", &"test_cold_pudding", &"test_paper_cup_water", &"test_pressed_violet", &"test_birthday_candle", &"test_inside_out_raincoat"])
 properties = Array[Resource]([SubResource("PropertyFood"), SubResource("PropertyFlower"), SubResource("PropertyToy"), SubResource("PropertyDrink"), SubResource("PropertyCd"), SubResource("PropertyBook"), SubResource("PropertyCassette"), SubResource("PropertyCandle"), SubResource("PropertyClothing"), SubResource("PropertyMetal"), SubResource("PropertyRose"), SubResource("PropertyPersona"), SubResource("PropertyNightwalker"), SubResource("PropertyMourner"), SubResource("PropertyDreamwalker"), SubResource("PropertyHomecomer")])
 items = Array[Resource]([ExtResource("3_item"), ExtResource("4_item"), ExtResource("5_item"), ExtResource("6_item"), ExtResource("7_item"), ExtResource("8_item"), ExtResource("9_item"), ExtResource("10_item"), ExtResource("11_item"), ExtResource("12_item"), ExtResource("13_item"), ExtResource("14_item"), ExtResource("15_item"), ExtResource("16_item"), ExtResource("40_item"), ExtResource("41_item"), ExtResource("42_item"), ExtResource("43_item"), ExtResource("44_item"), ExtResource("45_item"), ExtResource("46_item"), ExtResource("47_item"), ExtResource("48_item"), ExtResource("49_item"), ExtResource("50_item"), ExtResource("51_item"), ExtResource("52_item"), ExtResource("53_item"), ExtResource("54_item"), ExtResource("55_item"), ExtResource("56_item"), ExtResource("57_item")])
-tasks = Array[Resource]([ExtResource("17_task"), ExtResource("18_task"), ExtResource("19_task"), ExtResource("20_task"), ExtResource("21_task"), ExtResource("36_task"), ExtResource("37_task"), ExtResource("38_task"), ExtResource("39_task")])
+tasks = Array[Resource]([ExtResource("17_task"), ExtResource("18_task"), ExtResource("19_task"), ExtResource("20_task"), ExtResource("21_task"), ExtResource("36_task"), ExtResource("37_task"), ExtResource("38_task"), ExtResource("39_task"), ExtResource("67_task"), ExtResource("68_task"), ExtResource("69_task"), ExtResource("70_task"), ExtResource("71_task"), ExtResource("72_task"), ExtResource("73_task"), ExtResource("74_task"), ExtResource("75_task"), ExtResource("76_task"), ExtResource("77_task"), ExtResource("78_task"), ExtResource("79_task"), ExtResource("80_task"), ExtResource("81_task"), ExtResource("82_task"), ExtResource("83_task"), ExtResource("84_task"), ExtResource("85_task"), ExtResource("86_task"), ExtResource("87_task")])
 recipes = Array[Resource]([ExtResource("22_recipe"), ExtResource("58_recipe"), ExtResource("59_recipe"), ExtResource("60_recipe"), ExtResource("61_recipe"), ExtResource("62_recipe"), ExtResource("63_recipe"), ExtResource("64_recipe"), ExtResource("65_recipe"), ExtResource("66_recipe")])
 stores = Array[Resource]([ExtResource("23_store"), ExtResource("24_store"), ExtResource("25_store"), ExtResource("26_store"), ExtResource("27_store")])
 store_unlocks = Array[Resource]([ExtResource("28_unlock"), ExtResource("29_unlock"), ExtResource("30_unlock"), ExtResource("31_unlock"), ExtResource("32_unlock")])

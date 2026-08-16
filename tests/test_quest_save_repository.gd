@@ -147,15 +147,29 @@ func test_item_and_money_gift_states_survive_round_trip() -> void:
 	assert_not_null(_card_by_definition(claimed, &"tin_frog"))
 
 
-func test_self_care_history_and_pending_persona_reveals_survive_round_trip() -> void:
+func test_task_pool_cooldowns_offers_and_persona_reveals_survive_round_trip() -> void:
 	var source := _state_with_confirmed_self_care(&"plastic_orchid")
 	assert_true(source.begin_next_day().ok)
 	assert_true(source.apply_arc_effects().ok)
+	source.task_pool_available_days[&"daily_midnight_radio"] = 9
+	source.self_care_type_available_days[&"toy"] = 5
+	source.pending_task_offer_rounds = [{
+		"kind": QuestGameState.OFFER_KIND_DAILY,
+		"candidate_ids": [
+			&"daily_midnight_radio",
+			QuestGameState.DEEP_NIGHT_JOB_ID,
+		],
+	}]
 	assert_true(repository.save(source))
 	var restored := QuestGameState.new()
 	assert_true(repository.load_into(restored).ok)
-	assert_true(&"flower" in restored.self_care_category_history[0].category_ids)
-	assert_true(&"toy" in restored.self_care_category_history[0].category_ids)
+	assert_eq(int(restored.task_pool_available_days[&"daily_midnight_radio"]), 9)
+	assert_eq(int(restored.self_care_type_available_days[&"toy"]), 5)
+	assert_eq(restored.pending_task_offer_rounds.size(), 1)
+	assert_eq(
+		restored.pending_task_offer_rounds[0].candidate_ids,
+		[&"daily_midnight_radio", QuestGameState.DEEP_NIGHT_JOB_ID],
+	)
 	assert_true(&"dreamwalker" in restored.pending_persona_reveal_ids)
 	assert_true(&"mourner" in restored.pending_persona_reveal_ids)
 

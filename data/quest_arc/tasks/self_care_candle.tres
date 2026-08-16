@@ -3,33 +3,33 @@
 [ext_resource type="Script" path="res://scripts/quest_domain/task_definition.gd" id="1_task"]
 [ext_resource type="Script" path="res://scripts/slot_domain/card_slot_rule.gd" id="2_rule"]
 [ext_resource type="Script" path="res://scripts/quest_domain/task_outcome_definition.gd" id="3_outcome"]
-[ext_resource type="Script" path="res://scripts/quest_domain/story_effect.gd" id="4_effect"]
 
 [sub_resource type="Resource" id="Rule"]
 script = ExtResource("2_rule")
-id = &"drink"
-display_name_key = &"opening.task.aquarium.slot"
-required_all = Array[StringName]([&"drink"])
-
-[sub_resource type="Resource" id="MoneyEffect"]
-script = ExtResource("4_effect")
-kind = 0
-amount = 15
+id = &"item"
+display_name_key = &"task.self_care.candle.slot"
+required_all = Array[StringName]([&"candle"])
+allowed_any = Array[StringName]([&"nightwalker", &"mourner"])
 
 [sub_resource type="Resource" id="Outcome"]
 script = ExtResource("3_outcome")
-id = &"drink"
-result_text_key = &"opening.task.aquarium.result"
+id = &"complete"
+result_text_key = &"task.self_care.candle.result"
 is_fallback = true
-effects = Array[Resource]([SubResource("MoneyEffect")])
 
 [resource]
 script = ExtResource("1_task")
-id = &"girl_order"
-display_name_key = &"opening.task.aquarium.name"
-body_text_key = &"opening.task.aquarium.body"
-footer_text_key = &"opening.task.aquarium.footer"
-activation_store_id = &"toy"
-counts_toward_daily_limit = true
+id = &"self_care_candle"
+display_name_key = &"task.self_care.candle.name"
+body_text_key = &"task.self_care.candle.body"
+footer_text_key = &"task.self_care.footer"
+category = 1
+required_before_next_day = true
 slot_rules = Array[Resource]([SubResource("Rule")])
 outcomes = Array[Resource]([SubResource("Outcome")])
+selection_pool = 2
+offer_title_key = &"task.self_care.candle.name"
+offer_subtitle_key = &"task.self_care.candle.subtitle"
+offer_body_key = &"task.self_care.candle.body"
+completion_cooldown_nights = 3
+cooldown_group_id = &"candle"

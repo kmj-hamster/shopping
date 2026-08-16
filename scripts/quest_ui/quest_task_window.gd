@@ -39,6 +39,11 @@ func refresh() -> void:
 	var footer_copy := ""
 	if not definition.footer_text_key.is_empty():
 		footer_copy = TranslationServer.translate(definition.footer_text_key)
+	elif definition.selection_pool == TaskDefinition.SelectionPool.DAILY:
+		footer_copy = (
+			TranslationServer.translate(&"task.daily.reward.footer")
+			% definition.reward_money()
+		)
 	set_footer_copy(footer_copy)
 	if definition.settlement_mode == TaskDefinition.SettlementMode.GIFT_PICKUP:
 		set_body_copy(
