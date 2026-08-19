@@ -13,8 +13,9 @@ const PAPER_ANCHOR_TOP := 0.064
 const PAPER_ANCHOR_RIGHT := 0.652
 const PAPER_ANCHOR_BOTTOM := 0.691
 const PAPER_SIZE := Vector2(531, 344)
-const INTERACTION_POSITION := Vector2(328, 98)
+const INTERACTION_POSITION := Vector2(333, 112)
 const INTERACTION_SEPARATION := 4
+const ACTION_GAP_HEIGHT := 28.0
 const SLOT_ART_INSET_RECT := Rect2(350, 94, 112, 138)
 const PAPER_TEXTURE := preload("res://resources/ui/quest/task-paper.png")
 const CLOSE_TEXTURE := preload("res://resources/ui/quest/task-close.png")
@@ -39,7 +40,7 @@ var body_page_row: HBoxContainer
 var body_previous_button: TextureButton
 var body_page_spacer: Control
 var body_next_button: TextureButton
-var slot_prompt_label: Label
+var action_gap_spacer: Control
 var lower_spacer: Control
 var slots_row: HBoxContainer
 var feedback_label: Label
@@ -207,16 +208,11 @@ func _ready() -> void:
 	slots_row.add_theme_constant_override("separation", 14)
 	interaction_column.add_child(slots_row)
 
-	slot_prompt_label = Label.new()
-	slot_prompt_label.name = "PopupSlotPrompt"
-	slot_prompt_label.custom_minimum_size = Vector2(0, 24)
-	slot_prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	slot_prompt_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	slot_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	slot_prompt_label.add_theme_font_size_override("font_size", 13)
-	slot_prompt_label.add_theme_color_override("font_color", Color("554b3e"))
-	slot_prompt_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	interaction_column.add_child(slot_prompt_label)
+	action_gap_spacer = Control.new()
+	action_gap_spacer.name = "PopupActionGap"
+	action_gap_spacer.custom_minimum_size = Vector2(0, ACTION_GAP_HEIGHT)
+	action_gap_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	interaction_column.add_child(action_gap_spacer)
 
 	interaction_footer_row = HBoxContainer.new()
 	interaction_footer_row.name = "PopupInteractionFooter"
@@ -452,11 +448,6 @@ func set_body_copy(text: String, height: float, maximum_lines: int) -> void:
 	if content_changed:
 		body_page_index = 0
 	_queue_body_pagination()
-
-
-func set_slot_prompt(text: String) -> void:
-	if slot_prompt_label != null:
-		slot_prompt_label.text = text
 
 
 func _queue_body_pagination() -> void:

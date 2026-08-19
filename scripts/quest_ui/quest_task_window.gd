@@ -52,7 +52,6 @@ func refresh() -> void:
 			LETTER_BODY_MAX_LINES,
 		)
 		_ensure_gift_slot()
-		set_slot_prompt(TranslationServer.translate(&"quest.ui.task.gift"))
 		gift_slot.setup(state, task.instance_id)
 		feedback_label.text = ""
 		if not task.gift_claimed:
@@ -86,13 +85,11 @@ func _ensure_gift_slot() -> void:
 
 func _ensure_slot_views(task: TaskInstanceState, definition: TaskDefinition) -> void:
 	var effective_rules: Array[CardSlotRule] = []
-	var prompt_parts: PackedStringArray = []
 	for raw_rule in definition.slot_rules:
 		var rule := state.effective_task_rule(task, raw_rule as CardSlotRule)
 		if rule == null:
 			continue
 		effective_rules.append(rule)
-		prompt_parts.append(TranslationServer.translate(rule.display_name_key))
 	if submission_slot == null:
 		submission_slot = QuestTaskSlot.new()
 		submission_slot.name = "TaskSubmissionSlot"
@@ -103,7 +100,6 @@ func _ensure_slot_views(task: TaskInstanceState, definition: TaskDefinition) -> 
 	slot_views.clear()
 	for rule in effective_rules:
 		slot_views[rule.id] = submission_slot
-	set_slot_prompt(" / ".join(prompt_parts))
 
 
 func _update_action_state(

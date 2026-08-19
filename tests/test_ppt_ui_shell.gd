@@ -498,10 +498,7 @@ func test_locked_location_uses_confirmed_popup_then_enters_shop() -> void:
 	assert_true(map.location_popup.action_button.disabled)
 	assert_eq(map.location_popup.feedback_label.text, "")
 	assert_not_null(map.location_popup.action_button.get_theme_stylebox("disabled"))
-	assert_eq(
-		map.location_popup.slot_prompt_label.text,
-		TranslationServer.translate(map.location_popup.unlock_definition.slot_rule.display_name_key),
-	)
+	assert_null(map.location_popup.find_child("PopupSlotPrompt", true, false))
 	assert_eq(
 		map.location_popup.slots_row.size_flags_vertical,
 		Control.SIZE_SHRINK_CENTER,
@@ -747,6 +744,12 @@ func test_task_popup_uses_horizontal_letter_and_slot_columns() -> void:
 	assert_eq(popup.slots_row.get_child_count(), 1)
 	assert_true(popup.action_button.disabled)
 	assert_same(popup.action_button.get_parent(), popup.interaction_footer_row)
+	assert_same(popup.action_gap_spacer.get_parent(), popup.interaction_column)
+	assert_eq(
+		popup.action_gap_spacer.custom_minimum_size.y,
+		PaperActivityPopup.ACTION_GAP_HEIGHT,
+	)
+	assert_null(popup.find_child("PopupSlotPrompt", true, false))
 	var slot := popup.slot_views.values()[0] as QuestTaskSlot
 	var slot_local_position := (
 		popup.get_global_transform_with_canvas().affine_inverse()
@@ -764,11 +767,8 @@ func test_task_popup_uses_horizontal_letter_and_slot_columns() -> void:
 	)
 	assert_gte(
 		popup.action_button.get_global_rect().position.y,
-		popup.slots_row.get_global_rect().end.y,
-	)
-	assert_gt(
-		popup.action_button.get_global_rect().position.y,
-		popup.slot_prompt_label.get_global_rect().position.y,
+		popup.slots_row.get_global_rect().end.y
+			+ PaperActivityPopup.ACTION_GAP_HEIGHT,
 	)
 	_assert_slot_contains_no_instruction_copy(slot)
 	var fries := main.state.inventory[0] as CardItemState
@@ -1108,13 +1108,10 @@ func test_self_and_owner_tasks_use_deferred_actions_and_owner_rule_titles() -> v
 	assert_true(popup.get_global_rect().encloses(popup.submission_slot.get_global_rect()))
 	var owner_definition := QuestArcCatalog.task_by_id(owner_task.definition_id)
 	var owner_rule := owner_definition.slot_rules[0] as CardSlotRule
-	var expected_prompts := PackedStringArray()
 	for raw_rule in owner_definition.slot_rules:
 		var rule := raw_rule as CardSlotRule
-		expected_prompts.append(TranslationServer.translate(rule.display_name_key))
 		assert_same(popup.slot_views[rule.id], popup.submission_slot)
-	assert_eq(popup.slot_prompt_label.text, " / ".join(expected_prompts))
-	assert_gt(popup.slot_prompt_label.global_position.y, popup.submission_slot.global_position.y)
+	assert_null(popup.find_child("PopupSlotPrompt", true, false))
 	var alternative_item := main.state.grant_item(&"agave", &"test")
 	assert_true(popup.submission_slot._can_drop_data(
 		Vector2.ZERO,
