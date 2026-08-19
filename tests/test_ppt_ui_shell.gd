@@ -1669,10 +1669,9 @@ func test_hud_and_map_ignore_unrelated_state_deltas() -> void:
 	assert_eq(map.debug_refresh_count, initial_map_refreshes + 1)
 
 
-func test_removed_arc_and_task_offer_overlays_are_not_built() -> void:
+func test_removed_arc_overlay_is_not_built() -> void:
 	var main := await _spawn_main()
 	assert_null(main.arc_overlay)
-	assert_null(main.task_offer_overlay)
 
 
 func test_legacy_manifest_does_not_expose_an_incomplete_expedition() -> void:

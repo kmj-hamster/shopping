@@ -1,7 +1,7 @@
 class_name QuestSaveRepository
 extends RefCounted
 
-const SAVE_VERSION := 11
+const SAVE_VERSION := 12
 const CONTENT_VERSION := "mall-expedition-1"
 const DEFAULT_PATH := "user://save_shopping0807_v1.json"
 
@@ -100,15 +100,6 @@ func to_dictionary(state: QuestGameState) -> Dictionary:
 		"unlocked_store_ids": _string_array(state.unlocked_store_ids.keys()),
 		"discovered_recipe_ids": _string_array(state.discovered_recipe_ids.keys()),
 		"owner_states": _string_dictionary(state.owner_states),
-		"task_pool_available_days": _string_int_dictionary(
-			state.task_pool_available_days
-		),
-		"self_care_type_available_days": _string_int_dictionary(
-			state.self_care_type_available_days
-		),
-		"pending_task_offer_rounds": _serialize_task_offers(
-			state.pending_task_offer_rounds
-		),
 		"pending_persona_reveal_ids": _string_array(state.pending_persona_reveal_ids),
 		"visited_store_ids": _string_array(state.visited_store_ids.keys()),
 		"bgm_playback_positions": _string_float_dictionary(state.bgm_playback_positions),
@@ -172,15 +163,6 @@ func _restore(state: QuestGameState, payload: Dictionary) -> bool:
 	state.unlocked_store_ids = _name_set(payload.get("unlocked_store_ids", []))
 	state.discovered_recipe_ids = _name_set(payload.get("discovered_recipe_ids", []))
 	state.owner_states = _name_dictionary(payload.get("owner_states", {}))
-	state.task_pool_available_days = _name_int_dictionary(
-		payload.get("task_pool_available_days", {})
-	)
-	state.self_care_type_available_days = _name_int_dictionary(
-		payload.get("self_care_type_available_days", {})
-	)
-	state.pending_task_offer_rounds = _restore_task_offers(
-		payload.get("pending_task_offer_rounds", [])
-	)
 	state.pending_persona_reveal_ids = _name_array(
 		payload.get("pending_persona_reveal_ids", [])
 	)
@@ -423,42 +405,6 @@ func _name_set(values: Array) -> Dictionary:
 	var result: Dictionary = {}
 	for value in values:
 		result[StringName(value)] = true
-	return result
-
-
-func _serialize_task_offers(values: Array[Dictionary]) -> Array[Dictionary]:
-	var result: Array[Dictionary] = []
-	for entry in values:
-		result.append({
-			"kind": String(entry.get("kind", "")),
-			"candidate_ids": _string_array(entry.get("candidate_ids", [])),
-		})
-	return result
-
-
-func _restore_task_offers(values: Array) -> Array[Dictionary]:
-	var result: Array[Dictionary] = []
-	for raw_entry in values:
-		if not raw_entry is Dictionary:
-			continue
-		var entry := raw_entry as Dictionary
-		var kind := StringName(entry.get("kind", ""))
-		if kind not in [QuestGameState.OFFER_KIND_DAILY, QuestGameState.OFFER_KIND_SELF_CARE]:
-			continue
-		var candidate_ids := _name_array(entry.get("candidate_ids", []))
-		candidate_ids = candidate_ids.filter(
-			func(candidate_id: StringName) -> bool:
-				return (
-					candidate_id == QuestGameState.DEEP_NIGHT_JOB_ID
-					or QuestArcCatalog.task_by_id(candidate_id) != null
-				)
-		)
-		if candidate_ids.is_empty():
-			continue
-		result.append({
-			"kind": kind,
-			"candidate_ids": candidate_ids,
-		})
 	return result
 
 

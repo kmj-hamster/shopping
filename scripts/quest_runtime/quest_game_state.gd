@@ -20,15 +20,6 @@ const RESULT_STORE_ALREADY_OPEN := &"store_already_open"
 const RESULT_STORE_LOCKED := &"store_locked"
 const RESULT_UNKNOWN_RECIPE := &"unknown_recipe"
 const RESULT_UNKNOWN_OWNER := &"unknown_owner"
-const RESULT_REQUIRED_TASK_INCOMPLETE := &"required_task_incomplete"
-const RESULT_UNKNOWN_OFFER := &"unknown_offer"
-const OFFER_KIND_DAILY := &"daily"
-const OFFER_KIND_SELF_CARE := &"self_care"
-const DEEP_NIGHT_JOB_ID := &"deep_night_job"
-const DEEP_NIGHT_JOB_REWARD := 12
-const MAX_ACTIVE_DAILY_TASKS := 4
-const MAX_DAILY_OFFER_ROUNDS := 2
-const OFFER_CARD_COUNT := 3
 const EXPEDITION_WORK_REWARD := 12
 const EXPEDITION_SUCCESS_ITEM_ID := &"expedition_salvage"
 const EXPEDITION_FAILURE_ITEM_ID := &"expedition_wound"
@@ -43,9 +34,6 @@ var protagonist_persona_counts: Dictionary = {}
 var unlocked_store_ids: Dictionary = {}
 var discovered_recipe_ids: Dictionary = {}
 var owner_states: Dictionary = {}
-var task_pool_available_days: Dictionary = {}
-var self_care_type_available_days: Dictionary = {}
-var pending_task_offer_rounds: Array[Dictionary] = []
 var pending_persona_reveal_ids: Array[StringName] = []
 var visited_store_ids: Dictionary = {}
 var bgm_playback_positions: Dictionary = {}
@@ -93,9 +81,6 @@ func reset() -> void:
 				unlocked_store_ids[store.id] = true
 	discovered_recipe_ids = {}
 	owner_states = {}
-	task_pool_available_days = {}
-	self_care_type_available_days = {}
-	pending_task_offer_rounds = []
 	pending_persona_reveal_ids = []
 	visited_store_ids = {}
 	bgm_playback_positions = {}
@@ -141,7 +126,6 @@ func activate_scheduled_tasks(for_day: int) -> Array[TaskInstanceState]:
 		if (
 			definition == null
 			or definition.category == TaskDefinition.Category.OWNER_REQUEST
-			or definition.selection_pool != TaskDefinition.SelectionPool.NONE
 			or not _task_is_due(definition, for_day)
 			or (
 				not definition.activation_store_id.is_empty()
@@ -163,8 +147,7 @@ func activate_task(definition_id: StringName) -> TaskInstanceState:
 		definition == null
 		or _has_active_task_definition(definition_id)
 		or (
-			definition.selection_pool == TaskDefinition.SelectionPool.NONE
-			and definition.repeat_interval_days <= 0
+			definition.repeat_interval_days <= 0
 			and task_history.has(definition_id)
 		)
 	):
@@ -209,7 +192,6 @@ func _activate_tasks_for_store(store_id: StringName) -> Array[TaskInstanceState]
 		var definition := raw_task as TaskDefinition
 		if (
 			definition == null
-			or definition.selection_pool != TaskDefinition.SelectionPool.NONE
 			or definition.activation_store_id != store_id
 		):
 			continue
@@ -225,226 +207,6 @@ func active_tasks() -> Array[TaskInstanceState]:
 		if not instance.settled:
 			result.append(instance)
 	return result
-
-
-func active_daily_task_count() -> int:
-	var result := 0
-	for instance in active_tasks():
-		var definition := QuestArcCatalog.task_by_id(instance.definition_id)
-		if definition != null and definition.counts_toward_daily_limit:
-			result += 1
-	return result
-
-
-func task_nights_remaining(instance: TaskInstanceState) -> int:
-	if instance == null or instance.settled:
-		return 0
-	var definition := QuestArcCatalog.task_by_id(instance.definition_id)
-	if (
-		definition == null
-		or definition.selection_pool != TaskDefinition.SelectionPool.DAILY
-		or definition.active_night_count <= 0
-	):
-		return 0
-	return maxi(0, definition.active_night_count - (day - instance.activation_day))
-
-
-func has_pending_task_offers() -> bool:
-	return not pending_task_offer_rounds.is_empty()
-
-
-func current_task_offer() -> Dictionary:
-	return pending_task_offer_rounds[0] if not pending_task_offer_rounds.is_empty() else {}
-
-
-func prepare_task_offers_for_day() -> Array[Dictionary]:
-	pending_task_offer_rounds.clear()
-	if day <= 1:
-		return pending_task_offer_rounds
-	var rng := RandomNumberGenerator.new()
-	rng.seed = _task_offer_seed()
-	var round_count := mini(
-		MAX_DAILY_OFFER_ROUNDS,
-		maxi(0, MAX_ACTIVE_DAILY_TASKS - active_daily_task_count()),
-	)
-	var daily_candidates := _eligible_pooled_tasks(TaskDefinition.SelectionPool.DAILY)
-	var deep_night_job_round := -1
-	if round_count > 0 and rng.randf() < 0.5:
-		deep_night_job_round = rng.randi_range(0, round_count - 1)
-	for round_index in round_count:
-		var selected := _draw_weighted_tasks(daily_candidates, OFFER_CARD_COUNT, rng)
-		var candidate_ids: Array[StringName] = []
-		for definition in selected:
-			candidate_ids.append(definition.id)
-		if round_index == deep_night_job_round:
-			var insert_index := rng.randi_range(0, candidate_ids.size())
-			if candidate_ids.size() >= OFFER_CARD_COUNT:
-				candidate_ids.remove_at(mini(insert_index, candidate_ids.size() - 1))
-				insert_index = mini(insert_index, candidate_ids.size())
-			candidate_ids.insert(insert_index, DEEP_NIGHT_JOB_ID)
-		if not candidate_ids.is_empty():
-			pending_task_offer_rounds.append({
-				"kind": OFFER_KIND_DAILY,
-				"candidate_ids": candidate_ids,
-			})
-	var self_care_candidates := _eligible_pooled_tasks(TaskDefinition.SelectionPool.SELF_CARE)
-	var self_care_selected := _draw_distinct_self_care_tasks(
-		self_care_candidates, OFFER_CARD_COUNT, rng
-	)
-	if not self_care_selected.is_empty():
-		var self_care_candidate_ids: Array[StringName] = []
-		for definition in self_care_selected:
-			self_care_candidate_ids.append(definition.id)
-		pending_task_offer_rounds.append({
-			"kind": OFFER_KIND_SELF_CARE,
-			"candidate_ids": self_care_candidate_ids,
-		})
-	_mark_state_changed(QuestStateDelta.new().mark_task_list(&"task_offers_prepared"))
-	return pending_task_offer_rounds
-
-
-func choose_current_task_offer(candidate_id: StringName) -> Dictionary:
-	if pending_task_offer_rounds.is_empty():
-		return _result(false, RESULT_UNKNOWN_OFFER)
-	var offer := pending_task_offer_rounds[0]
-	var candidate_ids := offer.get("candidate_ids", []) as Array
-	if candidate_id not in candidate_ids:
-		return _result(false, RESULT_UNKNOWN_OFFER)
-	var kind := StringName(offer.get("kind", ""))
-	if kind not in [OFFER_KIND_DAILY, OFFER_KIND_SELF_CARE]:
-		return _result(false, RESULT_UNKNOWN_OFFER)
-	var delta := QuestStateDelta.new()
-	var selected_instance: TaskInstanceState
-	var money_reward := 0
-	if candidate_id == DEEP_NIGHT_JOB_ID:
-		if kind != OFFER_KIND_DAILY:
-			return _result(false, RESULT_UNKNOWN_OFFER)
-		wallet.money += DEEP_NIGHT_JOB_REWARD
-		money_reward = DEEP_NIGHT_JOB_REWARD
-		delta.mark_wallet(&"deep_night_job")
-	else:
-		var definition := QuestArcCatalog.task_by_id(candidate_id)
-		var expected_pool := (
-			TaskDefinition.SelectionPool.DAILY
-			if kind == OFFER_KIND_DAILY
-			else TaskDefinition.SelectionPool.SELF_CARE
-		)
-		if definition == null or definition.selection_pool != expected_pool:
-			return _result(false, RESULT_UNKNOWN_OFFER)
-		if expected_pool == TaskDefinition.SelectionPool.DAILY:
-			if active_daily_task_count() >= MAX_ACTIVE_DAILY_TASKS:
-				return _result(false, RESULT_NOT_READY)
-		selected_instance = activate_task(definition.id)
-		if selected_instance == null:
-			return _result(false, RESULT_NOT_READY)
-		if expected_pool == TaskDefinition.SelectionPool.SELF_CARE:
-			self_care_type_available_days[definition.cooldown_group_id] = (
-				day + definition.completion_cooldown_nights
-			)
-	pending_task_offer_rounds.remove_at(0)
-	delta.mark_task_list(&"task_offer_selected")
-	_mark_state_changed(delta)
-	return _result(true, RESULT_OK, {
-		"candidate_id": candidate_id,
-		"kind": kind,
-		"task_instance_id": selected_instance.instance_id if selected_instance != null else 0,
-		"money_reward": money_reward,
-		"offers_remaining": pending_task_offer_rounds.size(),
-	})
-
-
-func _eligible_pooled_tasks(pool: int) -> Array[TaskDefinition]:
-	var result: Array[TaskDefinition] = []
-	var content := QuestArcCatalog.manifest()
-	if content == null:
-		return result
-	for raw_task in content.tasks:
-		var definition := raw_task as TaskDefinition
-		if definition == null or definition.selection_pool != pool:
-			continue
-		if _has_active_task_definition(definition.id):
-			continue
-		if pool == TaskDefinition.SelectionPool.DAILY:
-			if int(task_pool_available_days.get(definition.id, 1)) > day:
-				continue
-		elif (
-			int(self_care_type_available_days.get(definition.cooldown_group_id, 1)) > day
-			or not _self_care_candidate_is_available(definition)
-		):
-			continue
-		result.append(definition)
-	return result
-
-
-func _self_care_candidate_is_available(definition: TaskDefinition) -> bool:
-	if definition == null or definition.slot_rules.size() != 1:
-		return false
-	var rule := definition.slot_rules[0] as CardSlotRule
-	for card in inventory:
-		if (
-			card.location == CardItemState.Location.HAND
-			and CardRuleEvaluator.can_execute(rule, definition_for_card(card))
-		):
-			return true
-	for raw_store_id in unlocked_store_ids:
-		var store_id := StringName(raw_store_id)
-		var transaction := transaction_for_store(store_id)
-		if transaction == null:
-			continue
-		for slot in transaction.shelf_slots:
-			if (
-				not slot.is_empty()
-				and CardRuleEvaluator.can_execute(rule, QuestArcCatalog.item_by_id(slot.item_id))
-			):
-				return true
-	return false
-
-
-func _draw_weighted_tasks(
-	candidates: Array[TaskDefinition],
-	count: int,
-	rng: RandomNumberGenerator,
-) -> Array[TaskDefinition]:
-	var result: Array[TaskDefinition] = []
-	while result.size() < count and not candidates.is_empty():
-		var total_weight := 0.0
-		for definition in candidates:
-			total_weight += definition.offer_weight
-		var roll := rng.randf() * total_weight
-		var selected_index := candidates.size() - 1
-		for index in candidates.size():
-			roll -= candidates[index].offer_weight
-			if roll <= 0.0:
-				selected_index = index
-				break
-		result.append(candidates[selected_index])
-		candidates.remove_at(selected_index)
-	return result
-
-
-func _draw_distinct_self_care_tasks(
-	candidates: Array[TaskDefinition],
-	count: int,
-	rng: RandomNumberGenerator,
-) -> Array[TaskDefinition]:
-	var result: Array[TaskDefinition] = []
-	while result.size() < count and not candidates.is_empty():
-		var selected := _draw_weighted_tasks(candidates, 1, rng)
-		if selected.is_empty():
-			break
-		var definition := selected[0]
-		result.append(definition)
-		candidates = candidates.filter(
-			func(candidate: TaskDefinition) -> bool:
-				return candidate.cooldown_group_id != definition.cooldown_group_id
-		)
-	return result
-
-
-func _task_offer_seed() -> int:
-	return absi(
-		("%d:%d:%d:%d" % [day, next_task_instance_id, task_history.size(), inventory.size()]).hash()
-	)
 
 
 func task_instance(instance_id: int) -> TaskInstanceState:
@@ -1235,36 +997,6 @@ func cancel_task_confirmation(task_instance_id: int) -> bool:
 	return false
 
 
-func _incomplete_required_task_definition() -> TaskDefinition:
-	var has_current_required_task := false
-	for instance in active_tasks():
-		var definition := QuestArcCatalog.task_by_id(instance.definition_id)
-		if (
-			definition != null
-			and definition.required_before_next_day
-			and instance.activation_day == day
-		):
-			has_current_required_task = true
-			if not instance.confirmed:
-				return definition
-	if has_current_required_task:
-		return null
-	var fallback := QuestArcCatalog.task_by_id(&"self_care")
-	if day <= 1 and fallback != null and fallback.required_before_next_day:
-		return fallback
-	var content := QuestArcCatalog.manifest()
-	if content != null:
-		for raw_task in content.tasks:
-			var definition := raw_task as TaskDefinition
-			if (
-				definition != null
-				and definition.required_before_next_day
-				and definition.selection_pool == TaskDefinition.SelectionPool.SELF_CARE
-			):
-				return definition
-	return null
-
-
 func _self_care_growth_for_items(item_definition_ids: Array[StringName]) -> Dictionary:
 	var persona_totals: Dictionary = {}
 	for persona_id in CardPropertySet.PERSONAS:
@@ -1700,13 +1432,6 @@ func _name_array_from_variant(values: Variant) -> Array[StringName]:
 func begin_next_day() -> Dictionary:
 	if pending_arc != null:
 		return _result(false, RESULT_TRANSITION_ACTIVE)
-	var required_definition := _incomplete_required_task_definition()
-	if required_definition != null:
-		return _result(
-			false,
-			RESULT_REQUIRED_TASK_INCOMPLETE,
-			{"task_definition_id": required_definition.id},
-		)
 	var entries: Array[Dictionary] = []
 	for instance in active_tasks():
 		if not instance.confirmed:
@@ -1745,7 +1470,6 @@ func begin_next_day() -> Dictionary:
 				persona_growth[raw_persona_id]
 		)
 		entries.append({
-			"entry_kind": &"settlement",
 			"task_instance_id": instance.instance_id,
 			"task_definition_id": definition.id,
 			"outcome_id": outcome.id,
@@ -1757,41 +1481,12 @@ func begin_next_day() -> Dictionary:
 			"persona_growth": persona_growth,
 		})
 	var confirmed_task_count := entries.size()
-	for instance in active_tasks():
-		if instance.confirmed:
-			continue
-		var definition := QuestArcCatalog.task_by_id(instance.definition_id)
-		if (
-			definition == null
-			or definition.selection_pool != TaskDefinition.SelectionPool.DAILY
-			or task_nights_remaining(instance) != 1
-		):
-			continue
-		var card_instance_ids := instance.assigned_instance_ids()
-		var item_definition_ids: Array[StringName] = []
-		for card_id in card_instance_ids:
-			var card := card_by_instance_id(card_id)
-			if card != null:
-				item_definition_ids.append(card.definition_id)
-		entries.append({
-			"entry_kind": &"expiration",
-			"task_instance_id": instance.instance_id,
-			"task_definition_id": definition.id,
-			"outcome_id": &"",
-			"result_text_key": definition.expiration_text_key,
-			"card_instance_ids": card_instance_ids,
-			"item_definition_ids": item_definition_ids,
-			"reward_money": 0,
-			"reward_stats": {},
-			"persona_growth": {},
-		})
 	pending_arc = ArcTransitionState.new(day, entries)
 	_mark_state_changed()
 	return {
 		"ok": true,
 		"reason": RESULT_OK,
 		"confirmed_task_count": confirmed_task_count,
-		"expired_task_count": entries.size() - confirmed_task_count,
 		"empty_arc": entries.is_empty(),
 	}
 
@@ -1808,25 +1503,12 @@ func apply_arc_effects() -> Dictionary:
 	for entry in pending_arc.entries:
 		var instance := task_instance(int(entry.task_instance_id))
 		var definition := QuestArcCatalog.task_by_id(StringName(entry.task_definition_id))
-		var entry_kind := StringName(entry.get("entry_kind", "settlement"))
-		var is_expiration := entry_kind == &"expiration"
 		var outcome := (
 			definition.outcome_by_id(StringName(entry.outcome_id))
-			if definition != null and not is_expiration
+			if definition != null
 			else null
 		)
-		if instance == null or definition == null or instance.settled:
-			return _result(false, RESULT_NOT_READY)
-		if (
-			is_expiration
-			and (
-				instance.confirmed
-				or definition.selection_pool != TaskDefinition.SelectionPool.DAILY
-				or task_nights_remaining(instance) != 1
-			)
-		):
-			return _result(false, RESULT_NOT_READY)
-		if not is_expiration and outcome == null:
+		if instance == null or definition == null or outcome == null or instance.settled:
 			return _result(false, RESULT_NOT_READY)
 		var cards: Array[CardItemState] = []
 		var items: Array[QuestItemDefinition] = []
@@ -1840,7 +1522,6 @@ func apply_arc_effects() -> Dictionary:
 			cards.append(card)
 			items.append(item)
 		resolved_entries.append({
-			"is_expiration": is_expiration,
 			"entry": entry,
 			"instance": instance,
 			"definition": definition,
@@ -1857,19 +1538,6 @@ func apply_arc_effects() -> Dictionary:
 		var definition := resolved.definition as TaskDefinition
 		var outcome := resolved.outcome as TaskOutcomeDefinition
 		var entry := resolved.entry as Dictionary
-		if bool(resolved.is_expiration):
-			for raw_card in resolved.cards:
-				var returned_card := raw_card as CardItemState
-				returned_card.return_to_hand()
-				hand_delta.mark_hand_location(returned_card.instance_id, &"task_expired")
-			instance.assignments.clear()
-			instance.settled = true
-			task_pool_available_days[definition.id] = (
-				pending_arc.from_day + definition.expiration_cooldown_nights
-			)
-			task_history[definition.id] = &"expired"
-			hand_delta.mark_task_instance(instance.instance_id, &"task_expired")
-			continue
 		for raw_effect in outcome.effects:
 			_apply_story_effect(raw_effect as StoryEffect, hand_delta)
 		for raw_persona_id in (entry.get("persona_growth", {}) as Dictionary):
@@ -1891,10 +1559,6 @@ func apply_arc_effects() -> Dictionary:
 		instance.settled = true
 		hand_delta.mark_task_instance(instance.instance_id, &"arc_settlement")
 		task_history[definition.id] = outcome.id
-		if definition.selection_pool == TaskDefinition.SelectionPool.DAILY:
-			task_pool_available_days[definition.id] = (
-				pending_arc.from_day + definition.completion_cooldown_nights
-			)
 	pending_arc.effects_applied = true
 	if not resolved_entries.is_empty():
 		hand_delta.mark_task_list(&"arc_settlement")
@@ -1929,7 +1593,6 @@ func finish_arc() -> Dictionary:
 	pending_arc = null
 	refill_scheduled_shelves(day)
 	var activated := activate_scheduled_tasks(day)
-	prepare_task_offers_for_day()
 	var finish_delta := QuestStateDelta.new().mark_day(&"arc_finished")
 	for store_id in store_transactions:
 		finish_delta.mark_shelf(StringName(store_id), &"daily_shelf_refill")

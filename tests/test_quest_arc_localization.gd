@@ -56,7 +56,6 @@ const RUNTIME_UI_KEYS: Array[StringName] = [
 	&"quest.ui.task.not_ready",
 	&"opening.ui.shop.restock",
 	&"opening.ui.shop.not_open",
-	&"opening.ui.next_day.self_care_required",
 	&"opening.ui.persona.reveal",
 	&"opening.ui.persona.flip",
 	&"opening.ui.persona.continue",

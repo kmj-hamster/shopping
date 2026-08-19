@@ -110,7 +110,6 @@ var persona_reveal_card: CardHandCard
 var persona_reveal_hint: Label
 var persona_reveal_persona_id: StringName
 var persona_reveal_flipped := false
-var task_offer_overlay: QuestTaskOfferOverlay
 var expedition_screen: QuestExpeditionScreen
 var english_font_by_size: Dictionary = {}
 
@@ -292,13 +291,6 @@ func _build_global_interface() -> void:
 	_build_drag_return_layer()
 	_build_screen_transition_overlay()
 	_build_persona_reveal_overlay()
-
-
-func _build_task_offer_overlay() -> void:
-	task_offer_overlay = QuestTaskOfferOverlay.new()
-	task_offer_overlay.name = "QuestTaskOfferOverlay"
-	task_offer_overlay.setup(state)
-	add_child(task_offer_overlay)
 
 
 func _build_drag_return_layer() -> void:
@@ -870,22 +862,6 @@ func _resume_arc() -> void:
 		_run_arc()
 
 
-func _resume_task_offers() -> void:
-	if transition_in_progress or not state.has_pending_task_offers():
-		return
-	bgm_director.play_track(QuestBgmDirector.TRACK_DREAM)
-	transition_in_progress = true
-	hand_bar.visible = false
-	detail_popup.close()
-	rule_detail_popup.close()
-	task_offer_overlay.show_current_offer()
-	await task_offer_overlay.offers_completed
-	transition_in_progress = false
-	hand_bar.visible = true
-	bgm_director.play_track(QuestBgmDirector.TRACK_EMPTY)
-	_show_map_immediate()
-
-
 func _run_arc() -> void:
 	bgm_director.play_track(QuestBgmDirector.TRACK_DREAM)
 	transition_in_progress = true
@@ -933,10 +909,6 @@ func _run_arc() -> void:
 		push_error("Arc finish failed: %s" % finish.reason)
 		transition_in_progress = false
 		return
-	if state.has_pending_task_offers():
-		task_offer_overlay.show_current_offer()
-		await task_offer_overlay.offers_completed
-		transition_in_progress = true
 	arc_day_label.text = TranslationServer.translate(&"quest.ui.arc.new_day") % state.day
 	_clear_arc_task_source()
 	arc_money_label.text = TranslationServer.translate(&"demo.ui.money") % state.wallet.money

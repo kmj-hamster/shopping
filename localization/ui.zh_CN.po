@@ -68,9 +68,6 @@ msgstr "这里尚未营业。"
 msgid "demo.ui.rule.recently_used"
 msgstr "前两夜已使用"
 
-msgid "opening.ui.next_day.self_care_required"
-msgstr "今夜还没有照顾自己。先取得铁皮青蛙、解锁欣欣玩具店，并完成“我：照顾自己”。"
-
 msgid "opening.ui.persona.reveal"
 msgstr "一种新的我"
 

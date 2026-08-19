@@ -11,7 +11,6 @@ const TASKS_PER_PAGE := 5
 const TASK_LINE_HEIGHT := 33.0
 const TASK_HIT_HEIGHT := 22.0
 const TASK_TEXT_MAX_WIDTH := 174.0
-const TASK_COUNTDOWN_X := 194.0
 const TASK_HOVER_COLOR := Color("446979")
 const TASK_GLOW_COLOR := Color("789cab", 0.55)
 const NIGHT_VALUE_COLOR := Color("47496f")
@@ -192,16 +191,6 @@ func _create_bookmark(instance_id: int) -> Button:
 	bookmark.mouse_entered.connect(_set_bookmark_hovered.bind(bookmark, true))
 	bookmark.mouse_exited.connect(_set_bookmark_hovered.bind(bookmark, false))
 	bookmark.pressed.connect(_toggle_task.bind(instance_id))
-	var countdown := Label.new()
-	countdown.name = "NightCountdown"
-	countdown.position = Vector2(TASK_COUNTDOWN_X, 0)
-	countdown.size = Vector2(26, TASK_HIT_HEIGHT)
-	countdown.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	countdown.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	countdown.add_theme_font_size_override("font_size", 12)
-	countdown.add_theme_color_override("font_color", UiPalette.INK_COLOR)
-	countdown.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bookmark.add_child(countdown)
 	bookmark_column.add_child(bookmark)
 	return bookmark
 
@@ -209,10 +198,6 @@ func _create_bookmark(instance_id: int) -> Button:
 func _update_bookmark(bookmark: Button, task: TaskInstanceState) -> void:
 	var definition := QuestArcCatalog.task_by_id(task.definition_id)
 	bookmark.text = TranslationServer.translate(definition.display_name_key)
-	var countdown := bookmark.get_node("NightCountdown") as Label
-	var nights_remaining := state.task_nights_remaining(task)
-	countdown.text = str(nights_remaining) if nights_remaining > 0 else ""
-	countdown.visible = nights_remaining > 0
 	_resize_bookmark_to_text(bookmark)
 
 
