@@ -1,6 +1,6 @@
 # Godot + Codex workflow template
 
-复制本目录内容到一个 Godot 4.7.1 项目根目录（不要复制父目录
+复制本目录内容到一个 Godot 4.7.2 项目根目录（不要复制父目录
 `templates/.gdignore`），然后：
 
 1. 修改 `godot-codex.json`。

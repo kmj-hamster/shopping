@@ -20,7 +20,7 @@ macOS. Read `AGENTS.md`, `godot-codex.json`, and
 
 1. Run `git status --short --branch`. Never discard or overwrite changes you
    did not create.
-2. Confirm Godot reports version **4.7.1**.
+2. Confirm Godot reports version **4.7.2**.
 3. Pull the latest agreed branch before starting a new visual pass.
 4. Determine which asset files and scenes you own for this pass. Do not edit a
    `.tscn` that another collaborator is actively modifying.

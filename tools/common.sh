@@ -43,7 +43,7 @@ shopping_resolve_godot() {
 		fi
 	done
 
-	echo "Godot was not found. Install Godot 4.7.1 or set GODOT_BIN." >&2
+	echo "Godot was not found. Install Godot 4.7.2 or set GODOT_BIN." >&2
 	return 1
 }
 

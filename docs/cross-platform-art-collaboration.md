@@ -6,11 +6,11 @@ Godot 工程。双方只通过 Git 共享源文件，不共享 `.godot/` 导入�
 
 ## 1. 固定环境
 
-- 引擎：Godot **4.7.1**。
+- 引擎：Godot **4.7.2**。
 - 项目语言：GDScript，纯 2D。
 - 仓库：`https://github.com/kmj-hamster/shopping.git`。
 - Mac 建议安装官方 Universal 版 Godot 及同版本 Export Templates；Steam 版也
-  可以，但仍须确认完整版本号为 4.7.1。
+  可以，但仍须确认完整版本号为 4.7.2。
 - Mac 第一次打开 `project.godot` 时会重建 `.godot/`，这是正常过程。
 
 Mac 终端快速检查：
@@ -81,7 +81,7 @@ Windows 绝对路径位于开发工具配置 `godot-codex.json`，Mac 脚本通�
 ```text
 拉取约定分支
   → 确认本次负责的资产/场景
-  → 在 Godot 4.7.1 中修改
+  → 在 Godot 4.7.2 中修改
   → 中英文各运行一次
   → ./tools/check.sh
   → 审查 git diff 与截图
@@ -100,7 +100,7 @@ Windows 绝对路径位于开发工具配置 `godot-codex.json`，Mac 脚本通�
 
 ## 5. Mac 可玩包
 
-Mac 是本项目 macOS 构建的权威环境。安装 4.7.1 Export Templates 后执行：
+Mac 是本项目 macOS 构建的权威环境。安装 4.7.2 Export Templates 后执行：
 
 ```bash
 ./tools/export-macos.sh

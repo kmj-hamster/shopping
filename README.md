@@ -1,12 +1,12 @@
 # Millennium Shopping Guide / 千禧年购物指南
 
-A Godot 4.7.1 2D game prototype. The repository is designed for gameplay
+A Godot 4.7.2 2D game prototype. The repository is designed for gameplay
 development on Windows and art review/export on macOS without sharing Godot's
 generated cache.
 
 ## Quick start
 
-- Install **Godot 4.7.1**. Do not open the project with another engine version.
+- Install **Godot 4.7.2**. Do not open the project with another engine version.
 - Clone the repository and open `project.godot` in Godot.
 - Wait for the first import to finish, then run the main scene with F6/F5.
 

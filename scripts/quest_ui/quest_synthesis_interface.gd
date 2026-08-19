@@ -37,6 +37,20 @@ const BASE_TYPE_ICON_SIDE := 30
 const BASE_TYPE_ROW_WIDTH := 210.0
 const BASE_TYPE_BOTTOM_GAP := 8.0
 const BAG_BACKGROUND_PATH := "res://resources/ui/synthesis/bg-inbag.png"
+const PERSONA_ICON_TEXTURES := {
+	CardPropertySet.PERSONA_NIGHTWALKER: preload(
+		"res://resources/ui/synthesis/persona/nightwalker.png"
+	),
+	CardPropertySet.PERSONA_MOURNER: preload(
+		"res://resources/ui/synthesis/persona/mourner.png"
+	),
+	CardPropertySet.PERSONA_DREAMWALKER: preload(
+		"res://resources/ui/synthesis/persona/dreamwalker.png"
+	),
+	CardPropertySet.PERSONA_HOMECOMER: preload(
+		"res://resources/ui/synthesis/persona/homecomer.png"
+	),
+}
 
 var state: QuestGameState
 var phase := Phase.DRAFT
@@ -302,7 +316,8 @@ func _build_persona_field() -> void:
 		button.mouse_exited.connect(_on_persona_unhovered.bind(persona_id))
 		draft_layer.add_child(button)
 		var image := TextureRect.new()
-		image.texture = ItemDetailPopup.property_icon_texture(persona_id)
+		image.name = "PersonaIcon"
+		image.texture = PERSONA_ICON_TEXTURES.get(persona_id) as Texture2D
 		image.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED

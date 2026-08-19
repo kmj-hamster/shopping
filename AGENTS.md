@@ -3,7 +3,7 @@
 ## Project contract
 
 - Read `godot-codex.json` before running Godot or MCP diagnostics. It is the source of truth for the engine path, expected version, MCP endpoint, language, dimension, and test runner.
-- Use Godot 4.7.1 and GDScript, and keep the game strictly 2D, unless the user explicitly changes the technical direction.
+- Use Godot 4.7.2 and GDScript, and keep the game strictly 2D, unless the user explicitly changes the technical direction.
 - Every player-facing screen must support live Chinese (`zh_CN`) and English (`en`) switching. Use translation keys and `TranslationServer`; do not hardcode display text in gameplay or UI scripts.
 - Preserve user changes and inspect `git status` before editing. Never discard unrelated work.
 - Before art collaboration or asset/scene work on macOS, read `ARTIST_AI.md` and `docs/cross-platform-art-collaboration.md`.
