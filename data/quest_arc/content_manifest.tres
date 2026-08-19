@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="GameContentManifest" load_steps=93 format=3]
+[gd_resource type="Resource" script_class="GameContentManifest" load_steps=80 format=3]
 
 [ext_resource type="Script" path="res://scripts/quest_domain/game_content_manifest.gd" id="1_manifest"]
 [ext_resource type="Script" path="res://scripts/quest_domain/property_definition.gd" id="2_property"]
@@ -30,36 +30,6 @@
 [ext_resource type="Resource" path="res://data/quest_arc/items/crafted_birthday_cake.tres" id="28_item"]
 [ext_resource type="Resource" path="res://data/quest_arc/items/crafted_cola.tres" id="29_item"]
 [ext_resource type="Resource" path="res://data/quest_arc/items/crafted_rose.tres" id="30_item"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/opening_remittance.tres" id="31_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/opening_tin_boy_intro.tres" id="32_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/opening_tin_boy_toy.tres" id="33_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/opening_self_care.tres" id="34_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/opening_aquarium_drink.tres" id="35_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/debug_todo_page_1.tres" id="36_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/debug_todo_page_2.tres" id="37_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/debug_todo_page_3.tres" id="38_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/debug_todo_page_4.tres" id="39_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/daily_midnight_radio.tres" id="40_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/daily_rain_librarian.tres" id="41_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/daily_moth_rehearsal.tres" id="42_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/daily_paper_crown.tres" id="43_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/daily_last_festival.tres" id="44_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/daily_rooftop_thermos.tres" id="45_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/daily_unopened_apology.tres" id="46_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/daily_blackout_vigil.tres" id="47_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/daily_borrowed_coat.tres" id="48_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/daily_window_audience.tres" id="49_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/daily_afterimage_album.tres" id="50_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/daily_dawn_picnic.tres" id="51_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/self_care_read.tres" id="52_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/self_care_listen_cd.tres" id="53_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/self_care_old_dream.tres" id="54_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/self_care_play.tres" id="55_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/self_care_eat.tres" id="56_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/self_care_drink.tres" id="57_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/self_care_flowers.tres" id="58_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/self_care_candle.tres" id="59_task"]
-[ext_resource type="Resource" path="res://data/quest_arc/tasks/self_care_change_clothes.tres" id="60_task"]
 [ext_resource type="Resource" path="res://data/quest_arc/recipes/opening_recipe_cold_teddy_bear.tres" id="61_recipe"]
 [ext_resource type="Resource" path="res://data/quest_arc/recipes/opening_recipe_baby_soothing_bear.tres" id="62_recipe"]
 [ext_resource type="Resource" path="res://data/quest_arc/recipes/opening_recipe_birthday_cake.tres" id="63_recipe"]
@@ -78,6 +48,23 @@
 [ext_resource type="Resource" path="res://data/quest_arc/owners/opening_toy_owner.tres" id="76_owner"]
 [ext_resource type="Resource" path="res://data/quest_arc/owners/opening_fast_food_owner.tres" id="77_owner"]
 [ext_resource type="Resource" path="res://data/quest_arc/owners/opening_flower_owner.tres" id="78_owner"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/expedition_salvage.tres" id="79_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/expedition_wound.tres" id="80_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/expedition_wage.tres" id="81_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/expedition_rooms/spaceship_library_city.tres" id="82_room"]
+[ext_resource type="Resource" path="res://data/quest_arc/expedition_rooms/gray_hall.tres" id="83_room"]
+[ext_resource type="Resource" path="res://data/quest_arc/expedition_rooms/anniversary_corridor.tres" id="84_room"]
+[ext_resource type="Resource" path="res://data/quest_arc/expedition_rooms/aquarium.tres" id="85_room"]
+[ext_resource type="Resource" path="res://data/quest_arc/expedition_rooms/clothing_area.tres" id="86_room"]
+[ext_resource type="Resource" path="res://data/quest_arc/expedition_rooms/retro_restaurant.tres" id="87_room"]
+[ext_resource type="Resource" path="res://data/quest_arc/expedition_rooms/screening_room.tres" id="88_room"]
+[ext_resource type="Resource" path="res://data/quest_arc/expedition_rooms/children_playground.tres" id="89_room"]
+[ext_resource type="Resource" path="res://data/quest_arc/expedition_rooms/home.tres" id="90_room"]
+[ext_resource type="Resource" path="res://data/quest_arc/expedition_rooms/rainforest.tres" id="91_room"]
+[ext_resource type="Resource" path="res://data/quest_arc/expedition_rooms/salvage_yard.tres" id="92_room"]
+[ext_resource type="Resource" path="res://data/quest_arc/expedition_rooms/cold_storage.tres" id="93_room"]
+[ext_resource type="Resource" path="res://data/quest_arc/expedition_rooms/shelf_shift.tres" id="94_room"]
+[ext_resource type="Resource" path="res://data/quest_arc/expedition_rooms/scanner.tres" id="95_room"]
 
 [sub_resource type="Resource" id="PropertyFood"]
 script = ExtResource("2_property")
@@ -187,11 +174,12 @@ maximum_item_price = 84
 maximum_properties_per_item = 4
 maximum_personas_per_item = 2
 initial_protagonist_stats = {&"nightwalker": 1, &"homecomer": 3, &"mourner": 3, &"dreamwalker": 5}
-starting_item_ids = Array[StringName]([])
+starting_item_ids = Array[StringName]([&"tin_frog"])
 properties = Array[Resource]([SubResource("PropertyFood"), SubResource("PropertyFlower"), SubResource("PropertyToy"), SubResource("PropertyDrink"), SubResource("PropertyCd"), SubResource("PropertyBook"), SubResource("PropertyCassette"), SubResource("PropertyCandle"), SubResource("PropertyClothing"), SubResource("PropertyPersona"), SubResource("PropertyNightwalker"), SubResource("PropertyMourner"), SubResource("PropertyDreamwalker"), SubResource("PropertyHomecomer")])
-items = Array[Resource]([ExtResource("3_item"), ExtResource("4_item"), ExtResource("5_item"), ExtResource("6_item"), ExtResource("7_item"), ExtResource("8_item"), ExtResource("9_item"), ExtResource("10_item"), ExtResource("11_item"), ExtResource("12_item"), ExtResource("13_item"), ExtResource("14_item"), ExtResource("15_item"), ExtResource("16_item"), ExtResource("17_item"), ExtResource("18_item"), ExtResource("19_item"), ExtResource("20_item"), ExtResource("21_item"), ExtResource("22_item"), ExtResource("23_item"), ExtResource("24_item"), ExtResource("25_item"), ExtResource("26_item"), ExtResource("27_item"), ExtResource("28_item"), ExtResource("29_item"), ExtResource("30_item")])
-tasks = Array[Resource]([ExtResource("31_task"), ExtResource("32_task"), ExtResource("33_task"), ExtResource("34_task"), ExtResource("35_task"), ExtResource("36_task"), ExtResource("37_task"), ExtResource("38_task"), ExtResource("39_task"), ExtResource("40_task"), ExtResource("41_task"), ExtResource("42_task"), ExtResource("43_task"), ExtResource("44_task"), ExtResource("45_task"), ExtResource("46_task"), ExtResource("47_task"), ExtResource("48_task"), ExtResource("49_task"), ExtResource("50_task"), ExtResource("51_task"), ExtResource("52_task"), ExtResource("53_task"), ExtResource("54_task"), ExtResource("55_task"), ExtResource("56_task"), ExtResource("57_task"), ExtResource("58_task"), ExtResource("59_task"), ExtResource("60_task")])
+items = Array[Resource]([ExtResource("3_item"), ExtResource("4_item"), ExtResource("5_item"), ExtResource("6_item"), ExtResource("7_item"), ExtResource("8_item"), ExtResource("9_item"), ExtResource("10_item"), ExtResource("11_item"), ExtResource("12_item"), ExtResource("13_item"), ExtResource("14_item"), ExtResource("15_item"), ExtResource("16_item"), ExtResource("17_item"), ExtResource("18_item"), ExtResource("19_item"), ExtResource("20_item"), ExtResource("21_item"), ExtResource("22_item"), ExtResource("23_item"), ExtResource("24_item"), ExtResource("25_item"), ExtResource("26_item"), ExtResource("27_item"), ExtResource("28_item"), ExtResource("29_item"), ExtResource("30_item"), ExtResource("79_item"), ExtResource("80_item"), ExtResource("81_item")])
+tasks = Array[Resource]([])
 recipes = Array[Resource]([ExtResource("61_recipe"), ExtResource("62_recipe"), ExtResource("63_recipe"), ExtResource("64_recipe"), ExtResource("65_recipe")])
 stores = Array[Resource]([ExtResource("66_store"), ExtResource("67_store"), ExtResource("68_store"), ExtResource("69_store"), ExtResource("70_store")])
 store_unlocks = Array[Resource]([ExtResource("71_unlock"), ExtResource("72_unlock"), ExtResource("73_unlock"), ExtResource("74_unlock"), ExtResource("75_unlock")])
 owners = Array[Resource]([ExtResource("76_owner"), ExtResource("77_owner"), ExtResource("78_owner")])
+expedition_rooms = Array[Resource]([ExtResource("82_room"), ExtResource("83_room"), ExtResource("84_room"), ExtResource("85_room"), ExtResource("86_room"), ExtResource("87_room"), ExtResource("88_room"), ExtResource("89_room"), ExtResource("90_room"), ExtResource("91_room"), ExtResource("92_room"), ExtResource("93_room"), ExtResource("94_room"), ExtResource("95_room")])

@@ -60,6 +60,27 @@ const RUNTIME_UI_KEYS: Array[StringName] = [
 	&"opening.ui.persona.reveal",
 	&"opening.ui.persona.flip",
 	&"opening.ui.persona.continue",
+	&"expedition.ui.enter",
+	&"expedition.ui.enter_short",
+	&"expedition.ui.confirm_enter",
+	&"expedition.ui.door_prompt",
+	&"expedition.ui.unknown",
+	&"expedition.ui.continue",
+	&"expedition.ui.submit",
+	&"expedition.ui.confirm",
+	&"expedition.ui.sell",
+	&"expedition.ui.leave",
+	&"expedition.ui.next_round",
+	&"expedition.ui.demo_complete",
+	&"expedition.ui.placeholder.intro",
+	&"expedition.ui.placeholder.challenge",
+	&"expedition.ui.placeholder.response",
+	&"expedition.ui.placeholder.result",
+	&"expedition.feedback.enough",
+	&"expedition.feedback.maybe",
+	&"expedition.feedback.hopeless",
+	&"expedition.room.rest.result",
+	&"expedition.room.salvage.result",
 ]
 
 var original_locale: String
@@ -123,6 +144,20 @@ func test_all_quest_arc_content_keys_exist_in_chinese_and_english() -> void:
 			keys.append(owner.reminder_dialogue_key)
 			for raw_key in owner.state_dialogue_keys.values():
 				keys.append(StringName(raw_key))
+	for raw_room in manifest.expedition_rooms:
+		var room := raw_room as MallRoomDefinition
+		keys.append(room.display_name_key)
+		keys.append_array(room.intro_text_keys)
+		keys.append_array(room.challenge_text_keys)
+		keys.append_array(room.approach_title_keys)
+		keys.append_array(room.approach_text_keys)
+		for optional_key in [
+			room.post_choice_text_key,
+			room.success_text_key,
+			room.failure_text_key,
+		]:
+			if not optional_key.is_empty():
+				keys.append(optional_key)
 
 	for locale in [&"zh_CN", &"en"]:
 		TranslationServer.set_locale(locale)

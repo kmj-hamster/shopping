@@ -29,6 +29,9 @@ const DEEP_NIGHT_JOB_REWARD := 12
 const MAX_ACTIVE_DAILY_TASKS := 4
 const MAX_DAILY_OFFER_ROUNDS := 2
 const OFFER_CARD_COUNT := 3
+const EXPEDITION_WORK_REWARD := 12
+const EXPEDITION_SUCCESS_ITEM_ID := &"expedition_salvage"
+const EXPEDITION_FAILURE_ITEM_ID := &"expedition_wound"
 
 var day := 1
 var wallet := PlayerWallet.new(0)
@@ -47,6 +50,7 @@ var pending_persona_reveal_ids: Array[StringName] = []
 var visited_store_ids: Dictionary = {}
 var bgm_playback_positions: Dictionary = {}
 var pending_arc: ArcTransitionState
+var expedition := MallExpeditionState.new()
 var synthesis_base_instance_id := 0
 var synthesis_helper_instance_id := 0
 var synthesis_persona_id: StringName
@@ -96,6 +100,7 @@ func reset() -> void:
 	visited_store_ids = {}
 	bgm_playback_positions = {}
 	pending_arc = null
+	expedition = MallExpeditionState.new()
 	synthesis_base_instance_id = 0
 	synthesis_helper_instance_id = 0
 	synthesis_persona_id = &""
@@ -1288,6 +1293,408 @@ func acknowledge_persona_reveal(persona_id: StringName) -> bool:
 	pending_persona_reveal_ids.erase(persona_id)
 	_mark_state_changed()
 	return true
+
+
+func begin_mall_expedition(seed_value: int = 0) -> Dictionary:
+	if expedition.active:
+		return _result(false, RESULT_TRANSITION_ACTIVE)
+	var content := QuestArcCatalog.manifest()
+	if content == null or content.expedition_rooms.is_empty():
+		return _result(false, RESULT_NOT_READY)
+	var selected_seed := seed_value
+	if selected_seed <= 0:
+		selected_seed = maxi(
+			1,
+			int(Time.get_unix_time_from_system()) ^ (day * 104729) ^ next_card_instance_id,
+		)
+	expedition.begin_night(day, selected_seed)
+	_generate_expedition_doors()
+	_mark_state_changed(QuestStateDelta.new().mark_full_reconcile(&"expedition_started"))
+	return {
+		"ok": true,
+		"reason": RESULT_OK,
+		"door_ids": expedition.current_door_ids.duplicate(),
+	}
+
+
+func evaluate_expedition_challenge_round(
+	room_id: StringName,
+	card_instance_ids: Array[int],
+	persona_ids: Array[StringName],
+	approach_index: int,
+	round_index: int = 0,
+) -> Dictionary:
+	var room := QuestArcCatalog.mall_room_by_id(room_id)
+	if (
+		room == null
+		or room.category not in [
+			MallRoomDefinition.Category.CHALLENGE,
+			MallRoomDefinition.Category.BOSS,
+		]
+		or approach_index < 0
+		or approach_index >= room.approach_title_keys.size()
+		or round_index < 0
+		or round_index >= room.boss_round_count
+		or card_instance_ids.size() + persona_ids.size() > room.slot_count
+	):
+		return _result(false, RESULT_NOT_READY)
+	var resolved := _expedition_input_definitions(card_instance_ids, persona_ids)
+	if not bool(resolved.ok):
+		return resolved
+	var evaluation := MallChallengeRules.evaluate(room, resolved.definitions)
+	var roll := _expedition_challenge_roll(
+		room_id,
+		card_instance_ids,
+		persona_ids,
+		approach_index,
+		round_index,
+	)
+	evaluation["ok"] = true
+	evaluation["reason"] = RESULT_OK
+	evaluation["roll_percent"] = roll
+	evaluation["success"] = MallChallengeRules.succeeds(evaluation, roll)
+	return evaluation
+
+
+func complete_expedition_room(
+	room_id: StringName,
+	card_instance_ids: Array[int] = [],
+	persona_ids: Array[StringName] = [],
+	challenge_rounds: Array[Dictionary] = [],
+) -> Dictionary:
+	if not expedition.active or not expedition.has_current_door(room_id):
+		return _result(false, RESULT_NOT_READY)
+	var room := QuestArcCatalog.mall_room_by_id(room_id)
+	if room == null:
+		return _result(false, RESULT_NOT_READY)
+	var consumed_ids: Array[int] = []
+	var persona_growth: Dictionary = {}
+	var money_gained := 0
+	var reward_item_id: StringName
+	var new_persona_ids: Array[StringName] = []
+	var room_success := true
+	var boss_failed := false
+	var demo_complete := false
+
+	match room.category:
+		MallRoomDefinition.Category.CHALLENGE, MallRoomDefinition.Category.BOSS:
+			var challenge_result := _resolve_expedition_challenge_submission(
+				room, challenge_rounds
+			)
+			if not bool(challenge_result.ok):
+				return challenge_result
+			consumed_ids = _int_array_from_variant(challenge_result.consumed_card_ids)
+			room_success = bool(challenge_result.success)
+			boss_failed = room.category == MallRoomDefinition.Category.BOSS and not room_success
+			demo_complete = room.category == MallRoomDefinition.Category.BOSS and room_success
+			reward_item_id = (
+				EXPEDITION_SUCCESS_ITEM_ID if room_success else EXPEDITION_FAILURE_ITEM_ID
+			)
+		MallRoomDefinition.Category.REST:
+			var rest_result := _resolve_expedition_rest_submission(
+				room, card_instance_ids, persona_ids
+			)
+			if not bool(rest_result.ok):
+				return rest_result
+			consumed_ids = _int_array_from_variant(rest_result.consumed_card_ids)
+			persona_growth = rest_result.persona_growth
+			money_gained = int(rest_result.money_gained)
+		MallRoomDefinition.Category.WORK:
+			if not card_instance_ids.is_empty() or not persona_ids.is_empty():
+				return _result(false, RESULT_REJECTED)
+			money_gained = EXPEDITION_WORK_REWARD
+
+	_begin_change_batch()
+	var delta := QuestStateDelta.new().mark_full_reconcile(&"expedition_room_committed")
+	for card_id in consumed_ids:
+		var card := card_by_instance_id(card_id)
+		if card != null:
+			inventory.erase(card)
+			delta.mark_hand_removed(card.instance_id, &"expedition_consumed")
+	for raw_persona_id in persona_growth:
+		var persona_id := StringName(raw_persona_id)
+		var previous_amount := int(protagonist_persona_counts.get(persona_id, 0))
+		protagonist_persona_counts[persona_id] = previous_amount + int(
+			persona_growth[raw_persona_id]
+		)
+		if previous_amount <= 0 and int(persona_growth[raw_persona_id]) > 0:
+			if persona_id not in pending_persona_reveal_ids:
+				pending_persona_reveal_ids.append(persona_id)
+			new_persona_ids.append(persona_id)
+		delta.mark_synthesis_persona(&"expedition_persona_growth")
+	if money_gained > 0:
+		wallet.money += money_gained
+	if not reward_item_id.is_empty():
+		grant_item(reward_item_id, &"expedition")
+	expedition.discovered_room_ids[room.id] = true
+	expedition.entered_room_ids[room.id] = true
+	if room.category == MallRoomDefinition.Category.CHALLENGE and room_success:
+		expedition.first_cleared_challenge_ids[room.id] = true
+	if demo_complete:
+		expedition.boss_cleared = true
+		expedition.active = false
+		expedition.current_door_ids.clear()
+	elif boss_failed:
+		_finish_expedition_night(delta)
+	else:
+		expedition.rooms_completed += 1
+		if expedition.reached_night_limit():
+			_finish_expedition_night(delta)
+		else:
+			_generate_expedition_doors()
+	_mark_state_changed(delta)
+	_end_change_batch()
+	return {
+		"ok": true,
+		"reason": RESULT_OK,
+		"success": room_success,
+		"boss_failed": boss_failed,
+		"demo_complete": demo_complete,
+		"night_finished": not expedition.active and not demo_complete,
+		"reward_item_id": reward_item_id,
+		"money_gained": money_gained,
+		"persona_growth": persona_growth,
+		"new_persona_ids": new_persona_ids,
+		"door_ids": expedition.current_door_ids.duplicate(),
+	}
+
+
+func expedition_card_can_be_used(card: CardItemState) -> bool:
+	if card == null or not inventory.has(card) or card.location != CardItemState.Location.HAND:
+		return false
+	return MallChallengeRules.can_use_in_challenge(definition_for_card(card))
+
+
+func expedition_room_accepts_card(
+	room_id: StringName,
+	card: CardItemState,
+	persona_id: StringName = &"",
+) -> bool:
+	var room := QuestArcCatalog.mall_room_by_id(room_id)
+	if room == null:
+		return false
+	if not persona_id.is_empty():
+		return (
+			int(protagonist_persona_counts.get(persona_id, 0)) > 0
+			and (
+				room.category in [
+					MallRoomDefinition.Category.CHALLENGE,
+					MallRoomDefinition.Category.BOSS,
+				]
+				or room.rest_mode == MallRoomDefinition.RestMode.PERSONA_GROWTH
+			)
+		)
+	if not expedition_card_can_be_used(card):
+		return false
+	var definition := definition_for_card(card)
+	if room.category in [
+		MallRoomDefinition.Category.CHALLENGE,
+		MallRoomDefinition.Category.BOSS,
+	]:
+		return true
+	if room.rest_mode == MallRoomDefinition.RestMode.SALVAGE:
+		return definition != null and definition.can_recycle
+	if room.rest_mode != MallRoomDefinition.RestMode.ITEM_GROWTH:
+		return false
+	return room.allowed_type_ids.is_empty() or room.allowed_type_ids.any(
+		func(type_id: StringName) -> bool: return definition.has_property(type_id)
+	)
+
+
+func _resolve_expedition_challenge_submission(
+	room: MallRoomDefinition,
+	challenge_rounds: Array[Dictionary],
+) -> Dictionary:
+	if challenge_rounds.is_empty() or challenge_rounds.size() > room.boss_round_count:
+		return _result(false, RESULT_NOT_READY)
+	if room.category == MallRoomDefinition.Category.CHALLENGE and challenge_rounds.size() != 1:
+		return _result(false, RESULT_NOT_READY)
+	var consumed_ids: Array[int] = []
+	var all_success := true
+	for round_index in challenge_rounds.size():
+		var round := challenge_rounds[round_index]
+		var round_card_ids := _int_array_from_variant(round.get("card_instance_ids", []))
+		var round_persona_ids := _name_array_from_variant(round.get("persona_ids", []))
+		for card_id in round_card_ids:
+			if card_id in consumed_ids:
+				return _result(false, RESULT_REJECTED)
+		var evaluation := evaluate_expedition_challenge_round(
+			room.id,
+			round_card_ids,
+			round_persona_ids,
+			int(round.get("approach_index", -1)),
+			round_index,
+		)
+		if not bool(evaluation.ok):
+			return evaluation
+		consumed_ids.append_array(round_card_ids)
+		if not bool(evaluation.success):
+			all_success = false
+			break
+	if room.category == MallRoomDefinition.Category.BOSS:
+		all_success = all_success and challenge_rounds.size() == room.boss_round_count
+	return {
+		"ok": true,
+		"reason": RESULT_OK,
+		"success": all_success,
+		"consumed_card_ids": consumed_ids,
+	}
+
+
+func _resolve_expedition_rest_submission(
+	room: MallRoomDefinition,
+	card_instance_ids: Array[int],
+	persona_ids: Array[StringName],
+) -> Dictionary:
+	if card_instance_ids.size() + persona_ids.size() > room.slot_count:
+		return _result(false, RESULT_REJECTED)
+	if room.rest_mode == MallRoomDefinition.RestMode.PERSONA_GROWTH:
+		if card_instance_ids.size() > 0 or persona_ids.size() != 1:
+			return _result(false, RESULT_NOT_READY)
+		var persona_id := persona_ids[0]
+		if int(protagonist_persona_counts.get(persona_id, 0)) <= 0:
+			return _result(false, RESULT_REJECTED)
+		return {
+			"ok": true,
+			"reason": RESULT_OK,
+			"consumed_card_ids": [],
+			"persona_growth": {persona_id: 1},
+			"money_gained": 0,
+		}
+	if not persona_ids.is_empty():
+		return _result(false, RESULT_REJECTED)
+	var resolved_cards: Array[CardItemState] = []
+	var seen_card_ids: Dictionary = {}
+	for card_id in card_instance_ids:
+		var card := card_by_instance_id(card_id)
+		if (
+			seen_card_ids.has(card_id)
+			or card == null
+			or not expedition_room_accepts_card(room.id, card)
+		):
+			return _result(false, RESULT_REJECTED)
+		seen_card_ids[card_id] = true
+		resolved_cards.append(card)
+	if room.rest_mode == MallRoomDefinition.RestMode.SALVAGE:
+		var total := 0
+		for card in resolved_cards:
+			var definition := definition_for_card(card)
+			total += card.purchase_price if card.purchase_price > 0 else definition.resale_value()
+		return {
+			"ok": true,
+			"reason": RESULT_OK,
+			"consumed_card_ids": card_instance_ids.duplicate(),
+			"persona_growth": {},
+			"money_gained": total,
+		}
+	var growth: Dictionary = {}
+	if not resolved_cards.is_empty():
+		var definition := definition_for_card(resolved_cards[0])
+		for persona_id in CardPropertySet.PERSONAS:
+			if definition.property_value(persona_id) > int(
+				protagonist_persona_counts.get(persona_id, 0)
+			):
+				growth[persona_id] = 1
+	return {
+		"ok": true,
+		"reason": RESULT_OK,
+		"consumed_card_ids": card_instance_ids.duplicate(),
+		"persona_growth": growth,
+		"money_gained": 0,
+	}
+
+
+func _expedition_input_definitions(
+	card_instance_ids: Array[int],
+	persona_ids: Array[StringName],
+) -> Dictionary:
+	var definitions: Array[CardItemDefinition] = []
+	var seen_card_ids: Dictionary = {}
+	for card_id in card_instance_ids:
+		var card := card_by_instance_id(card_id)
+		if seen_card_ids.has(card_id) or not expedition_card_can_be_used(card):
+			return _result(false, RESULT_REJECTED)
+		seen_card_ids[card_id] = true
+		definitions.append(definition_for_card(card))
+	for persona_id in persona_ids:
+		var amount := int(protagonist_persona_counts.get(persona_id, 0))
+		if persona_id not in CardPropertySet.PERSONAS or amount <= 0:
+			return _result(false, RESULT_REJECTED)
+		definitions.append(_expedition_persona_definition(persona_id, amount))
+	return {"ok": true, "reason": RESULT_OK, "definitions": definitions}
+
+
+func _expedition_persona_definition(persona_id: StringName, amount: int) -> CardItemDefinition:
+	var properties := CardPropertySet.new()
+	properties.tags = [CardPropertySet.PROPERTY_PERSONA]
+	properties.values = {persona_id: amount}
+	var definition := CardItemDefinition.new()
+	definition.id = StringName("expedition_persona_%s" % persona_id)
+	definition.property_set = properties
+	return definition
+
+
+func _expedition_challenge_roll(
+	room_id: StringName,
+	card_instance_ids: Array[int],
+	persona_ids: Array[StringName],
+	approach_index: int,
+	round_index: int,
+) -> int:
+	var card_key := card_instance_ids.duplicate()
+	card_key.sort()
+	var persona_key := persona_ids.duplicate()
+	persona_key.sort()
+	var signature := "%d|%d|%s|%d|%d|%s|%s" % [
+		expedition.rng_seed,
+		expedition.checkpoint_serial,
+		room_id,
+		approach_index,
+		round_index,
+		card_key,
+		persona_key,
+	]
+	return absi(hash(signature)) % 100
+
+
+func _generate_expedition_doors() -> void:
+	var content := QuestArcCatalog.manifest()
+	if content == null:
+		expedition.current_door_ids.clear()
+		return
+	var rng := RandomNumberGenerator.new()
+	if expedition.rng_state != 0:
+		rng.state = expedition.rng_state
+	else:
+		rng.seed = expedition.rng_seed
+	expedition.current_door_ids = MallDoorGenerator.generate(
+		expedition, content.expedition_rooms, rng
+	)
+	expedition.rng_state = rng.state
+	expedition.checkpoint_serial += 1
+
+
+func _finish_expedition_night(delta: QuestStateDelta) -> void:
+	day += 1
+	expedition.end_night()
+	refill_scheduled_shelves(day)
+	delta.mark_day(&"expedition_night_finished")
+	for store_id in store_transactions:
+		delta.mark_shelf(StringName(store_id), &"expedition_shelf_refill")
+
+
+func _int_array_from_variant(values: Variant) -> Array[int]:
+	var result: Array[int] = []
+	for value in values as Array:
+		result.append(int(value))
+	return result
+
+
+func _name_array_from_variant(values: Variant) -> Array[StringName]:
+	var result: Array[StringName] = []
+	for value in values as Array:
+		result.append(StringName(value))
+	return result
 
 
 func begin_next_day() -> Dictionary:

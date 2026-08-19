@@ -2,6 +2,7 @@ class_name QuestMapScreen
 extends Control
 
 signal shop_requested(store_id: StringName)
+signal expedition_requested
 signal card_staging_changed(card: CardItemState, staged: bool)
 signal rule_focused(rule: CardSlotRule)
 signal item_inspected(definition: CardItemDefinition)
@@ -15,6 +16,8 @@ var location_popup: QuestLocationPopup
 var location_popups: Dictionary = {}
 var background_input: Control
 var debug_refresh_count := 0
+var expedition_button: Button
+var expedition_confirm_dialog: ConfirmationDialog
 
 
 func setup(game_state: QuestGameState) -> void:
@@ -134,6 +137,29 @@ func _build_interface() -> void:
 	notice_panel.add_child(notice_label)
 	notice_panel.visible = false
 
+	expedition_button = Button.new()
+	expedition_button.name = "MallExpeditionEntrance"
+	expedition_button.anchor_left = 0.405
+	expedition_button.anchor_top = 0.69
+	expedition_button.anchor_right = 0.595
+	expedition_button.anchor_bottom = 0.785
+	expedition_button.add_theme_font_size_override("font_size", 18)
+	expedition_button.add_theme_color_override("font_color", Color("e7eee8"))
+	expedition_button.add_theme_stylebox_override(
+		"normal", UiPalette.panel_style(Color("081318", 0.92), Color("d0bd7f", 0.88))
+	)
+	expedition_button.add_theme_stylebox_override(
+		"hover", UiPalette.panel_style(Color("10252a", 0.98), Color("f0d590"))
+	)
+	expedition_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	expedition_button.pressed.connect(_on_expedition_pressed)
+	add_child(expedition_button)
+	expedition_confirm_dialog = ConfirmationDialog.new()
+	expedition_confirm_dialog.name = "ExpeditionConfirmation"
+	expedition_confirm_dialog.confirmed.connect(expedition_requested.emit)
+	add_child(expedition_confirm_dialog)
+	_refresh_expedition_text()
+
 
 func _on_store_pressed(store_id: StringName) -> void:
 	if not state.is_store_visible(store_id):
@@ -142,6 +168,23 @@ func _on_store_pressed(store_id: StringName) -> void:
 		shop_requested.emit(store_id)
 	else:
 		_open_location_popup(store_id)
+
+
+func _on_expedition_pressed() -> void:
+	_close_location_popup()
+	expedition_confirm_dialog.popup_centered(Vector2i(480, 190))
+
+
+func _refresh_expedition_text() -> void:
+	if expedition_button == null or expedition_confirm_dialog == null:
+		return
+	expedition_button.text = TranslationServer.translate(&"expedition.ui.enter")
+	expedition_confirm_dialog.title = TranslationServer.translate(&"expedition.ui.enter")
+	expedition_confirm_dialog.dialog_text = TranslationServer.translate(
+		&"expedition.ui.confirm_enter"
+	)
+	expedition_confirm_dialog.ok_button_text = TranslationServer.translate(&"demo.ui.confirm")
+	expedition_confirm_dialog.cancel_button_text = TranslationServer.translate(&"demo.ui.cancel")
 
 
 func _open_location_popup(store_id: StringName) -> void:
@@ -193,6 +236,7 @@ func _on_unlock_confirmed(store_id: StringName, card: CardItemState) -> void:
 
 
 func _on_locale_changed(_locale: String) -> void:
+	_refresh_expedition_text()
 	refresh()
 
 

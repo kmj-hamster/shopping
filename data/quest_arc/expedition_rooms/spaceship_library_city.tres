@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="MallRoomDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/mall_room_definition.gd" id="1_room"]
+
+[resource]
+script = ExtResource("1_room")
+id = &"spaceship_library_city"
+display_name_key = &"expedition.room.spaceship_library_city.name"
+intro_text_keys = Array[StringName]([&"expedition.room.spaceship_library_city.intro.1", &"expedition.room.spaceship_library_city.intro.2"])
+challenge_text_keys = Array[StringName]([&"expedition.room.common.challenge.1", &"expedition.room.common.challenge.2"])
+approach_title_keys = Array[StringName]([&"expedition.approach.observe.title", &"expedition.approach.advance.title"])
+approach_text_keys = Array[StringName]([&"expedition.approach.observe.text", &"expedition.approach.advance.text"])
+post_choice_text_key = &"expedition.room.common.post_choice"
+success_text_key = &"expedition.room.common.success"
+failure_text_key = &"expedition.room.common.failure"
+required_persona_ids = Array[StringName]([&"nightwalker"])
+persona_total_required = 5
+slot_count = 2

@@ -14,6 +14,7 @@ extends Resource
 @export var stores: Array[Resource] = []
 @export var store_unlocks: Array[Resource] = []
 @export var owners: Array[Resource] = []
+@export var expedition_rooms: Array[Resource] = []
 
 
 func validation_errors() -> PackedStringArray:
@@ -24,6 +25,7 @@ func validation_errors() -> PackedStringArray:
 	var recipes_by_id := _resources_by_id(recipes, "recipe", errors)
 	var stores_by_id := _resources_by_id(stores, "store", errors)
 	var unlocks_by_id := _resources_by_id(store_unlocks, "store unlock", errors)
+	_resources_by_id(expedition_rooms, "mall room", errors)
 	for item_id in starting_item_ids:
 		if not items_by_id.has(item_id):
 			errors.append("Starting inventory references missing item %s." % item_id)
@@ -39,6 +41,7 @@ func validation_errors() -> PackedStringArray:
 	_validate_resources(stores, errors)
 	_validate_resources(store_unlocks, errors)
 	_validate_resources(owners, errors)
+	_validate_resources(expedition_rooms, errors)
 	for raw_item in items:
 		var item := raw_item as QuestItemDefinition
 		if item == null:

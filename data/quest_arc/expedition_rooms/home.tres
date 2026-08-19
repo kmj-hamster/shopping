@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MallRoomDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/mall_room_definition.gd" id="1_room"]
+
+[resource]
+script = ExtResource("1_room")
+id = &"home"
+display_name_key = &"expedition.room.home.name"
+category = 1
+generation_weight = 3
+intro_text_keys = Array[StringName]([&"expedition.room.home.intro.1", &"expedition.room.home.intro.2"])
+rest_mode = 1

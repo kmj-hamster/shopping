@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="QuestItemDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/quest_item_definition.gd" id="1_item"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_property_set.gd" id="2_properties"]
+
+[sub_resource type="Resource" id="Properties"]
+script = ExtResource("2_properties")
+
+[resource]
+script = ExtResource("1_item")
+id = &"expedition_wage"
+display_name_key = &"expedition.reward.wage.name"
+description_key = &"expedition.reward.wage.description"
+store_id = &"expedition"
+can_recycle = false
+can_be_synthesis_base = false
+property_set = SubResource("Properties")
+supply_mode = 2
+is_story_item = true

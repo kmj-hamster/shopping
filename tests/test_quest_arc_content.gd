@@ -8,6 +8,7 @@ const EXPECTED_ITEM_IDS: Array[StringName] = [
 	&"conservatory_story", &"nocturne_competition_recording", &"concrete_city_vol_1",
 	&"mirror_and_lamp", &"ufo_exploration_magazine", &"mania_manga",
 	&"cold_teddy_bear", &"baby_soothing_bear", &"birthday_cake", &"cola", &"rose",
+	&"expedition_salvage", &"expedition_wound", &"expedition_wage",
 ]
 
 const EXPECTED_PERSONA_LEVELS := {
@@ -22,15 +23,16 @@ func test_manifest_is_the_live_content_whitelist_without_test_cards() -> void:
 	var manifest := QuestArcCatalog.manifest()
 	assert_not_null(manifest)
 	assert_eq(manifest.initial_money, 0)
-	assert_true(manifest.starting_item_ids.is_empty())
+	assert_eq(manifest.starting_item_ids, [&"tin_frog"])
 	assert_eq(manifest.maximum_item_price, 84)
 	assert_eq(manifest.properties.size(), 14)
 	assert_eq(manifest.items.size(), EXPECTED_ITEM_IDS.size())
-	assert_eq(manifest.tasks.size(), 30)
+	assert_eq(manifest.tasks.size(), 0)
 	assert_eq(manifest.recipes.size(), 5)
 	assert_eq(manifest.stores.size(), 5)
 	assert_eq(manifest.store_unlocks.size(), 5)
 	assert_eq(manifest.owners.size(), 3)
+	assert_eq(manifest.expedition_rooms.size(), 14)
 	for persona_id in CardPropertySet.PERSONAS:
 		assert_eq(
 			int(manifest.initial_protagonist_stats.get(persona_id, -1)),
@@ -185,17 +187,13 @@ func test_finite_shelf_cards_do_not_return_on_their_store_restock_day() -> void:
 	assert_true(book_slot.is_empty())
 
 
-func test_new_game_starts_without_test_items_but_keeps_four_personas() -> void:
+func test_new_game_starts_with_only_tin_frog_and_keeps_four_personas() -> void:
 	var state := QuestGameState.new()
 	assert_eq(state.wallet.money, 0)
-	assert_true(state.inventory.is_empty())
+	assert_eq(state.inventory.size(), 1)
+	assert_eq(state.inventory[0].definition_id, &"tin_frog")
 	assert_true(state.unlocked_store_ids.is_empty())
-	assert_eq(state.active_tasks().size(), 6)
-	assert_not_null(state.task_instance_for_definition(&"remittance"))
-	assert_not_null(state.task_instance_for_definition(&"tin_boy_gift"))
-	for index in 4:
-		assert_not_null(state.task_instance_for_definition(StringName("debug_todo_page_%d" % (index + 1))))
-	assert_null(state.task_instance_for_definition(&"self_care"))
+	assert_true(state.active_tasks().is_empty())
 	for persona_id in CardPropertySet.PERSONAS:
 		assert_eq(
 			int(state.protagonist_persona_counts.get(persona_id, -1)),

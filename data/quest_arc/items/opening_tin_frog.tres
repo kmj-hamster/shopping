@@ -14,6 +14,4 @@ display_name_key = &"demo.item.tin_frog.name"
 description_key = &"demo.item.tin_frog.description"
 store_id = &"toy"
 base_price = 8
-is_story_item = true
-can_recycle = false
 property_set = SubResource("Props")

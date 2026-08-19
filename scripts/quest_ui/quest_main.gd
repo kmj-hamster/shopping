@@ -111,6 +111,7 @@ var persona_reveal_hint: Label
 var persona_reveal_persona_id: StringName
 var persona_reveal_flipped := false
 var task_offer_overlay: QuestTaskOfferOverlay
+var expedition_screen: QuestExpeditionScreen
 var english_font_by_size: Dictionary = {}
 
 
@@ -128,12 +129,8 @@ func _ready() -> void:
 	_refresh_global_text()
 	_show_map_immediate()
 	call_deferred("_apply_locale_typography")
-	if state.pending_arc != null:
-		call_deferred("_resume_arc")
-	elif not state.pending_persona_reveal_ids.is_empty():
-		call_deferred("_run_pending_persona_reveals")
-	elif state.has_pending_task_offers():
-		call_deferred("_resume_task_offers")
+	if state.expedition.active:
+		call_deferred("_show_expedition_immediate")
 
 
 func _build_bgm_director() -> void:
@@ -230,7 +227,7 @@ func _build_shell() -> void:
 	debug_button_row.anchor_right = 0.265
 	debug_button_row.anchor_bottom = 0.992
 	debug_button_row.add_theme_constant_override("separation", 5)
-	debug_button_row.z_index = 60
+	debug_button_row.z_index = 600
 	add_child(debug_button_row)
 	language_button = Button.new()
 	language_button.name = "LanguageButton"
@@ -295,8 +292,6 @@ func _build_global_interface() -> void:
 	_build_drag_return_layer()
 	_build_screen_transition_overlay()
 	_build_persona_reveal_overlay()
-	_build_arc_overlay()
-	_build_task_offer_overlay()
 
 
 func _build_task_offer_overlay() -> void:
@@ -484,6 +479,7 @@ func _show_map_immediate() -> void:
 		map_screen.name = "QuestMapScreen"
 		map_screen.setup(state)
 		map_screen.shop_requested.connect(_show_shop)
+		map_screen.expedition_requested.connect(_start_expedition)
 		map_screen.card_staging_changed.connect(_on_card_staging_changed)
 		map_screen.rule_focused.connect(_on_rule_focused)
 		map_screen.item_inspected.connect(_show_item)
@@ -795,16 +791,54 @@ func _task_definition_for_rule(rule: CardSlotRule) -> TaskDefinition:
 func _on_next_day_pressed() -> void:
 	if transition_in_progress:
 		return
-	_prepare_for_arc_display()
-	var result := state.begin_next_day()
-	if result.ok:
-		_run_arc()
-	elif result.reason == QuestGameState.RESULT_REQUIRED_TASK_INCOMPLETE:
-		next_day_blocked_dialog.title = TranslationServer.translate(&"demo.ui.next_day")
-		next_day_blocked_dialog.dialog_text = TranslationServer.translate(
-			&"opening.ui.next_day.self_care_required"
-		)
-		next_day_blocked_dialog.popup_centered(Vector2i(520, 190))
+	_start_expedition()
+
+
+func _start_expedition() -> void:
+	if transition_in_progress:
+		return
+	if not state.expedition.active:
+		var result := state.begin_mall_expedition()
+		if not result.ok:
+			return
+		GameState.save_game_now()
+	_run_screen_transition(Callable(self, "_show_expedition_immediate"), 0.24, 0.28)
+
+
+func _show_expedition_immediate() -> void:
+	bgm_director.play_track(QuestBgmDirector.TRACK_DREAM)
+	if detail_popup != null:
+		detail_popup.close()
+	if rule_detail_popup != null:
+		rule_detail_popup.close()
+	art_canvas.visible = false
+	if expedition_screen != null and is_instance_valid(expedition_screen):
+		expedition_screen.queue_free()
+	expedition_screen = QuestExpeditionScreen.new()
+	expedition_screen.name = "QuestExpeditionScreen"
+	expedition_screen.setup(state)
+	expedition_screen.expedition_finished.connect(_on_expedition_finished)
+	expedition_screen.checkpoint_reached.connect(_on_expedition_checkpoint_reached)
+	expedition_screen.demo_completed.connect(_on_expedition_checkpoint_reached)
+	expedition_screen.persona_reveal_requested.connect(_run_pending_persona_reveals)
+	add_child(expedition_screen)
+	expedition_screen.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	debug_button_row.visible = true
+	if not state.pending_persona_reveal_ids.is_empty():
+		call_deferred("_run_pending_persona_reveals")
+
+
+func _on_expedition_finished() -> void:
+	GameState.save_game_now()
+	if expedition_screen != null and is_instance_valid(expedition_screen):
+		expedition_screen.queue_free()
+	expedition_screen = null
+	art_canvas.visible = true
+	_show_map_immediate()
+
+
+func _on_expedition_checkpoint_reached() -> void:
+	GameState.save_game_now()
 
 
 func _on_clear_save_pressed() -> void:
@@ -1198,7 +1232,7 @@ func _refresh_global_text() -> void:
 		return
 	_refresh_hud_state()
 	if next_day_button != null:
-		next_day_button.text = TranslationServer.translate(&"demo.ui.next_day")
+		next_day_button.text = TranslationServer.translate(&"expedition.ui.enter_short")
 	if language_button != null:
 		language_button.text = LocaleManager.switch_button_text()
 	if clear_save_button != null:

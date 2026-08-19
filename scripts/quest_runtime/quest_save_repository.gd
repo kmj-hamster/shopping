@@ -1,8 +1,8 @@
 class_name QuestSaveRepository
 extends RefCounted
 
-const SAVE_VERSION := 10
-const CONTENT_VERSION := "task-selection-1"
+const SAVE_VERSION := 11
+const CONTENT_VERSION := "mall-expedition-1"
 const DEFAULT_PATH := "user://save_shopping0807_v1.json"
 
 var save_path: String
@@ -113,6 +113,7 @@ func to_dictionary(state: QuestGameState) -> Dictionary:
 		"visited_store_ids": _string_array(state.visited_store_ids.keys()),
 		"bgm_playback_positions": _string_float_dictionary(state.bgm_playback_positions),
 		"pending_arc": _serialize_arc(state.pending_arc),
+		"expedition": _serialize_expedition(state.expedition),
 		"commerce": state.commerce_snapshot(),
 	}
 
@@ -188,6 +189,9 @@ func _restore(state: QuestGameState, payload: Dictionary) -> bool:
 		payload.get("bgm_playback_positions", {})
 	)
 	state.pending_arc = _restore_arc(payload.get("pending_arc", {}))
+	state.expedition = _restore_expedition(payload.get("expedition", {}))
+	if state.expedition == null:
+		return false
 	# Synthesis placement is a screen-local draft and never survives loading.
 	state.synthesis_base_instance_id = 0
 	state.synthesis_helper_instance_id = 0
@@ -280,6 +284,62 @@ func _restore_arc(data: Dictionary) -> ArcTransitionState:
 		int(data.get("next_entry_index", 0)), 0, arc.entries.size()
 	)
 	return arc
+
+
+func _serialize_expedition(expedition: MallExpeditionState) -> Dictionary:
+	if expedition == null:
+		return {}
+	return {
+		"active": expedition.active,
+		"from_day": expedition.from_day,
+		"rooms_completed": expedition.rooms_completed,
+		"entered_room_ids": _string_array(expedition.entered_room_ids.keys()),
+		"work_offer_seen": expedition.work_offer_seen,
+		"current_door_ids": _string_array(expedition.current_door_ids),
+		"rng_seed": expedition.rng_seed,
+		# RandomNumberGenerator state is a 64-bit value and cannot safely round-trip
+		# through JSON's floating-point number representation.
+		"rng_state": str(expedition.rng_state),
+		"checkpoint_serial": expedition.checkpoint_serial,
+		"discovered_room_ids": _string_array(expedition.discovered_room_ids.keys()),
+		"first_cleared_challenge_ids": _string_array(
+			expedition.first_cleared_challenge_ids.keys()
+		),
+		"boss_cleared": expedition.boss_cleared,
+	}
+
+
+func _restore_expedition(data: Dictionary) -> MallExpeditionState:
+	var expedition := MallExpeditionState.new()
+	if data.is_empty():
+		return expedition
+	expedition.active = bool(data.get("active", false))
+	expedition.from_day = maxi(1, int(data.get("from_day", 1)))
+	expedition.rooms_completed = clampi(
+		int(data.get("rooms_completed", 0)), 0, MallExpeditionState.ROOMS_PER_NIGHT
+	)
+	expedition.entered_room_ids = _name_set(data.get("entered_room_ids", []))
+	expedition.work_offer_seen = bool(data.get("work_offer_seen", false))
+	expedition.current_door_ids = _name_array(data.get("current_door_ids", []))
+	expedition.rng_seed = maxi(1, int(data.get("rng_seed", 1)))
+	expedition.rng_state = int(String(data.get("rng_state", "0")))
+	expedition.checkpoint_serial = maxi(0, int(data.get("checkpoint_serial", 0)))
+	expedition.discovered_room_ids = _name_set(data.get("discovered_room_ids", []))
+	expedition.first_cleared_challenge_ids = _name_set(
+		data.get("first_cleared_challenge_ids", [])
+	)
+	expedition.boss_cleared = bool(data.get("boss_cleared", false))
+	for room_id in (
+		expedition.current_door_ids
+		+ _name_array(expedition.entered_room_ids.keys())
+		+ _name_array(expedition.discovered_room_ids.keys())
+		+ _name_array(expedition.first_cleared_challenge_ids.keys())
+	):
+		if QuestArcCatalog.mall_room_by_id(room_id) == null:
+			return null
+	if expedition.active and expedition.current_door_ids.is_empty():
+		return null
+	return expedition
 
 
 func _next_card_id(cards: Array[CardItemState]) -> int:

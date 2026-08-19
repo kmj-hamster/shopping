@@ -1669,97 +1669,18 @@ func test_hud_and_map_ignore_unrelated_state_deltas() -> void:
 	assert_eq(map.debug_refresh_count, initial_map_refreshes + 1)
 
 
-func test_arc_uses_item_strip_reward_summary_and_click_advance() -> void:
+func test_removed_arc_and_task_offer_overlays_are_not_built() -> void:
 	var main := await _spawn_main()
-	var task := main.state.task_instance_for_definition(&"girl_order")
-	var fries := main.state.inventory[0] as CardItemState
-	assert_true(main.state.assign_card(task.instance_id, &"food", fries).ok)
-	assert_true(main.state.confirm_task(task.instance_id).ok)
-	assert_true(main.state.begin_next_day().ok)
-	main.arc_fade_seconds = 0.0
-	main.arc_typewriter_char_seconds = 0.0
-	main.bgm_director.fade_seconds = 0.0
-	main._run_arc()
-	assert_eq(main.bgm_director.active_track_id, QuestBgmDirector.TRACK_DREAM)
-	await get_tree().process_frame
-	await get_tree().process_frame
-	assert_true(main.arc_overlay.visible)
-	assert_eq(main.arc_image.texture, QuestArcCatalog.item_by_id(&"fries").image)
-	assert_true(main.arc_used_card.visible)
-	assert_eq(main.arc_used_card.definition.id, &"fries")
-	assert_eq(main.arc_used_card.mouse_filter, Control.MOUSE_FILTER_IGNORE)
-	assert_almost_eq(main.arc_used_card.modulate.a, 0.48, 0.001)
-	assert_true(main.arc_reward_label.text.contains("12"))
-	var task_definition := QuestArcCatalog.task_by_id(task.definition_id)
-	assert_true(main.arc_task_source_row.visible)
-	assert_almost_eq(main.arc_task_source_row.modulate.a, 0.68, 0.001)
-	assert_eq(
-		main.arc_task_source_tag_label.text,
-		TranslationServer.translate(&"quest.ui.arc.task_source"),
-	)
-	assert_eq(
-		main.arc_task_source_name_label.text,
-		TranslationServer.translate(task_definition.display_name_key),
-	)
-	assert_lt(
-		main.arc_task_source_name_label.get_theme_font_size("font_size"),
-		main.arc_result_label.get_theme_font_size("font_size"),
-	)
-	assert_true(main.arc_cursor_label.visible)
-	for index in 8:
-		main._on_arc_advance_requested()
-		await get_tree().process_frame
-		if not main.transition_in_progress:
-			break
-	assert_false(main.transition_in_progress)
-	assert_false(main.arc_task_source_row.visible)
-	assert_eq(main.state.day, 2)
-	assert_eq(main.bgm_director.active_track_id, QuestBgmDirector.TRACK_EMPTY)
+	assert_null(main.arc_overlay)
+	assert_null(main.task_offer_overlay)
 
 
-func test_small_next_day_button_runs_the_real_confirmed_task_arc() -> void:
+func test_legacy_manifest_does_not_expose_an_incomplete_expedition() -> void:
 	var main := await _spawn_main()
-	var original_day := main.state.day
-	var original_money := main.state.wallet.money
-	var task := main.state.task_instance_for_definition(&"girl_order")
-	var fries := main.state.inventory.filter(
-		func(card: CardItemState) -> bool: return card.definition_id == &"fries"
-	)[0] as CardItemState
-	assert_true(main.state.assign_card(task.instance_id, &"food", fries).ok)
-	assert_true(main.state.confirm_task(task.instance_id).ok)
-	main.arc_fade_seconds = 0.0
-	main.arc_typewriter_char_seconds = 0.0
-	main.bgm_director.fade_seconds = 0.0
 	main.next_day_button.pressed.emit()
 	await get_tree().process_frame
-	await get_tree().process_frame
-	assert_true(main.arc_overlay.visible)
-	assert_false(main.hand_bar.visible)
-	assert_true(main.transition_in_progress)
-	assert_true(main.arc_waiting_for_click)
-	assert_true(main.arc_task_source_row.visible)
-	assert_eq(main.arc_used_card.definition.id, &"fries")
-	assert_not_null(main.state.pending_arc)
-	assert_eq(main.state.pending_arc.entries.size(), 1)
-	assert_true(main.state.pending_arc.effects_applied)
-	assert_true(task.settled)
-	assert_eq(main.state.day, original_day)
-	assert_eq(main.state.wallet.money, original_money + 12)
-	main._on_arc_advance_requested()
-	await get_tree().process_frame
-	assert_eq(
-		main.arc_day_label.text,
-		TranslationServer.translate(&"quest.ui.arc.new_day") % (original_day + 1)
-	)
-	main._on_arc_advance_requested()
-	for index in 6:
-		await get_tree().process_frame
-		if not main.transition_in_progress:
-			break
-	assert_false(main.transition_in_progress)
-	assert_eq(main.state.day, original_day + 1)
-	assert_eq(main.state.wallet.money, original_money + 12)
-	assert_null(main.state.pending_arc)
+	assert_null(main.expedition_screen)
+	assert_false(main.state.expedition.active)
 
 
 func test_closing_location_popup_returns_unconfirmed_card() -> void:
