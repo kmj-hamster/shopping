@@ -5,15 +5,16 @@
 
 [sub_resource type="Resource" id="Props"]
 script = ExtResource("2_props")
-tags = Array[StringName]([&"book"])
-values = {&"nightwalker": 4, &"mourner": 1}
+tags = Array[StringName]([&"toy"])
+values = {&"mourner": 3}
 
 [resource]
 script = ExtResource("1_item")
-id = &"test_late_train_timetable"
-display_name_key = &"test.item.late_train_timetable.name"
-description_key = &"test.item.late_train_timetable.description"
-store_id = &"bookstore"
-supply_mode = 2
-can_recycle = false
+id = &"cold_teddy_bear"
+display_name_key = &"opening.item.cold_teddy_bear.name"
+description_key = &"opening.item.cold_teddy_bear.description"
+supply_mode = 3
+is_crafted = true
+fixed_resale_value = 20
+can_be_synthesis_base = false
 property_set = SubResource("Props")

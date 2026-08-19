@@ -11,5 +11,5 @@ unlock_definition_id = &"unlock_flower"
 map_anchor = Vector2(0.69, 0.57)
 restock_interval_days = 3
 restock_phase_day = 3
-initial_capacity = 4
-initial_shelf_item_ids = Array[StringName]([&"jasmine", &"gardenia", &"cactus", &"plastic_orchid"])
+initial_capacity = 6
+initial_shelf_item_ids = Array[StringName]([&"jasmine", &"camellia", &"cactus", &"foam_fake_flower"])

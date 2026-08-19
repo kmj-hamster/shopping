@@ -33,7 +33,7 @@ func test_next_night_is_blocked_until_self_care_is_confirmed() -> void:
 	blocked = state.begin_next_day()
 	assert_false(blocked.ok)
 	var self_care := state.task_instance_for_definition(&"self_care")
-	var car := state.grant_item(&"plastic_car", &"test")
+	var car := state.grant_item(&"ratty_doll", &"test")
 	assert_true(state.assign_card(self_care.instance_id, &"self_care_item", car).ok)
 	assert_true(state.confirm_task(self_care.instance_id).ok)
 	assert_true(state.begin_next_day().ok)
@@ -42,7 +42,7 @@ func test_next_night_is_blocked_until_self_care_is_confirmed() -> void:
 func test_self_care_grows_each_persona_and_queues_first_reveals() -> void:
 	var state := QuestGameState.new()
 	state.protagonist_persona_counts[&"dreamwalker"] = 0
-	state.protagonist_persona_counts[&"mourner"] = 0
+	state.protagonist_persona_counts[&"nightwalker"] = 0
 	_unlock_toy_shop(state)
 	var self_care := state.task_instance_for_definition(&"self_care")
 	var kaleidoscope := state.grant_item(&"kaleidoscope", &"test")
@@ -51,9 +51,9 @@ func test_self_care_grows_each_persona_and_queues_first_reveals() -> void:
 	assert_true(state.begin_next_day().ok)
 	assert_true(state.apply_arc_effects().ok)
 	assert_eq(int(state.protagonist_persona_counts[&"dreamwalker"]), 1)
-	assert_eq(int(state.protagonist_persona_counts[&"mourner"]), 1)
+	assert_eq(int(state.protagonist_persona_counts[&"nightwalker"]), 1)
 	assert_true(&"dreamwalker" in state.pending_persona_reveal_ids)
-	assert_true(&"mourner" in state.pending_persona_reveal_ids)
+	assert_true(&"nightwalker" in state.pending_persona_reveal_ids)
 	assert_true(state.mark_arc_entry_shown())
 	assert_true(state.finish_arc().ok)
 	assert_true(state.has_pending_task_offers())
@@ -68,7 +68,7 @@ func test_self_care_growth_adds_only_one_when_the_item_is_stronger() -> void:
 	_unlock_toy_shop(state)
 	state.protagonist_persona_counts[&"dreamwalker"] = 1
 	var self_care := state.task_instance_for_definition(&"self_care")
-	var rose := state.grant_item(&"midnight_rose", &"test")
+	var rose := state.grant_item(&"rose", &"test")
 	assert_true(state.assign_card(self_care.instance_id, &"self_care_item", rose).ok)
 	assert_true(state.confirm_task(self_care.instance_id).ok)
 	assert_true(state.begin_next_day().ok)
@@ -80,7 +80,7 @@ func test_self_care_no_longer_inherits_category_bans_from_previous_nights() -> v
 	var state := QuestGameState.new()
 	_unlock_toy_shop(state)
 	var first_task := state.task_instance_for_definition(&"self_care")
-	var orchid := state.grant_item(&"plastic_orchid", &"test")
+	var orchid := state.grant_item(&"foam_fake_flower", &"test")
 	assert_true(state.assign_card(first_task.instance_id, &"self_care_item", orchid).ok)
 	assert_true(state.confirm_task(first_task.instance_id).ok)
 	assert_true(state.begin_next_day().ok)
@@ -95,7 +95,7 @@ func test_self_care_no_longer_inherits_category_bans_from_previous_nights() -> v
 	var selected := state.choose_current_task_offer(&"self_care_play")
 	assert_true(selected.ok)
 	var second_task := state.task_instance(int(selected.task_instance_id))
-	var toy := state.grant_item(&"plastic_car", &"test")
+	var toy := state.grant_item(&"kaleidoscope", &"test")
 	assert_true(state.can_assign_card_to_task(second_task.instance_id, &"item", toy))
 	var effective := state.effective_task_rule(
 		second_task,
@@ -159,7 +159,7 @@ func test_shelves_refill_only_on_the_store_fixed_phase() -> void:
 	state.refill_scheduled_shelves(2)
 	assert_true(slot.is_empty())
 	state.refill_scheduled_shelves(4)
-	assert_eq(slot.item_id, &"plastic_car")
+	assert_eq(slot.item_id, &"kaleidoscope")
 
 
 func _unlock_toy_shop(state: QuestGameState) -> void:

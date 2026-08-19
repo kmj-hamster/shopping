@@ -7,7 +7,7 @@
 script = ExtResource("2_rule")
 id = &"record_store_lock"
 display_name_key = &"opening.unlock.record.slot"
-accepted_item_ids = Array[StringName]([&"midnight_rose"])
+accepted_item_ids = Array[StringName]([&"rose"])
 
 [resource]
 script = ExtResource("1_unlock")

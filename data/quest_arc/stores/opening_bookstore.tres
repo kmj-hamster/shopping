@@ -11,4 +11,5 @@ visible_after_store_ids = Array[StringName]([&"toy", &"fast_food", &"flower"])
 map_anchor = Vector2(0.72, 0.27)
 restock_interval_days = 3
 restock_phase_day = 2
-initial_capacity = 0
+initial_capacity = 6
+initial_shelf_item_ids = Array[StringName]([&"concrete_city_vol_1", &"mirror_and_lamp", &"ufo_exploration_magazine", &"mania_manga", &"mania_manga"])

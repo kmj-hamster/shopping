@@ -783,12 +783,36 @@ msgid "demo.item.tin_frog.name"
 msgstr "Tin Frog"
 
 msgid "demo.item.tin_frog.description"
-msgstr "A wind-up frog with a hollow tin belly. Its eyes hold a small, steady lamplight."
+msgstr "A spring inside its tin belly refuses to sleep. Wind it, and it hops twice toward the nearest light."
 msgid "opening.property.cd.name"
 msgstr "CD"
 
 msgid "opening.property.cd.description"
 msgstr "A disc that plays sound, and an item category."
+
+msgid "opening.property.book.name"
+msgstr "Book"
+
+msgid "opening.property.book.description"
+msgstr "Bound words, pictures, and a few thoughts that refuse to disperse."
+
+msgid "opening.property.cassette.name"
+msgstr "Cassette"
+
+msgid "opening.property.cassette.description"
+msgstr "An item category that winds sound between two spools."
+
+msgid "opening.property.candle.name"
+msgstr "Candle"
+
+msgid "opening.property.candle.description"
+msgstr "It makes a small circle of light by making itself shorter."
+
+msgid "opening.property.clothing.name"
+msgstr "Clothing"
+
+msgid "opening.property.clothing.description"
+msgstr "Worn outside the body to provide warmth, or make a statement in its place."
 
 msgid "opening.task.remittance.name"
 msgstr "Regular Remittance"
@@ -847,23 +871,17 @@ msgstr "Any drink"
 msgid "opening.task.aquarium.result"
 msgstr "The drink sank to the bottom of the aquarium. Tiny bubbles drifted upward all night."
 
-msgid "opening.item.plastic_car.name"
-msgstr "Plastic Car"
-
-msgid "opening.item.plastic_car.description"
-msgstr "Hollow wheels rattle over the tile seams. Its clear headlights are always on."
-
 msgid "opening.item.kaleidoscope.name"
 msgstr "Kaleidoscope"
 
 msgid "opening.item.kaleidoscope.description"
-msgstr "Turn the paper tube against your eye, and broken glass assembles the same room many times."
+msgstr "It twists the mall's broken light into a street that cannot exist. Turn it again and the exit moves."
 
 msgid "opening.item.lotus_candle.name"
 msgstr "Lotus Candle"
 
 msgid "opening.item.lotus_candle.description"
-msgstr "Plastic petals open with the birthday song. After the flames die, it keeps turning."
+msgstr "Wind the base and it sings Happy Birthday in a small metal voice. No one knows who is growing older."
 
 msgid "opening.item.mung_bean_cake.name"
 msgstr "Mung Bean Cake"
@@ -875,43 +893,202 @@ msgid "opening.item.milkshake.name"
 msgstr "Milkshake"
 
 msgid "opening.item.milkshake.description"
-msgstr "The cup is cold; the cream is as soft as a small pillow no one has used."
+msgstr "Ratty's smiling face is printed on the cup. The cream is already a little cloying; the straw still points toward happiness."
 
 msgid "opening.item.cola.name"
 msgstr "Cola"
 
 msgid "opening.item.cola.description"
-msgstr "The tab snaps once. Brown bubbles bring alertness and sleepiness together."
+msgstr "The indisputable classic. In the drifting markets at the end of the century, it became valuable hard currency."
 
 msgid "opening.item.fries.name"
 msgstr "Fries"
 
 msgid "opening.item.fries.description"
-msgstr "A little salt and warmth remain at the bottom of the paper bag, enough for the walk home."
+msgstr "Crisp and delicious for exactly five minutes after frying. In minute six, they only remember their golden age."
 
 msgid "opening.item.nuggets.name"
 msgstr "Chicken Nuggets"
 
 msgid "opening.item.nuggets.description"
-msgstr "Regular golden shells, with soft shapes inside that no one can quite name."
+msgstr "No logo. Yellow with a touch of pink. Strange. They are definitely not chicken—at least, not any chicken you know."
 
 msgid "opening.item.gardenia.name"
 msgstr "Gardenia"
 
 msgid "opening.item.gardenia.description"
-msgstr "The white flower smells too strong, like a visible dream in damp air."
+msgstr "Its fragrance is almost painfully white, admitting its sweetness only after midnight. An invitation without a signature."
 
 msgid "opening.item.cactus.name"
-msgstr "Cactus"
+msgstr "Cactus Ball"
 
 msgid "opening.item.cactus.description"
-msgstr "It stores the day inside its body and remains dry and awake at night."
+msgstr "Round, silent, and fully armed. Under fluorescent light, it continues to believe in the desert."
 
-msgid "opening.item.plastic_orchid.name"
-msgstr "Plastic Orchid"
+msgid "opening.item.jasmine.name"
+msgstr "Jasmine"
 
-msgid "opening.item.plastic_orchid.description"
-msgstr "It never wilts and never grows. The dust on its leaves becomes more real each year."
+msgid "opening.item.jasmine.description"
+msgstr "A few white flowers soften the night with fragrance. They bloom quietly, as if afraid of waking someone."
+
+msgid "opening.item.ratty_doll.name"
+msgstr "Ratty Doll"
+
+msgid "opening.item.ratty_doll.description"
+msgstr "Sewn in Ratty's image, with the left ear coming loose. The old stuffing remembers a child's fierce embrace."
+
+msgid "opening.item.fruit_wine.name"
+msgstr "Fruit Wine"
+
+msgid "opening.item.fruit_wine.description"
+msgstr "Its color resembles dusk squeezed from cheap candy wrappers. The first sip is sweet; the second begins dreaming for you."
+
+msgid "opening.item.camellia.name"
+msgstr "Camellia"
+
+msgid "opening.item.camellia.description"
+msgstr "The petals are layered in an order so strict it becomes sorrowful. When it falls, it returns itself to the ground whole."
+
+msgid "opening.item.foam_fake_flower.name"
+msgstr "Foam Flower"
+
+msgid "opening.item.foam_fake_flower.description"
+msgstr "Foam petals that never wilt and never bloomed. The label calls it gardening; the texture insists it is a toy."
+
+msgid "opening.item.candy_fake_flower.name"
+msgstr "Candy Flower"
+
+msgid "opening.item.candy_fake_flower.description"
+msgstr "Candy wrappers, wire, and an irresponsible spring. It looks edible—which is rarely good news."
+
+msgid "opening.item.goldberg_variations.name"
+msgstr "Goldberg Variations"
+
+msgid "opening.item.goldberg_variations.description"
+msgstr "A cassette of expensive manufacture. On the cover, a faceless male musician poses with absolute faith that applause is coming."
+
+msgid "opening.item.debussy_clair_de_lune.name"
+msgstr "Debussy's Clair de Lune"
+
+msgid "opening.item.debussy_clair_de_lune.description"
+msgstr "The piano ladles moonlight into the room. When the piece ends, the water remains on the ceiling."
+
+msgid "opening.item.conservatory_story.name"
+msgstr "The Story of the Conservatory"
+
+msgid "opening.item.conservatory_story.description"
+msgstr "“You have no choice but to compose.” Everyone in the book says so, as if a choice once existed."
+
+msgid "opening.item.nocturne_competition_recording.name"
+msgstr "Nocturne (Competition Recording)"
+
+msgid "opening.item.nocturne_competition_recording.description"
+msgstr "A bootleg of a music competition. The pops sound like tiny gunfire, but the piano is agile and unruly. The performer was probably drunk."
+
+msgid "opening.item.concrete_city_vol_1.name"
+msgstr "Welcome to Concrete City (Vol. I)"
+
+msgid "opening.item.concrete_city_vol_1.description"
+msgstr "A bizarre fin-de-siècle bestseller, readable from any page. Some say it predicted the end; others simply refuse to finish Volume II."
+
+msgid "opening.item.mirror_and_lamp.name"
+msgstr "The Mirror and the Lamp"
+
+msgid "opening.item.mirror_and_lamp.description"
+msgstr "Should literature mirror life, or become a lamp that illuminates it? The argument is forty dollars thick."
+
+msgid "opening.item.ufo_exploration_magazine.name"
+msgstr "UFO Exploration Magazine"
+
+msgid "opening.item.ufo_exploration_magazine.description"
+msgstr "The ink is not quite dry, yet seventeen suspicious reflections have been circled in the sky. Each page is more certain we are not alone."
+
+msgid "opening.item.mania_manga.name"
+msgstr "mania manga"
+
+msgid "opening.item.mania_manga.description"
+msgstr "Their eyes are large enough to hold two incompatible sorrows. The final page is printed twice. Perhaps it was not a mistake."
+
+msgid "opening.item.cold_teddy_bear.name"
+msgstr "Cold Teddy Bear"
+
+msgid "opening.item.cold_teddy_bear.description"
+msgstr "Its fur keeps the temperature of the back of a freezer. Hold it close and a forgotten winter holds you back."
+
+msgid "opening.item.baby_soothing_bear.name"
+msgstr "Baby Soothing Bear"
+
+msgid "opening.item.baby_soothing_bear.description"
+msgstr "A slow clockwork heart hides in its chest. It can hum only one lullaby, and that lullaby has no words."
+
+msgid "opening.item.birthday_cake.name"
+msgstr "Birthday Cake"
+
+msgid "opening.item.birthday_cake.description"
+msgstr "Its candles remember a birthday no one attended. The icing is sweet like a sin asking to be forgiven."
+
+msgid "opening.item.rose.name"
+msgstr "Rose"
+
+msgid "opening.item.rose.description"
+msgstr "It has no morning dew and needs no morning. Every petal is practicing how to become a secret."
+
+msgid "opening.recipe.base.toy"
+msgstr "Any toy"
+
+msgid "opening.recipe.base.food"
+msgstr "Any food"
+
+msgid "opening.recipe.base.drink"
+msgstr "Any drink"
+
+msgid "opening.recipe.base.flower"
+msgstr "Any flower"
+
+msgid "opening.recipe.cold_teddy_bear.name"
+msgstr "Cold Teddy Bear"
+
+msgid "opening.recipe.cold_teddy_bear.process.1"
+msgstr "The toy's stuffing turns cold. It begins remembering winters that never belonged to it."
+
+msgid "opening.recipe.cold_teddy_bear.process.2"
+msgstr "The seam closes. The new bear has no body heat, but it is very good at being missed."
+
+msgid "opening.recipe.baby_soothing_bear.name"
+msgstr "Baby Soothing Bear"
+
+msgid "opening.recipe.baby_soothing_bear.process.1"
+msgstr "Softness wraps the noise layer by layer, leaving only a slow and regular heartbeat."
+
+msgid "opening.recipe.baby_soothing_bear.process.2"
+msgstr "It learns a wordless lullaby and decides never to sing the ending."
+
+msgid "opening.recipe.birthday_cake.name"
+msgstr "Birthday Cake"
+
+msgid "opening.recipe.birthday_cake.process.1"
+msgstr "Food is shaped into a celebration. Icing conceals the date and everyone who failed to attend."
+
+msgid "opening.recipe.birthday_cake.process.2"
+msgstr "The candles light themselves. They insist this day once belonged to someone."
+
+msgid "opening.recipe.cola.name"
+msgstr "Cola"
+
+msgid "opening.recipe.cola.process.1"
+msgstr "Weariness gathers into brown syrup. It remembers a formula no longer manufactured."
+
+msgid "opening.recipe.cola.process.2"
+msgstr "Bubbles wake at the bottom of the can. For a few minutes, the world tastes classic again."
+
+msgid "opening.recipe.rose.name"
+msgstr "Rose"
+
+msgid "opening.recipe.rose.process.1"
+msgstr "Petals unfold from impossible angles, like a secret practicing its own pronunciation."
+
+msgid "opening.recipe.rose.process.2"
+msgstr "Thorns emerge along the stem. The dream has learned to protect what it creates."
 msgid "opening.store.toy.name"
 msgstr "Joy Joy Toys"
 
@@ -955,10 +1132,10 @@ msgid "opening.unlock.flower.result"
 msgstr "The mask appears in the glass, and the shop opens through its reflection."
 
 msgid "opening.unlock.record.prompt"
-msgstr "The needle rests on a silent record. This place specifically asks for a Midnight Rose."
+msgstr "The needle rests on a silent record. This place specifically asks for a rose."
 
 msgid "opening.unlock.record.slot"
-msgstr "A Midnight Rose"
+msgstr "A rose"
 
 msgid "opening.unlock.record.result"
 msgstr "The rose remains beside the door. A record begins to turn."
@@ -1019,228 +1196,6 @@ msgstr "Any item"
 
 msgid "debug.task.todo_page.result"
 msgstr "The test item has been recorded. This request gives no reward."
-
-msgid "test.property.book.name"
-msgstr "Book"
-
-msgid "test.property.book.description"
-msgstr "Something bound together to be read, dog-eared, or forgotten."
-
-msgid "test.property.cassette.name"
-msgstr "Cassette"
-
-msgid "test.property.cassette.description"
-msgstr "An object that winds sound between two small wheels."
-
-msgid "test.property.candle.name"
-msgstr "Candle"
-
-msgid "test.property.candle.description"
-msgstr "Something that keeps a small light alive by slowly shortening itself."
-
-msgid "test.property.clothing.name"
-msgstr "Clothing"
-
-msgid "test.property.clothing.description"
-msgstr "Something worn outside the body that remembers warmth and scent."
-
-msgid "test.item.late_train_timetable.name"
-msgstr "Last-Train Timetable"
-
-msgid "test.item.late_train_timetable.description"
-msgstr "After the last train, the station names continue to move. A short unfinished night road is caught in the folds."
-
-msgid "test.item.blank_disc.name"
-msgstr "Blank Disc"
-
-msgid "test.item.blank_disc.description"
-msgstr "Its surface appears empty, yet reflects lamps from unfamiliar rooms when spun. It seems to await a sound that has not happened."
-
-msgid "test.item.rewound_tape.name"
-msgstr "Rewound Tape"
-
-msgid "test.item.rewound_tape.description"
-msgstr "The tape has returned to the beginning, leaving no fingerprints in its window. Before play is pressed, it remembers the final unfinished sentence."
-
-msgid "test.item.clockwork_moon.name"
-msgstr "Clockwork Moon"
-
-msgid "test.item.clockwork_moon.description"
-msgstr "Wind it and it slowly orbits the edge of a table. Whenever it stops, its far side faces you."
-
-msgid "test.item.cold_pudding.name"
-msgstr "Cold Pudding"
-
-msgid "test.item.cold_pudding.description"
-msgstr "The caramel has set into thin amber, and the spoon still waits beside the plate. The refrigerator light watched over it all night."
-
-msgid "test.item.paper_cup_water.name"
-msgstr "Paper Cup of Warm Water"
-
-msgid "test.item.paper_cup_water.description"
-msgstr "The water is no longer hot, though a little mist remains on the cup. It resembles a rest that ended too soon."
-
-msgid "test.item.pressed_violet.name"
-msgstr "Violet Between Pages"
-
-msgid "test.item.pressed_violet.description"
-msgstr "The petals are pressed flat as an old ink stain, but their scent has not entirely left. The flower quietly changes color whenever the book is closed."
-
-msgid "test.item.birthday_candle.name"
-msgstr "Extinguished Birthday Candle"
-
-msgid "test.item.birthday_candle.description"
-msgstr "The wick has smoked, and wax tears have hardened on the side where no wish was made. It remembers the song but not who blew it out."
-
-msgid "test.item.inside_out_raincoat.name"
-msgstr "Inside-Out Raincoat"
-
-msgid "test.item.inside_out_raincoat.description"
-msgstr "Its pockets hide inside while rain drips outward from the lining. Anyone wearing it feels as though they are waking from the weather."
-
-msgid "test.item.unborrowed_atlas.name"
-msgstr "Unborrowed Atlas"
-
-msgid "test.item.unborrowed_atlas.description"
-msgstr "Every road leads to a reading room after closing. On the final page, you find the route you just walked."
-
-msgid "test.item.four_am_live.name"
-msgstr "Four A.M. Live"
-
-msgid "test.item.four_am_live.description"
-msgstr "The applause comes from an audience that never entered the studio. When the last song ends, morning still refuses admission."
-
-msgid "test.item.unsent_message.name"
-msgstr "Unsent Message"
-
-msgid "test.item.unsent_message.description"
-msgstr "Press play and first hear a very long breath. The real message appears while rewinding, its ending closer than its beginning."
-
-msgid "test.item.blinking_satellite.name"
-msgstr "Blinking Satellite"
-
-msgid "test.item.blinking_satellite.description"
-msgstr "It circles the bedroom's only bulb and blinks every seventh orbit. No one knows whether it is reporting in or asking for rescue."
-
-msgid "test.item.counterclockwise_pudding.name"
-msgstr "Counterclockwise Pudding"
-
-msgid "test.item.counterclockwise_pudding.description"
-msgstr "Caramel retreats around the plate and each spoon mark disappears in turn. By the last bite, you have only just sat down."
-
-msgid "test.item.waiting_room_soda.name"
-msgstr "Waiting-Room Soda"
-
-msgid "test.item.waiting_room_soda.description"
-msgstr "Its bubbles imitate a distant train arriving. Once empty, the cup contains a platform ticket for a station that does not exist."
-
-msgid "test.item.echo_violet.name"
-msgstr "Echo Violet"
-
-msgid "test.item.echo_violet.description"
-msgstr "Each petal preserves the soft sound of a book closing. Hold it to your ear and hear a room from long ago."
-
-msgid "test.item.countdown_candle.name"
-msgstr "Countdown Candle"
-
-msgid "test.item.countdown_candle.description"
-msgstr "Its flame silently counts down from ten. At zero the room stays bright, but loses one piece of furniture you remember."
-
-msgid "test.item.bedtime_overcoat.name"
-msgstr "Bedtime Overcoat"
-
-msgid "test.item.bedtime_overcoat.description"
-msgstr "The collar holds the scent of sun-dried sheets, and the cuffs fall asleep before your arms. Fasten the final button and the corridor shortens to the bed."
-
-msgid "test.recipe.base.book"
-msgstr "Any Book"
-
-msgid "test.recipe.base.cd"
-msgstr "Any CD"
-
-msgid "test.recipe.base.cassette"
-msgstr "Any Cassette"
-
-msgid "test.recipe.base.toy"
-msgstr "Any Toy"
-
-msgid "test.recipe.base.food"
-msgstr "Any Food"
-
-msgid "test.recipe.base.drink"
-msgstr "Any Drink"
-
-msgid "test.recipe.base.flower"
-msgstr "Any Flower"
-
-msgid "test.recipe.base.candle"
-msgstr "Any Candle"
-
-msgid "test.recipe.base.clothing"
-msgstr "Any Clothing"
-
-msgid "test.recipe.unborrowed_atlas.name"
-msgstr "Unborrowed Atlas"
-msgid "test.recipe.unborrowed_atlas.process.1"
-msgstr "Station names loosen from the paper and arrange themselves along the folds."
-msgid "test.recipe.unborrowed_atlas.process.2"
-msgstr "Every unfinished night road meets again inside the back cover."
-
-msgid "test.recipe.four_am_live.name"
-msgstr "Four A.M. Live"
-msgid "test.recipe.four_am_live.process.1"
-msgstr "Empty grooves begin to remember applause from an audience that never existed."
-msgid "test.recipe.four_am_live.process.2"
-msgstr "The needle drops, and it remains night outside the studio."
-
-msgid "test.recipe.unsent_message.name"
-msgstr "Unsent Message"
-msgid "test.recipe.unsent_message.process.1"
-msgstr "The two wheels turn apart and wind a long breath tight again."
-msgid "test.recipe.unsent_message.process.2"
-msgstr "The sentence ending arrives first, then finds its speaker."
-
-msgid "test.recipe.blinking_satellite.name"
-msgstr "Blinking Satellite"
-msgid "test.recipe.blinking_satellite.process.1"
-msgstr "The spring pushes the tabletop away, raising the bulb into a small star."
-msgid "test.recipe.blinking_satellite.process.2"
-msgstr "At the end of its seventh orbit, it blinks at the bedroom."
-
-msgid "test.recipe.counterclockwise_pudding.name"
-msgstr "Counterclockwise Pudding"
-msgid "test.recipe.counterclockwise_pudding.process.1"
-msgstr "Caramel runs backward around the plate and each spoon mark closes."
-msgid "test.recipe.counterclockwise_pudding.process.2"
-msgstr "The last bite returns to the cup, just as the late snack begins."
-
-msgid "test.recipe.waiting_room_soda.name"
-msgstr "Waiting-Room Soda"
-msgid "test.recipe.waiting_room_soda.process.1"
-msgstr "Tiny bubbles rise and arrange themselves as departing train lights."
-msgid "test.recipe.waiting_room_soda.process.2"
-msgstr "A damp platform ticket settles at the bottom of the cup."
-
-msgid "test.recipe.echo_violet.name"
-msgstr "Echo Violet"
-msgid "test.recipe.echo_violet.process.1"
-msgstr "The petals absorb the sound of a closing book and deepen in color."
-msgid "test.recipe.echo_violet.process.2"
-msgstr "A room from long ago answers softly inside the flower."
-
-msgid "test.recipe.countdown_candle.name"
-msgstr "Countdown Candle"
-msgid "test.recipe.countdown_candle.process.1"
-msgstr "The dead wick lights again and silently begins counting from ten."
-msgid "test.recipe.countdown_candle.process.2"
-msgstr "At zero, one familiar piece of furniture leaves the room."
-
-msgid "test.recipe.bedtime_overcoat.name"
-msgstr "Bedtime Overcoat"
-msgid "test.recipe.bedtime_overcoat.process.1"
-msgstr "Rain withdraws from the lining, leaving the scent of sun-dried sheets."
-msgid "test.recipe.bedtime_overcoat.process.2"
-msgstr "The last button closes and the corridor shortens to the bed."
 
 # Daily task selection
 msgid "quest.ui.offer.daily.heading"

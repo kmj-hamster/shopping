@@ -5,16 +5,16 @@
 
 [sub_resource type="Resource" id="Props"]
 script = ExtResource("2_props")
-tags = Array[StringName]([&"cassette"])
-values = {&"mourner": 6, &"homecomer": 2}
+tags = Array[StringName]([&"food"])
+values = {&"mourner": 4}
 
 [resource]
 script = ExtResource("1_item")
-id = &"test_unsent_message"
-display_name_key = &"test.item.unsent_message.name"
-description_key = &"test.item.unsent_message.description"
+id = &"birthday_cake"
+display_name_key = &"opening.item.birthday_cake.name"
+description_key = &"opening.item.birthday_cake.description"
 supply_mode = 3
 is_crafted = true
-can_recycle = false
+fixed_resale_value = 40
 can_be_synthesis_base = false
 property_set = SubResource("Props")

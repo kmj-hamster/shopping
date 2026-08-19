@@ -5,15 +5,15 @@
 
 [sub_resource type="Resource" id="BaseRule"]
 script = ExtResource("2_rule")
-id = &"test_book_base"
-display_name_key = &"test.recipe.base.book"
-required_all = Array[StringName]([&"book"])
+id = &"cold_teddy_bear_base"
+display_name_key = &"opening.recipe.base.toy"
+required_all = Array[StringName]([&"toy"])
 
 [resource]
 script = ExtResource("1_recipe")
-id = &"recipe_test_unborrowed_atlas"
-display_name_key = &"test.recipe.unborrowed_atlas.name"
+id = &"recipe_cold_teddy_bear"
+display_name_key = &"opening.recipe.cold_teddy_bear.name"
 base_rule = SubResource("BaseRule")
-required_personas = {&"nightwalker": 6, &"mourner": 3}
-output_id = &"test_unborrowed_atlas"
-process_text_keys = Array[StringName]([&"test.recipe.unborrowed_atlas.process.1", &"test.recipe.unborrowed_atlas.process.2"])
+required_personas = {&"mourner": 5}
+output_id = &"cold_teddy_bear"
+process_text_keys = Array[StringName]([&"opening.recipe.cold_teddy_bear.process.1", &"opening.recipe.cold_teddy_bear.process.2"])

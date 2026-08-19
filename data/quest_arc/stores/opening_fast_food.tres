@@ -11,5 +11,5 @@ unlock_definition_id = &"unlock_fast_food"
 map_anchor = Vector2(0.49, 0.42)
 restock_interval_days = 3
 restock_phase_day = 2
-initial_capacity = 4
-initial_shelf_item_ids = Array[StringName]([&"milkshake", &"cola", &"fries", &"nuggets"])
+initial_capacity = 6
+initial_shelf_item_ids = Array[StringName]([&"milkshake", &"fruit_wine", &"fries", &"fries", &"milkshake", &"nuggets"])

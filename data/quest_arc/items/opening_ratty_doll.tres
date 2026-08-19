@@ -5,15 +5,14 @@
 
 [sub_resource type="Resource" id="Props"]
 script = ExtResource("2_props")
-tags = Array[StringName]([&"food"])
-values = {&"homecomer": 6, &"mourner": 1}
+tags = Array[StringName]([&"toy"])
+values = {&"homecomer": 2, &"mourner": 1}
 
 [resource]
 script = ExtResource("1_item")
-id = &"test_cold_pudding"
-display_name_key = &"test.item.cold_pudding.name"
-description_key = &"test.item.cold_pudding.description"
-store_id = &"fast_food"
-supply_mode = 2
-can_recycle = false
+id = &"ratty_doll"
+display_name_key = &"opening.item.ratty_doll.name"
+description_key = &"opening.item.ratty_doll.description"
+store_id = &"toy"
+base_price = 18
 property_set = SubResource("Props")

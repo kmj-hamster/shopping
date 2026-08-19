@@ -1,20 +1,18 @@
-[gd_resource type="Resource" script_class="QuestItemDefinition" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="QuestItemDefinition" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/quest_domain/quest_item_definition.gd" id="1_item"]
 [ext_resource type="Script" path="res://scripts/slot_domain/card_property_set.gd" id="2_props"]
-[ext_resource type="Texture2D" path="res://resources/placeholders/item-flower-block.svg" id="3_image"]
-
 [sub_resource type="Resource" id="Props"]
 script = ExtResource("2_props")
 tags = Array[StringName]([&"flower"])
-values = {&"dreamwalker": 3}
+values = {&"dreamwalker": 2, &"homecomer": 2}
 
 [resource]
 script = ExtResource("1_item")
 id = &"gardenia"
 display_name_key = &"opening.item.gardenia.name"
 description_key = &"opening.item.gardenia.description"
-image = ExtResource("3_image")
 store_id = &"flower"
-base_price = 40
+base_price = 24
+supply_mode = 2
 property_set = SubResource("Props")

@@ -11,5 +11,5 @@ unlock_definition_id = &"unlock_toy"
 map_anchor = Vector2(0.28, 0.55)
 restock_interval_days = 3
 restock_phase_day = 1
-initial_capacity = 4
-initial_shelf_item_ids = Array[StringName]([&"plastic_car", &"kaleidoscope", &"lotus_candle", &"mung_bean_cake"])
+initial_capacity = 6
+initial_shelf_item_ids = Array[StringName]([&"kaleidoscope", &"lotus_candle", &"mung_bean_cake", &"tin_frog", &"ratty_doll", &"mung_bean_cake"])

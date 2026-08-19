@@ -24,6 +24,6 @@ func validation_errors() -> PackedStringArray:
 		errors.append("Craft-only item %s must be marked crafted." % id)
 	if is_crafted and supply_mode != SupplyMode.CRAFT_ONLY:
 		errors.append("Crafted item %s must use CRAFT_ONLY supply." % id)
-	if (is_map_key or is_story_item or is_crafted) and can_recycle:
+	if (is_map_key or is_story_item) and can_recycle:
 		errors.append("Protected item %s cannot be recycled." % id)
 	return errors

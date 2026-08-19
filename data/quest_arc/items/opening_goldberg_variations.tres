@@ -5,15 +5,14 @@
 
 [sub_resource type="Resource" id="Props"]
 script = ExtResource("2_props")
-tags = Array[StringName]([&"cd"])
-values = {&"dreamwalker": 2}
+tags = Array[StringName]([&"cassette"])
+values = {&"homecomer": 2, &"nightwalker": 2}
 
 [resource]
 script = ExtResource("1_item")
-id = &"test_blank_disc"
-display_name_key = &"test.item.blank_disc.name"
-description_key = &"test.item.blank_disc.description"
+id = &"goldberg_variations"
+display_name_key = &"opening.item.goldberg_variations.name"
+description_key = &"opening.item.goldberg_variations.description"
 store_id = &"record"
-supply_mode = 2
-can_recycle = false
+base_price = 20
 property_set = SubResource("Props")

@@ -18,7 +18,7 @@ func test_round_trip_preserves_opening_tasks_cards_and_map_state() -> void:
 	var source := QuestGameState.new()
 	_unlock_toy_shop(source)
 	var self_care := source.task_instance_for_definition(&"self_care")
-	var car := source.grant_item(&"plastic_car", &"test", 8)
+	var car := source.grant_item(&"ratty_doll", &"test", 18)
 	assert_true(source.assign_card(self_care.instance_id, &"self_care_item", car).ok)
 	assert_true(source.confirm_task(self_care.instance_id).ok)
 	source.mark_store_visited(&"toy")
@@ -71,8 +71,11 @@ func test_round_trip_preserves_fixed_shelf_stock() -> void:
 	assert_true(repository.load_into(restored).ok)
 	var restored_toy := restored.transaction_for_store(&"toy")
 	assert_true(restored_toy.shelf_slots[0].is_empty())
-	assert_eq(restored_toy.shelf_slots[1].item_id, &"kaleidoscope")
-	assert_true(restored.transaction_for_store(&"record").shelf_slots.is_empty())
+	assert_eq(restored_toy.shelf_slots[1].item_id, &"lotus_candle")
+	assert_eq(
+		restored.transaction_for_store(&"record").shelf_slots[0].item_id,
+		&"goldberg_variations",
+	)
 
 
 func test_pending_arc_preserves_dynamic_persona_growth_without_duplicate_reward() -> void:
@@ -85,11 +88,11 @@ func test_pending_arc_preserves_dynamic_persona_growth_without_duplicate_reward(
 	assert_eq(restored.pending_arc.entries[0].item_definition_ids, [&"kaleidoscope"])
 	assert_eq(restored.pending_arc.entries[0].persona_growth, {
 		&"dreamwalker": 1,
-		&"mourner": 1,
+		&"nightwalker": 1,
 	})
 	assert_true(restored.apply_arc_effects().ok)
 	assert_eq(int(restored.protagonist_persona_counts[&"dreamwalker"]), 1)
-	assert_eq(int(restored.protagonist_persona_counts[&"mourner"]), 1)
+	assert_eq(int(restored.protagonist_persona_counts[&"nightwalker"]), 1)
 	assert_true(restored.apply_arc_effects().already_applied)
 	assert_eq(int(restored.protagonist_persona_counts[&"dreamwalker"]), 1)
 
@@ -115,11 +118,11 @@ func test_synthesis_placement_is_not_persisted() -> void:
 
 func test_discovered_recipe_is_persisted_without_draft_inputs() -> void:
 	var source := QuestGameState.new()
-	source.discovered_recipe_ids[&"recipe_midnight_rose"] = true
+	source.discovered_recipe_ids[&"recipe_rose"] = true
 	assert_true(repository.save(source))
 	var restored := QuestGameState.new()
 	assert_true(repository.load_into(restored).ok)
-	assert_true(restored.discovered_recipe_ids.has(&"recipe_midnight_rose"))
+	assert_true(restored.discovered_recipe_ids.has(&"recipe_rose"))
 	assert_eq(restored.synthesis_base_instance_id, 0)
 	assert_eq(restored.synthesis_helper_instance_id, 0)
 
@@ -148,7 +151,7 @@ func test_item_and_money_gift_states_survive_round_trip() -> void:
 
 
 func test_task_pool_cooldowns_offers_and_persona_reveals_survive_round_trip() -> void:
-	var source := _state_with_confirmed_self_care(&"plastic_orchid")
+	var source := _state_with_confirmed_self_care(&"foam_fake_flower")
 	assert_true(source.begin_next_day().ok)
 	assert_true(source.apply_arc_effects().ok)
 	source.task_pool_available_days[&"daily_midnight_radio"] = 9
@@ -178,6 +181,7 @@ func _state_with_confirmed_self_care(item_id: StringName) -> QuestGameState:
 	var state := QuestGameState.new()
 	state.protagonist_persona_counts[&"dreamwalker"] = 0
 	state.protagonist_persona_counts[&"mourner"] = 0
+	state.protagonist_persona_counts[&"nightwalker"] = 0
 	_unlock_toy_shop(state)
 	var task := state.task_instance_for_definition(&"self_care")
 	var item := state.grant_item(item_id, &"test")

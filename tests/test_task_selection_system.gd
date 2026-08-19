@@ -58,7 +58,7 @@ func test_unfinished_daily_task_expires_after_three_nights_and_returns_its_card(
 	var drink := state.grant_item(&"cola", &"test")
 	assert_true(state.assign_card(daily.instance_id, &"item", drink).ok)
 	state.day = 4
-	_confirm_opening_self_care(state, &"plastic_car")
+	_confirm_opening_self_care(state, &"ratty_doll")
 	var begin := state.begin_next_day()
 	assert_true(begin.ok)
 	assert_eq(int(begin.expired_task_count), 1)
@@ -76,7 +76,7 @@ func test_completed_daily_task_observes_the_seven_night_cooldown() -> void:
 	var drink := state.grant_item(&"cola", &"test")
 	assert_true(state.assign_card(daily.instance_id, &"item", drink).ok)
 	assert_true(state.confirm_task(daily.instance_id).ok)
-	_confirm_opening_self_care(state, &"plastic_car")
+	_confirm_opening_self_care(state, &"ratty_doll")
 	assert_true(state.begin_next_day().ok)
 	assert_true(state.apply_arc_effects().ok)
 	assert_eq(int(state.task_pool_available_days[&"daily_rooftop_thermos"]), 9)
@@ -85,15 +85,11 @@ func test_completed_daily_task_observes_the_seven_night_cooldown() -> void:
 func test_self_care_candidates_require_a_fully_matching_accessible_item_and_cool_by_type() -> void:
 	var state := QuestGameState.new()
 	state.day = 2
+	var book := state.grant_item(&"mirror_and_lamp", &"test")
 	var candidates := state._eligible_pooled_tasks(TaskDefinition.SelectionPool.SELF_CARE)
 	assert_true(candidates.any(
 		func(definition: TaskDefinition) -> bool: return definition.id == &"self_care_read"
 	))
-	var book: CardItemState
-	for card in state.inventory:
-		if card.definition_id == &"test_late_train_timetable":
-			book = card
-			break
 	assert_not_null(book)
 	state.inventory.erase(book)
 	candidates = state._eligible_pooled_tasks(TaskDefinition.SelectionPool.SELF_CARE)

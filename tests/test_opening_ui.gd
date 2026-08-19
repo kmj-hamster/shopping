@@ -16,13 +16,13 @@ func before_each() -> void:
 func test_opening_ui_has_letters_pagination_tests_unlock_cards_and_three_visible_stores() -> void:
 	var main := await _spawn_main()
 	assert_eq(main.task_dock.bookmark_buttons.size(), 6)
-	assert_eq(main.state.inventory.size(), 12)
+	assert_true(main.state.inventory.is_empty())
 	for persona_id in CardPropertySet.PERSONAS:
 		var persona_card := PersonaMaskCatalog.card_for_persona(persona_id)
 		assert_true(main.hand_bar.card_views.has(persona_card.instance_id))
 	for card in main.state.inventory:
 		assert_true(main.hand_bar.card_views.has(card.instance_id))
-	assert_eq(main.hand_bar.card_views.size(), 16)
+	assert_eq(main.hand_bar.card_views.size(), 4)
 	assert_eq(main.map_screen.store_hotspots.size(), 5)
 	assert_true((main.map_screen.store_hotspots[&"toy"] as Button).visible)
 	assert_true((main.map_screen.store_hotspots[&"fast_food"] as Button).visible)
@@ -32,7 +32,7 @@ func test_opening_ui_has_letters_pagination_tests_unlock_cards_and_three_visible
 	for hotspot in main.map_screen.store_hotspots.values():
 		assert_eq((hotspot as Button).tooltip_text, "")
 	main.hand_bar.show_tab(QuestHandBar.TAB_MASKS)
-	assert_eq(main.hand_bar.card_views.size(), 16)
+	assert_eq(main.hand_bar.card_views.size(), 4)
 	assert_false(main.state.select_synthesis_persona(&"nightwalker"))
 
 
@@ -199,7 +199,7 @@ func test_toy_unlock_enters_shop_activates_three_tasks_and_shows_restock_timer()
 	for view_index in shop.shelf_views.size():
 		var shelf_card := shop.shelf_views[view_index].card as CardHandCard
 		assert_eq(shelf_card.mouse_filter, Control.MOUSE_FILTER_IGNORE)
-		assert_eq(shelf_card.visible, view_index < 4)
+		assert_true(shelf_card.visible)
 	assert_true(main.state.has_visited_store(&"toy"))
 	assert_not_null(main.state.task_instance_for_definition(&"tin_boy_toy"))
 	assert_not_null(main.state.task_instance_for_definition(&"self_care"))
@@ -280,20 +280,12 @@ func test_demo_next_day_button_builds_arc_from_all_three_confirmed_opening_tasks
 	var tin_task := state.task_instance_for_definition(&"tin_boy_toy")
 	var self_care := state.task_instance_for_definition(&"self_care")
 	var drink_task := state.task_instance_for_definition(&"girl_order")
-	var plastic_car := state.inventory.filter(
-		func(card: CardItemState) -> bool: return card.definition_id == &"plastic_car"
-	)[0] as CardItemState
-	var fries := state.inventory.filter(
-		func(card: CardItemState) -> bool: return card.definition_id == &"fries"
-	)[0] as CardItemState
-	var water := state.inventory.filter(
-		func(card: CardItemState) -> bool: return (
-			card.definition_id == &"test_paper_cup_water"
-		)
-	)[0] as CardItemState
-	assert_true(state.assign_card(tin_task.instance_id, &"toy", plastic_car).ok)
+	var ratty_doll := state.grant_item(&"ratty_doll", &"test")
+	var fries := state.grant_item(&"fries", &"test")
+	var milkshake := state.grant_item(&"milkshake", &"test")
+	assert_true(state.assign_card(tin_task.instance_id, &"toy", ratty_doll).ok)
 	assert_true(state.assign_card(self_care.instance_id, &"self_care_item", fries).ok)
-	assert_true(state.assign_card(drink_task.instance_id, &"drink", water).ok)
+	assert_true(state.assign_card(drink_task.instance_id, &"drink", milkshake).ok)
 	assert_true(state.confirm_task(tin_task.instance_id).ok)
 	assert_true(state.confirm_task(self_care.instance_id).ok)
 	assert_true(state.confirm_task(drink_task.instance_id).ok)
@@ -316,7 +308,7 @@ func test_demo_next_day_button_builds_arc_from_all_three_confirmed_opening_tasks
 	assert_true(self_care.settled)
 	assert_true(drink_task.settled)
 	assert_eq(state.wallet.money, 35)
-	assert_eq(main.arc_used_card.definition.id, &"plastic_car")
+	assert_eq(main.arc_used_card.definition.id, &"ratty_doll")
 	assert_true(main.arc_task_source_row.visible)
 
 
@@ -324,7 +316,7 @@ func test_persona_first_acquisition_reveals_each_new_mask_after_arc() -> void:
 	var main := await _spawn_main()
 	var state := main.state
 	state.protagonist_persona_counts[&"dreamwalker"] = 0
-	state.protagonist_persona_counts[&"mourner"] = 0
+	state.protagonist_persona_counts[&"nightwalker"] = 0
 	var frog := state.grant_item(&"tin_frog", &"test")
 	assert_true(state.unlock_store(&"toy", frog).ok)
 	var self_care := state.task_instance_for_definition(&"self_care")
