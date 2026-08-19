@@ -94,6 +94,8 @@ func test_work_check_stops_after_a_work_door_has_appeared() -> void:
 			)
 			assert_true(run.work_offer_seen)
 			assert_eq(second_doors.size(), 2)
+			assert_false(second_doors.has(&"cold_storage"))
+			assert_false(second_doors.has(&"shelf_shift"))
 			break
 	assert_true(found_work_seed)
 
@@ -168,13 +170,19 @@ func test_work_room_pays_twelve_and_does_not_add_wage_to_hand() -> void:
 
 func test_third_room_advances_day_and_returns_to_courtyard() -> void:
 	var state := QuestGameState.new()
+	state.day = 3
+	state.transaction_for_store(&"toy").shelf_slots[0].clear()
 	state.expedition.begin_night(state.day, 22)
 	state.expedition.rooms_completed = 2
 	state.expedition.current_door_ids = [&"shelf_shift"]
 	var result := state.complete_expedition_room(&"shelf_shift")
 	assert_true(result.night_finished)
-	assert_eq(state.day, 2)
+	assert_eq(state.day, 4)
 	assert_false(state.expedition.active)
+	assert_eq(
+		state.transaction_for_store(&"toy").shelf_slots[0].item_id,
+		&"kaleidoscope",
+	)
 
 
 func test_door_checkpoint_round_trips_without_rerolling() -> void:
@@ -209,6 +217,45 @@ func test_rest_room_type_filters_and_rainforest_persona_growth() -> void:
 	assert_true(state.inventory.has(food))
 
 
+func test_each_rest_room_enforces_its_confirmed_card_categories() -> void:
+	var state := QuestGameState.new()
+	var toy := state.inventory[0]
+	var food := state.grant_item(&"fries", &"test")
+	var drink := state.grant_item(&"milkshake", &"test")
+	var book := state.grant_item(&"conservatory_story", &"test")
+	var cassette := state.grant_item(&"goldberg_variations", &"test")
+	var flower := state.grant_item(&"jasmine", &"test")
+	var wound := state.grant_item(&"expedition_wound", &"test")
+	assert_true(state.expedition_room_accepts_card(&"retro_restaurant", food))
+	assert_true(state.expedition_room_accepts_card(&"retro_restaurant", drink))
+	assert_false(state.expedition_room_accepts_card(&"retro_restaurant", toy))
+	assert_true(state.expedition_room_accepts_card(&"screening_room", book))
+	assert_true(state.expedition_room_accepts_card(&"screening_room", cassette))
+	assert_false(state.expedition_room_accepts_card(&"screening_room", food))
+	assert_true(state.expedition_room_accepts_card(&"children_playground", toy))
+	assert_true(state.expedition_room_accepts_card(&"children_playground", flower))
+	assert_false(state.expedition_room_accepts_card(&"children_playground", book))
+	assert_true(state.expedition_room_accepts_card(&"home", toy))
+	assert_false(state.expedition_room_accepts_card(&"home", wound))
+	assert_true(
+		state.expedition_room_accepts_card(&"rainforest", null, &"nightwalker")
+	)
+	assert_false(state.expedition_room_accepts_card(&"rainforest", toy))
+
+
+func test_optional_rest_can_be_left_empty_but_rainforest_cannot() -> void:
+	var state := QuestGameState.new()
+	state.expedition.begin_night(1, 35)
+	state.expedition.current_door_ids = [&"home"]
+	var home_result := state.complete_expedition_room(&"home")
+	assert_true(home_result.ok)
+	assert_eq(state.expedition.rooms_completed, 1)
+	state.expedition.current_door_ids = [&"rainforest"]
+	var rainforest_result := state.complete_expedition_room(&"rainforest")
+	assert_false(rainforest_result.ok)
+	assert_eq(state.expedition.rooms_completed, 1)
+
+
 func test_salvage_room_sells_up_to_three_items_at_full_recorded_value() -> void:
 	var state := QuestGameState.new()
 	var fries := state.grant_item(&"fries", &"test", 8)
@@ -223,6 +270,22 @@ func test_salvage_room_sells_up_to_three_items_at_full_recorded_value() -> void:
 	assert_eq(state.wallet.money, 32)
 	assert_null(state.card_by_instance_id(fries.instance_id))
 	assert_null(state.card_by_instance_id(gardenia.instance_id))
+
+
+func test_salvage_rejects_a_fourth_item_without_consuming_anything() -> void:
+	var state := QuestGameState.new()
+	var cards: Array[CardItemState] = []
+	for item_id in [&"fries", &"milkshake", &"jasmine", &"tin_frog"]:
+		cards.append(state.grant_item(item_id, &"test"))
+	state.expedition.begin_night(1, 48)
+	state.expedition.current_door_ids = [&"salvage_yard"]
+	var ids: Array[int] = []
+	for card in cards:
+		ids.append(card.instance_id)
+	var result := state.complete_expedition_room(&"salvage_yard", ids)
+	assert_false(result.ok)
+	for card in cards:
+		assert_true(state.inventory.has(card))
 
 
 func test_rest_growth_from_zero_queues_first_persona_reveal() -> void:
@@ -272,6 +335,7 @@ func test_boss_failure_grants_wound_and_immediately_ends_the_night() -> void:
 	assert_true(result.night_finished)
 	assert_eq(state.day, 2)
 	assert_eq(state.inventory[-1].definition_id, &"expedition_wound")
+	assert_true(state.expedition.is_discovered(&"scanner"))
 
 
 func _challenge_room(

@@ -70,7 +70,7 @@ func refresh() -> void:
 	door_button.texture_pressed = textures[1] as Texture2D
 	name_label.text = (
 		TranslationServer.translate(room.display_name_key)
-		if state.expedition.is_discovered(room.id) or room.category == MallRoomDefinition.Category.BOSS
+		if state.expedition.is_discovered(room.id)
 		else TranslationServer.translate(&"expedition.ui.unknown")
 	)
 	name_label.visible = false

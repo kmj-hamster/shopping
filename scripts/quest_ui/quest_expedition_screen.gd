@@ -15,12 +15,14 @@ enum Phase {
 	ROUND_RESULT,
 	REWARD,
 	REST_RESULT,
+	WAITING_PERSONA_REVEAL,
 	DEMO_COMPLETE,
 }
 
 const INK := Color("e6ece8")
 const MUTED := Color("91aaa7")
 const ACCENT := Color("d2bd7d")
+const TYPEWRITER_CHARACTER_SECONDS := 0.024
 
 var state: QuestGameState
 var phase := Phase.DOORS
@@ -33,6 +35,11 @@ var used_card_ids: Dictionary = {}
 var reward_collected := false
 var last_round_success := false
 var current_reward_id: StringName
+var pending_completion_result: Dictionary = {}
+var narrative_timer: Timer
+var narrative_typing := false
+var narrative_character_index := 0
+var suppress_narrative_animation := false
 
 var background_input: Control
 var door_prompt: Label
@@ -69,6 +76,10 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	z_index = 500
 	_build_interface()
+	narrative_timer = Timer.new()
+	narrative_timer.one_shot = true
+	narrative_timer.timeout.connect(_advance_narrative_typewriter)
+	add_child(narrative_timer)
 	LocaleManager.locale_changed.connect(_on_locale_changed)
 	if state != null:
 		show_checkpoint()
@@ -351,6 +362,9 @@ func _enter_room(room_id: StringName) -> void:
 
 
 func _on_action_pressed() -> void:
+	if narrative_typing:
+		_finish_narrative_typewriter()
+		return
 	match phase:
 		Phase.INTRO:
 			_advance_from_intro()
@@ -359,7 +373,12 @@ func _on_action_pressed() -> void:
 		Phase.SLOTS:
 			_submit_slots()
 		Phase.ROUND_RESULT:
-			_start_next_boss_round()
+			if _has_next_boss_round():
+				_start_next_boss_round()
+			else:
+				_show_reward(
+					&"expedition_salvage" if last_round_success else &"expedition_wound"
+				)
 		Phase.REST_RESULT:
 			_leave_room()
 		Phase.REWARD:
@@ -392,7 +411,8 @@ func _show_challenge_intro() -> void:
 func _show_approaches() -> void:
 	phase = Phase.APPROACH
 	_set_room_image(&"challenge")
-	_set_narrative(room.challenge_text_keys)
+	narrative_label.visible_characters = -1
+	narrative_typing = false
 	approach_row.visible = true
 	for index in approach_buttons.size():
 		approach_buttons[index].text = TranslationServer.translate(
@@ -409,9 +429,12 @@ func _choose_approach(index: int) -> void:
 	approach_index = index
 	phase = Phase.SLOTS
 	approach_row.visible = false
-	narrative_label.text = TranslationServer.translate(room.approach_text_keys[index])
+	var narrative_lines: PackedStringArray = [
+		TranslationServer.translate(room.approach_text_keys[index])
+	]
 	if not room.post_choice_text_key.is_empty():
-		narrative_label.text += "\n\n" + TranslationServer.translate(room.post_choice_text_key)
+		narrative_lines.append(TranslationServer.translate(room.post_choice_text_key))
+	_set_narrative_text("\n\n".join(narrative_lines))
 	_set_room_image(&"response")
 	_prepare_slots(room.slot_count)
 	feedback_label.visible = true
@@ -464,23 +487,29 @@ func _submit_challenge_round() -> void:
 	for card_id in round.card_instance_ids:
 		used_card_ids[card_id] = true
 	_release_current_personas_only()
+	phase = Phase.ROUND_RESULT
 	_set_room_image(&"result")
-	narrative_label.text = TranslationServer.translate(
+	_set_narrative_text(TranslationServer.translate(
 		room.success_text_key if bool(evaluation.success) else room.failure_text_key
-	)
+	))
 	slot_row.visible = false
 	feedback_label.visible = false
-	if (
-		room.category == MallRoomDefinition.Category.BOSS
-		and bool(evaluation.success)
+	action_button.visible = true
+	action_button.text = TranslationServer.translate(
+		&"expedition.ui.next_round"
+		if _has_next_boss_round()
+		else &"expedition.ui.continue"
+	)
+	reward_host.visible = false
+	reward_target.visible = false
+
+
+func _has_next_boss_round() -> bool:
+	return (
+		room != null
+		and room.category == MallRoomDefinition.Category.BOSS
+		and last_round_success
 		and boss_round_index + 1 < room.boss_round_count
-	):
-		phase = Phase.ROUND_RESULT
-		action_button.visible = true
-		action_button.text = TranslationServer.translate(&"expedition.ui.next_round")
-		return
-	_show_reward(
-		&"expedition_salvage" if bool(evaluation.success) else &"expedition_wound"
 	)
 
 
@@ -503,11 +532,11 @@ func _preview_rest_result() -> void:
 	slot_row.visible = false
 	feedback_label.visible = false
 	_set_room_image(&"result")
-	narrative_label.text = TranslationServer.translate(
+	_set_narrative_text(TranslationServer.translate(
 		&"expedition.room.salvage.result"
 		if room.rest_mode == MallRoomDefinition.RestMode.SALVAGE
 		else &"expedition.room.rest.result"
-	)
+	))
 	action_button.visible = true
 	action_button.text = TranslationServer.translate(&"expedition.ui.leave")
 
@@ -523,7 +552,7 @@ func _show_reward(reward_id: StringName) -> void:
 	action_button.visible = false
 	var definition := QuestArcCatalog.item_by_id(reward_id)
 	var preview_state := CardItemState.new(-900, reward_id, state.day, &"expedition_preview")
-	reward_card.setup(preview_state, definition, true)
+	reward_card.setup(preview_state, definition, reward_id != &"expedition_wage")
 
 
 func _flip_reward() -> void:
@@ -567,6 +596,24 @@ func _leave_room() -> void:
 	if not bool(result.get("ok", false)):
 		return
 	_clear_room_draft()
+	if not (result.get("new_persona_ids", []) as Array).is_empty():
+		pending_completion_result = result
+		phase = Phase.WAITING_PERSONA_REVEAL
+		action_button.visible = false
+		persona_reveal_requested.emit()
+		return
+	_finalize_committed_room(result)
+
+
+func on_persona_reveals_completed() -> void:
+	if phase != Phase.WAITING_PERSONA_REVEAL or pending_completion_result.is_empty():
+		return
+	var result := pending_completion_result
+	pending_completion_result = {}
+	_finalize_committed_room(result)
+
+
+func _finalize_committed_room(result: Dictionary) -> void:
 	if bool(result.demo_complete):
 		_show_demo_complete()
 		demo_completed.emit()
@@ -575,8 +622,6 @@ func _leave_room() -> void:
 	else:
 		show_checkpoint()
 		checkpoint_reached.emit()
-	if not (result.get("new_persona_ids", []) as Array).is_empty():
-		persona_reveal_requested.emit()
 
 
 func _show_demo_complete() -> void:
@@ -662,6 +707,11 @@ func _clear_room_draft() -> void:
 	reward_collected = false
 	last_round_success = false
 	current_reward_id = &""
+	pending_completion_result = {}
+	if narrative_timer != null:
+		narrative_timer.stop()
+	narrative_typing = false
+	narrative_character_index = 0
 	if hand_bar != null:
 		hand_bar.clear_temporarily_hidden_cards()
 
@@ -720,7 +770,40 @@ func _set_narrative(keys: Array[StringName]) -> void:
 	var lines: PackedStringArray = []
 	for key in keys:
 		lines.append(TranslationServer.translate(key))
-	narrative_label.text = "\n".join(lines)
+	_set_narrative_text("\n".join(lines))
+
+
+func _set_narrative_text(full_text: String) -> void:
+	if narrative_timer != null:
+		narrative_timer.stop()
+	narrative_label.text = full_text
+	narrative_character_index = 0
+	if suppress_narrative_animation or full_text.is_empty():
+		narrative_label.visible_characters = -1
+		narrative_typing = false
+		return
+	narrative_label.visible_characters = 0
+	narrative_typing = true
+	_advance_narrative_typewriter()
+
+
+func _advance_narrative_typewriter() -> void:
+	if not narrative_typing:
+		return
+	narrative_character_index += 1
+	narrative_label.visible_characters = narrative_character_index
+	if narrative_character_index >= narrative_label.get_total_character_count():
+		_finish_narrative_typewriter()
+	elif narrative_timer != null:
+		narrative_timer.start(TYPEWRITER_CHARACTER_SECONDS)
+
+
+func _finish_narrative_typewriter() -> void:
+	if narrative_timer != null:
+		narrative_timer.stop()
+	narrative_label.visible_characters = -1
+	narrative_character_index = narrative_label.get_total_character_count()
+	narrative_typing = false
 
 
 func _set_room_image(stage_id: StringName) -> void:
@@ -742,7 +825,9 @@ func _refresh_localized_text() -> void:
 
 
 func _on_locale_changed(_locale: String) -> void:
+	suppress_narrative_animation = true
 	_refresh_localized_text()
+	suppress_narrative_animation = false
 
 
 func _refresh_room_phase_text() -> void:
@@ -781,7 +866,7 @@ func _refresh_room_phase_text() -> void:
 				var lines: PackedStringArray = []
 				for key in narrative_keys:
 					lines.append(TranslationServer.translate(key))
-				narrative_label.text = "\n\n".join(lines)
+				_set_narrative_text("\n\n".join(lines))
 				action_button.text = TranslationServer.translate(&"expedition.ui.submit")
 				_refresh_feedback()
 			else:
@@ -794,24 +879,28 @@ func _refresh_room_phase_text() -> void:
 				)
 		Phase.ROUND_RESULT:
 			_set_room_image(&"result")
-			narrative_label.text = TranslationServer.translate(
+			_set_narrative_text(TranslationServer.translate(
 				room.success_text_key if last_round_success else room.failure_text_key
+			))
+			action_button.text = TranslationServer.translate(
+				&"expedition.ui.next_round"
+				if _has_next_boss_round()
+				else &"expedition.ui.continue"
 			)
-			action_button.text = TranslationServer.translate(&"expedition.ui.next_round")
 		Phase.REST_RESULT:
 			_set_room_image(&"result")
-			narrative_label.text = TranslationServer.translate(
+			_set_narrative_text(TranslationServer.translate(
 				&"expedition.room.salvage.result"
 				if room.rest_mode == MallRoomDefinition.RestMode.SALVAGE
 				else &"expedition.room.rest.result"
-			)
+			))
 			action_button.text = TranslationServer.translate(&"expedition.ui.leave")
 		Phase.REWARD:
 			if room.category != MallRoomDefinition.Category.WORK:
 				_set_room_image(&"result")
-				narrative_label.text = TranslationServer.translate(
+				_set_narrative_text(TranslationServer.translate(
 					room.success_text_key if last_round_success else room.failure_text_key
-				)
+				))
 			else:
 				_set_room_image(&"intro")
 				_set_narrative(room.intro_text_keys)
@@ -820,7 +909,11 @@ func _refresh_room_phase_text() -> void:
 				var preview_state := CardItemState.new(
 					-900, current_reward_id, state.day, &"expedition_preview"
 				)
-				reward_card.setup(preview_state, definition, true)
+				reward_card.setup(
+					preview_state,
+					definition,
+					current_reward_id != &"expedition_wage",
+				)
 			if reward_collected:
 				action_button.text = TranslationServer.translate(&"expedition.ui.leave")
 

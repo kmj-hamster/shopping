@@ -130,6 +130,8 @@ func _ready() -> void:
 	call_deferred("_apply_locale_typography")
 	if state.expedition.active:
 		call_deferred("_show_expedition_immediate")
+	elif not state.pending_persona_reveal_ids.is_empty():
+		call_deferred("_run_pending_persona_reveals")
 
 
 func _build_bgm_director() -> void:
@@ -805,6 +807,12 @@ func _show_expedition_immediate() -> void:
 		rule_detail_popup.close()
 	art_canvas.visible = false
 	if expedition_screen != null and is_instance_valid(expedition_screen):
+		if persona_reveals_completed.is_connected(
+			expedition_screen.on_persona_reveals_completed
+		):
+			persona_reveals_completed.disconnect(
+				expedition_screen.on_persona_reveals_completed
+			)
 		expedition_screen.queue_free()
 	expedition_screen = QuestExpeditionScreen.new()
 	expedition_screen.name = "QuestExpeditionScreen"
@@ -813,6 +821,7 @@ func _show_expedition_immediate() -> void:
 	expedition_screen.checkpoint_reached.connect(_on_expedition_checkpoint_reached)
 	expedition_screen.demo_completed.connect(_on_expedition_checkpoint_reached)
 	expedition_screen.persona_reveal_requested.connect(_run_pending_persona_reveals)
+	persona_reveals_completed.connect(expedition_screen.on_persona_reveals_completed)
 	add_child(expedition_screen)
 	expedition_screen.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	debug_button_row.visible = true
@@ -823,6 +832,12 @@ func _show_expedition_immediate() -> void:
 func _on_expedition_finished() -> void:
 	GameState.save_game_now()
 	if expedition_screen != null and is_instance_valid(expedition_screen):
+		if persona_reveals_completed.is_connected(
+			expedition_screen.on_persona_reveals_completed
+		):
+			persona_reveals_completed.disconnect(
+				expedition_screen.on_persona_reveals_completed
+			)
 		expedition_screen.queue_free()
 	expedition_screen = null
 	art_canvas.visible = true

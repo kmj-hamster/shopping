@@ -79,6 +79,23 @@ func test_expedition_checkpoint_preserves_candidates_progress_and_permanent_disc
 	assert_eq(restored.expedition.rng_state, rng_state)
 
 
+func test_expedition_challenge_roll_is_identical_after_checkpoint_reload() -> void:
+	var source := QuestGameState.new()
+	assert_true(source.begin_mall_expedition(441122).ok)
+	source.expedition.current_door_ids = [&"gray_hall"]
+	source.protagonist_persona_counts[&"nightwalker"] = 4
+	var before := source.evaluate_expedition_challenge_round(
+		&"gray_hall", [], [&"nightwalker"], 0
+	)
+	var restored := _round_trip(source)
+	var after := restored.evaluate_expedition_challenge_round(
+		&"gray_hall", [], [&"nightwalker"], 0
+	)
+	assert_eq(after.roll_percent, before.roll_percent)
+	assert_eq(after.success_probability, before.success_probability)
+	assert_eq(after.success, before.success)
+
+
 func _round_trip(source: QuestGameState) -> QuestGameState:
 	assert_true(repository.save(source))
 	var restored := QuestGameState.new()
