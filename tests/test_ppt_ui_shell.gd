@@ -723,6 +723,11 @@ func test_task_popup_uses_horizontal_letter_and_slot_columns() -> void:
 	assert_true(popup.letter_panel.is_ancestor_of(popup.text_column))
 	assert_same(popup.interaction_column.get_parent(), popup.content_row)
 	assert_lt(popup.letter_panel.global_position.x, popup.interaction_column.global_position.x)
+	assert_eq(popup.interaction_column.position, PaperActivityPopup.INTERACTION_POSITION)
+	assert_eq(
+		popup.interaction_column.get_theme_constant("separation"),
+		PaperActivityPopup.INTERACTION_SEPARATION,
+	)
 	assert_same(popup.body_viewport.get_parent(), popup.text_column)
 	assert_same(popup.slots_row.get_parent(), popup.interaction_column)
 	assert_eq(popup.body_margin.get_theme_constant("margin_left"), 0)
@@ -742,6 +747,16 @@ func test_task_popup_uses_horizontal_letter_and_slot_columns() -> void:
 	assert_eq(popup.slots_row.get_child_count(), 1)
 	assert_true(popup.action_button.disabled)
 	assert_same(popup.action_button.get_parent(), popup.interaction_footer_row)
+	var slot := popup.slot_views.values()[0] as QuestTaskSlot
+	var slot_local_position := (
+		popup.get_global_transform_with_canvas().affine_inverse()
+		* slot.get_global_transform_with_canvas().origin
+	)
+	assert_true(
+		PaperActivityPopup.SLOT_ART_INSET_RECT.encloses(
+			Rect2(slot_local_position, slot.size)
+		)
+	)
 	assert_almost_eq(
 		popup.action_button.get_global_rect().get_center().x,
 		popup.slots_row.get_global_rect().get_center().x,
@@ -751,7 +766,10 @@ func test_task_popup_uses_horizontal_letter_and_slot_columns() -> void:
 		popup.action_button.get_global_rect().position.y,
 		popup.slots_row.get_global_rect().end.y,
 	)
-	var slot := popup.slot_views.values()[0] as QuestTaskSlot
+	assert_gt(
+		popup.action_button.get_global_rect().position.y,
+		popup.slot_prompt_label.get_global_rect().position.y,
+	)
 	_assert_slot_contains_no_instruction_copy(slot)
 	var fries := main.state.inventory[0] as CardItemState
 	var hand_card_size := (main.hand_bar.card_views[fries.instance_id] as CardHandCard).size

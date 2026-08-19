@@ -13,6 +13,9 @@ const PAPER_ANCHOR_TOP := 0.064
 const PAPER_ANCHOR_RIGHT := 0.652
 const PAPER_ANCHOR_BOTTOM := 0.691
 const PAPER_SIZE := Vector2(531, 344)
+const INTERACTION_POSITION := Vector2(328, 98)
+const INTERACTION_SEPARATION := 4
+const SLOT_ART_INSET_RECT := Rect2(350, 94, 112, 138)
 const PAPER_TEXTURE := preload("res://resources/ui/quest/task-paper.png")
 const CLOSE_TEXTURE := preload("res://resources/ui/quest/task-close.png")
 const CONFIRM_TEXTURE := preload("res://resources/ui/quest/task-confirm.png")
@@ -188,10 +191,10 @@ func _ready() -> void:
 
 	interaction_column = VBoxContainer.new()
 	interaction_column.name = "PopupInteractionColumn"
-	interaction_column.position = Vector2(335, 91)
+	interaction_column.position = INTERACTION_POSITION
 	interaction_column.size = Vector2(150, 218)
 	interaction_column.mouse_filter = Control.MOUSE_FILTER_PASS
-	interaction_column.add_theme_constant_override("separation", 2)
+	interaction_column.add_theme_constant_override("separation", INTERACTION_SEPARATION)
 	content_row.add_child(interaction_column)
 
 	slots_row = HBoxContainer.new()
