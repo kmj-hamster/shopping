@@ -685,13 +685,17 @@ func _on_card_staging_changed(card: CardItemState, staged: bool) -> void:
 
 
 func _on_hand_card_drag_started(card: CardItemState) -> void:
-	if current_screen is QuestSynthesisInterface:
-		(current_screen as QuestSynthesisInterface).show_drop_targets_for_card(card)
+	if task_dock != null:
+		task_dock.show_drop_targets_for_card(card)
+	if current_screen != null and current_screen.has_method("show_drop_targets_for_card"):
+		current_screen.call("show_drop_targets_for_card", card)
 
 
 func _on_hand_card_drag_finished(_card: CardItemState, _succeeded: bool) -> void:
-	if synthesis_interface != null:
-		synthesis_interface.clear_drop_target_highlights()
+	if task_dock != null:
+		task_dock.clear_drop_target_highlights()
+	if current_screen != null and current_screen.has_method("clear_drop_target_highlights"):
+		current_screen.call("clear_drop_target_highlights")
 
 
 func _on_synthesis_hand_highlight_requested(role_id: StringName) -> void:

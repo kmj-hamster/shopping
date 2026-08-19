@@ -113,6 +113,16 @@ func _update_action_state(
 		feedback_label.text = TranslationServer.translate(&"quest.ui.task.not_ready")
 
 
+func show_drop_targets_for_card(card: CardItemState) -> void:
+	if submission_slot != null:
+		submission_slot.set_drop_highlight(submission_slot.can_accept_card(card))
+
+
+func clear_drop_target_highlights() -> void:
+	if submission_slot != null:
+		submission_slot.set_drop_highlight(false)
+
+
 func _on_action_pressed() -> void:
 	var task := state.task_instance(task_instance_id)
 	if task == null:

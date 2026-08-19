@@ -307,6 +307,16 @@ func _toggle_receipt() -> void:
 	_set_expanded(not is_expanded)
 
 
+func show_drop_targets_for_card(card: CardItemState) -> void:
+	if task_window != null and task_window.visible:
+		task_window.show_drop_targets_for_card(card)
+
+
+func clear_drop_target_highlights() -> void:
+	if task_window != null:
+		task_window.clear_drop_target_highlights()
+
+
 func _on_receipt_gui_input(event: InputEvent) -> void:
 	var click := event as InputEventMouseButton
 	if click == null or click.button_index != MOUSE_BUTTON_LEFT or not click.pressed:

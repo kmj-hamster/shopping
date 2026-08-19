@@ -48,10 +48,16 @@ func release_card() -> void:
 
 
 func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
-	if state == null or rule == null or typeof(data) != TYPE_DICTIONARY:
+	if typeof(data) != TYPE_DICTIONARY:
 		return false
-	var card := data.get("card") as CardItemState
-	if data.get("kind") != &"card_item" or card == null or card == pending_card:
+	return (
+		data.get("kind") == &"card_item"
+		and can_accept_card(data.get("card") as CardItemState)
+	)
+
+
+func can_accept_card(card: CardItemState) -> bool:
+	if state == null or rule == null or card == null or card == pending_card:
 		return false
 	if card.location != CardItemState.Location.HAND:
 		return false

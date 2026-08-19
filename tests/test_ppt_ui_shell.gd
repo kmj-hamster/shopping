@@ -503,6 +503,19 @@ func test_locked_location_uses_confirmed_popup_then_enters_shop() -> void:
 		map.location_popup.slots_row.size_flags_vertical,
 		Control.SIZE_SHRINK_CENTER,
 	)
+	var unlock_slot_style := (
+		map.location_popup.unlock_slot.get_theme_stylebox("panel") as StyleBoxFlat
+	)
+	assert_eq(unlock_slot_style.bg_color, QuestTaskSlot.PAPER_SLOT_COLOR)
+	main._on_hand_card_drag_started(jasmine)
+	assert_true(map.location_popup.unlock_slot.drop_highlighted)
+	unlock_slot_style = (
+		map.location_popup.unlock_slot.get_theme_stylebox("panel") as StyleBoxFlat
+	)
+	assert_eq(unlock_slot_style.border_color, QuestTaskSlot.DROP_HIGHLIGHT_COLOR)
+	assert_eq(unlock_slot_style.shadow_size, 10)
+	main._on_hand_card_drag_finished(jasmine, false)
+	assert_false(map.location_popup.unlock_slot.drop_highlighted)
 	assert_null(main.focused_rule)
 	assert_false(main.rule_detail_popup.visible)
 	var hand_order_before: Array[int] = []
@@ -760,6 +773,8 @@ func test_task_popup_uses_horizontal_letter_and_slot_columns() -> void:
 			Rect2(slot_local_position, slot.size)
 		)
 	)
+	var slot_style := slot.get_theme_stylebox("panel") as StyleBoxFlat
+	assert_eq(slot_style.bg_color, QuestTaskSlot.PAPER_SLOT_COLOR)
 	assert_almost_eq(
 		popup.action_button.get_global_rect().get_center().x,
 		popup.slots_row.get_global_rect().get_center().x,
@@ -772,6 +787,13 @@ func test_task_popup_uses_horizontal_letter_and_slot_columns() -> void:
 	)
 	_assert_slot_contains_no_instruction_copy(slot)
 	var fries := main.state.inventory[0] as CardItemState
+	main._on_hand_card_drag_started(fries)
+	assert_true(slot.drop_highlighted)
+	slot_style = slot.get_theme_stylebox("panel") as StyleBoxFlat
+	assert_eq(slot_style.border_color, QuestTaskSlot.DROP_HIGHLIGHT_COLOR)
+	assert_eq(slot_style.shadow_color, Color(QuestTaskSlot.DROP_HIGHLIGHT_COLOR, 0.72))
+	main._on_hand_card_drag_finished(fries, false)
+	assert_false(slot.drop_highlighted)
 	var hand_card_size := (main.hand_bar.card_views[fries.instance_id] as CardHandCard).size
 	var definition := QuestArcCatalog.task_by_id(task.definition_id)
 	assert_true(main.state.assign_card(task.instance_id, definition.slot_rules[0].id, fries).ok)

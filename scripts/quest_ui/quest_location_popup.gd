@@ -64,6 +64,16 @@ func show_feedback(message_key: StringName) -> void:
 	feedback_label.text = TranslationServer.translate(message_key)
 
 
+func show_drop_targets_for_card(card: CardItemState) -> void:
+	if unlock_slot != null:
+		unlock_slot.set_drop_highlight(unlock_slot.can_accept_card(card))
+
+
+func clear_drop_target_highlights() -> void:
+	if unlock_slot != null:
+		unlock_slot.set_drop_highlight(false)
+
+
 func _on_staging_changed(card: CardItemState, staged: bool) -> void:
 	staging_changed.emit(card, staged)
 	refresh()

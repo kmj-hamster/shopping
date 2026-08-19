@@ -172,6 +172,16 @@ func _close_location_popup() -> void:
 	rule_focused.emit(null)
 
 
+func show_drop_targets_for_card(card: CardItemState) -> void:
+	if location_popup != null and location_popup.visible:
+		location_popup.show_drop_targets_for_card(card)
+
+
+func clear_drop_target_highlights() -> void:
+	if location_popup != null:
+		location_popup.clear_drop_target_highlights()
+
+
 func _on_unlock_confirmed(store_id: StringName, card: CardItemState) -> void:
 	var result := state.unlock_store(store_id, card)
 	if result.ok:

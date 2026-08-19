@@ -6,6 +6,9 @@ signal item_inspected(definition: CardItemDefinition)
 
 const CARD_SIZE := CardHandCard.CARD_SIZE
 const DROP_MARGIN := Vector2(18, 26)
+const PAPER_SLOT_COLOR := Color("d5d1c5", 0.92)
+const PAPER_SLOT_BORDER_COLOR := Color("eeeade", 0.78)
+const DROP_HIGHLIGHT_COLOR := Color("fffdf5")
 
 var state: QuestGameState
 var task: TaskInstanceState
@@ -13,6 +16,7 @@ var rule: CardSlotRule
 var rules: Array[CardSlotRule] = []
 var card_holder: CenterContainer
 var card_view: CardHandCard
+var drop_highlighted := false
 
 
 func setup(
@@ -44,7 +48,7 @@ func _ready() -> void:
 	size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	add_theme_stylebox_override("panel", make_card_slot_style())
+	_apply_paper_slot_style()
 	var stack := Control.new()
 	stack.custom_minimum_size = CARD_SIZE
 	stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -85,15 +89,45 @@ func refresh() -> void:
 
 
 func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
-	if state == null or task == null or task.confirmed or typeof(data) != TYPE_DICTIONARY:
+	if typeof(data) != TYPE_DICTIONARY:
 		return false
-	var card := data.get("card") as CardItemState
 	return (
 		data.get("kind") == &"card_item"
+		and can_accept_card(data.get("card") as CardItemState)
+	)
+
+
+func can_accept_card(card: CardItemState) -> bool:
+	return (
+		state != null
+		and task != null
+		and not task.confirmed
 		and card != null
 		and card != _assigned_card()
 		and _matching_rule(card) != null
 	)
+
+
+func set_drop_highlight(highlighted: bool) -> void:
+	if drop_highlighted == highlighted:
+		return
+	drop_highlighted = highlighted
+	_apply_paper_slot_style()
+
+
+func _apply_paper_slot_style() -> void:
+	var style := UiPalette.panel_style(PAPER_SLOT_COLOR, PAPER_SLOT_BORDER_COLOR)
+	style.content_margin_left = 0.0
+	style.content_margin_top = 0.0
+	style.content_margin_right = 0.0
+	style.content_margin_bottom = 0.0
+	if drop_highlighted:
+		style.bg_color = Color("e7e3d8", 0.98)
+		style.border_color = DROP_HIGHLIGHT_COLOR
+		style.set_border_width_all(3)
+		style.shadow_color = Color(DROP_HIGHLIGHT_COLOR, 0.72)
+		style.shadow_size = 10
+	add_theme_stylebox_override("panel", style)
 
 
 func _has_point(point: Vector2) -> bool:
