@@ -192,6 +192,14 @@ func test_toy_unlock_enters_shop_activates_three_tasks_and_shows_restock_timer()
 		"res://resources/shaders/frosted_dialogue.gdshader",
 	)
 	assert_null(shop.owner_name_background.material)
+	assert_true(shop.shelf_popup.get_theme_stylebox("panel") is StyleBoxEmpty)
+	assert_eq(shop.shelf_grid.columns, 3)
+	assert_eq(shop.shelf_views.size(), CardShopTransaction.PAGE_SIZE)
+	assert_true(shop.shelf_glass.material is ShaderMaterial)
+	for view_index in shop.shelf_views.size():
+		var shelf_card := shop.shelf_views[view_index].card as CardHandCard
+		assert_eq(shelf_card.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+		assert_eq(shelf_card.visible, view_index < 4)
 	assert_true(main.state.has_visited_store(&"toy"))
 	assert_not_null(main.state.task_instance_for_definition(&"tin_boy_toy"))
 	assert_not_null(main.state.task_instance_for_definition(&"self_care"))

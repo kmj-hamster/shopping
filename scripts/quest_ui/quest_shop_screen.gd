@@ -37,6 +37,8 @@ var navigation_column: VBoxContainer
 var dialogue_panel: PanelContainer
 var dialogue_back_buffer: BackBufferCopy
 var dialogue_glass: ColorRect
+var shelf_back_buffer: BackBufferCopy
+var shelf_glass: ColorRect
 var owner_name_background: Panel
 var checkout_button: Button
 var feedback_label: Label
@@ -45,16 +47,11 @@ var owner_dialogue_label: Label
 var shelf_nav_button: Button
 var talk_nav_button: Button
 var leave_nav_button: Button
-var shelf_caption: Label
 var restock_label: Label
-var empty_store_label: Label
-var page_row: HBoxContainer
 var shelf_buttons: Dictionary = {}
-var page_buttons: Dictionary = {}
 var shelf_views: Array[Dictionary] = []
 var shelf_view_slot_ids: Array[StringName] = []
 var highlight_rule: CardSlotRule
-var current_page := 1
 var owner_dialogue_override_key: StringName
 var owner_dialogue_item_name := ""
 var owner_dialogue_char_seconds := 0.055
@@ -299,87 +296,154 @@ func _build_dialogue_voice_players() -> void:
 
 
 func _build_shelf_popup() -> void:
+	shelf_back_buffer = BackBufferCopy.new()
+	shelf_back_buffer.name = "ShelfBackBuffer"
+	shelf_back_buffer.copy_mode = BackBufferCopy.COPY_MODE_VIEWPORT
+	shelf_back_buffer.visible = false
+	add_child(shelf_back_buffer)
 	shelf_popup = PanelContainer.new()
 	shelf_popup.name = "ShelfPopup"
 	shelf_popup.anchor_left = 0.18
-	shelf_popup.anchor_top = 0.16
-	shelf_popup.anchor_right = 0.385
-	shelf_popup.anchor_bottom = 0.755
-	shelf_popup.add_theme_stylebox_override(
-		"panel", UiPalette.panel_style(Color("071217", 0.98), Color("8c805d", 0.92))
-	)
+	shelf_popup.anchor_top = 0.13
+	shelf_popup.anchor_right = 0.475
+	shelf_popup.anchor_bottom = 0.72
+	shelf_popup.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	shelf_popup.clip_contents = true
 	add_child(shelf_popup)
+	shelf_glass = ColorRect.new()
+	shelf_glass.name = "FrostedShelfGlass"
+	shelf_glass.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shelf_glass.color = Color.WHITE
+	shelf_glass.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var shelf_glass_material := ShaderMaterial.new()
+	shelf_glass_material.shader = FROSTED_DIALOGUE_SHADER
+	shelf_glass_material.set_shader_parameter("glass_tint", Color("dce8e4"))
+	shelf_glass_material.set_shader_parameter("blur_lod", 2.7)
+	shelf_glass_material.set_shader_parameter("tint_strength", 0.18)
+	shelf_glass_material.set_shader_parameter("brightness", 1.03)
+	shelf_glass_material.set_shader_parameter("distortion_px", 0.82)
+	shelf_glass_material.set_shader_parameter("dispersion_px", 0.55)
+	shelf_glass_material.set_shader_parameter("corner_radius_px", 16.0)
+	shelf_glass_material.set_shader_parameter("edge_depth_px", 9.0)
+	shelf_glass.material = shelf_glass_material
+	shelf_glass.resized.connect(_update_shelf_glass_size)
+	shelf_popup.add_child(shelf_glass)
 	var margin := MarginContainer.new()
-	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_%s" % side, 8)
+	margin.mouse_filter = Control.MOUSE_FILTER_PASS
+	for side in ["left", "right"]:
+		margin.add_theme_constant_override("margin_%s" % side, 10)
+	margin.add_theme_constant_override("margin_top", 9)
+	margin.add_theme_constant_override("margin_bottom", 10)
 	shelf_popup.add_child(margin)
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 6)
+	column.mouse_filter = Control.MOUSE_FILTER_PASS
+	column.add_theme_constant_override("separation", 8)
 	margin.add_child(column)
-	var header := HBoxContainer.new()
-	column.add_child(header)
-	shelf_caption = Label.new()
-	shelf_caption.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	shelf_caption.add_theme_font_size_override("font_size", 15)
-	shelf_caption.add_theme_color_override("font_color", Color("d9c582"))
-	header.add_child(shelf_caption)
 	restock_label = Label.new()
-	restock_label.add_theme_font_size_override("font_size", 11)
-	restock_label.add_theme_color_override("font_color", Color("8ca49f"))
-	header.add_child(restock_label)
-	var close_button := Button.new()
-	close_button.text = "×"
-	close_button.custom_minimum_size = Vector2(34, 30)
-	close_button.pressed.connect(_toggle_shelf_popup)
-	header.add_child(close_button)
-	page_row = HBoxContainer.new()
-	page_row.add_theme_constant_override("separation", 5)
-	column.add_child(page_row)
-	for page_index in range(1, CardShopTransaction.MAX_PAGE_COUNT + 1):
-		var page_button := Button.new()
-		page_button.custom_minimum_size = Vector2(44, 24)
-		page_button.toggle_mode = true
-		page_button.pressed.connect(_on_page_pressed.bind(page_index))
-		page_row.add_child(page_button)
-		page_buttons[page_index] = page_button
-	empty_store_label = Label.new()
-	empty_store_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	empty_store_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	empty_store_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	empty_store_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	empty_store_label.add_theme_color_override("font_color", Color("879a94"))
-	column.add_child(empty_store_label)
+	restock_label.custom_minimum_size.y = 20
+	restock_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	restock_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	restock_label.add_theme_font_size_override("font_size", 13)
+	restock_label.add_theme_color_override("font_color", Color("e8eeea"))
+	restock_label.add_theme_color_override("font_shadow_color", Color("071217", 0.74))
+	restock_label.add_theme_constant_override("shadow_offset_x", 1)
+	restock_label.add_theme_constant_override("shadow_offset_y", 1)
+	column.add_child(restock_label)
 	shelf_grid = GridContainer.new()
-	shelf_grid.columns = 2
+	shelf_grid.name = "ShelfCardGrid"
+	shelf_grid.columns = 3
+	shelf_grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	shelf_grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	shelf_grid.add_theme_constant_override("h_separation", 7)
-	shelf_grid.add_theme_constant_override("v_separation", 5)
+	shelf_grid.add_theme_constant_override("h_separation", 10)
+	shelf_grid.add_theme_constant_override("v_separation", 8)
 	column.add_child(shelf_grid)
 	_build_shelf_views()
-	shelf_popup.visible = false
+	_set_shelf_popup_visible(false)
+	call_deferred("_update_shelf_glass_size")
 
 
 func _build_shelf_views() -> void:
 	for view_index in CardShopTransaction.PAGE_SIZE:
 		var holder := VBoxContainer.new()
-		holder.custom_minimum_size = Vector2(92, 70)
-		holder.add_theme_constant_override("separation", 3)
+		holder.name = "ShelfCell%d" % (view_index + 1)
+		holder.custom_minimum_size = Vector2(CardHandCard.CARD_SIZE.x, 132)
+		holder.add_theme_constant_override("separation", 4)
 		shelf_grid.add_child(holder)
+		var card_host := Control.new()
+		card_host.custom_minimum_size = CardHandCard.CARD_SIZE
+		card_host.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		holder.add_child(card_host)
+		var card_view := CardHandCard.new()
+		card_view.name = "ShelfItemCard"
+		card_view.setup(null, null, false)
+		card_view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		card_host.add_child(card_view)
+		card_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var selection_outline := Panel.new()
+		selection_outline.name = "ShelfSelectionOutline"
+		selection_outline.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		selection_outline.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		selection_outline.z_index = 2
+		card_host.add_child(selection_outline)
 		var button := Button.new()
-		button.custom_minimum_size = Vector2(92, 52)
+		button.name = "ShelfCardButton"
+		button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		button.toggle_mode = true
+		button.focus_mode = Control.FOCUS_NONE
+		button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		_configure_shelf_card_button(button)
 		button.pressed.connect(_on_shelf_view_pressed.bind(view_index))
-		holder.add_child(button)
+		button.z_index = 3
+		card_host.add_child(button)
 		var price := Label.new()
+		price.custom_minimum_size.y = 18
 		price.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		price.add_theme_color_override("font_color", Color("e1c373"))
+		price.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		price.add_theme_font_size_override("font_size", 13)
+		price.add_theme_color_override("font_color", Color("f0dc9f"))
+		price.add_theme_color_override("font_shadow_color", Color("071217", 0.78))
+		price.add_theme_constant_override("shadow_offset_x", 1)
+		price.add_theme_constant_override("shadow_offset_y", 1)
 		holder.add_child(price)
 		shelf_views.append({
 			"root": holder,
+			"card": card_view,
 			"button": button,
 			"price": price,
+			"selection_outline": selection_outline,
 		})
 		shelf_view_slot_ids.append(&"")
+
+
+func _configure_shelf_card_button(button: Button) -> void:
+	for state_name in ["normal", "focus", "disabled"]:
+		button.add_theme_stylebox_override(state_name, StyleBoxEmpty.new())
+	var hover_style := StyleBoxFlat.new()
+	hover_style.bg_color = Color("dce8e4", 0.08)
+	hover_style.border_color = Color("e8eeea", 0.46)
+	hover_style.set_border_width_all(1)
+	hover_style.set_corner_radius_all(6)
+	button.add_theme_stylebox_override("hover", hover_style)
+	var pressed_style := hover_style.duplicate() as StyleBoxFlat
+	pressed_style.bg_color = Color("e0c77d", 0.10)
+	pressed_style.border_color = Color("f0dc9f", 0.62)
+	button.add_theme_stylebox_override("pressed", pressed_style)
+	button.add_theme_stylebox_override("hover_pressed", pressed_style)
+
+
+func _update_shelf_glass_size() -> void:
+	if shelf_glass == null or not (shelf_glass.material is ShaderMaterial):
+		return
+	(shelf_glass.material as ShaderMaterial).set_shader_parameter(
+		"panel_size_px", shelf_glass.size
+	)
+
+
+func _set_shelf_popup_visible(is_visible: bool) -> void:
+	if shelf_popup != null:
+		shelf_popup.visible = is_visible
+	if shelf_back_buffer != null:
+		shelf_back_buffer.visible = is_visible
 
 
 func refresh() -> void:
@@ -393,7 +457,6 @@ func refresh() -> void:
 	shelf_nav_button.text = ""
 	talk_nav_button.text = ""
 	leave_nav_button.text = ""
-	shelf_caption.text = TranslationServer.translate(&"quest.ui.shop.shelf")
 	restock_label.text = TranslationServer.translate(&"opening.ui.shop.restock") % state.restock_nights_remaining(store_id)
 	_refresh_owner_dialogue()
 	_refresh_shelf()
@@ -407,56 +470,54 @@ func _refresh_checkout_state() -> void:
 
 
 func _refresh_shelf() -> void:
-	var has_shelf_content := not transaction.shelf_slots.is_empty()
-	empty_store_label.visible = not has_shelf_content
-	empty_store_label.text = TranslationServer.translate(&"opening.ui.shop.not_open")
-	shelf_grid.visible = has_shelf_content
-	page_row.visible = has_shelf_content
-	current_page = clampi(current_page, 1, transaction.unlocked_page_count)
-	for page_index in page_buttons:
-		var page_button := page_buttons[page_index] as Button
-		page_button.text = str(page_index)
-		page_button.disabled = not transaction.is_page_unlocked(page_index)
-		page_button.button_pressed = page_index == current_page
-		page_button.tooltip_text = (
-			"" if transaction.is_page_unlocked(page_index)
-			else TranslationServer.translate(&"quest.ui.shop.page_locked")
-		)
 	shelf_buttons.clear()
-	var slots := transaction.shelf_slots_for_page(current_page)
+	var slots := transaction.shelf_slots_for_page(1)
 	for view_index in shelf_views.size():
 		var view := shelf_views[view_index]
 		var holder := view.root as VBoxContainer
+		var card_view := view.card as CardHandCard
 		var button := view.button as Button
 		var price := view.price as Label
+		var selection_outline := view.selection_outline as Panel
+		holder.visible = true
 		if view_index >= slots.size():
-			holder.visible = false
 			shelf_view_slot_ids[view_index] = &""
+			_set_empty_shelf_view(card_view, button, price, selection_outline)
 			continue
 		var slot := slots[view_index] as ShelfSlotState
-		holder.visible = true
 		shelf_view_slot_ids[view_index] = slot.slot_id
-		button.icon = null
 		button.tooltip_text = ""
 		button.button_pressed = false
 		if slot.is_empty():
-			button.text = TranslationServer.translate(&"quest.ui.shop.sold")
-			button.disabled = true
+			_set_empty_shelf_view(card_view, button, price, selection_outline)
 		else:
 			var definition := QuestArcCatalog.item_by_id(slot.item_id)
-			button.text = definition.localized_name() if definition != null else ""
-			button.icon = definition.image if definition != null else null
-			button.expand_icon = true
+			card_view.setup(null, definition, false)
+			card_view.visible = definition != null
+			price.visible = definition != null
+			button.visible = definition != null
 			button.button_pressed = transaction.is_selected(slot.slot_id)
-			button.disabled = false
-		price.text = (
-			"—" if slot.is_empty()
-			else TranslationServer.translate(&"demo.ui.price") % transaction.price_for(
-				QuestArcCatalog.item_by_id(slot.item_id)
+			button.disabled = definition == null
+			price.text = TranslationServer.translate(&"demo.ui.price") % transaction.price_for(
+				definition
 			)
-		)
 		shelf_buttons[slot.slot_id] = button
-		_apply_shelf_highlight(button, slot)
+		_apply_shelf_highlight(view, slot)
+
+
+func _set_empty_shelf_view(
+	card_view: CardHandCard,
+	button: Button,
+	price: Label,
+	selection_outline: Panel,
+) -> void:
+	card_view.visible = false
+	card_view.apply_match_highlight(false)
+	button.visible = false
+	button.disabled = true
+	button.button_pressed = false
+	price.visible = false
+	selection_outline.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 
 
 func _on_shelf_view_pressed(view_index: int) -> void:
@@ -468,7 +529,7 @@ func _on_shelf_view_pressed(view_index: int) -> void:
 
 
 func _toggle_shelf_popup() -> void:
-	shelf_popup.visible = not shelf_popup.visible
+	_set_shelf_popup_visible(not shelf_popup.visible)
 
 
 func _on_shelf_pressed(slot_id: StringName) -> void:
@@ -489,15 +550,12 @@ func _on_selection_changed(previous_slot_id: StringName, selected_slot_id: Strin
 			continue
 		var button := shelf_buttons[slot_id] as Button
 		button.button_pressed = transaction.is_selected(slot_id)
+		var slot := transaction.shelf_slot(slot_id)
+		var view_index := shelf_view_slot_ids.find(slot_id)
+		if view_index >= 0:
+			_apply_shelf_highlight(shelf_views[view_index], slot)
 	_refresh_checkout_state()
 	_refresh_owner_dialogue()
-
-
-func _on_page_pressed(page_index: int) -> void:
-	if transaction == null or not transaction.is_page_unlocked(page_index):
-		return
-	current_page = page_index
-	_refresh_shelf()
 
 
 func _on_owner_pressed() -> void:
@@ -522,8 +580,7 @@ func cancel_pending_purchase() -> void:
 		transaction.clear_selection()
 	if feedback_label != null:
 		feedback_label.text = ""
-	if shelf_popup != null:
-		shelf_popup.visible = false
+	_set_shelf_popup_visible(false)
 
 
 func _refresh_owner_dialogue(force_restart := false) -> void:
@@ -746,12 +803,18 @@ func set_highlight_rule(rule: CardSlotRule) -> void:
 	if transaction == null:
 		return
 	for slot_id in shelf_buttons:
-		_apply_shelf_highlight(shelf_buttons[slot_id] as Button, transaction.shelf_slot(slot_id))
+		var view_index := shelf_view_slot_ids.find(slot_id)
+		if view_index >= 0:
+			_apply_shelf_highlight(
+				shelf_views[view_index], transaction.shelf_slot(slot_id)
+			)
 
 
-func _apply_shelf_highlight(button: Button, slot: ShelfSlotState) -> void:
-	if button == null:
+func _apply_shelf_highlight(view: Dictionary, slot: ShelfSlotState) -> void:
+	if view.is_empty():
 		return
+	var card_view := view.card as CardHandCard
+	var selection_outline := view.selection_outline as Panel
 	var definition := (
 		QuestArcCatalog.item_by_id(slot.item_id)
 		if slot != null and not slot.is_empty()
@@ -762,13 +825,19 @@ func _apply_shelf_highlight(button: Button, slot: ShelfSlotState) -> void:
 		and definition != null
 		and CardRuleEvaluator.can_place(highlight_rule, definition)
 	)
-	button.add_theme_stylebox_override(
-		"normal",
-		UiPalette.panel_style(
-			Color("122326", 0.98) if matches else Color("0b1519", 0.96),
-			Color("e4eee7") if matches else Color("627a76", 0.78),
-		),
-	)
+	card_view.apply_match_highlight(matches)
+	var selected := slot != null and transaction.is_selected(slot.slot_id)
+	if not selected:
+		selection_outline.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+		return
+	var selected_style := StyleBoxFlat.new()
+	selected_style.bg_color = Color.TRANSPARENT
+	selected_style.border_color = Color("f0dc9f", 0.96)
+	selected_style.set_border_width_all(2)
+	selected_style.set_corner_radius_all(6)
+	selected_style.shadow_color = Color("f0dc9f", 0.28)
+	selected_style.shadow_size = 5
+	selection_outline.add_theme_stylebox_override("panel", selected_style)
 
 
 func _on_checkout_pressed() -> void:
@@ -779,7 +848,7 @@ func _on_checkout_pressed() -> void:
 		else &"quest.ui.shop.empty"
 	)
 	if result.ok:
-		shelf_popup.visible = false
+		_set_shelf_popup_visible(false)
 		checkout_completed.emit()
 		_refresh_shelf()
 	_refresh_checkout_state()

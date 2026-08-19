@@ -202,9 +202,9 @@ func test_flower_shop_starts_as_scene_and_opens_shelf_on_request() -> void:
 	assert_not_null(shop.find_child("LeaveButton", true, false))
 	assert_null(shop.title_label)
 	assert_lt(shop.shelf_popup.anchor_right, shop.owner_portrait.anchor_left)
-	assert_lt(shop.shelf_popup.anchor_right, shop.dialogue_panel.anchor_left)
+	assert_lte(shop.shelf_popup.anchor_bottom, shop.dialogue_panel.anchor_top)
 	assert_almost_eq(shop.shelf_popup.anchor_left, 0.18, 0.001)
-	assert_almost_eq(shop.shelf_popup.anchor_right, 0.385, 0.001)
+	assert_almost_eq(shop.shelf_popup.anchor_right, 0.475, 0.001)
 	assert_gt(
 		shop.shelf_popup.get_global_rect().position.x,
 		main.task_dock.receipt_host.get_global_rect().end.x + 16.0,
@@ -230,9 +230,23 @@ func test_flower_shop_starts_as_scene_and_opens_shelf_on_request() -> void:
 	)
 	assert_eq(shop.owner_dialogue_voice_players.size(), 3)
 	assert_eq(shop.owner_dialogue_label.mouse_filter, Control.MOUSE_FILTER_PASS)
+	assert_true(shop.shelf_popup.get_theme_stylebox("panel") is StyleBoxEmpty)
+	assert_eq(shop.shelf_back_buffer.copy_mode, BackBufferCopy.COPY_MODE_VIEWPORT)
+	assert_true(shop.shelf_glass.material is ShaderMaterial)
+	assert_eq(
+		(shop.shelf_glass.material as ShaderMaterial).shader.resource_path,
+		"res://resources/shaders/frosted_dialogue.gdshader",
+	)
+	assert_eq(shop.shelf_grid.columns, 3)
+	assert_null(shop.find_child("ShelfPage1", true, false))
 	shop._toggle_shelf_popup()
 	assert_true(shop.shelf_popup.visible)
+	assert_true(shop.shelf_back_buffer.visible)
 	assert_eq(shop.shelf_buttons.size(), 6)
+	assert_eq(shop.shelf_views.size(), 6)
+	assert_true(shop.shelf_views[0].card is CardHandCard)
+	assert_true((shop.shelf_views[0].card as CardHandCard).visible)
+	assert_false((shop.shelf_views[2].card as CardHandCard).visible)
 
 
 func test_shop_dialogue_click_finishes_then_starts_the_next_line() -> void:
@@ -349,7 +363,7 @@ func test_switching_shelf_selection_updates_existing_views_without_global_refres
 	assert_same(shop.shelf_buttons[second.slot_id], second_button)
 
 
-func test_shop_reuses_six_fixed_shelf_views_for_dialogue_and_pages() -> void:
+func test_shop_reuses_six_fixed_shelf_views_when_content_refreshes() -> void:
 	var main := await _spawn_main()
 	main._show_shop(&"flower")
 	await get_tree().process_frame
@@ -365,10 +379,10 @@ func test_shop_reuses_six_fixed_shelf_views_for_dialogue_and_pages() -> void:
 	for view_index in shop.shelf_views.size():
 		assert_same(shop.shelf_views[view_index].root, roots[view_index])
 		assert_same(shop.shelf_views[view_index].button, buttons[view_index])
-	assert_true(transaction.unlock_page(2))
-	shop._on_page_pressed(2)
-	assert_eq(shop.current_page, 2)
+	transaction.shelf_slots[0].clear()
+	shop._refresh_shelf()
 	assert_eq(shop.shelf_grid.get_child_count(), CardShopTransaction.PAGE_SIZE)
+	assert_false((shop.shelf_views[0].card as CardHandCard).visible)
 	for view_index in shop.shelf_views.size():
 		assert_same(shop.shelf_views[view_index].root, roots[view_index])
 		assert_same(shop.shelf_views[view_index].button, buttons[view_index])
