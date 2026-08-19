@@ -304,6 +304,44 @@ func test_main_persona_reveal_overlay_resumes_waiting_rest_room() -> void:
 	assert_eq(screen.phase, QuestExpeditionScreen.Phase.DOORS)
 
 
+func test_lethal_disease_enters_a_persistent_arc_ending_instead_of_doors() -> void:
+	var state := QuestGameState.new()
+	state.gain_disease(&"expedition_wound", 3)
+	assert_true(state.begin_mall_expedition(818).game_over)
+	var screen := await _spawn_screen(state)
+	assert_eq(screen.phase, QuestExpeditionScreen.Phase.DISEASE_END)
+	assert_true(screen.demo_panel.visible)
+	assert_false(screen.hand_bar.visible)
+	assert_eq(
+		(screen.demo_panel.get_node("DemoCompleteLabel") as Label).text,
+		TranslationServer.translate(&"expedition.ui.disease_end.expedition_wound"),
+	)
+
+
+func test_outputless_disease_synthesis_returns_directly_to_the_draft() -> void:
+	var main := await _spawn_main()
+	main._show_synthesis_immediate()
+	await get_tree().process_frame
+	var synthesis := main.current_screen as QuestSynthesisInterface
+	var gained := main.state.gain_disease(&"white_flower")
+	var flower := main.state.card_by_instance_id(int(gained.granted_instance_ids[0]))
+	var cactus := main.state.grant_item(&"cactus", &"test")
+	assert_true(main.state.assign_synthesis_base(flower).ok)
+	assert_true(main.state.assign_synthesis_helper(cactus).ok)
+	assert_true(main.state.select_synthesis_persona(&"nightwalker"))
+	assert_true(
+		main.state.select_synthesis_candidate(&"recipe_clear_white_flower_nightwalker")
+	)
+	synthesis._on_action_pressed()
+	assert_eq(synthesis.phase, QuestSynthesisInterface.Phase.NARRATIVE)
+	assert_null(synthesis.pending_output)
+	synthesis._advance_narrative()
+	synthesis._advance_narrative()
+	assert_eq(synthesis.phase, QuestSynthesisInterface.Phase.DRAFT)
+	assert_true(synthesis.draft_layer.visible)
+	assert_false(synthesis.result_layer.visible)
+
+
 func _spawn_main() -> QuestMain:
 	var packed := load("res://scenes/main/main.tscn") as PackedScene
 	var main := packed.instantiate() as QuestMain

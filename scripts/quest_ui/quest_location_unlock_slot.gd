@@ -62,6 +62,8 @@ func can_accept_card(card: CardItemState) -> bool:
 	if card.location != CardItemState.Location.HAND:
 		return false
 	var definition := state.definition_for_card(card)
+	if state.is_disease_definition(definition):
+		return false
 	var is_owned_item := card in state.inventory
 	var persona_id := PersonaMaskCatalog.persona_for_card(card)
 	if not is_owned_item and (

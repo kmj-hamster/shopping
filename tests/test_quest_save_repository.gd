@@ -96,6 +96,23 @@ func test_expedition_challenge_roll_is_identical_after_checkpoint_reload() -> vo
 	assert_eq(after.success, before.success)
 
 
+func test_disease_recipe_growth_and_game_over_checkpoint_are_persisted() -> void:
+	var source := QuestGameState.new()
+	source.synthesis_recipe_use_counts[&"recipe_clear_wound_homecomer"] = 2
+	source.gain_disease(&"expedition_wound", 3)
+	assert_true(source.begin_mall_expedition(1717).game_over)
+	var restored := _round_trip(source)
+	assert_eq(
+		restored.synthesis_recipe_requirements(
+			QuestArcCatalog.recipe_by_id(&"recipe_clear_wound_homecomer")
+		),
+		{&"homecomer": 5},
+	)
+	assert_true(restored.expedition.active)
+	assert_eq(restored.expedition.disease_game_over_id, &"expedition_wound")
+	assert_true(restored.expedition.current_door_ids.is_empty())
+
+
 func _round_trip(source: QuestGameState) -> QuestGameState:
 	assert_true(repository.save(source))
 	var restored := QuestGameState.new()

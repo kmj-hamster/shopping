@@ -60,6 +60,8 @@ static func succeeds(evaluation: Dictionary, roll_percent: int) -> bool:
 static func is_protected(definition: CardItemDefinition) -> bool:
 	if definition == null:
 		return true
+	if definition.has_property(CardPropertySet.PROPERTY_DISEASE):
+		return true
 	if definition.has_property(CardPropertySet.PROPERTY_PERSONA):
 		return false
 	var item := definition as QuestItemDefinition

@@ -23,6 +23,12 @@ const RESULT_UNKNOWN_OWNER := &"unknown_owner"
 const EXPEDITION_WORK_REWARD := 12
 const EXPEDITION_SUCCESS_ITEM_ID := &"expedition_salvage"
 const EXPEDITION_FAILURE_ITEM_ID := &"expedition_wound"
+const EXPEDITION_WHITE_FLOWER_ITEM_ID := &"white_flower"
+const DISEASE_LIMIT := 3
+const DISEASE_OPPOSITES := {
+	EXPEDITION_FAILURE_ITEM_ID: EXPEDITION_WHITE_FLOWER_ITEM_ID,
+	EXPEDITION_WHITE_FLOWER_ITEM_ID: EXPEDITION_FAILURE_ITEM_ID,
+}
 
 var day := 1
 var wallet := PlayerWallet.new(0)
@@ -43,6 +49,7 @@ var synthesis_base_instance_id := 0
 var synthesis_helper_instance_id := 0
 var synthesis_persona_id: StringName
 var synthesis_candidate_recipe_id: StringName
+var synthesis_recipe_use_counts: Dictionary = {}
 var store_transactions: Dictionary = {}
 var recycle_transaction: CardRecycleTransaction
 var next_card_instance_id := 1
@@ -90,6 +97,7 @@ func reset() -> void:
 	synthesis_helper_instance_id = 0
 	synthesis_persona_id = &""
 	synthesis_candidate_recipe_id = &""
+	synthesis_recipe_use_counts = {}
 	next_card_instance_id = 1
 	next_task_instance_id = 1
 	_build_commerce()
@@ -575,6 +583,50 @@ func grant_item(
 	return card
 
 
+func gain_disease(disease_id: StringName, amount: int = 1) -> Dictionary:
+	if disease_id not in DISEASE_OPPOSITES or amount <= 0:
+		return _result(false, RESULT_REJECTED)
+	_begin_change_batch()
+	var delta := QuestStateDelta.new()
+	var result := _gain_disease_in_batch(disease_id, amount, delta)
+	_mark_state_changed(delta)
+	_end_change_batch()
+	result["ok"] = true
+	result["reason"] = RESULT_OK
+	return result
+
+
+func _gain_disease_in_batch(
+	disease_id: StringName,
+	amount: int,
+	delta: QuestStateDelta,
+) -> Dictionary:
+	var granted_instance_ids: Array[int] = []
+	var removed_instance_ids: Array[int] = []
+	var opposite_id := StringName(DISEASE_OPPOSITES[disease_id])
+	for _index in amount:
+		var granted := grant_item(disease_id, &"expedition_disease")
+		if granted == null:
+			continue
+		granted_instance_ids.append(granted.instance_id)
+		var opposite_card: CardItemState
+		for candidate in inventory:
+			if candidate.definition_id == opposite_id:
+				opposite_card = candidate
+				break
+		if opposite_card == null:
+			continue
+		_clear_synthesis_assignment_for_card(opposite_card.instance_id)
+		inventory.erase(opposite_card)
+		removed_instance_ids.append(opposite_card.instance_id)
+		delta.mark_hand_removed(opposite_card.instance_id, &"disease_opposite_removed")
+	return {
+		"disease_id": disease_id,
+		"granted_instance_ids": granted_instance_ids,
+		"removed_instance_ids": removed_instance_ids,
+	}
+
+
 func assign_card(task_instance_id: int, slot_id: StringName, card: CardItemState) -> Dictionary:
 	var instance := task_instance(task_instance_id)
 	if instance == null or instance.settled:
@@ -593,6 +645,8 @@ func assign_card(task_instance_id: int, slot_id: StringName, card: CardItemState
 	if rule == null:
 		return _result(false, RESULT_UNKNOWN_SLOT)
 	var item := definition_for_card(card)
+	if is_disease_definition(item):
+		return _result(false, RESULT_REJECTED)
 	var effective_rule := effective_task_rule(instance, rule)
 	var evaluation := CardRuleEvaluator.evaluate(effective_rule, item)
 	if not evaluation.can_place:
@@ -692,12 +746,17 @@ func available_synthesis_recipe_ids() -> Array[StringName]:
 
 
 func assign_synthesis_base(card: CardItemState) -> Dictionary:
+	var definition := definition_for_card(card)
+	if definition == null or not definition.can_be_synthesis_base:
+		return _result(false, RESULT_REJECTED)
 	return _assign_synthesis_card(&"base", card)
 
 
 func assign_synthesis_helper(card: CardItemState) -> Dictionary:
 	if synthesis_base_instance_id <= 0 or card == null or card.instance_id == synthesis_base_instance_id:
 		return _result(false, RESULT_NOT_READY)
+	if is_disease_definition(definition_for_card(card)):
+		return _result(false, RESULT_REJECTED)
 	return _assign_synthesis_card(&"helper", card)
 
 
@@ -799,10 +858,13 @@ func synthesis_evaluation_snapshot() -> Dictionary:
 	if base_item != null:
 		for recipe_id in available_synthesis_recipe_ids():
 			var recipe := QuestArcCatalog.recipe_by_id(recipe_id)
-			var evaluation := SynthesisRules.evaluate_candidate(recipe, base_item, totals)
+			var effective_requirements := synthesis_recipe_requirements(recipe)
+			var evaluation := SynthesisRules.evaluate_candidate(
+				recipe, base_item, totals, effective_requirements
+			)
 			if evaluation.is_visible:
 				evaluation["recipe_id"] = recipe.id
-				evaluation["required_personas"] = recipe.required_personas.duplicate()
+				evaluation["required_personas"] = effective_requirements
 				evaluation["is_discovered"] = discovered_recipe_ids.has(recipe.id)
 				evaluation["shows_output"] = (
 					evaluation.is_complete or discovered_recipe_ids.has(recipe.id)
@@ -817,6 +879,18 @@ func synthesis_evaluation_snapshot() -> Dictionary:
 	}
 	_synthesis_snapshot_revision = _synthesis_input_revision
 	return _cached_synthesis_snapshot
+
+
+func synthesis_recipe_requirements(recipe: SynthesisRecipeDefinition) -> Dictionary:
+	if recipe == null:
+		return {}
+	var requirements := recipe.required_personas.duplicate()
+	if not recipe.escalating_persona_requirement:
+		return requirements
+	var growth := maxi(0, int(synthesis_recipe_use_counts.get(recipe.id, 0)))
+	for raw_persona_id in requirements:
+		requirements[raw_persona_id] = int(requirements[raw_persona_id]) + growth
+	return requirements
 
 
 func synthesis_candidates() -> Array[Dictionary]:
@@ -882,7 +956,13 @@ func begin_synthesis() -> Dictionary:
 	synthesis_helper_instance_id = 0
 	synthesis_persona_id = &""
 	synthesis_candidate_recipe_id = &""
-	var output := grant_item(recipe.output_id, &"synthesis")
+	if recipe.escalating_persona_requirement:
+		synthesis_recipe_use_counts[recipe.id] = (
+			int(synthesis_recipe_use_counts.get(recipe.id, 0)) + 1
+		)
+	var output: CardItemState
+	if not recipe.output_id.is_empty():
+		output = grant_item(recipe.output_id, &"synthesis")
 	_mark_state_changed(delta)
 	_end_change_batch()
 	return {
@@ -911,14 +991,16 @@ func can_assign_card_to_task(
 		QuestArcCatalog.task_by_id(instance.definition_id) if instance != null else null
 	)
 	var rule := _rule_by_id(definition, slot_id)
+	var item := definition_for_card(card)
 	return (
 		instance != null
 		and not instance.confirmed
 		and card != null
 		and card in inventory
+		and not is_disease_definition(item)
 		and CardRuleEvaluator.can_place(
 			effective_task_rule(instance, rule),
-			definition_for_card(card),
+			item,
 		)
 	)
 
@@ -932,6 +1014,25 @@ func item_category_ids(item: CardItemDefinition) -> Array[StringName]:
 		if property != null and property.is_item_category and property_id not in result:
 			result.append(property_id)
 	return result
+
+
+func is_disease_definition(item: CardItemDefinition) -> bool:
+	return item != null and item.has_property(CardPropertySet.PROPERTY_DISEASE)
+
+
+func disease_count(disease_id: StringName) -> int:
+	var count := 0
+	for card in inventory:
+		if card.definition_id == disease_id:
+			count += 1
+	return count
+
+
+func lethal_disease_id() -> StringName:
+	for disease_id in [EXPEDITION_WHITE_FLOWER_ITEM_ID, EXPEDITION_FAILURE_ITEM_ID]:
+		if disease_count(disease_id) >= DISEASE_LIMIT:
+			return disease_id
+	return &""
 
 
 func task_evaluation(task_instance_id: int) -> Dictionary:
@@ -1033,6 +1134,16 @@ func begin_mall_expedition(seed_value: int = 0) -> Dictionary:
 	var content := QuestArcCatalog.manifest()
 	if content == null or content.expedition_rooms.is_empty():
 		return _result(false, RESULT_NOT_READY)
+	var lethal_id := lethal_disease_id()
+	if not lethal_id.is_empty():
+		expedition.begin_disease_end(day, lethal_id)
+		_mark_state_changed(QuestStateDelta.new().mark_full_reconcile(&"disease_game_over"))
+		return {
+			"ok": true,
+			"reason": RESULT_OK,
+			"game_over": true,
+			"disease_id": lethal_id,
+		}
 	var selected_seed := seed_value
 	if selected_seed <= 0:
 		selected_seed = maxi(
@@ -1104,6 +1215,7 @@ func complete_expedition_room(
 	var money_gained := 0
 	var reward_item_id: StringName
 	var new_persona_ids: Array[StringName] = []
+	var white_flower_amount := 0
 	var room_success := true
 	var boss_failed := false
 	var demo_complete := false
@@ -1131,6 +1243,10 @@ func complete_expedition_room(
 			consumed_ids = _int_array_from_variant(rest_result.consumed_card_ids)
 			persona_growth = rest_result.persona_growth
 			money_gained = int(rest_result.money_gained)
+			if room.rest_mode == MallRoomDefinition.RestMode.PERSONA_GROWTH:
+				white_flower_amount = 2
+			elif not consumed_ids.is_empty():
+				white_flower_amount = 1
 		MallRoomDefinition.Category.WORK:
 			if not card_instance_ids.is_empty() or not persona_ids.is_empty():
 				return _result(false, RESULT_REJECTED)
@@ -1156,8 +1272,15 @@ func complete_expedition_room(
 		delta.mark_synthesis_persona(&"expedition_persona_growth")
 	if money_gained > 0:
 		wallet.money += money_gained
-	if not reward_item_id.is_empty():
+	var disease_changes: Array[Dictionary] = []
+	if reward_item_id == EXPEDITION_FAILURE_ITEM_ID:
+		disease_changes.append(_gain_disease_in_batch(reward_item_id, 1, delta))
+	elif not reward_item_id.is_empty():
 		grant_item(reward_item_id, &"expedition")
+	if white_flower_amount > 0:
+		disease_changes.append(
+			_gain_disease_in_batch(EXPEDITION_WHITE_FLOWER_ITEM_ID, white_flower_amount, delta)
+		)
 	expedition.discovered_room_ids[room.id] = true
 	expedition.entered_room_ids[room.id] = true
 	if room.category == MallRoomDefinition.Category.CHALLENGE and room_success:
@@ -1187,6 +1310,7 @@ func complete_expedition_room(
 		"money_gained": money_gained,
 		"persona_growth": persona_growth,
 		"new_persona_ids": new_persona_ids,
+		"disease_changes": disease_changes,
 		"door_ids": expedition.current_door_ids.duplicate(),
 	}
 
@@ -1194,7 +1318,11 @@ func complete_expedition_room(
 func expedition_card_can_be_used(card: CardItemState) -> bool:
 	if card == null or not inventory.has(card) or card.location != CardItemState.Location.HAND:
 		return false
-	return MallChallengeRules.can_use_in_challenge(definition_for_card(card))
+	var definition := definition_for_card(card)
+	return (
+		not is_disease_definition(definition)
+		and MallChallengeRules.can_use_in_challenge(definition)
+	)
 
 
 func expedition_room_accepts_card(
@@ -1644,6 +1772,8 @@ func unlock_store(store_id: StringName, card: CardItemState) -> Dictionary:
 	if unlock == null or card == null or card.location != CardItemState.Location.HAND:
 		return _result(false, RESULT_NOT_OWNED)
 	var item := definition_for_card(card)
+	if is_disease_definition(item):
+		return _result(false, RESULT_REJECTED)
 	var persona_id := PersonaMaskCatalog.persona_for_card(card)
 	if not persona_id.is_empty() and int(protagonist_persona_counts.get(persona_id, 0)) <= 0:
 		return _result(false, RESULT_REJECTED)

@@ -2,6 +2,7 @@ class_name CardPropertySet
 extends Resource
 
 const PROPERTY_PERSONA := &"persona"
+const PROPERTY_DISEASE := &"disease"
 const PERSONA_NIGHTWALKER := &"nightwalker"
 const PERSONA_MOURNER := &"mourner"
 const PERSONA_DREAMWALKER := &"dreamwalker"

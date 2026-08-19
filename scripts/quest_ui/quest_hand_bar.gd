@@ -221,7 +221,10 @@ func _apply_card_highlight(
 	if card_highlight_predicate.is_valid():
 		matches = bool(card_highlight_predicate.call(card))
 	elif highlight_rule != null and definition != null:
-		matches = CardRuleEvaluator.can_place(highlight_rule, definition)
+		matches = (
+			not state.is_disease_definition(definition)
+			and CardRuleEvaluator.can_place(highlight_rule, definition)
+		)
 	view.apply_match_highlight(matches)
 
 

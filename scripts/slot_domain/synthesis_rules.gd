@@ -27,6 +27,7 @@ static func evaluate_candidate(
 	recipe: SynthesisRecipeDefinition,
 	base_item: CardItemDefinition,
 	totals: Dictionary,
+	required_personas: Dictionary = {},
 ) -> Dictionary:
 	if recipe == null or base_item == null or not base_item.can_be_synthesis_base:
 		return _result(false, false, {}, &"")
@@ -35,9 +36,12 @@ static func evaluate_candidate(
 		return _result(false, false, {}, &"")
 	var requirements_met := true
 	var missing: Dictionary = {}
-	for raw_persona in recipe.required_personas:
+	var effective_requirements := (
+		required_personas if not required_personas.is_empty() else recipe.required_personas
+	)
+	for raw_persona in effective_requirements:
 		var persona_id := StringName(raw_persona)
-		var required := recipe.required_value(persona_id)
+		var required := int(effective_requirements[raw_persona])
 		var actual := int(totals.get(persona_id, 0))
 		requirements_met = requirements_met and actual >= required
 		if actual < required:

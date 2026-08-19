@@ -1,8 +1,8 @@
 class_name QuestSaveRepository
 extends RefCounted
 
-const SAVE_VERSION := 12
-const CONTENT_VERSION := "mall-expedition-1"
+const SAVE_VERSION := 13
+const CONTENT_VERSION := "mall-expedition-diseases-1"
 const DEFAULT_PATH := "user://save_shopping0807_v1.json"
 
 var save_path: String
@@ -99,6 +99,9 @@ func to_dictionary(state: QuestGameState) -> Dictionary:
 		"protagonist_persona_counts": _string_int_dictionary(state.protagonist_persona_counts),
 		"unlocked_store_ids": _string_array(state.unlocked_store_ids.keys()),
 		"discovered_recipe_ids": _string_array(state.discovered_recipe_ids.keys()),
+		"synthesis_recipe_use_counts": _string_int_dictionary(
+			state.synthesis_recipe_use_counts
+		),
 		"owner_states": _string_dictionary(state.owner_states),
 		"pending_persona_reveal_ids": _string_array(state.pending_persona_reveal_ids),
 		"visited_store_ids": _string_array(state.visited_store_ids.keys()),
@@ -162,6 +165,17 @@ func _restore(state: QuestGameState, payload: Dictionary) -> bool:
 			state.protagonist_persona_counts[stat_id] = 0
 	state.unlocked_store_ids = _name_set(payload.get("unlocked_store_ids", []))
 	state.discovered_recipe_ids = _name_set(payload.get("discovered_recipe_ids", []))
+	state.synthesis_recipe_use_counts = _name_int_dictionary(
+		payload.get("synthesis_recipe_use_counts", {})
+	)
+	for raw_recipe_id in state.synthesis_recipe_use_counts:
+		var recipe := QuestArcCatalog.recipe_by_id(StringName(raw_recipe_id))
+		if (
+			recipe == null
+			or not recipe.escalating_persona_requirement
+			or int(state.synthesis_recipe_use_counts[raw_recipe_id]) < 0
+		):
+			return false
 	state.owner_states = _name_dictionary(payload.get("owner_states", {}))
 	state.pending_persona_reveal_ids = _name_array(
 		payload.get("pending_persona_reveal_ids", [])
@@ -283,6 +297,7 @@ func _serialize_expedition(expedition: MallExpeditionState) -> Dictionary:
 		# through JSON's floating-point number representation.
 		"rng_state": str(expedition.rng_state),
 		"checkpoint_serial": expedition.checkpoint_serial,
+		"disease_game_over_id": String(expedition.disease_game_over_id),
 		"discovered_room_ids": _string_array(expedition.discovered_room_ids.keys()),
 		"first_cleared_challenge_ids": _string_array(
 			expedition.first_cleared_challenge_ids.keys()
@@ -306,6 +321,7 @@ func _restore_expedition(data: Dictionary) -> MallExpeditionState:
 	expedition.rng_seed = maxi(1, int(data.get("rng_seed", 1)))
 	expedition.rng_state = int(String(data.get("rng_state", "0")))
 	expedition.checkpoint_serial = maxi(0, int(data.get("checkpoint_serial", 0)))
+	expedition.disease_game_over_id = StringName(data.get("disease_game_over_id", ""))
 	expedition.discovered_room_ids = _name_set(data.get("discovered_room_ids", []))
 	expedition.first_cleared_challenge_ids = _name_set(
 		data.get("first_cleared_challenge_ids", [])
@@ -319,7 +335,24 @@ func _restore_expedition(data: Dictionary) -> MallExpeditionState:
 	):
 		if QuestArcCatalog.mall_room_by_id(room_id) == null:
 			return null
-	if expedition.active and expedition.current_door_ids.is_empty():
+	if (
+		expedition.active
+		and expedition.current_door_ids.is_empty()
+		and expedition.disease_game_over_id.is_empty()
+	):
+		return null
+	if (
+		not expedition.disease_game_over_id.is_empty()
+		and expedition.disease_game_over_id not in [
+			QuestGameState.EXPEDITION_WHITE_FLOWER_ITEM_ID,
+			QuestGameState.EXPEDITION_FAILURE_ITEM_ID,
+		]
+	):
+		return null
+	if (
+		not expedition.disease_game_over_id.is_empty()
+		and (not expedition.active or not expedition.current_door_ids.is_empty())
+	):
 		return null
 	return expedition
 

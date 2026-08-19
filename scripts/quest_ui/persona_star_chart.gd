@@ -122,13 +122,21 @@ func axis_point(persona_id: StringName, amount: float) -> Vector2:
 	return start + direction * visible_length
 
 
-func candidate_position(recipe: SynthesisRecipeDefinition) -> Vector2:
+func candidate_position(
+	recipe: SynthesisRecipeDefinition,
+	required_personas: Dictionary = {},
+) -> Vector2:
 	if recipe == null:
 		return FIELD_CENTER
 	var personas := _ordered_recipe_personas(recipe)
 	if personas.size() == 1:
 		var persona_id := personas[0]
-		return axis_point(persona_id, float(recipe.required_value(persona_id)))
+		var required_value := (
+			int(required_personas.get(persona_id, recipe.required_value(persona_id)))
+			if not required_personas.is_empty()
+			else recipe.required_value(persona_id)
+		)
+		return axis_point(persona_id, float(required_value))
 	if personas.size() != 2:
 		return FIELD_CENTER
 	var track_points := pair_track_points(recipe)

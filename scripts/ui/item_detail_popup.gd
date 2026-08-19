@@ -652,6 +652,7 @@ static func property_symbol(tag: StringName) -> String:
 		&"cassette": "▰",
 		&"candle": "♨",
 		&"clothing": "⌑",
+		&"disease": "✚",
 		&"teddy_bear": "⌁",
 		&"drink": "∪",
 		&"metal": "◆",

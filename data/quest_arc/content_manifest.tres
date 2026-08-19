@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="GameContentManifest" load_steps=80 format=3]
+[gd_resource type="Resource" script_class="GameContentManifest" load_steps=86 format=3]
 
 [ext_resource type="Script" path="res://scripts/quest_domain/game_content_manifest.gd" id="1_manifest"]
 [ext_resource type="Script" path="res://scripts/quest_domain/property_definition.gd" id="2_property"]
@@ -65,6 +65,11 @@
 [ext_resource type="Resource" path="res://data/quest_arc/expedition_rooms/cold_storage.tres" id="93_room"]
 [ext_resource type="Resource" path="res://data/quest_arc/expedition_rooms/shelf_shift.tres" id="94_room"]
 [ext_resource type="Resource" path="res://data/quest_arc/expedition_rooms/scanner.tres" id="95_room"]
+[ext_resource type="Resource" path="res://data/quest_arc/items/expedition_white_flower.tres" id="96_item"]
+[ext_resource type="Resource" path="res://data/quest_arc/recipes/expedition_recipe_clear_white_flower_nightwalker.tres" id="97_recipe"]
+[ext_resource type="Resource" path="res://data/quest_arc/recipes/expedition_recipe_clear_white_flower_mourner.tres" id="98_recipe"]
+[ext_resource type="Resource" path="res://data/quest_arc/recipes/expedition_recipe_clear_wound_homecomer.tres" id="99_recipe"]
+[ext_resource type="Resource" path="res://data/quest_arc/recipes/expedition_recipe_clear_wound_dreamwalker.tres" id="100_recipe"]
 
 [sub_resource type="Resource" id="PropertyFood"]
 script = ExtResource("2_property")
@@ -129,6 +134,13 @@ display_name_key = &"opening.property.clothing.name"
 description_key = &"opening.property.clothing.description"
 is_item_category = true
 
+[sub_resource type="Resource" id="PropertyDisease"]
+script = ExtResource("2_property")
+id = &"disease"
+display_name_key = &"expedition.property.disease.name"
+description_key = &"expedition.property.disease.description"
+is_item_category = true
+
 [sub_resource type="Resource" id="PropertyPersona"]
 script = ExtResource("2_property")
 id = &"persona"
@@ -175,10 +187,10 @@ maximum_properties_per_item = 4
 maximum_personas_per_item = 2
 initial_protagonist_stats = {&"nightwalker": 1, &"homecomer": 3, &"mourner": 3, &"dreamwalker": 5}
 starting_item_ids = Array[StringName]([&"tin_frog"])
-properties = Array[Resource]([SubResource("PropertyFood"), SubResource("PropertyFlower"), SubResource("PropertyToy"), SubResource("PropertyDrink"), SubResource("PropertyCd"), SubResource("PropertyBook"), SubResource("PropertyCassette"), SubResource("PropertyCandle"), SubResource("PropertyClothing"), SubResource("PropertyPersona"), SubResource("PropertyNightwalker"), SubResource("PropertyMourner"), SubResource("PropertyDreamwalker"), SubResource("PropertyHomecomer")])
-items = Array[Resource]([ExtResource("3_item"), ExtResource("4_item"), ExtResource("5_item"), ExtResource("6_item"), ExtResource("7_item"), ExtResource("8_item"), ExtResource("9_item"), ExtResource("10_item"), ExtResource("11_item"), ExtResource("12_item"), ExtResource("13_item"), ExtResource("14_item"), ExtResource("15_item"), ExtResource("16_item"), ExtResource("17_item"), ExtResource("18_item"), ExtResource("19_item"), ExtResource("20_item"), ExtResource("21_item"), ExtResource("22_item"), ExtResource("23_item"), ExtResource("24_item"), ExtResource("25_item"), ExtResource("26_item"), ExtResource("27_item"), ExtResource("28_item"), ExtResource("29_item"), ExtResource("30_item"), ExtResource("79_item"), ExtResource("80_item"), ExtResource("81_item")])
+properties = Array[Resource]([SubResource("PropertyFood"), SubResource("PropertyFlower"), SubResource("PropertyToy"), SubResource("PropertyDrink"), SubResource("PropertyCd"), SubResource("PropertyBook"), SubResource("PropertyCassette"), SubResource("PropertyCandle"), SubResource("PropertyClothing"), SubResource("PropertyDisease"), SubResource("PropertyPersona"), SubResource("PropertyNightwalker"), SubResource("PropertyMourner"), SubResource("PropertyDreamwalker"), SubResource("PropertyHomecomer")])
+items = Array[Resource]([ExtResource("3_item"), ExtResource("4_item"), ExtResource("5_item"), ExtResource("6_item"), ExtResource("7_item"), ExtResource("8_item"), ExtResource("9_item"), ExtResource("10_item"), ExtResource("11_item"), ExtResource("12_item"), ExtResource("13_item"), ExtResource("14_item"), ExtResource("15_item"), ExtResource("16_item"), ExtResource("17_item"), ExtResource("18_item"), ExtResource("19_item"), ExtResource("20_item"), ExtResource("21_item"), ExtResource("22_item"), ExtResource("23_item"), ExtResource("24_item"), ExtResource("25_item"), ExtResource("26_item"), ExtResource("27_item"), ExtResource("28_item"), ExtResource("29_item"), ExtResource("30_item"), ExtResource("79_item"), ExtResource("80_item"), ExtResource("81_item"), ExtResource("96_item")])
 tasks = Array[Resource]([])
-recipes = Array[Resource]([ExtResource("61_recipe"), ExtResource("62_recipe"), ExtResource("63_recipe"), ExtResource("64_recipe"), ExtResource("65_recipe")])
+recipes = Array[Resource]([ExtResource("61_recipe"), ExtResource("62_recipe"), ExtResource("63_recipe"), ExtResource("64_recipe"), ExtResource("65_recipe"), ExtResource("97_recipe"), ExtResource("98_recipe"), ExtResource("99_recipe"), ExtResource("100_recipe")])
 stores = Array[Resource]([ExtResource("66_store"), ExtResource("67_store"), ExtResource("68_store"), ExtResource("69_store"), ExtResource("70_store")])
 store_unlocks = Array[Resource]([ExtResource("71_unlock"), ExtResource("72_unlock"), ExtResource("73_unlock"), ExtResource("74_unlock"), ExtResource("75_unlock")])
 owners = Array[Resource]([ExtResource("76_owner"), ExtResource("77_owner"), ExtResource("78_owner")])

@@ -17,6 +17,7 @@ enum Phase {
 	REST_RESULT,
 	WAITING_PERSONA_REVEAL,
 	DEMO_COMPLETE,
+	DISEASE_END,
 }
 
 const INK := Color("e6ece8")
@@ -87,6 +88,9 @@ func _ready() -> void:
 
 func show_checkpoint() -> void:
 	_clear_room_draft()
+	if state != null and not state.expedition.disease_game_over_id.is_empty():
+		_show_disease_end()
+		return
 	phase = Phase.DOORS
 	room = null
 	door_prompt.visible = true
@@ -636,6 +640,22 @@ func _show_demo_complete() -> void:
 	label.text = TranslationServer.translate(&"expedition.ui.demo_complete")
 
 
+func _show_disease_end() -> void:
+	phase = Phase.DISEASE_END
+	door_prompt.visible = false
+	door_host.visible = false
+	room_panel.visible = false
+	hand_bar.visible = false
+	detail_popup.close()
+	demo_panel.visible = true
+	var label := demo_panel.get_node("DemoCompleteLabel") as Label
+	label.text = TranslationServer.translate(
+		StringName(
+			"expedition.ui.disease_end.%s" % String(state.expedition.disease_game_over_id)
+		)
+	)
+
+
 func _refresh_feedback() -> void:
 	if room == null or phase != Phase.SLOTS:
 		return
@@ -820,6 +840,8 @@ func _refresh_localized_text() -> void:
 		(demo_panel.get_node("DemoCompleteLabel") as Label).text = TranslationServer.translate(
 			&"expedition.ui.demo_complete"
 		)
+	elif phase == Phase.DISEASE_END:
+		_show_disease_end()
 	elif room != null and room_panel.visible:
 		_refresh_room_phase_text()
 

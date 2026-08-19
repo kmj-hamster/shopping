@@ -102,6 +102,7 @@ func test_work_check_stops_after_a_work_door_has_appeared() -> void:
 
 func test_failed_challenge_commits_wound_discovery_and_next_checkpoint() -> void:
 	var state := QuestGameState.new()
+	state.gain_disease(&"white_flower")
 	state.expedition.begin_night(state.day, 31)
 	state.expedition.current_door_ids = [&"gray_hall"]
 	var result := state.complete_expedition_room(
@@ -116,6 +117,8 @@ func test_failed_challenge_commits_wound_discovery_and_next_checkpoint() -> void
 	assert_false(state.expedition.is_first_cleared(&"gray_hall"))
 	assert_eq(state.expedition.rooms_completed, 1)
 	assert_eq(state.inventory[-1].definition_id, &"expedition_wound")
+	assert_eq(state.disease_count(&"white_flower"), 0)
+	assert_eq(state.disease_count(&"expedition_wound"), 1)
 	assert_eq(state.expedition.current_door_ids.size(), 2)
 
 
@@ -154,6 +157,7 @@ func test_rest_growth_consumes_item_and_increases_each_stronger_persona_once() -
 	assert_null(state.card_by_instance_id(card.instance_id))
 	assert_eq(state.protagonist_persona_counts[&"nightwalker"], 1)
 	assert_eq(state.protagonist_persona_counts[&"dreamwalker"], 1)
+	assert_eq(state.disease_count(&"white_flower"), 1)
 
 
 func test_work_room_pays_twelve_and_does_not_add_wage_to_hand() -> void:
@@ -213,6 +217,7 @@ func test_rest_room_type_filters_and_rainforest_persona_growth() -> void:
 	var result := state.complete_expedition_room(&"rainforest", [], [&"nightwalker"])
 	assert_true(result.ok)
 	assert_eq(state.protagonist_persona_counts[&"nightwalker"], persona_before + 1)
+	assert_eq(state.disease_count(&"white_flower"), 2)
 	assert_true(state.inventory.has(frog))
 	assert_true(state.inventory.has(food))
 
@@ -250,6 +255,7 @@ func test_optional_rest_can_be_left_empty_but_rainforest_cannot() -> void:
 	var home_result := state.complete_expedition_room(&"home")
 	assert_true(home_result.ok)
 	assert_eq(state.expedition.rooms_completed, 1)
+	assert_eq(state.disease_count(&"white_flower"), 0)
 	state.expedition.current_door_ids = [&"rainforest"]
 	var rainforest_result := state.complete_expedition_room(&"rainforest")
 	assert_false(rainforest_result.ok)
@@ -270,6 +276,7 @@ func test_salvage_room_sells_up_to_three_items_at_full_recorded_value() -> void:
 	assert_eq(state.wallet.money, 32)
 	assert_null(state.card_by_instance_id(fries.instance_id))
 	assert_null(state.card_by_instance_id(gardenia.instance_id))
+	assert_eq(state.disease_count(&"white_flower"), 1)
 
 
 func test_salvage_rejects_a_fourth_item_without_consuming_anything() -> void:
@@ -298,6 +305,76 @@ func test_rest_growth_from_zero_queues_first_persona_reveal() -> void:
 	assert_true(result.ok)
 	assert_eq(result.new_persona_ids, [&"nightwalker"])
 	assert_true(state.pending_persona_reveal_ids.has(&"nightwalker"))
+	assert_eq(state.disease_count(&"white_flower"), 1)
+
+
+func test_diseases_are_gained_then_remove_one_opposite_per_card() -> void:
+	var state := QuestGameState.new()
+	assert_true(state.gain_disease(&"white_flower", 2).ok)
+	assert_eq(state.disease_count(&"white_flower"), 2)
+	assert_eq(state.disease_count(&"expedition_wound"), 0)
+	assert_true(state.gain_disease(&"expedition_wound").ok)
+	assert_eq(state.disease_count(&"white_flower"), 1)
+	assert_eq(state.disease_count(&"expedition_wound"), 1)
+	assert_true(state.gain_disease(&"white_flower").ok)
+	assert_eq(state.disease_count(&"white_flower"), 2)
+	assert_eq(state.disease_count(&"expedition_wound"), 0)
+
+
+func test_disease_cards_only_enter_the_synthesis_base_slot() -> void:
+	var state := QuestGameState.new()
+	var wound_id := int(state.gain_disease(&"expedition_wound").granted_instance_ids[0])
+	var wound_card := state.card_by_instance_id(wound_id)
+	assert_true(state.assign_synthesis_base(wound_card).ok)
+	assert_true(state.return_card_to_hand(wound_card))
+	var frog := state.inventory[0]
+	assert_true(state.assign_synthesis_base(frog).ok)
+	assert_false(state.assign_synthesis_helper(wound_card).ok)
+	state.clear_synthesis_draft()
+	assert_false(state.expedition_room_accepts_card(&"home", wound_card))
+	assert_false(state.expedition_room_accepts_card(&"gray_hall", wound_card))
+	assert_false(state.unlock_store(&"toy", wound_card).ok)
+
+
+func test_disease_death_is_checked_only_when_starting_an_expedition() -> void:
+	var state := QuestGameState.new()
+	state.gain_disease(&"white_flower", 3)
+	assert_false(state.expedition.active)
+	assert_eq(state.disease_count(&"white_flower"), 3)
+	var result := state.begin_mall_expedition(919)
+	assert_true(result.ok)
+	assert_true(result.game_over)
+	assert_true(state.expedition.active)
+	assert_eq(state.expedition.disease_game_over_id, &"white_flower")
+	assert_true(state.expedition.current_door_ids.is_empty())
+
+
+func test_outputless_disease_recipe_consumes_inputs_and_only_grows_used_path() -> void:
+	var state := QuestGameState.new()
+	var gained := state.gain_disease(&"white_flower")
+	var white_flower := state.card_by_instance_id(int(gained.granted_instance_ids[0]))
+	var cactus := state.grant_item(&"cactus", &"test")
+	assert_true(state.assign_synthesis_base(white_flower).ok)
+	assert_true(state.assign_synthesis_helper(cactus).ok)
+	assert_true(state.select_synthesis_persona(&"nightwalker"))
+	assert_true(state.select_synthesis_candidate(&"recipe_clear_white_flower_nightwalker"))
+	var result := state.begin_synthesis()
+	assert_true(result.ok)
+	assert_null(result.output)
+	assert_null(state.card_by_instance_id(white_flower.instance_id))
+	assert_null(state.card_by_instance_id(cactus.instance_id))
+	assert_eq(
+		state.synthesis_recipe_requirements(
+			QuestArcCatalog.recipe_by_id(&"recipe_clear_white_flower_nightwalker")
+		),
+		{&"nightwalker": 4},
+	)
+	assert_eq(
+		state.synthesis_recipe_requirements(
+			QuestArcCatalog.recipe_by_id(&"recipe_clear_white_flower_mourner")
+		),
+		{&"mourner": 3},
+	)
 
 
 func test_boss_requires_three_successful_rounds_and_then_completes_demo() -> void:

@@ -12,6 +12,7 @@ var current_door_ids: Array[StringName] = []
 var rng_seed := 1
 var rng_state := 0
 var checkpoint_serial := 0
+var disease_game_over_id: StringName
 
 var discovered_room_ids: Dictionary = {}
 var first_cleared_challenge_ids: Dictionary = {}
@@ -28,6 +29,20 @@ func begin_night(day: int, seed_value: int) -> void:
 	rng_seed = maxi(1, seed_value)
 	rng_state = 0
 	checkpoint_serial = 0
+	disease_game_over_id = &""
+
+
+func begin_disease_end(day: int, disease_id: StringName) -> void:
+	active = true
+	from_day = maxi(1, day)
+	rooms_completed = 0
+	entered_room_ids.clear()
+	work_offer_seen = false
+	current_door_ids.clear()
+	rng_seed = 1
+	rng_state = 0
+	checkpoint_serial = 0
+	disease_game_over_id = disease_id
 
 
 func end_night() -> void:
@@ -38,6 +53,7 @@ func end_night() -> void:
 	current_door_ids.clear()
 	rng_state = 0
 	checkpoint_serial = 0
+	disease_game_over_id = &""
 
 
 func has_entered(room_id: StringName) -> bool:

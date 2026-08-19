@@ -191,6 +191,7 @@ func can_stage_card(role_id: StringName, card: CardItemState) -> bool:
 		return (
 			state.synthesis_base_instance_id > 0
 			and card.instance_id != state.synthesis_base_instance_id
+			and not state.is_disease_definition(definition)
 		)
 	return false
 
@@ -618,7 +619,7 @@ func _rebuild_candidates(snapshot: Dictionary) -> void:
 			candidate_views[recipe_id] = _create_candidate_view(recipe)
 		var view := candidate_views[recipe_id] as Dictionary
 		var button := view.button as Button
-		var position := _candidate_position(recipe)
+		var position := _candidate_position(recipe, candidate)
 		button.position = position - CANDIDATE_NODE_SIZE * 0.5
 		var halo := view.halo as Label
 		halo.position = button.position
@@ -756,9 +757,16 @@ func _pulse_candidate_ready(recipe_id: StringName) -> void:
 
 func _candidate_position(
 	recipe: SynthesisRecipeDefinition,
-	_occupied_positions: Dictionary = {},
+	candidate: Dictionary = {},
 ) -> Vector2:
-	return star_chart.candidate_position(recipe) if star_chart != null else FIELD_CENTER
+	return (
+		star_chart.candidate_position(
+			recipe,
+			candidate.get("required_personas", {}) as Dictionary,
+		)
+		if star_chart != null
+		else FIELD_CENTER
+	)
 
 
 func _update_action_button(snapshot: Dictionary = {}) -> void:
@@ -814,7 +822,13 @@ func _update_candidate_hover_state(persona_id: StringName) -> void:
 			continue
 		var recipe := QuestArcCatalog.recipe_by_id(recipe_id)
 		var output := QuestArcCatalog.item_by_id(recipe.output_id) if recipe != null else null
-		if output == null or not output.has_property(persona_id):
+		var matches_output := output != null and output.has_property(persona_id)
+		var matches_consumption_route := (
+			recipe != null
+			and recipe.consumes_without_output
+			and recipe.required_personas.has(persona_id)
+		)
+		if not matches_output and not matches_consumption_route:
 			button.modulate = Color(0.46, 0.50, 0.55, 0.68)
 			continue
 		var pulse := button.create_tween().set_loops()
@@ -881,10 +895,12 @@ func _on_candidate_pressed(recipe_id: StringName) -> void:
 		return
 	var recipe := QuestArcCatalog.recipe_by_id(recipe_id)
 	var candidate := _candidate_by_id(recipe_id)
-	if candidate.get("shows_output", false) or candidate.get("is_complete", false):
+	if recipe.consumes_without_output:
+		item_inspected.emit(_possibility_definition(recipe, candidate))
+	elif candidate.get("shows_output", false) or candidate.get("is_complete", false):
 		item_inspected.emit(QuestArcCatalog.item_by_id(recipe.output_id))
 	else:
-		item_inspected.emit(_possibility_definition(recipe))
+		item_inspected.emit(_possibility_definition(recipe, candidate))
 	_update_action_button()
 	_update_candidate_selection()
 
@@ -896,12 +912,19 @@ func _candidate_by_id(recipe_id: StringName) -> Dictionary:
 	return {}
 
 
-func _possibility_definition(recipe: SynthesisRecipeDefinition) -> CardItemDefinition:
+func _possibility_definition(
+	recipe: SynthesisRecipeDefinition,
+	candidate: Dictionary = {},
+) -> CardItemDefinition:
 	var definition := possibility_definitions.get(recipe.id) as CardItemDefinition
 	if definition == null:
 		definition = CardItemDefinition.new()
 		definition.id = StringName("possibility_%s" % recipe.id)
-		definition.display_name_key = &"quest.ui.synthesis.possibility.title"
+		definition.display_name_key = (
+			recipe.display_name_key
+			if recipe.consumes_without_output
+			else &"quest.ui.synthesis.possibility.title"
+		)
 		definition.can_recycle = false
 		definition.can_be_synthesis_base = false
 		definition.property_set = CardPropertySet.new()
@@ -914,7 +937,11 @@ func _possibility_definition(recipe: SynthesisRecipeDefinition) -> CardItemDefin
 			var property := QuestArcCatalog.property_by_id(property_id)
 			if property != null and property.is_item_category:
 				definition.property_set.tags.append(property_id)
-	definition.property_set.values = recipe.required_personas.duplicate()
+	definition.property_set.values = (
+		(candidate.get("required_personas", {}) as Dictionary).duplicate()
+		if not candidate.is_empty()
+		else recipe.required_personas.duplicate()
+	)
 	return definition
 
 
@@ -938,7 +965,8 @@ func _on_action_pressed() -> void:
 	if not result.ok:
 		return
 	pending_output = result.output as CardItemState
-	card_staging_changed.emit(pending_output, true)
+	if pending_output != null:
+		card_staging_changed.emit(pending_output, true)
 	details_cleared.emit()
 	_start_narrative(result.process_text_keys)
 
@@ -1010,6 +1038,12 @@ func _show_result() -> void:
 	narrative_overlay.visible = false
 	result_layer.visible = true
 	result_revealed = false
+	if pending_output == null:
+		phase = Phase.DRAFT
+		result_layer.visible = false
+		draft_layer.visible = true
+		refresh()
+		return
 	_rebuild_result()
 
 

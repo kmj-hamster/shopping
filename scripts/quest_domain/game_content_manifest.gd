@@ -75,7 +75,7 @@ func validation_errors() -> PackedStringArray:
 		var recipe := raw_recipe as SynthesisRecipeDefinition
 		if recipe != null:
 			_validate_slot_rules([recipe.base_rule], properties_by_id, items_by_id, errors)
-			if not items_by_id.has(recipe.output_id):
+			if not recipe.output_id.is_empty() and not items_by_id.has(recipe.output_id):
 				errors.append("Recipe %s references missing output %s." % [recipe.id, recipe.output_id])
 	for raw_unlock in store_unlocks:
 		var unlock := raw_unlock as StoreUnlockDefinition

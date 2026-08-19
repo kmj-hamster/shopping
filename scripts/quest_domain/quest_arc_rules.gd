@@ -76,6 +76,8 @@ static func store_unlock_accepts(
 ) -> bool:
 	return (
 		definition != null
+		and item != null
+		and not item.has_property(CardPropertySet.PROPERTY_DISEASE)
 		and CardRuleEvaluator.can_execute(definition.slot_rule, item)
 	)
 

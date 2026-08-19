@@ -8,7 +8,7 @@ const EXPECTED_ITEM_IDS: Array[StringName] = [
 	&"conservatory_story", &"nocturne_competition_recording", &"concrete_city_vol_1",
 	&"mirror_and_lamp", &"ufo_exploration_magazine", &"mania_manga",
 	&"cold_teddy_bear", &"baby_soothing_bear", &"birthday_cake", &"cola", &"rose",
-	&"expedition_salvage", &"expedition_wound", &"expedition_wage",
+	&"expedition_salvage", &"expedition_wound", &"expedition_wage", &"white_flower",
 ]
 
 const EXPECTED_PERSONA_LEVELS := {
@@ -25,10 +25,10 @@ func test_manifest_is_the_live_content_whitelist_without_test_cards() -> void:
 	assert_eq(manifest.initial_money, 0)
 	assert_eq(manifest.starting_item_ids, [&"tin_frog"])
 	assert_eq(manifest.maximum_item_price, 84)
-	assert_eq(manifest.properties.size(), 14)
+	assert_eq(manifest.properties.size(), 15)
 	assert_eq(manifest.items.size(), EXPECTED_ITEM_IDS.size())
 	assert_eq(manifest.tasks.size(), 0)
-	assert_eq(manifest.recipes.size(), 5)
+	assert_eq(manifest.recipes.size(), 9)
 	assert_eq(manifest.stores.size(), 5)
 	assert_eq(manifest.store_unlocks.size(), 5)
 	assert_eq(manifest.owners.size(), 3)
@@ -89,6 +89,12 @@ func test_retail_cards_match_the_declared_prices_types_and_personas() -> void:
 			QuestArcCatalog.item_by_id(locked_item_id).supply_mode,
 			QuestItemDefinition.SupplyMode.EVENT_ONLY,
 		)
+	for disease_id in [&"white_flower", &"expedition_wound"]:
+		var disease := QuestArcCatalog.item_by_id(disease_id)
+		assert_eq(disease.property_set.tags, [&"disease"], disease_id)
+		assert_true(disease.property_set.values.is_empty(), disease_id)
+		assert_false(disease.can_recycle, disease_id)
+		assert_true(disease.can_be_synthesis_base, disease_id)
 
 
 func test_shelves_are_three_by_two_with_declared_duplicates_and_reserved_flower_slots() -> void:
@@ -150,6 +156,23 @@ func test_five_live_recipes_match_requirements_outputs_and_resale_values() -> vo
 			EXPECTED_PERSONA_LEVELS,
 		)
 		assert_true(SynthesisRules.evaluate_candidate(recipe, base, totals).is_complete, recipe.id)
+
+
+func test_disease_recipes_are_outputless_single_persona_paths() -> void:
+	var cases := [
+		[&"recipe_clear_white_flower_nightwalker", &"white_flower", &"nightwalker"],
+		[&"recipe_clear_white_flower_mourner", &"white_flower", &"mourner"],
+		[&"recipe_clear_wound_homecomer", &"expedition_wound", &"homecomer"],
+		[&"recipe_clear_wound_dreamwalker", &"expedition_wound", &"dreamwalker"],
+	]
+	for test_case in cases:
+		var recipe := QuestArcCatalog.recipe_by_id(test_case[0])
+		assert_not_null(recipe)
+		assert_eq(recipe.base_rule.accepted_item_ids, [test_case[1]], recipe.id)
+		assert_eq(recipe.required_personas, {test_case[2]: 3}, recipe.id)
+		assert_true(recipe.output_id.is_empty(), recipe.id)
+		assert_true(recipe.consumes_without_output, recipe.id)
+		assert_true(recipe.escalating_persona_requirement, recipe.id)
 
 
 func test_store_unlocks_use_items_or_non_consuming_personas() -> void:

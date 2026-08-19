@@ -10,6 +10,8 @@ extends Resource
 @export var required_personas: Dictionary = {}
 @export var possibility_hint_key: StringName = &"quest.ui.synthesis.possibility.default"
 @export var output_id: StringName
+@export var consumes_without_output := false
+@export var escalating_persona_requirement := false
 @export var process_text_keys: Array[StringName] = []
 
 
@@ -38,8 +40,13 @@ func validation_errors() -> PackedStringArray:
 		var amount := int(required_personas[raw_persona])
 		if persona_id not in CardPropertySet.PERSONAS or amount < 1 or amount > 20:
 			errors.append("Recipe %s has an invalid threshold for %s." % [id, persona_id])
-	if output_id.is_empty():
-		errors.append("Recipe %s needs an output item." % id)
+	var has_output := not output_id.is_empty()
+	if has_output == consumes_without_output:
+		errors.append(
+			"Recipe %s must have exactly one completion mode: output or consumption." % id
+		)
+	if escalating_persona_requirement and required_personas.size() != 1:
+		errors.append("Escalating recipe %s needs exactly one persona threshold." % id)
 	if process_text_keys.is_empty():
 		errors.append("Recipe %s needs synthesis narration." % id)
 	return errors
