@@ -108,15 +108,10 @@ func _ensure_slot_views(task: TaskInstanceState, definition: TaskDefinition) -> 
 
 func _update_action_state(
 	task: TaskInstanceState,
-	definition: TaskDefinition,
+	_definition: TaskDefinition,
 	evaluation: Dictionary,
 ) -> void:
-	action_button.text = TranslationServer.translate(
-		&"quest.ui.task.enjoy_tonight"
-		if definition.category == TaskDefinition.Category.SELF_CARE
-		else &"quest.ui.task.deliver_tomorrow"
-	)
-	action_button.disabled = task.confirmed or not evaluation.is_ready
+	set_action_visual(task.confirmed, not task.confirmed and evaluation.is_ready)
 	action_button.tooltip_text = ""
 	if not evaluation.is_ready and not task.assignments.is_empty():
 		feedback_label.text = TranslationServer.translate(&"quest.ui.task.not_ready")

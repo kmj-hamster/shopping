@@ -48,6 +48,14 @@ func test_runtime_art_assets_exist() -> void:
 		"frame-synthesis.png",
 	]:
 		assert_true(FileAccess.file_exists("res://resources/ui/frames/%s" % frame_asset))
+	for quest_asset in [
+		"task-paper.png",
+		"task-close.png",
+		"task-confirm.png",
+		"task-completed.png",
+		"pager-arrow.png",
+	]:
+		assert_true(FileAccess.file_exists("res://resources/ui/quest/%s" % quest_asset))
 	assert_true(FileAccess.file_exists("res://resources/shaders/frosted_dialogue.gdshader"))
 	assert_eq(ProjectSettings.get_setting("display/window/stretch/aspect"), "keep")
 

@@ -8,14 +8,22 @@ const LETTER_BODY_HEIGHT := 144.0
 const BODY_FONT_SIZE := 15
 const BODY_MAX_LINES := 5
 const LETTER_BODY_MAX_LINES := 7
-const PAPER_ANCHOR_LEFT := 0.28
-const PAPER_ANCHOR_TOP := 0.22
-const PAPER_ANCHOR_RIGHT := 0.79
-const PAPER_ANCHOR_BOTTOM := 0.80
+const PAPER_ANCHOR_LEFT := 0.167
+const PAPER_ANCHOR_TOP := 0.064
+const PAPER_ANCHOR_RIGHT := 0.652
+const PAPER_ANCHOR_BOTTOM := 0.691
+const PAPER_SIZE := Vector2(531, 344)
+const PAPER_TEXTURE := preload("res://resources/ui/quest/task-paper.png")
+const CLOSE_TEXTURE := preload("res://resources/ui/quest/task-close.png")
+const CONFIRM_TEXTURE := preload("res://resources/ui/quest/task-confirm.png")
+const COMPLETED_TEXTURE := preload("res://resources/ui/quest/task-completed.png")
+const PAGER_ARROW_TEXTURE := preload("res://resources/ui/quest/pager-arrow.png")
 
 var title_label: Label
 var drag_handle: HBoxContainer
-var content_row: HBoxContainer
+var paper_background: TextureRect
+var close_button: TextureButton
+var content_row: Control
 var letter_panel: PanelContainer
 var text_column: VBoxContainer
 var interaction_column: VBoxContainer
@@ -25,9 +33,9 @@ var body_margin: MarginContainer
 var body_label: Label
 var footer_label: Label
 var body_page_row: HBoxContainer
-var body_previous_button: Button
+var body_previous_button: TextureButton
 var body_page_spacer: Control
-var body_next_button: Button
+var body_next_button: TextureButton
 var slot_prompt_label: Label
 var lower_spacer: Control
 var slots_row: HBoxContainer
@@ -54,68 +62,70 @@ func _ready() -> void:
 	anchor_top = PAPER_ANCHOR_TOP
 	anchor_right = PAPER_ANCHOR_RIGHT
 	anchor_bottom = PAPER_ANCHOR_BOTTOM
+	custom_minimum_size = PAPER_SIZE
 	z_index = 40
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	gui_input.connect(_on_popup_gui_input)
-	add_theme_stylebox_override("panel", UiPalette.paper_style())
+	add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 
-	var margin := MarginContainer.new()
-	margin.mouse_filter = Control.MOUSE_FILTER_PASS
-	margin.add_theme_constant_override("margin_left", 20)
-	margin.add_theme_constant_override("margin_right", 20)
-	margin.add_theme_constant_override("margin_top", 16)
-	margin.add_theme_constant_override("margin_bottom", 16)
-	add_child(margin)
+	paper_background = TextureRect.new()
+	paper_background.name = "PopupPaperArtwork"
+	paper_background.texture = PAPER_TEXTURE
+	paper_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	paper_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	paper_background.stretch_mode = TextureRect.STRETCH_SCALE
+	paper_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(paper_background)
 
-	var paper_column := VBoxContainer.new()
-	paper_column.name = "PopupPaperColumn"
-	paper_column.mouse_filter = Control.MOUSE_FILTER_PASS
-	paper_column.add_theme_constant_override("separation", 8)
-	margin.add_child(paper_column)
+	content_row = Control.new()
+	content_row.name = "PopupContent"
+	content_row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	content_row.mouse_filter = Control.MOUSE_FILTER_PASS
+	add_child(content_row)
 
 	drag_handle = HBoxContainer.new()
 	drag_handle.name = "PopupHeader"
+	drag_handle.position = Vector2(66, 30)
+	drag_handle.size = Vector2(330, 42)
 	drag_handle.mouse_filter = Control.MOUSE_FILTER_PASS
-	paper_column.add_child(drag_handle)
+	content_row.add_child(drag_handle)
 	title_label = Label.new()
 	title_label.name = "PopupTitle"
 	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	title_label.add_theme_font_size_override("font_size", 25)
+	title_label.add_theme_font_size_override("font_size", 22)
 	title_label.add_theme_color_override("font_color", Color("302a22"))
 	drag_handle.add_child(title_label)
-	var close_button := Button.new()
-	close_button.name = "CloseButton"
-	close_button.text = "×"
-	close_button.custom_minimum_size = Vector2(38, 34)
-	close_button.pressed.connect(closed.emit)
-	drag_handle.add_child(close_button)
 
-	content_row = HBoxContainer.new()
-	content_row.name = "PopupContentRow"
-	content_row.mouse_filter = Control.MOUSE_FILTER_PASS
-	content_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	content_row.add_theme_constant_override("separation", 18)
-	paper_column.add_child(content_row)
+	close_button = TextureButton.new()
+	close_button.name = "CloseButton"
+	close_button.texture_normal = CLOSE_TEXTURE
+	close_button.texture_hover = CLOSE_TEXTURE
+	close_button.texture_pressed = CLOSE_TEXTURE
+	close_button.ignore_texture_size = true
+	close_button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	close_button.position = Vector2(445, -1)
+	close_button.size = Vector2(49, 51)
+	close_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	close_button.tooltip_text = ""
+	close_button.pressed.connect(closed.emit)
+	content_row.add_child(close_button)
 
 	letter_panel = PanelContainer.new()
 	letter_panel.name = "PopupLetterPanel"
+	letter_panel.position = Vector2(76, 95)
+	letter_panel.size = Vector2(220, 180)
 	letter_panel.mouse_filter = Control.MOUSE_FILTER_PASS
-	letter_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	letter_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	letter_panel.size_flags_stretch_ratio = 1.35
-	letter_panel.add_theme_stylebox_override(
-		"panel", UiPalette.panel_style(Color("e7e1d5", 0.72), Color("746c60", 0.82))
-	)
+	letter_panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	content_row.add_child(letter_panel)
 	var letter_margin := MarginContainer.new()
 	letter_margin.mouse_filter = Control.MOUSE_FILTER_PASS
-	letter_margin.add_theme_constant_override("margin_left", 10)
-	letter_margin.add_theme_constant_override("margin_right", 10)
-	letter_margin.add_theme_constant_override("margin_top", 8)
-	letter_margin.add_theme_constant_override("margin_bottom", 8)
+	letter_margin.add_theme_constant_override("margin_left", 14)
+	letter_margin.add_theme_constant_override("margin_right", 14)
+	letter_margin.add_theme_constant_override("margin_top", 10)
+	letter_margin.add_theme_constant_override("margin_bottom", 6)
 	letter_panel.add_child(letter_margin)
 	text_column = VBoxContainer.new()
 	text_column.name = "PopupLetterColumn"
@@ -134,8 +144,8 @@ func _ready() -> void:
 	body_margin = MarginContainer.new()
 	body_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	body_margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	body_margin.add_theme_constant_override("margin_left", 2)
-	body_margin.add_theme_constant_override("margin_right", 2)
+	body_margin.add_theme_constant_override("margin_left", 0)
+	body_margin.add_theme_constant_override("margin_right", 0)
 	body_viewport.add_child(body_margin)
 	body_label = Label.new()
 	body_label.name = "PopupBody"
@@ -157,14 +167,13 @@ func _ready() -> void:
 	text_column.add_child(footer_label)
 	body_page_row = HBoxContainer.new()
 	body_page_row.name = "PopupBodyPager"
+	body_page_row.position = Vector2(30, 142)
+	body_page_row.size = Vector2(292, 49)
 	body_page_row.mouse_filter = Control.MOUSE_FILTER_PASS
-	body_page_row.add_theme_constant_override("separation", 6)
-	text_column.add_child(body_page_row)
-	body_previous_button = Button.new()
+	body_page_row.add_theme_constant_override("separation", 0)
+	content_row.add_child(body_page_row)
+	body_previous_button = _create_pager_button(false)
 	body_previous_button.name = "PreviousBodyPageButton"
-	body_previous_button.text = "<"
-	body_previous_button.custom_minimum_size = Vector2(32, 24)
-	body_previous_button.focus_mode = Control.FOCUS_NONE
 	body_previous_button.pressed.connect(_on_previous_body_page_pressed)
 	body_page_row.add_child(body_previous_button)
 	body_page_spacer = Control.new()
@@ -172,30 +181,32 @@ func _ready() -> void:
 	body_page_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	body_page_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	body_page_row.add_child(body_page_spacer)
-	body_next_button = Button.new()
+	body_next_button = _create_pager_button(true)
 	body_next_button.name = "NextBodyPageButton"
-	body_next_button.text = ">"
-	body_next_button.custom_minimum_size = Vector2(32, 24)
-	body_next_button.focus_mode = Control.FOCUS_NONE
 	body_next_button.pressed.connect(_on_next_body_page_pressed)
 	body_page_row.add_child(body_next_button)
 
-	var divider := ColorRect.new()
-	divider.name = "PopupColumnDivider"
-	divider.color = Color("8d7654", 0.34)
-	divider.custom_minimum_size = Vector2(1, 0)
-	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	content_row.add_child(divider)
-
 	interaction_column = VBoxContainer.new()
 	interaction_column.name = "PopupInteractionColumn"
+	interaction_column.position = Vector2(335, 91)
+	interaction_column.size = Vector2(150, 218)
 	interaction_column.mouse_filter = Control.MOUSE_FILTER_PASS
-	interaction_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	interaction_column.add_theme_constant_override("separation", 4)
+	interaction_column.add_theme_constant_override("separation", 2)
 	content_row.add_child(interaction_column)
+
+	slots_row = HBoxContainer.new()
+	slots_row.name = "PopupSlots"
+	slots_row.custom_minimum_size = Vector2(0, QuestTaskSlot.CARD_SIZE.y)
+	slots_row.mouse_filter = Control.MOUSE_FILTER_PASS
+	slots_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	slots_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slots_row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	slots_row.add_theme_constant_override("separation", 14)
+	interaction_column.add_child(slots_row)
+
 	slot_prompt_label = Label.new()
 	slot_prompt_label.name = "PopupSlotPrompt"
-	slot_prompt_label.custom_minimum_size = Vector2(0, 22)
+	slot_prompt_label.custom_minimum_size = Vector2(0, 24)
 	slot_prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	slot_prompt_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	slot_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -204,17 +215,9 @@ func _ready() -> void:
 	slot_prompt_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	interaction_column.add_child(slot_prompt_label)
 
-	slots_row = HBoxContainer.new()
-	slots_row.name = "PopupSlots"
-	slots_row.mouse_filter = Control.MOUSE_FILTER_PASS
-	slots_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	slots_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	slots_row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	slots_row.add_theme_constant_override("separation", 14)
-	interaction_column.add_child(slots_row)
-
 	interaction_footer_row = HBoxContainer.new()
 	interaction_footer_row.name = "PopupInteractionFooter"
+	interaction_footer_row.custom_minimum_size = Vector2(0, 36)
 	interaction_footer_row.mouse_filter = Control.MOUSE_FILTER_PASS
 	interaction_footer_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	interaction_column.add_child(interaction_footer_row)
@@ -225,12 +228,20 @@ func _ready() -> void:
 
 	action_button = Button.new()
 	action_button.name = "PopupActionButton"
-	action_button.custom_minimum_size = Vector2(124, 38)
+	action_button.custom_minimum_size = Vector2(81, 34)
 	action_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	action_button.add_theme_stylebox_override(
-		"disabled", UiPalette.panel_style(Color("777b78", 0.72), Color("9b9e9b", 0.72))
-	)
-	action_button.add_theme_color_override("font_disabled_color", Color("d0d2cf", 0.76))
+	action_button.icon = CONFIRM_TEXTURE
+	action_button.expand_icon = true
+	action_button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	action_button.text = ""
+	action_button.tooltip_text = ""
+	action_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	for style_name in [&"normal", &"hover", &"pressed", &"focus", &"disabled", &"hover_pressed"]:
+		action_button.add_theme_stylebox_override(style_name, StyleBoxEmpty.new())
+	action_button.add_theme_color_override("icon_normal_color", Color.WHITE)
+	action_button.add_theme_color_override("icon_hover_color", Color(1.08, 1.08, 1.08, 1.0))
+	action_button.add_theme_color_override("icon_pressed_color", Color("d8c8bd"))
+	action_button.add_theme_color_override("icon_disabled_color", Color(0.46, 0.46, 0.46, 0.62))
 	interaction_footer_row.add_child(action_button)
 	var action_right_spacer := Control.new()
 	action_right_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -258,6 +269,34 @@ func _ready() -> void:
 	if window != null:
 		window.focus_exited.connect(_stop_dragging)
 	call_deferred("_apply_preferred_size")
+
+
+func _create_pager_button(flip_h: bool) -> TextureButton:
+	var button := TextureButton.new()
+	button.texture_normal = PAGER_ARROW_TEXTURE
+	button.texture_hover = PAGER_ARROW_TEXTURE
+	button.texture_pressed = PAGER_ARROW_TEXTURE
+	button.texture_disabled = PAGER_ARROW_TEXTURE
+	button.ignore_texture_size = true
+	button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	button.flip_h = flip_h
+	button.custom_minimum_size = Vector2(13, 49)
+	button.focus_mode = Control.FOCUS_NONE
+	button.tooltip_text = ""
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	return button
+
+
+func set_action_visual(completed: bool, enabled: bool) -> void:
+	if action_button == null:
+		return
+	action_button.icon = COMPLETED_TEXTURE if completed else CONFIRM_TEXTURE
+	action_button.custom_minimum_size = Vector2(103, 34) if completed else Vector2(81, 34)
+	action_button.disabled = not enabled
+	action_button.add_theme_color_override(
+		"icon_disabled_color",
+		Color.WHITE if completed else Color(0.46, 0.46, 0.46, 0.62),
+	)
 
 
 func set_drag_bounds_control(bounds: Control) -> void:
@@ -502,6 +541,8 @@ func _update_body_page() -> void:
 	body_label.text = body_pages[body_page_index]
 	body_previous_button.disabled = body_page_index <= 0
 	body_next_button.disabled = body_page_index >= body_pages.size() - 1
+	body_previous_button.modulate.a = 0.28 if body_previous_button.disabled else 0.82
+	body_next_button.modulate.a = 0.28 if body_next_button.disabled else 0.82
 
 
 func _on_previous_body_page_pressed() -> void:

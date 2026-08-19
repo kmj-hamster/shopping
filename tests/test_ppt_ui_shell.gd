@@ -107,18 +107,25 @@ func test_main_uses_the_centered_art_shell_and_unified_hand() -> void:
 	_assert_background_overscans_frame(map_background)
 	assert_eq((main.current_screen as QuestMapScreen).store_hotspots.size(), 2)
 	assert_eq(main.task_dock.bookmark_column.get_child_count(), 4)
-	assert_eq(main.task_dock.receipt_title.get_theme_color("font_color"), UiPalette.INK_COLOR)
 	assert_eq(
-		main.task_dock.receipt_title.horizontal_alignment,
-		HORIZONTAL_ALIGNMENT_LEFT,
+		main.task_dock.receipt_day_label.get_theme_color("font_color"),
+		QuestTaskDock.NIGHT_VALUE_COLOR,
+	)
+	assert_eq(
+		main.task_dock.receipt_day_label.text,
+		str(main.state.day),
 	)
 	assert_eq(
 		main.task_dock.receipt_money_label.text,
-		TranslationServer.translate(&"demo.ui.money") % main.state.wallet.money,
+		str(main.state.wallet.money),
 	)
 	assert_eq(
 		main.task_dock.receipt_money_label.horizontal_alignment,
-		HORIZONTAL_ALIGNMENT_LEFT,
+		HORIZONTAL_ALIGNMENT_CENTER,
+	)
+	assert_eq(
+		main.task_dock.receipt_background.texture.resource_path,
+		QuestTaskDock.TODO_COLLAPSED_PATH,
 	)
 	assert_false(main.task_dock.is_expanded)
 	assert_false(main.task_dock.bookmark_column.visible)
@@ -150,7 +157,7 @@ func test_english_locale_uses_baker_signet_with_six_percent_tracking_live() -> v
 	LocaleManager.set_locale(LocaleManager.LOCALE_EN, false)
 	await get_tree().process_frame
 	assert_eq(main.theme, QuestMain.EN_UI_THEME)
-	assert_eq(main.task_dock.receipt_money_label.text, "Money: %d" % main.state.wallet.money)
+	assert_eq(main.task_dock.receipt_money_label.text, str(main.state.wallet.money))
 	var theme_font := main.theme.default_font as FontVariation
 	assert_not_null(theme_font)
 	assert_eq(theme_font.base_font.resource_path, "res://resources/fonts/baker-signet-bt.ttf")
@@ -669,8 +676,16 @@ func test_task_popup_uses_horizontal_letter_and_slot_columns() -> void:
 	var anchored_height := main.task_popup_layer.size.y * (
 		PaperActivityPopup.PAPER_ANCHOR_BOTTOM - PaperActivityPopup.PAPER_ANCHOR_TOP
 	)
-	assert_gte(popup.size.y, anchored_height)
+	assert_almost_eq(popup.size.y, anchored_height, 0.1)
 	assert_lte(popup.size.y, main.task_popup_layer.size.y)
+	assert_eq(
+		popup.paper_background.texture.resource_path,
+		"res://resources/ui/quest/task-paper.png",
+	)
+	assert_eq(
+		popup.close_button.texture_normal.resource_path,
+		"res://resources/ui/quest/task-close.png",
+	)
 	assert_eq(popup.title_label.horizontal_alignment, HORIZONTAL_ALIGNMENT_LEFT)
 	assert_eq(popup.body_label.horizontal_alignment, HORIZONTAL_ALIGNMENT_LEFT)
 	assert_eq(popup.body_label.vertical_alignment, VERTICAL_ALIGNMENT_TOP)
@@ -680,10 +695,10 @@ func test_task_popup_uses_horizontal_letter_and_slot_columns() -> void:
 	assert_lt(popup.letter_panel.global_position.x, popup.interaction_column.global_position.x)
 	assert_same(popup.body_viewport.get_parent(), popup.text_column)
 	assert_same(popup.slots_row.get_parent(), popup.interaction_column)
-	assert_eq(popup.body_margin.get_theme_constant("margin_left"), 2)
-	assert_eq(popup.body_margin.get_theme_constant("margin_right"), 2)
+	assert_eq(popup.body_margin.get_theme_constant("margin_left"), 0)
+	assert_eq(popup.body_margin.get_theme_constant("margin_right"), 0)
 	assert_true(popup.body_viewport.clip_contents)
-	assert_same(popup.body_page_row.get_parent(), popup.text_column)
+	assert_same(popup.body_page_row.get_parent(), popup.content_row)
 	assert_null(popup.get_node_or_null("BodyPageLabel"))
 	assert_eq(popup.body_page_spacer.size_flags_horizontal, Control.SIZE_EXPAND_FILL)
 	assert_almost_eq(
@@ -729,15 +744,17 @@ func test_task_popup_uses_horizontal_letter_and_slot_columns() -> void:
 		-QuestTaskSlot.DROP_MARGIN.x - 1.0,
 		70.0,
 	)))
+	assert_eq(popup.action_button.text, "")
 	assert_eq(
-		popup.action_button.text,
-		TranslationServer.translate(&"quest.ui.task.deliver_tomorrow"),
+		popup.action_button.icon.resource_path,
+		"res://resources/ui/quest/task-confirm.png",
 	)
 	popup._on_action_pressed()
 	assert_true(task.confirmed)
+	assert_true(popup.action_button.disabled)
 	assert_eq(
-		popup.action_button.text,
-		TranslationServer.translate(&"quest.ui.task.deliver_tomorrow"),
+		popup.action_button.icon.resource_path,
+		"res://resources/ui/quest/task-completed.png",
 	)
 	assert_eq(popup.feedback_label.text, "")
 
@@ -1015,8 +1032,8 @@ func test_self_and_owner_tasks_use_deferred_actions_and_owner_rule_titles() -> v
 	main.task_dock._toggle_task(self_task.instance_id)
 	await get_tree().process_frame
 	assert_eq(
-		main.task_dock.task_window.action_button.text,
-		TranslationServer.translate(&"quest.ui.task.enjoy_tonight"),
+		main.task_dock.task_window.action_button.icon.resource_path,
+		"res://resources/ui/quest/task-confirm.png",
 	)
 	main.task_dock._close_task()
 	main.state.interact_with_store_owner(&"flower")
@@ -1028,9 +1045,10 @@ func test_self_and_owner_tasks_use_deferred_actions_and_owner_rule_titles() -> v
 	await get_tree().process_frame
 	var popup := main.task_dock.task_window
 	assert_false(popup.action_button.disabled)
+	assert_eq(popup.action_button.text, "")
 	assert_eq(
-		popup.action_button.text,
-		TranslationServer.translate(&"quest.ui.task.deliver_tomorrow"),
+		popup.action_button.icon.resource_path,
+		"res://resources/ui/quest/task-confirm.png",
 	)
 	assert_eq(popup.feedback_label.text, "")
 	var owner_slots := popup.slot_views.values()
@@ -1048,7 +1066,7 @@ func test_self_and_owner_tasks_use_deferred_actions_and_owner_rule_titles() -> v
 		expected_prompts.append(TranslationServer.translate(rule.display_name_key))
 		assert_same(popup.slot_views[rule.id], popup.submission_slot)
 	assert_eq(popup.slot_prompt_label.text, " / ".join(expected_prompts))
-	assert_lt(popup.slot_prompt_label.global_position.y, popup.submission_slot.global_position.y)
+	assert_gt(popup.slot_prompt_label.global_position.y, popup.submission_slot.global_position.y)
 	var alternative_item := main.state.grant_item(&"agave", &"test")
 	assert_true(popup.submission_slot._can_drop_data(
 		Vector2.ZERO,

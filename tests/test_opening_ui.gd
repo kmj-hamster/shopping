@@ -47,7 +47,7 @@ func test_money_letter_flips_to_plus_one_hundred_and_disappears_on_close() -> vo
 	assert_eq(main.state.wallet.money, 100)
 	assert_eq(
 		main.task_dock.receipt_money_label.text,
-		TranslationServer.translate(&"demo.ui.money") % 100,
+		"100",
 	)
 	assert_true(slot.money_face.visible)
 	assert_eq(slot.money_label.text, "+100")
@@ -101,7 +101,7 @@ func test_todo_receipt_uses_narrow_text_rows_and_fixed_page_navigation() -> void
 	assert_false(dock.page_navigation.visible)
 	assert_null(dock.get_node_or_null("TodoReceipt/TodoTaskScroll"))
 	assert_eq(dock.receipt_host.size, Vector2(264, 477))
-	assert_eq(dock.receipt_background.size, Vector2(264, 186))
+	assert_eq(dock.receipt_background.size, Vector2(264, 172))
 	assert_eq(dock.receipt_host.mouse_filter, Control.MOUSE_FILTER_STOP)
 	var click_in_folded_air := InputEventMouseButton.new()
 	click_in_folded_air.button_index = MOUSE_BUTTON_LEFT
@@ -113,23 +113,21 @@ func test_todo_receipt_uses_narrow_text_rows_and_fixed_page_navigation() -> void
 	assert_true(dock.page_navigation.visible)
 	assert_eq(dock.receipt_host.size, Vector2(264, 477))
 	assert_eq(dock.receipt_background.size, Vector2(264, 477))
-	assert_eq(dock.receipt_money_label.position.y, 23.0)
-	assert_eq(dock.receipt_title.position.y, 55.0)
-	assert_eq(dock.bookmark_column.position.y, 100.0)
-	assert_eq(dock.page_navigation.position.y, 324.0)
+	assert_eq(dock.receipt_day_label.position.y, 60.0)
+	assert_eq(dock.receipt_money_label.position.y, 60.0)
+	assert_eq(dock.bookmark_column.position.y, 101.0)
+	assert_eq(dock.page_navigation.position.y, 298.0)
 	assert_gt(
 		dock.page_navigation.position.y,
 		dock.bookmark_column.position.y + QuestTaskDock.TASKS_PER_PAGE * QuestTaskDock.TASK_LINE_HEIGHT,
 	)
 	assert_eq(
-		dock.page_previous_button.get_theme_color("font_hover_color"),
-		dock.receipt_title.get_theme_color("font_color"),
+		dock.page_previous_button.texture_normal.resource_path,
+		"res://resources/ui/quest/pager-arrow.png",
 	)
-	assert_eq(
-		dock.page_previous_button.get_theme_color("font_disabled_color"),
-		dock.receipt_title.get_theme_color("font_color"),
-	)
-	assert_eq(dock.page_previous_button.get_theme_font_size("font_size"), 18)
+	assert_false(dock.page_previous_button.flip_h)
+	assert_true(dock.page_next_button.flip_h)
+	assert_eq(dock.receipt_toggle_icon.texture.resource_path, "res://resources/ui/quest/pager-arrow.png")
 	assert_true(dock.page_previous_button.disabled)
 	assert_false(dock.page_next_button.disabled)
 	var task := main.state.active_tasks()[0] as TaskInstanceState

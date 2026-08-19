@@ -5,26 +5,31 @@ signal rule_focused(rule: CardSlotRule)
 signal item_inspected(definition: CardItemDefinition)
 
 const RECEIPT_WIDTH := 264.0
-const RECEIPT_COLLAPSED_HEIGHT := 186.0
+const RECEIPT_COLLAPSED_HEIGHT := 172.0
 const RECEIPT_EXPANDED_HEIGHT := 477.0
 const TASKS_PER_PAGE := 5
-const TASK_LINE_HEIGHT := 42.0
-const TASK_HIT_HEIGHT := 24.0
+const TASK_LINE_HEIGHT := 33.0
+const TASK_HIT_HEIGHT := 22.0
 const TASK_TEXT_MAX_WIDTH := 174.0
 const TASK_COUNTDOWN_X := 194.0
-const RECEIPT_TEXT_SHIFT_Y := 7.0
 const TASK_HOVER_COLOR := Color("446979")
 const TASK_GLOW_COLOR := Color("789cab", 0.55)
+const NIGHT_VALUE_COLOR := Color("47496f")
+const MONEY_VALUE_COLOR := Color("805c36")
+const TODO_EXPANDED_PATH := "res://resources/ui/shell/todo-expanded.png"
+const TODO_COLLAPSED_PATH := "res://resources/ui/shell/todo-collapsed.png"
+const PAGER_ARROW_TEXTURE := preload("res://resources/ui/quest/pager-arrow.png")
 
 var state: QuestGameState
 var receipt_host: Control
 var receipt_background: TextureRect
-var receipt_title: Label
+var receipt_day_label: Label
 var receipt_money_label: Label
+var receipt_toggle_icon: TextureRect
 var bookmark_column: Control
 var page_navigation: HBoxContainer
-var page_previous_button: Button
-var page_next_button: Button
+var page_previous_button: TextureButton
+var page_next_button: TextureButton
 var popup_host: Control
 var task_window: QuestTaskWindow
 var open_task_instance_id := 0
@@ -66,53 +71,62 @@ func _ready() -> void:
 	receipt_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	receipt_host.add_child(receipt_background)
 
+	receipt_day_label = Label.new()
+	receipt_day_label.name = "TodoReceiptDayValue"
+	receipt_day_label.position = Vector2(24, 60)
+	receipt_day_label.size = Vector2(64, 30)
+	receipt_day_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	receipt_day_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	receipt_day_label.add_theme_font_size_override("font_size", 18)
+	receipt_day_label.add_theme_color_override("font_color", NIGHT_VALUE_COLOR)
+	receipt_day_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	receipt_host.add_child(receipt_day_label)
+
 	receipt_money_label = Label.new()
 	receipt_money_label.name = "TodoReceiptMoney"
-	receipt_money_label.position = Vector2(46, 16 + RECEIPT_TEXT_SHIFT_Y)
-	receipt_money_label.size = Vector2(160, 28)
-	receipt_money_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	receipt_money_label.position = Vector2(126, 60)
+	receipt_money_label.size = Vector2(72, 30)
+	receipt_money_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	receipt_money_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	receipt_money_label.add_theme_font_size_override("font_size", 15)
-	receipt_money_label.add_theme_color_override("font_color", UiPalette.INK_COLOR)
+	receipt_money_label.add_theme_font_size_override("font_size", 18)
+	receipt_money_label.add_theme_color_override("font_color", MONEY_VALUE_COLOR)
 	receipt_money_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	receipt_host.add_child(receipt_money_label)
 
-	receipt_title = Label.new()
-	receipt_title.name = "TodoReceiptTitle"
-	receipt_title.position = Vector2(46, 48 + RECEIPT_TEXT_SHIFT_Y)
-	receipt_title.size = Vector2(160, 44)
-	receipt_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	receipt_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	receipt_title.add_theme_font_size_override("font_size", 22)
-	receipt_title.add_theme_color_override("font_color", UiPalette.INK_COLOR)
-	receipt_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	receipt_host.add_child(receipt_title)
-
 	bookmark_column = Control.new()
 	bookmark_column.name = "TodoTaskColumn"
-	bookmark_column.position = Vector2(22, 93 + RECEIPT_TEXT_SHIFT_Y)
+	bookmark_column.position = Vector2(22, 101)
 	bookmark_column.size = Vector2(TASK_TEXT_MAX_WIDTH, TASKS_PER_PAGE * TASK_LINE_HEIGHT)
 	bookmark_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	receipt_host.add_child(bookmark_column)
 
 	page_navigation = HBoxContainer.new()
 	page_navigation.name = "TodoPageNavigation"
-	page_navigation.position = Vector2(52, 324)
-	page_navigation.size = Vector2(130, 28)
+	page_navigation.position = Vector2(74, 298)
+	page_navigation.size = Vector2(116, 49)
 	page_navigation.alignment = BoxContainer.ALIGNMENT_CENTER
-	page_navigation.add_theme_constant_override("separation", 30)
+	page_navigation.add_theme_constant_override("separation", 72)
 	receipt_host.add_child(page_navigation)
-	page_previous_button = _create_page_button("←")
+	page_previous_button = _create_page_button(false)
 	page_previous_button.name = "TodoPreviousPage"
 	page_previous_button.pressed.connect(_on_previous_page_pressed)
 	page_navigation.add_child(page_previous_button)
-	page_next_button = _create_page_button("→")
+	page_next_button = _create_page_button(true)
 	page_next_button.name = "TodoNextPage"
 	page_next_button.pressed.connect(_on_next_page_pressed)
 	page_navigation.add_child(page_next_button)
 
+	receipt_toggle_icon = TextureRect.new()
+	receipt_toggle_icon.name = "TodoToggleIcon"
+	receipt_toggle_icon.texture = PAGER_ARROW_TEXTURE
+	receipt_toggle_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	receipt_toggle_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	receipt_toggle_icon.size = Vector2(13, 49)
+	receipt_toggle_icon.pivot_offset = receipt_toggle_icon.size * 0.5
+	receipt_toggle_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	receipt_host.add_child(receipt_toggle_icon)
+
 	LocaleManager.locale_changed.connect(_on_locale_changed)
-	receipt_title.text = TranslationServer.translate(&"quest.ui.todo.title")
 	_set_expanded(false)
 	refresh()
 
@@ -157,7 +171,8 @@ func refresh() -> void:
 func _refresh_money() -> void:
 	if state == null or receipt_money_label == null:
 		return
-	receipt_money_label.text = TranslationServer.translate(&"demo.ui.money") % state.wallet.money
+	receipt_day_label.text = str(state.day)
+	receipt_money_label.text = str(state.wallet.money)
 
 
 func _create_bookmark(instance_id: int) -> Button:
@@ -232,22 +247,19 @@ func _set_bookmark_hovered(bookmark: Button, hovered: bool) -> void:
 	bookmark.add_theme_constant_override("outline_size", 3 if hovered else 0)
 
 
-func _create_page_button(label_text: String) -> Button:
-	var button := Button.new()
-	button.text = label_text
-	button.custom_minimum_size = Vector2(32, 24)
+func _create_page_button(flip_h: bool) -> TextureButton:
+	var button := TextureButton.new()
+	button.texture_normal = PAGER_ARROW_TEXTURE
+	button.texture_hover = PAGER_ARROW_TEXTURE
+	button.texture_pressed = PAGER_ARROW_TEXTURE
+	button.texture_disabled = PAGER_ARROW_TEXTURE
+	button.ignore_texture_size = true
+	button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	button.flip_h = flip_h
+	button.custom_minimum_size = Vector2(13, 49)
 	button.focus_mode = Control.FOCUS_NONE
-	button.flat = true
 	button.tooltip_text = ""
 	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	button.add_theme_font_size_override("font_size", 18)
-	button.add_theme_color_override("font_color", UiPalette.INK_COLOR)
-	button.add_theme_color_override("font_hover_color", UiPalette.INK_COLOR)
-	button.add_theme_color_override("font_pressed_color", UiPalette.INK_COLOR)
-	button.add_theme_color_override("font_disabled_color", UiPalette.INK_COLOR)
-	var empty_style := StyleBoxEmpty.new()
-	for style_name in [&"normal", &"hover", &"pressed", &"focus", &"disabled"]:
-		button.add_theme_stylebox_override(style_name, empty_style)
 	return button
 
 
@@ -272,6 +284,8 @@ func _refresh_task_page() -> void:
 			)
 	page_previous_button.disabled = task_page_index <= 0
 	page_next_button.disabled = task_page_index >= page_count - 1
+	page_previous_button.modulate.a = 0.34 if page_previous_button.disabled else 0.88
+	page_next_button.modulate.a = 0.34 if page_next_button.disabled else 0.88
 
 
 func _on_previous_page_pressed() -> void:
@@ -313,12 +327,16 @@ func _set_expanded(expanded: bool) -> void:
 	receipt_host.size = Vector2(RECEIPT_WIDTH, RECEIPT_EXPANDED_HEIGHT)
 	receipt_background.size = Vector2(RECEIPT_WIDTH, receipt_height)
 	receipt_background.texture = load(
-		"res://resources/ui/shell/todo-expanded.png"
+		TODO_EXPANDED_PATH
 		if is_expanded
-		else "res://resources/ui/shell/todo-collapsed.png"
+		else TODO_COLLAPSED_PATH
 	) as Texture2D
+	receipt_day_label.visible = is_expanded
+	receipt_money_label.visible = is_expanded
 	bookmark_column.visible = is_expanded
 	page_navigation.visible = is_expanded
+	receipt_toggle_icon.position = Vector2(125.5, 399.5 if is_expanded else 113.5)
+	receipt_toggle_icon.rotation = PI * 0.5 if is_expanded else -PI * 0.5
 
 
 func _toggle_task(instance_id: int) -> void:
@@ -396,8 +414,6 @@ func _on_state_delta(delta: QuestStateDelta) -> void:
 
 
 func _on_locale_changed(_locale: String) -> void:
-	if receipt_title != null:
-		receipt_title.text = TranslationServer.translate(&"quest.ui.todo.title")
 	_refresh_money()
 	refresh()
 	call_deferred("_refresh_task_page")
