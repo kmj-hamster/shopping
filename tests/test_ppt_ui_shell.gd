@@ -41,11 +41,27 @@ func test_main_uses_the_centered_art_shell_and_unified_hand() -> void:
 	assert_almost_eq(
 		main.protagonist_button.anchor_left, QuestMain.PROTAGONIST_ANCHOR_LEFT, 0.001
 	)
-	assert_almost_eq(main.protagonist_button.anchor_top, 0.60, 0.001)
+	assert_almost_eq(
+		main.protagonist_button.anchor_top, QuestMain.PROTAGONIST_ANCHOR_TOP, 0.001
+	)
 	assert_almost_eq(
 		main.protagonist_button.anchor_right, QuestMain.PROTAGONIST_ANCHOR_RIGHT, 0.001
 	)
-	assert_almost_eq(main.protagonist_button.anchor_bottom, 1.08, 0.001)
+	assert_almost_eq(
+		main.protagonist_button.anchor_bottom,
+		QuestMain.PROTAGONIST_ANCHOR_BOTTOM,
+		0.001,
+	)
+	assert_almost_eq(
+		main.protagonist_button.anchor_right - main.protagonist_button.anchor_left,
+		(1.025 - 0.78) * 0.8,
+		0.001,
+	)
+	assert_almost_eq(
+		main.protagonist_button.anchor_bottom - main.protagonist_button.anchor_top,
+		(1.08 - 0.60) * 0.8,
+		0.001,
+	)
 	assert_not_null(main.protagonist_button.texture_click_mask)
 	var bag_click_mask := main.protagonist_button.texture_click_mask
 	var bag_mask_size := bag_click_mask.get_size()

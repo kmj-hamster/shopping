@@ -56,11 +56,29 @@ func test_synthesis_uses_the_dedicated_four_persona_art() -> void:
 		synthesis.background_image.texture.resource_path,
 		"res://resources/ui/synthesis/bg-inbag.png",
 	)
+	assert_eq(
+		Vector4(
+			synthesis.background_image.offset_left,
+			synthesis.background_image.offset_top,
+			synthesis.background_image.offset_right,
+			synthesis.background_image.offset_bottom,
+		),
+		Vector4(0.0, -24.0, 48.0, 24.0),
+	)
 	for persona_id in expected_paths:
 		var button := synthesis.persona_buttons[persona_id] as Button
 		var icon := button.get_node("PersonaIcon") as TextureRect
 		assert_not_null(icon, persona_id)
 		assert_eq(icon.texture.resource_path, expected_paths[persona_id], persona_id)
+		var display_scale := float(
+			QuestSynthesisInterface.PERSONA_ICON_DISPLAY_SCALES[persona_id]
+		)
+		var expected_size := QuestSynthesisInterface.PERSONA_ICON_SIZE * display_scale
+		var expected_position := (button.size - icon.size) * 0.5
+		assert_almost_eq(icon.size.x, expected_size.x, 0.001, persona_id)
+		assert_almost_eq(icon.size.y, expected_size.y, 0.001, persona_id)
+		assert_almost_eq(icon.position.x, expected_position.x, 0.001, persona_id)
+		assert_almost_eq(icon.position.y, expected_position.y, 0.001, persona_id)
 
 
 func test_synthesis_shell_does_not_block_hand_cards_or_bag_button() -> void:

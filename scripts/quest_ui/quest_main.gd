@@ -29,8 +29,10 @@ const CONTENT_TOP := 97.0 / 1080.0
 const CONTENT_RIGHT := 1780.0 / 1920.0
 const CONTENT_BOTTOM := 920.0 / 1080.0
 const BACKGROUND_OVERSCAN := 20.0
-const PROTAGONIST_ANCHOR_LEFT := 0.78
+const PROTAGONIST_ANCHOR_LEFT := 0.829
+const PROTAGONIST_ANCHOR_TOP := 0.696
 const PROTAGONIST_ANCHOR_RIGHT := 1.025
+const PROTAGONIST_ANCHOR_BOTTOM := 1.08
 const HAND_VERTICAL_OFFSET := 16.0
 const DRAG_RETURN_CANVAS_LAYER := 200
 const SCREEN_TRANSITION_CANVAS_LAYER := 300
@@ -199,9 +201,9 @@ func _build_shell() -> void:
 		"res://resources/character/bag-light.png"
 	) as Texture2D
 	protagonist_button.anchor_left = PROTAGONIST_ANCHOR_LEFT
-	protagonist_button.anchor_top = 0.60
+	protagonist_button.anchor_top = PROTAGONIST_ANCHOR_TOP
 	protagonist_button.anchor_right = PROTAGONIST_ANCHOR_RIGHT
-	protagonist_button.anchor_bottom = 1.08
+	protagonist_button.anchor_bottom = PROTAGONIST_ANCHOR_BOTTOM
 	protagonist_button.ignore_texture_size = true
 	protagonist_button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
 	protagonist_button.texture_click_mask = _texture_alpha_mask(

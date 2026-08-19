@@ -37,6 +37,14 @@ const BASE_TYPE_ICON_SIDE := 30
 const BASE_TYPE_ROW_WIDTH := 210.0
 const BASE_TYPE_BOTTOM_GAP := 8.0
 const BAG_BACKGROUND_PATH := "res://resources/ui/synthesis/bg-inbag.png"
+const BAG_BACKGROUND_OVERSCAN := 24.0
+const BAG_BACKGROUND_SHIFT := Vector2(24.0, 0.0)
+const PERSONA_ICON_DISPLAY_SCALES := {
+	CardPropertySet.PERSONA_NIGHTWALKER: 1.0,
+	CardPropertySet.PERSONA_MOURNER: 1.0,
+	CardPropertySet.PERSONA_DREAMWALKER: 1.22,
+	CardPropertySet.PERSONA_HOMECOMER: 0.72,
+}
 const PERSONA_ICON_TEXTURES := {
 	CardPropertySet.PERSONA_NIGHTWALKER: preload(
 		"res://resources/ui/synthesis/persona/nightwalker.png"
@@ -268,6 +276,10 @@ func _build_interface() -> void:
 	background_image.name = "BagBackground"
 	background_image.texture = load(BAG_BACKGROUND_PATH) as Texture2D
 	background_image.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	background_image.offset_left = -BAG_BACKGROUND_OVERSCAN + BAG_BACKGROUND_SHIFT.x
+	background_image.offset_top = -BAG_BACKGROUND_OVERSCAN + BAG_BACKGROUND_SHIFT.y
+	background_image.offset_right = BAG_BACKGROUND_OVERSCAN + BAG_BACKGROUND_SHIFT.x
+	background_image.offset_bottom = BAG_BACKGROUND_OVERSCAN + BAG_BACKGROUND_SHIFT.y
 	background_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	background_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	background_image.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -318,7 +330,16 @@ func _build_persona_field() -> void:
 		var image := TextureRect.new()
 		image.name = "PersonaIcon"
 		image.texture = PERSONA_ICON_TEXTURES.get(persona_id) as Texture2D
-		image.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		var display_scale := float(PERSONA_ICON_DISPLAY_SCALES.get(persona_id, 1.0))
+		var display_size := PERSONA_ICON_SIZE * display_scale
+		image.anchor_left = 0.5
+		image.anchor_top = 0.5
+		image.anchor_right = 0.5
+		image.anchor_bottom = 0.5
+		image.offset_left = -display_size.x * 0.5
+		image.offset_top = -display_size.y * 0.5
+		image.offset_right = display_size.x * 0.5
+		image.offset_bottom = display_size.y * 0.5
 		image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		image.mouse_filter = Control.MOUSE_FILTER_IGNORE
