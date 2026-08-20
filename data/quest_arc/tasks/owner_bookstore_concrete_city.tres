@@ -1,0 +1,42 @@
+[gd_resource type="Resource" script_class="TaskDefinition" load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/task_definition.gd" id="1_task"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_slot_rule.gd" id="2_rule"]
+[ext_resource type="Script" path="res://scripts/quest_domain/task_outcome_definition.gd" id="3_outcome"]
+[ext_resource type="Script" path="res://scripts/quest_domain/story_effect.gd" id="4_effect"]
+
+[sub_resource type="Resource" id="BookRule"]
+script = ExtResource("2_rule")
+id = &"concrete_city_lower"
+display_name_key = &"owner_request.bookstore.slot"
+accepted_item_ids = Array[StringName]([&"concrete_city_vol_2"])
+
+[sub_resource type="Resource" id="MoneyEffect"]
+script = ExtResource("4_effect")
+kind = 0
+amount = 60
+
+[sub_resource type="Resource" id="PersonaEffect"]
+script = ExtResource("4_effect")
+kind = 2
+target_id = &"dream"
+amount = 1
+
+[sub_resource type="Resource" id="Outcome"]
+script = ExtResource("3_outcome")
+id = &"lower_volume_read"
+result_text_key = &"owner_request.bookstore.result"
+is_fallback = true
+effects = Array[Resource]([SubResource("MoneyEffect"), SubResource("PersonaEffect")])
+
+[resource]
+script = ExtResource("1_task")
+id = &"owner_bookstore_concrete_city"
+display_name_key = &"owner_request.bookstore.name"
+body_text_key = &"owner_request.bookstore.body"
+footer_text_key = &"owner_request.bookstore.footer"
+category = 2
+owner_id = &"bookstore_owner"
+store_id = &"bookstore"
+slot_rules = Array[Resource]([SubResource("BookRule")])
+outcomes = Array[Resource]([SubResource("Outcome")])

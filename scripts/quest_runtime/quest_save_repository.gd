@@ -1,8 +1,8 @@
 class_name QuestSaveRepository
 extends RefCounted
 
-const SAVE_VERSION := 13
-const CONTENT_VERSION := "mall-expedition-diseases-1"
+const SAVE_VERSION := 15
+const CONTENT_VERSION := "shape-ids-1"
 const DEFAULT_PATH := "user://save_shopping0807_v1.json"
 
 var save_path: String
@@ -96,14 +96,21 @@ func to_dictionary(state: QuestGameState) -> Dictionary:
 		"task_instances": tasks,
 		"task_history": _string_dictionary(state.task_history),
 		"story_flags": _string_dictionary(state.story_flags),
-		"protagonist_persona_counts": _string_int_dictionary(state.protagonist_persona_counts),
+		"protagonist_shape_levels": _string_int_dictionary(state.protagonist_shape_levels),
 		"unlocked_store_ids": _string_array(state.unlocked_store_ids.keys()),
+		"store_unlock_days": _string_int_dictionary(state.store_unlock_days),
+		"store_purchase_counts": _string_int_dictionary(state.store_purchase_counts),
+		"purchased_item_ids": _string_array(state.purchased_item_ids.keys()),
+		"available_owner_request_ids": _string_array(
+			state.available_owner_request_ids.keys()
+		),
+		"unlocked_store_item_ids": _string_array(state.unlocked_store_item_ids.keys()),
 		"discovered_recipe_ids": _string_array(state.discovered_recipe_ids.keys()),
 		"synthesis_recipe_use_counts": _string_int_dictionary(
 			state.synthesis_recipe_use_counts
 		),
 		"owner_states": _string_dictionary(state.owner_states),
-		"pending_persona_reveal_ids": _string_array(state.pending_persona_reveal_ids),
+		"pending_persona_reveal_shape_ids": _string_array(state.pending_persona_reveal_shape_ids),
 		"visited_store_ids": _string_array(state.visited_store_ids.keys()),
 		"bgm_playback_positions": _string_float_dictionary(state.bgm_playback_positions),
 		"pending_arc": _serialize_arc(state.pending_arc),
@@ -157,13 +164,24 @@ func _restore(state: QuestGameState, payload: Dictionary) -> bool:
 		state.task_instances.append(instance)
 	state.task_history = _name_dictionary(payload.get("task_history", {}))
 	state.story_flags = _name_dictionary(payload.get("story_flags", {}))
-	state.protagonist_persona_counts = _name_int_dictionary(
-		payload.get("protagonist_persona_counts", {})
+	state.protagonist_shape_levels = _name_int_dictionary(
+		payload.get("protagonist_shape_levels", {})
 	)
-	for stat_id in CardPropertySet.PERSONAS:
-		if not state.protagonist_persona_counts.has(stat_id):
-			state.protagonist_persona_counts[stat_id] = 0
+	for stat_id in CardPropertySet.SHAPES:
+		if not state.protagonist_shape_levels.has(stat_id):
+			state.protagonist_shape_levels[stat_id] = 0
 	state.unlocked_store_ids = _name_set(payload.get("unlocked_store_ids", []))
+	state.store_unlock_days = _name_int_dictionary(payload.get("store_unlock_days", {}))
+	state.store_purchase_counts = _name_int_dictionary(
+		payload.get("store_purchase_counts", {})
+	)
+	state.purchased_item_ids = _name_set(payload.get("purchased_item_ids", []))
+	state.available_owner_request_ids = _name_set(
+		payload.get("available_owner_request_ids", [])
+	)
+	state.unlocked_store_item_ids = _name_set(
+		payload.get("unlocked_store_item_ids", [])
+	)
 	state.discovered_recipe_ids = _name_set(payload.get("discovered_recipe_ids", []))
 	state.synthesis_recipe_use_counts = _name_int_dictionary(
 		payload.get("synthesis_recipe_use_counts", {})
@@ -172,13 +190,13 @@ func _restore(state: QuestGameState, payload: Dictionary) -> bool:
 		var recipe := QuestArcCatalog.recipe_by_id(StringName(raw_recipe_id))
 		if (
 			recipe == null
-			or not recipe.escalating_persona_requirement
+			or not recipe.escalating_shape_requirement
 			or int(state.synthesis_recipe_use_counts[raw_recipe_id]) < 0
 		):
 			return false
 	state.owner_states = _name_dictionary(payload.get("owner_states", {}))
-	state.pending_persona_reveal_ids = _name_array(
-		payload.get("pending_persona_reveal_ids", [])
+	state.pending_persona_reveal_shape_ids = _name_array(
+		payload.get("pending_persona_reveal_shape_ids", [])
 	)
 	state.visited_store_ids = _name_set(payload.get("visited_store_ids", []))
 	state.bgm_playback_positions = _name_float_dictionary(
@@ -191,7 +209,7 @@ func _restore(state: QuestGameState, payload: Dictionary) -> bool:
 	# Synthesis placement is a screen-local draft and never survives loading.
 	state.synthesis_base_instance_id = 0
 	state.synthesis_helper_instance_id = 0
-	state.synthesis_persona_id = &""
+	state.synthesis_persona_shape_id = &""
 	state.synthesis_candidate_recipe_id = &""
 	for card in state.inventory:
 		if card.activity_id == &"synthesis":
@@ -246,12 +264,15 @@ func _serialize_arc(arc: ArcTransitionState) -> Dictionary:
 			"item_definition_ids": _string_array(entry.get("item_definition_ids", [])),
 			"reward_money": int(entry.get("reward_money", 0)),
 			"reward_stats": _string_int_dictionary(entry.get("reward_stats", {})),
-			"persona_growth": _string_int_dictionary(entry.get("persona_growth", {})),
+			"reward_item_ids": _string_array(entry.get("reward_item_ids", [])),
+			"owner_id": String(entry.get("owner_id", "")),
+			"store_id": String(entry.get("store_id", "")),
 		})
 	return {
 		"from_day": arc.from_day,
 		"entries": entries,
 		"effects_applied": arc.effects_applied,
+		"applied_entry_count": arc.applied_entry_count,
 		"next_entry_index": arc.next_entry_index,
 	}
 
@@ -272,13 +293,19 @@ func _restore_arc(data: Dictionary) -> ArcTransitionState:
 			"item_definition_ids": _name_array(entry.get("item_definition_ids", [])),
 			"reward_money": int(entry.get("reward_money", 0)),
 			"reward_stats": _name_int_dictionary(entry.get("reward_stats", {})),
-			"persona_growth": _name_int_dictionary(entry.get("persona_growth", {})),
+			"reward_item_ids": _name_array(entry.get("reward_item_ids", [])),
+			"owner_id": StringName(entry.get("owner_id", "")),
+			"store_id": StringName(entry.get("store_id", "")),
 		})
 	var arc := ArcTransitionState.new(int(data.get("from_day", 1)), entries)
 	arc.effects_applied = bool(data.get("effects_applied", false))
-	arc.next_entry_index = clampi(
-		int(data.get("next_entry_index", 0)), 0, arc.entries.size()
+	arc.applied_entry_count = clampi(
+		int(data.get("applied_entry_count", 0)), 0, arc.entries.size()
 	)
+	arc.next_entry_index = clampi(
+		int(data.get("next_entry_index", 0)), 0, arc.applied_entry_count
+	)
+	arc.effects_applied = arc.applied_entry_count >= arc.entries.size()
 	return arc
 
 
@@ -290,7 +317,7 @@ func _serialize_expedition(expedition: MallExpeditionState) -> Dictionary:
 		"from_day": expedition.from_day,
 		"rooms_completed": expedition.rooms_completed,
 		"entered_room_ids": _string_array(expedition.entered_room_ids.keys()),
-		"work_offer_seen": expedition.work_offer_seen,
+		"economy_offer_seen": expedition.economy_offer_seen,
 		"current_door_ids": _string_array(expedition.current_door_ids),
 		"rng_seed": expedition.rng_seed,
 		# RandomNumberGenerator state is a 64-bit value and cannot safely round-trip
@@ -316,7 +343,7 @@ func _restore_expedition(data: Dictionary) -> MallExpeditionState:
 		int(data.get("rooms_completed", 0)), 0, MallExpeditionState.ROOMS_PER_NIGHT
 	)
 	expedition.entered_room_ids = _name_set(data.get("entered_room_ids", []))
-	expedition.work_offer_seen = bool(data.get("work_offer_seen", false))
+	expedition.economy_offer_seen = bool(data.get("economy_offer_seen", false))
 	expedition.current_door_ids = _name_array(data.get("current_door_ids", []))
 	expedition.rng_seed = maxi(1, int(data.get("rng_seed", 1)))
 	expedition.rng_state = int(String(data.get("rng_state", "0")))

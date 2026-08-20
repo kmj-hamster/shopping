@@ -3,15 +3,16 @@ extends Resource
 
 const PROPERTY_PERSONA := &"persona"
 const PROPERTY_DISEASE := &"disease"
-const PERSONA_NIGHTWALKER := &"nightwalker"
-const PERSONA_MOURNER := &"mourner"
-const PERSONA_DREAMWALKER := &"dreamwalker"
-const PERSONA_HOMECOMER := &"homecomer"
-const PERSONAS: Array[StringName] = [
-	PERSONA_NIGHTWALKER,
-	PERSONA_MOURNER,
-	PERSONA_DREAMWALKER,
-	PERSONA_HOMECOMER,
+const PROPERTY_KEEPSAKE := &"keepsake"
+const SHAPE_LIGHT := &"light"
+const SHAPE_TEAR := &"tear"
+const SHAPE_DREAM := &"dream"
+const SHAPE_SLEEP := &"sleep"
+const SHAPES: Array[StringName] = [
+	SHAPE_LIGHT,
+	SHAPE_TEAR,
+	SHAPE_DREAM,
+	SHAPE_SLEEP,
 ]
 
 @export var values: Dictionary = {}
@@ -41,11 +42,11 @@ func property_count() -> int:
 	return property_ids().size()
 
 
-func present_personas() -> Array[StringName]:
+func present_shapes() -> Array[StringName]:
 	var result: Array[StringName] = []
-	for persona_id in PERSONAS:
-		if has(persona_id):
-			result.append(persona_id)
+	for shape_id in SHAPES:
+		if has(shape_id):
+			result.append(shape_id)
 	return result
 
 
@@ -59,8 +60,8 @@ func validation_errors() -> PackedStringArray:
 			errors.append("Property tag %s cannot be repeated." % tag)
 		elif values.has(tag) or values.has(String(tag)):
 			errors.append("Property %s cannot be both a tag and a scaled value." % tag)
-		elif tag in PERSONAS:
-			errors.append("Persona %s must have a scaled value." % tag)
+		elif tag in SHAPES:
+			errors.append("Shape %s must have a scaled value." % tag)
 		seen_tags[tag] = true
 	for raw_tag in values:
 		var tag := String(raw_tag)

@@ -7,7 +7,7 @@
 [sub_resource type="Resource" id="LevelRequirement"]
 script = ExtResource("3_value")
 mode = 1
-tags = Array[StringName]([&"nightwalker", &"dreamwalker"])
+tags = Array[StringName]([&"light", &"dream"])
 minimum = 3
 
 [sub_resource type="Resource" id="Rule"]
@@ -15,7 +15,7 @@ script = ExtResource("2_rule")
 id = &"bookstore_lock"
 display_name_key = &"opening.unlock.bookstore.slot"
 required_all = Array[StringName]([&"persona"])
-allowed_any = Array[StringName]([&"nightwalker", &"dreamwalker"])
+allowed_any = Array[StringName]([&"light", &"dream"])
 value_requirements = Array[Resource]([SubResource("LevelRequirement")])
 
 [resource]

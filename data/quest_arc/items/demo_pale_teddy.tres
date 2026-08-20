@@ -7,7 +7,7 @@
 [sub_resource type="Resource" id="Props"]
 script = ExtResource("2_props")
 tags = Array[StringName]([&"toy", &"teddy_bear"])
-values = {&"mourner": 5, &"homecomer": 5}
+values = {&"tear": 5, &"sleep": 5}
 
 [resource]
 script = ExtResource("1_item")

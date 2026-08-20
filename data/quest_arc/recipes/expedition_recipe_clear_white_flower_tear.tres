@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="SynthesisRecipeDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/slot_domain/synthesis_recipe_definition.gd" id="1_recipe"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_slot_rule.gd" id="2_rule"]
+
+[sub_resource type="Resource" id="BaseRule"]
+script = ExtResource("2_rule")
+id = &"clear_white_flower_tear_base"
+display_name_key = &"expedition.recipe.base.white_flower"
+accepted_item_ids = Array[StringName]([&"white_flower"])
+
+[resource]
+script = ExtResource("1_recipe")
+id = &"recipe_clear_white_flower_tear"
+display_name_key = &"expedition.recipe.clear_white_flower.name"
+base_rule = SubResource("BaseRule")
+required_shapes = {&"tear": 3}
+possibility_hint_key = &"expedition.recipe.clear_white_flower.hint"
+consumes_without_output = true
+escalating_shape_requirement = true
+process_text_keys = Array[StringName]([&"expedition.recipe.clear_white_flower.process.1", &"expedition.recipe.clear_white_flower.process.2"])

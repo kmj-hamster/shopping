@@ -34,7 +34,7 @@ func test_flower_shop_purchase_moves_jasmine_into_center_hand() -> void:
 	assert_true(main.hand_bar.card_views.has(jasmine.instance_id))
 	assert_eq(
 		main.hand_bar.card_views.size(),
-		GameState.quest_state.inventory.size() + PersonaMaskCatalog.MASK_PERSONAS.size(),
+		GameState.quest_state.inventory.size() + PersonaCardCatalog.PERSONA_SHAPES.size(),
 	)
 
 
@@ -102,7 +102,7 @@ func test_flower_owner_request_confirms_anywhere_and_settles_in_the_arc() -> voi
 	assert_eq(task.resolved_outcome_id, &"trimmed")
 	assert_false(state.owner_states.has(&"flower_owner"))
 	assert_true(scissors in state.inventory)
-	assert_true(state.begin_next_day().ok)
+	assert_true(state.prepare_owner_request_settlement().ok)
 	assert_eq(state.pending_arc.entries.size(), 1)
 	assert_eq(state.pending_arc.entries[0].task_definition_id, &"flower_owner_request")
 	assert_eq(state.pending_arc.entries[0].outcome_id, &"trimmed")
@@ -110,26 +110,28 @@ func test_flower_owner_request_confirms_anywhere_and_settles_in_the_arc() -> voi
 		state.pending_arc.entries[0].result_text_key,
 		&"demo.task.flower_owner.result.trimmed",
 	)
-	assert_true(state.apply_arc_effects().ok)
+	assert_true(state.settle_current_arc_entry().ok)
 	assert_eq(state.owner_states[&"flower_owner"], &"trimmed")
 	assert_true(task.settled)
 	assert_false(scissors in state.inventory)
+	assert_true(state.mark_arc_entry_shown())
+	assert_true(state.finish_arc().ok)
 
 
 func test_new_synthesis_consumes_base_but_not_persona_and_creates_rose() -> void:
 	var state := GameState.quest_state
 	var jasmine := _card_by_definition(state, &"jasmine")
 	var soft_gauze := _card_by_definition(state, &"soft_gauze")
-	var reverie_before: int = int(state.protagonist_persona_counts[&"dreamwalker"])
+	var reverie_before: int = int(state.protagonist_shape_levels[&"dream"])
 	assert_true(state.assign_synthesis_base(jasmine).ok)
 	assert_true(state.assign_synthesis_helper(soft_gauze).ok)
-	assert_true(state.select_synthesis_persona(&"dreamwalker"))
+	assert_true(state.select_synthesis_persona(&"dream"))
 	assert_true(state.select_synthesis_candidate(&"recipe_midnight_rose"))
 	var result := state.begin_synthesis()
 	assert_true(result.ok)
 	assert_null(state.card_by_instance_id(jasmine.instance_id))
 	assert_null(state.card_by_instance_id(soft_gauze.instance_id))
-	assert_eq(state.protagonist_persona_counts[&"dreamwalker"], reverie_before)
+	assert_eq(state.protagonist_shape_levels[&"dream"], reverie_before)
 	assert_not_null(_card_by_definition(state, &"midnight_rose"))
 
 
@@ -142,16 +144,16 @@ func test_worn_teddy_can_be_used_for_both_second_step_recipes() -> void:
 	assert_eq(soft_gauze_cards.size(), 2)
 	assert_true(state.assign_synthesis_base(toy).ok)
 	assert_true(state.assign_synthesis_helper(soft_gauze_cards[0]).ok)
-	assert_true(state.select_synthesis_persona(&"homecomer"))
+	assert_true(state.select_synthesis_persona(&"sleep"))
 	assert_true(state.select_synthesis_candidate(&"recipe_worn_teddy"))
 	var first_step := state.begin_synthesis()
 	assert_true(first_step.ok)
-	assert_true(state.synthesis_persona_id.is_empty())
+	assert_true(state.synthesis_persona_shape_id.is_empty())
 	var worn := first_step.output as CardItemState
 	assert_not_null(worn)
 	assert_true(state.assign_synthesis_base(worn).ok)
 	assert_true(state.assign_synthesis_helper(soft_gauze_cards[1]).ok)
-	assert_true(state.select_synthesis_persona(&"homecomer"))
+	assert_true(state.select_synthesis_persona(&"sleep"))
 	assert_true(state.select_synthesis_candidate(&"recipe_baby_teddy"))
 	assert_true(state.begin_synthesis().ok)
 	assert_not_null(_card_by_definition(state, &"baby_teddy"))
@@ -160,7 +162,7 @@ func test_worn_teddy_can_be_used_for_both_second_step_recipes() -> void:
 	var mirror_shard := _card_by_definition(state, &"mirror_shard")
 	assert_true(state.assign_synthesis_base(worn).ok)
 	assert_true(state.assign_synthesis_helper(mirror_shard).ok)
-	assert_true(state.select_synthesis_persona(&"mourner"))
+	assert_true(state.select_synthesis_persona(&"tear"))
 	assert_true(state.select_synthesis_candidate(&"recipe_pale_teddy"))
 	assert_true(state.begin_synthesis().ok)
 	assert_not_null(_card_by_definition(state, &"pale_teddy"))

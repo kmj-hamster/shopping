@@ -6,7 +6,7 @@
 
 [sub_resource type="Resource" id="Props"]
 script = ExtResource("2_props")
-values = {&"dreamwalker": 2, &"homecomer": 2}
+values = {&"dream": 2, &"sleep": 2}
 
 [resource]
 script = ExtResource("1_item")

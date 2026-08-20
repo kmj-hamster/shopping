@@ -21,12 +21,15 @@ const RUNTIME_UI_KEYS: Array[StringName] = [
 	&"demo.ui.arc.stat_reward",
 	&"demo.ui.arc.new_day.body",
 	&"quest.ui.hand.items",
-	&"quest.ui.hand.masks",
+	&"quest.ui.hand.personas",
 	&"quest.ui.hand.title",
 	&"quest.ui.arc.empty",
 	&"quest.ui.arc.new_day",
 	&"quest.ui.arc.night",
 	&"quest.ui.arc.task_source",
+	&"quest.ui.arc.item_reward",
+	&"quest.ui.arc.flip_reward",
+	&"quest.ui.arc.continue_reward",
 	&"quest.ui.synthesis.open",
 	&"debug.ui.synthesis_background.blue",
 	&"debug.ui.synthesis_background.bag",
@@ -62,6 +65,8 @@ const RUNTIME_UI_KEYS: Array[StringName] = [
 	&"expedition.ui.enter",
 	&"expedition.ui.enter_short",
 	&"expedition.ui.confirm_enter",
+	&"expedition.ui.confirm_enter.lethal_white_flower",
+	&"expedition.ui.confirm_enter.lethal_wound",
 	&"expedition.ui.door_prompt",
 	&"expedition.ui.unknown",
 	&"expedition.ui.continue",
@@ -121,10 +126,10 @@ func test_all_quest_arc_content_keys_exist_in_chinese_and_english() -> void:
 		keys.append(recipe.possibility_hint_key)
 		for process_text_key in recipe.process_text_keys:
 			keys.append(process_text_key)
-	for persona_id in PersonaMaskCatalog.MASK_PERSONAS:
-		var mask := PersonaMaskCatalog.definition_for_persona(persona_id, 1)
-		keys.append(mask.display_name_key)
-		keys.append(mask.description_key)
+	for shape_id in PersonaCardCatalog.PERSONA_SHAPES:
+		var persona_card := PersonaCardCatalog.definition_for_shape(shape_id, 1)
+		keys.append(persona_card.display_name_key)
+		keys.append(persona_card.description_key)
 	keys.append_array(RUNTIME_UI_KEYS)
 	for raw_store in manifest.stores:
 		keys.append((raw_store as StoreDefinition).display_name_key)
@@ -141,6 +146,7 @@ func test_all_quest_arc_content_keys_exist_in_chinese_and_english() -> void:
 		if not owner.request_task_id.is_empty():
 			keys.append(owner.request_dialogue_key)
 			keys.append(owner.reminder_dialogue_key)
+			keys.append(owner.completed_dialogue_key)
 			for raw_key in owner.state_dialogue_keys.values():
 				keys.append(StringName(raw_key))
 	for raw_room in manifest.expedition_rooms:
@@ -165,29 +171,59 @@ func test_all_quest_arc_content_keys_exist_in_chinese_and_english() -> void:
 			assert_ne(TranslationServer.translate(key), String(key), "%s missing in %s" % [key, locale])
 
 
-func test_persona_descriptions_match_each_confirmed_role() -> void:
-	var expected_descriptions := {
+func test_persona_cards_match_each_confirmed_role() -> void:
+	var expected_copy := {
 		&"zh_CN": {
-			&"nightwalker": "交流电，明亮的街角，飞蛾噼啪作响。夜晚使我的头脑更加清醒。[夜之面相，理性、好奇]",
-			&"mourner": "看见我，你就看到了另一个自己。握住我，你就握住了自己的另一只手。夜晚使我想起忧伤之事。[夜之面相，共情、怀旧]",
-			&"dreamwalker": "远古鱼游过卧室的墙，湿漉漉的水泥枝条开满白花，夜晚使我的灵感无所遁形。[夜之面相，幻觉、随想]",
-			&"homecomer": "凉爽的鹅绒被，床头的薰衣草，天明前的片刻慰藉。祝我今夜好眠，今夜。[夜之面相，享受、安歇]",
+			&"light": ["提灯者", "侦探，调查员，午夜工作的学者。夜晚使我的头脑更加清醒。"],
+			&"tear": ["守夜者", "怀旧的幽灵，深夜热线主持人，普鲁斯特。夜晚使我想起忧伤之事。"],
+			&"dream": ["梦游者", "夜莺，超现实主义作家，星空下的梵高。夜晚使我的灵感无所遁形。"],
+			&"sleep": ["倦归者", "下班的人，享用夜宵的人，安睡的人。祝我今夜好眠，今夜。"],
 		},
 		&"en": {
-			&"nightwalker": "Alternating current, a brightly lit street corner, moths crackling. Night makes my mind clearer. [Persona of the night: reason, curiosity]",
-			&"mourner": "See me, and you see another self. Hold me, and you hold your own other hand. Night makes me remember sorrowful things. [Persona of the night: empathy, nostalgia]",
-			&"dreamwalker": "Ancient fish swim across the bedroom wall; wet concrete branches bloom with white flowers. Night leaves my inspiration nowhere to hide. [Persona of the night: hallucination, reverie]",
-			&"homecomer": "A cool goose-down quilt, lavender at the bedside, a moment of solace before dawn. May I sleep well tonight, tonight. [Persona of the night: pleasure, rest]",
+			&"light": ["The Lamplighter", "A detective, an investigator, a scholar working at midnight. Night makes my mind clearer."],
+			&"tear": ["The Nightwatcher", "A nostalgic ghost, a late night call-in radio host, Proust. Night makes me remember sorrowful things."],
+			&"dream": ["Dreamwalker", "A nightingale, a surrealist writer, Van Gogh beneath the stars. Night leaves my inspiration nowhere to hide."],
+			&"sleep": ["Homecomer", "Someone leaving work, someone enjoying a late-night meal, someone sleeping soundly. May I sleep well tonight, tonight."],
 		},
 	}
-	for locale in expected_descriptions:
+	for locale in expected_copy:
 		TranslationServer.set_locale(locale)
-		for persona_id in expected_descriptions[locale]:
-			var property := QuestArcCatalog.property_by_id(persona_id)
+		for shape_id in expected_copy[locale]:
+			var definition := PersonaCardCatalog.definition_for_shape(shape_id, 1)
+			assert_not_null(definition)
+			assert_eq(definition.localized_name(), expected_copy[locale][shape_id][0])
+			assert_eq(definition.localized_description(), expected_copy[locale][shape_id][1])
+
+
+func test_persona_properties_use_shape_names_and_descriptions() -> void:
+	var expected_copy := {
+		&"zh_CN": {
+			&"light": ["光", "交流电，明亮的街角，飞蛾噼啪作响。[夜之形，理性、好奇]"],
+			&"tear": ["泪", "看见我，你就看到了另一个自己。握住我，你就握住了自己的另一只手。[夜之形，共情、怜悯]"],
+			&"dream": ["梦", "远古鱼游过卧室的墙，湿漉漉的水泥枝条开满白花。[夜之形，幻觉、灵感]"],
+			&"sleep": ["眠", "凉爽的鹅绒被，床头的薰衣草，天明前的片刻慰藉。[夜之形，享受、安歇]"],
+		},
+		&"en": {
+			&"light": ["Light", "Alternating current, a brightly lit street corner, moths crackling. [Shape of the night: reason, curiosity]"],
+			&"tear": ["Tear", "See me, and you see another self. Hold me, and you hold your own other hand. [Shape of the night: empathy, compassion]"],
+			&"dream": ["Dream", "Ancient fish swim across the bedroom wall; wet concrete branches bloom with white flowers. [Shape of the night: hallucination, inspiration]"],
+			&"sleep": ["Sleep", "A cool goose-down quilt, lavender at the bedside, a moment of solace before dawn. [Shape of the night: pleasure, rest]"],
+		},
+	}
+	for locale in expected_copy:
+		TranslationServer.set_locale(locale)
+		for shape_id in expected_copy[locale]:
+			var property := QuestArcCatalog.property_by_id(shape_id)
+			assert_not_null(property)
+			assert_eq(
+				TranslationServer.translate(property.display_name_key),
+				expected_copy[locale][shape_id][0],
+				"%s shape name should match in %s" % [shape_id, locale],
+			)
 			assert_eq(
 				TranslationServer.translate(property.description_key),
-				expected_descriptions[locale][persona_id],
-				"%s description should match in %s" % [persona_id, locale],
+				expected_copy[locale][shape_id][1],
+				"%s shape description should match in %s" % [shape_id, locale],
 			)
 
 

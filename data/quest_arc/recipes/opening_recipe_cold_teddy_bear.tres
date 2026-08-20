@@ -14,6 +14,6 @@ script = ExtResource("1_recipe")
 id = &"recipe_cold_teddy_bear"
 display_name_key = &"opening.recipe.cold_teddy_bear.name"
 base_rule = SubResource("BaseRule")
-required_personas = {&"mourner": 5}
+required_shapes = {&"tear": 5}
 output_id = &"cold_teddy_bear"
 process_text_keys = Array[StringName]([&"opening.recipe.cold_teddy_bear.process.1", &"opening.recipe.cold_teddy_bear.process.2"])

@@ -1,0 +1,42 @@
+[gd_resource type="Resource" script_class="TaskDefinition" load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/task_definition.gd" id="1_task"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_slot_rule.gd" id="2_rule"]
+[ext_resource type="Script" path="res://scripts/quest_domain/task_outcome_definition.gd" id="3_outcome"]
+[ext_resource type="Script" path="res://scripts/quest_domain/story_effect.gd" id="4_effect"]
+
+[sub_resource type="Resource" id="CakeRule"]
+script = ExtResource("2_rule")
+id = &"birthday_cake"
+display_name_key = &"owner_request.toy.slot"
+accepted_item_ids = Array[StringName]([&"birthday_cake"])
+
+[sub_resource type="Resource" id="MoneyEffect"]
+script = ExtResource("4_effect")
+kind = 0
+amount = 20
+
+[sub_resource type="Resource" id="PersonaEffect"]
+script = ExtResource("4_effect")
+kind = 2
+target_id = &"tear"
+amount = 1
+
+[sub_resource type="Resource" id="Outcome"]
+script = ExtResource("3_outcome")
+id = &"remembered_birthday"
+result_text_key = &"owner_request.toy.result"
+is_fallback = true
+effects = Array[Resource]([SubResource("MoneyEffect"), SubResource("PersonaEffect")])
+
+[resource]
+script = ExtResource("1_task")
+id = &"owner_toy_birthday_cake"
+display_name_key = &"owner_request.toy.name"
+body_text_key = &"owner_request.toy.body"
+footer_text_key = &"owner_request.toy.footer"
+category = 2
+owner_id = &"toy_owner"
+store_id = &"toy"
+slot_rules = Array[Resource]([SubResource("CakeRule")])
+outcomes = Array[Resource]([SubResource("Outcome")])

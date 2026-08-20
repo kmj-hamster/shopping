@@ -117,7 +117,7 @@ func test_tin_frog_has_the_declared_properties() -> void:
 	assert_not_null(frog)
 	assert_true(frog.has_property(&"toy"))
 	assert_true(frog.has_property(&"metal"))
-	assert_eq(frog.property_value(CardPropertySet.PERSONA_NIGHTWALKER), 2)
+	assert_eq(frog.property_value(CardPropertySet.SHAPE_LIGHT), 2)
 
 
 func _spawn_main() -> QuestMain:

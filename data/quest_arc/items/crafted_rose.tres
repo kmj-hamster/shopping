@@ -1,18 +1,20 @@
-[gd_resource type="Resource" script_class="QuestItemDefinition" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="QuestItemDefinition" load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/quest_domain/quest_item_definition.gd" id="1_item"]
 [ext_resource type="Script" path="res://scripts/slot_domain/card_property_set.gd" id="2_props"]
+[ext_resource type="Texture2D" path="res://resources/items/rose.png" id="3_image"]
 
 [sub_resource type="Resource" id="Props"]
 script = ExtResource("2_props")
 tags = Array[StringName]([&"flower"])
-values = {&"dreamwalker": 2}
+values = {&"dream": 2}
 
 [resource]
 script = ExtResource("1_item")
 id = &"rose"
 display_name_key = &"opening.item.rose.name"
 description_key = &"opening.item.rose.description"
+image = ExtResource("3_image")
 supply_mode = 3
 is_crafted = true
 fixed_resale_value = 8

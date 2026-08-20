@@ -8,7 +8,7 @@ const SLOT_SIZE := Vector2(90, 110)
 var controller: QuestExpeditionScreen
 var slot_index := 0
 var card: CardItemState
-var persona_id: StringName
+var shape_id: StringName
 var holder: CenterContainer
 var empty_label: Label
 var card_view: CardHandCard
@@ -19,12 +19,12 @@ func setup(
 	screen: QuestExpeditionScreen,
 	index: int,
 	selected_card: CardItemState = null,
-	selected_persona_id: StringName = &"",
+	selected_shape_id: StringName = &"",
 ) -> void:
 	controller = screen
 	slot_index = index
 	card = selected_card
-	persona_id = selected_persona_id
+	shape_id = selected_shape_id
 	if is_node_ready():
 		refresh()
 

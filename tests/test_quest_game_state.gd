@@ -19,27 +19,27 @@ func test_store_visibility_and_persona_unlocks_follow_the_opening_chain() -> voi
 	assert_false(state.is_store_visible(&"bookstore"))
 	var food := state.grant_item(&"mung_bean_cake", &"test")
 	assert_true(state.unlock_store(&"fast_food", food).ok)
-	state.protagonist_persona_counts[&"nightwalker"] = 1
-	var nightwalker := PersonaMaskCatalog.card_for_persona(&"nightwalker")
-	PersonaMaskCatalog.sync_selection(&"")
-	var flower_unlock := state.unlock_store(&"flower", nightwalker)
+	state.protagonist_shape_levels[&"light"] = 1
+	var light := PersonaCardCatalog.card_for_shape(&"light")
+	PersonaCardCatalog.sync_selection(&"")
+	var flower_unlock := state.unlock_store(&"flower", light)
 	assert_true(flower_unlock.ok)
 	assert_eq(int(flower_unlock.consumed_instance_id), 0)
 	assert_true(state.is_store_visible(&"record"))
 	assert_true(state.is_store_visible(&"bookstore"))
-	assert_eq(nightwalker.location, CardItemState.Location.HAND)
+	assert_eq(light.location, CardItemState.Location.HAND)
 
 
-func test_bookstore_needs_level_three_nightwalker_or_dreamwalker() -> void:
+func test_bookstore_needs_level_three_light_or_dream() -> void:
 	var state := QuestGameState.new()
 	state.unlocked_store_ids = {&"toy": true, &"fast_food": true, &"flower": true}
-	var nightwalker := PersonaMaskCatalog.card_for_persona(&"nightwalker")
-	PersonaMaskCatalog.sync_selection(&"")
-	state.protagonist_persona_counts[&"nightwalker"] = 2
-	assert_false(state.unlock_store(&"bookstore", nightwalker).ok)
-	state.protagonist_persona_counts[&"nightwalker"] = 3
-	assert_true(state.unlock_store(&"bookstore", nightwalker).ok)
-	assert_eq(nightwalker.location, CardItemState.Location.HAND)
+	var light := PersonaCardCatalog.card_for_shape(&"light")
+	PersonaCardCatalog.sync_selection(&"")
+	state.protagonist_shape_levels[&"light"] = 2
+	assert_false(state.unlock_store(&"bookstore", light).ok)
+	state.protagonist_shape_levels[&"light"] = 3
+	assert_true(state.unlock_store(&"bookstore", light).ok)
+	assert_eq(light.location, CardItemState.Location.HAND)
 
 
 func test_shelves_refill_only_on_the_store_fixed_phase() -> void:

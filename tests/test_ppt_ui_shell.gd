@@ -79,7 +79,9 @@ func test_main_uses_the_centered_art_shell_and_unified_hand() -> void:
 	assert_not_null(main.next_day_button)
 	assert_not_null(main.find_child("LanguageButton", true, false))
 	assert_not_null(main.find_child("ClearSaveButton", true, false))
-	assert_not_null(main.get_node_or_null("DebugButtonRow"))
+	assert_not_null(main.get_node_or_null("GlobalDebugLayer/DebugButtonRow"))
+	assert_eq(main.debug_button_row.get_parent(), main.debug_button_layer)
+	assert_gt(main.debug_button_layer.layer, QuestMain.SCREEN_TRANSITION_CANVAS_LAYER)
 	assert_eq(main.language_button.get_parent(), main.debug_button_row)
 	assert_eq(main.clear_save_button.get_parent(), main.debug_button_row)
 	assert_eq(main.next_day_button.get_parent(), main.debug_button_row)
@@ -231,6 +233,27 @@ func test_flower_shop_starts_as_scene_and_opens_shelf_on_request() -> void:
 	assert_almost_eq(shop.owner_portrait.anchor_bottom, 1.035, 0.001)
 	assert_gt(main.global_frame.z_index, shop.owner_portrait.z_index)
 	assert_eq(shop.shelf_nav_button.custom_minimum_size, Vector2(82, 38))
+	assert_almost_eq(shop.dialogue_panel.anchor_right, 0.865, 0.001)
+	assert_lte(
+		shop.checkout_button.get_rect().end.x,
+		(shop.checkout_button.get_parent() as Control).size.x,
+	)
+	assert_gt(
+		(shop.checkout_button.get_parent() as Control).size.x
+		- shop.checkout_button.get_rect().end.x,
+		24.0,
+	)
+	var checkout_normal := (
+		shop.checkout_button.get_theme_stylebox("normal") as StyleBoxFlat
+	)
+	assert_eq(checkout_normal.bg_color, QuestShopScreen.CHECKOUT_NORMAL_COLOR)
+	assert_eq(checkout_normal.border_color, QuestShopScreen.CHECKOUT_NORMAL_BORDER)
+	assert_eq(
+		shop.checkout_button.get_theme_color("font_color"),
+		QuestShopScreen.DIALOGUE_TEXT_COLOR,
+	)
+	assert_eq(checkout_normal.shadow_color, Color("f4fbf8", 0.16))
+	assert_eq(checkout_normal.shadow_size, 5)
 	assert_almost_eq(shop.owner_name_label.anchor_left, 0.10, 0.001)
 	assert_almost_eq(shop.owner_dialogue_label.anchor_left, 0.055, 0.001)
 	assert_true(shop.dialogue_panel.get_theme_stylebox("panel") is StyleBoxEmpty)
@@ -263,6 +286,61 @@ func test_flower_shop_starts_as_scene_and_opens_shelf_on_request() -> void:
 	assert_true(shop.shelf_views[0].card is CardHandCard)
 	assert_true((shop.shelf_views[0].card as CardHandCard).visible)
 	assert_false((shop.shelf_views[2].card as CardHandCard).visible)
+
+
+func test_shelf_and_hand_cards_adapt_captions_and_only_enlarge_chinese_copy() -> void:
+	var main := await _spawn_main()
+	main._show_shop_immediate(&"flower")
+	await get_tree().process_frame
+	var shop := main.current_screen as QuestShopScreen
+	var shelf_card := shop.shelf_views[0].card as CardHandCard
+	var shelf_price := shop.shelf_views[0].price as Label
+	assert_eq(LocaleManager.current_locale, LocaleManager.LOCALE_ZH)
+	assert_not_null(shelf_card.definition)
+	assert_true(shelf_card.shelf_presentation)
+	assert_eq(shelf_card.title_label.max_lines_visible, 1)
+	assert_eq(
+		shelf_card.title_label.autowrap_mode,
+		TextServer.AUTOWRAP_OFF,
+	)
+	assert_eq(
+		shelf_card.title_host.custom_minimum_size.y,
+		CardHandCard.TITLE_HOST_HEIGHT,
+	)
+	assert_eq(shelf_card.image_host.custom_minimum_size.y, CardHandCard.SHELF_IMAGE_HEIGHT)
+	assert_eq(shelf_card.item_image.offset_left, 2.0)
+	assert_eq(shelf_card.item_image.offset_right, -2.0)
+	assert_eq(shelf_card.item_image.offset_bottom, -4.0)
+	assert_eq(
+		shelf_card.title_label.get_theme_font_size("font_size"),
+		CardHandCard.SHELF_ZH_TITLE_FONT_SIZE,
+	)
+	assert_eq(
+		shop.restock_label.get_theme_font_size("font_size"),
+		QuestShopScreen.SHELF_ZH_LABEL_FONT_SIZE,
+	)
+	assert_eq(
+		shelf_price.get_theme_font_size("font_size"),
+		QuestShopScreen.SHELF_ZH_LABEL_FONT_SIZE,
+	)
+	var hand_card := main.hand_bar.card_views.values()[0] as CardHandCard
+	assert_false(hand_card.shelf_presentation)
+	assert_eq(hand_card.title_label.max_lines_visible, 1)
+	assert_eq(hand_card.image_host.custom_minimum_size.y, CardHandCard.ITEM_IMAGE_HEIGHT)
+	LocaleManager.set_locale(LocaleManager.LOCALE_EN, false)
+	await get_tree().process_frame
+	assert_eq(
+		shelf_card.title_label.get_theme_font_size("font_size"),
+		CardHandCard.ITEM_TITLE_FONT_SIZE,
+	)
+	assert_eq(
+		shop.restock_label.get_theme_font_size("font_size"),
+		QuestShopScreen.SHELF_LABEL_FONT_SIZE,
+	)
+	assert_eq(
+		shelf_price.get_theme_font_size("font_size"),
+		QuestShopScreen.SHELF_LABEL_FONT_SIZE,
+	)
 
 
 func test_shop_dialogue_click_finishes_then_starts_the_next_line() -> void:
@@ -1328,7 +1406,7 @@ func test_item_detail_icons_append_without_overlap_and_close_outside() -> void:
 		main.detail_popup.property_panel.get_theme_stylebox("panel") as StyleBoxFlat
 	)
 	assert_almost_eq(property_panel_style.bg_color.a, 0.5, 0.001)
-	var lamp_view := main.detail_popup.property_views[&"nightwalker"] as Dictionary
+	var lamp_view := main.detail_popup.property_views[&"light"] as Dictionary
 	var property_root := lamp_view.root as Control
 	var property_button := lamp_view.button as Button
 	var property_value := lamp_view.value as Label
@@ -1362,18 +1440,27 @@ func test_item_detail_icons_append_without_overlap_and_close_outside() -> void:
 	var base_icon := property_button.get_child(0) as TextureRect
 	assert_not_null(base_icon)
 	assert_not_null(base_icon.texture)
-	main.detail_popup._show_property(&"nightwalker")
+	main.detail_popup._show_property(&"light")
 	await get_tree().process_frame
 	await get_tree().process_frame
 	assert_true(main.detail_popup.detail_panel.visible)
 	assert_true(main.detail_popup.property_panel.visible)
 	assert_eq(
 		main.detail_popup.property_description.text,
-		TranslationServer.translate(ItemDetailPopup.property_description_key(&"nightwalker")),
+		TranslationServer.translate(ItemDetailPopup.property_description_key(&"light")),
 	)
 	assert_eq(
 		main.detail_popup.property_icon_image.texture.resource_path,
-		"res://resources/ui/property-lamp.svg",
+		"res://resources/ui/synthesis/shape/light.png",
+	)
+	assert_eq(main.detail_popup.property_icon_image.self_modulate, Color.BLACK)
+	assert_eq(
+		main.detail_popup.property_icon_image.offset_left,
+		ItemDetailPopup.SHRUNK_SHAPE_PROPERTY_ICON_INSET,
+	)
+	assert_eq(
+		main.detail_popup.property_icon_image.size,
+		Vector2.ONE * ItemDetailPopup.SHRUNK_SHAPE_ICON_SIDE,
 	)
 	var first_item_property_font_size := (
 		main.detail_popup.property_description.get_theme_font_size("font_size")
@@ -1388,7 +1475,7 @@ func test_item_detail_icons_append_without_overlap_and_close_outside() -> void:
 	)
 	assert_eq(property_icon_frame.size, Vector2(82, 82))
 	var property_icon_style := property_icon_frame.get_theme_stylebox("panel") as StyleBoxFlat
-	assert_eq(property_icon_style.bg_color, Color("090b0c", 0.995))
+	assert_eq(property_icon_style.bg_color, ShapeVisuals.color(&"light"))
 	var actual_detail_visual_bottom := (
 		main.detail_popup.detail_panel.offset_top
 		+ maxf(
@@ -1408,9 +1495,9 @@ func test_item_detail_icons_append_without_overlap_and_close_outside() -> void:
 	property_click.position = property_button.get_global_rect().get_center()
 	main.detail_popup._input(property_click)
 	assert_true(main.detail_popup.property_panel.visible)
-	main.detail_popup._show_property(&"nightwalker")
+	main.detail_popup._show_property(&"light")
 	assert_false(main.detail_popup.property_panel.visible)
-	main.detail_popup._show_property(&"nightwalker")
+	main.detail_popup._show_property(&"light")
 	await get_tree().process_frame
 	await get_tree().process_frame
 	assert_true(main.detail_popup.property_panel.visible)
@@ -1427,8 +1514,8 @@ func test_item_detail_icons_append_without_overlap_and_close_outside() -> void:
 	assert_true(main.detail_popup.detail_panel.visible)
 	main._show_item(QuestArcCatalog.item_by_id(&"fries"))
 	main._show_item(QuestArcCatalog.item_by_id(&"mirror_shard"))
-	assert_same((main.detail_popup.property_views[&"nightwalker"] as Dictionary).root, property_root)
-	assert_same((main.detail_popup.property_views[&"nightwalker"] as Dictionary).button, property_button)
+	assert_same((main.detail_popup.property_views[&"light"] as Dictionary).root, property_root)
+	assert_same((main.detail_popup.property_views[&"light"] as Dictionary).button, property_button)
 
 
 func test_synthesis_bag_property_opens_primary_top_right_popup() -> void:
@@ -1440,32 +1527,45 @@ func test_synthesis_bag_property_opens_primary_top_right_popup() -> void:
 	var synthesis := main.current_screen as QuestSynthesisInterface
 	assert_true(synthesis.stage_card(&"base", jasmine))
 	await get_tree().process_frame
-	var homecomer_button := synthesis.persona_buttons[&"homecomer"] as Button
-	assert_true(homecomer_button.visible)
-	assert_eq(homecomer_button.mouse_filter, Control.MOUSE_FILTER_STOP)
-	assert_false(homecomer_button.toggle_mode)
-	homecomer_button.pressed.emit()
+	var sleep_button := synthesis.shape_buttons[&"sleep"] as Button
+	assert_true(sleep_button.visible)
+	assert_eq(sleep_button.mouse_filter, Control.MOUSE_FILTER_STOP)
+	assert_false(sleep_button.toggle_mode)
+	sleep_button.pressed.emit()
 	await get_tree().process_frame
 	assert_true(main.detail_popup.visible)
 	assert_true(main.detail_popup.detail_panel.visible)
 	assert_false(main.detail_popup.property_panel.visible)
 	assert_false(main.rule_detail_popup.visible)
-	assert_eq(main.detail_popup.primary_property_id, &"homecomer")
+	assert_eq(main.detail_popup.primary_property_id, &"sleep")
 	assert_null(main.detail_popup.current_definition)
 	assert_eq(main.detail_popup.detail_panel.offset_top, ItemDetailPopup.DETAIL_TOP)
 	assert_eq(
 		main.detail_popup.title_label.text,
-		TranslationServer.translate(ItemDetailPopup.property_name_key(&"homecomer")),
+		TranslationServer.translate(ItemDetailPopup.property_name_key(&"sleep")),
 	)
 	assert_eq(
 		main.detail_popup.description_label.text,
-		TranslationServer.translate(ItemDetailPopup.property_description_key(&"homecomer")),
+		TranslationServer.translate(ItemDetailPopup.property_description_key(&"sleep")),
 	)
 	assert_eq(
 		main.detail_popup.item_image.texture.resource_path,
-		"res://resources/ui/property-pillow.svg",
+		"res://resources/ui/synthesis/shape/sleep.png",
 	)
-	homecomer_button.pressed.emit()
+	assert_eq(main.detail_popup.item_image.self_modulate, Color.BLACK)
+	assert_eq(
+		main.detail_popup.item_image.custom_minimum_size,
+		Vector2.ONE * ItemDetailPopup.SHRUNK_SHAPE_ICON_SIDE,
+	)
+	assert_eq(
+		main.detail_popup.item_image.size,
+		Vector2.ONE * ItemDetailPopup.SHRUNK_SHAPE_ICON_SIDE,
+	)
+	var shape_icon_style := (
+		main.detail_popup.item_frame.get_theme_stylebox("panel") as StyleBoxFlat
+	)
+	assert_eq(shape_icon_style.bg_color, ShapeVisuals.color(&"sleep"))
+	sleep_button.pressed.emit()
 	assert_false(main.detail_popup.visible)
 
 
@@ -1488,7 +1588,7 @@ func test_synthesis_is_a_material_first_dedicated_space() -> void:
 	)[0] as CardItemState
 	assert_true(synthesis.stage_card(&"helper", soft_gauze))
 	assert_true(synthesis.stage_card(
-		&"persona", PersonaMaskCatalog.card_for_persona(&"dreamwalker")
+		&"persona", PersonaCardCatalog.card_for_shape(&"dream")
 	))
 	await get_tree().process_frame
 	assert_true(synthesis.candidate_buttons.has(&"recipe_midnight_rose"))
@@ -1546,7 +1646,7 @@ func test_synthesis_result_flip_reuses_views_without_freeing_signal_emitter() ->
 		func(card: CardItemState) -> bool: return card.definition_id == &"soft_gauze"
 	)[0] as CardItemState
 	assert_true(synthesis.stage_card(&"helper", soft_gauze))
-	assert_true(main.state.select_synthesis_persona(&"dreamwalker"))
+	assert_true(main.state.select_synthesis_persona(&"dream"))
 	synthesis._on_candidate_pressed(&"recipe_midnight_rose")
 	synthesis._on_action_pressed()
 	assert_not_null(synthesis.pending_output)
@@ -1669,9 +1769,13 @@ func test_hud_and_map_ignore_unrelated_state_deltas() -> void:
 	assert_eq(map.debug_refresh_count, initial_map_refreshes + 1)
 
 
-func test_removed_arc_overlay_is_not_built() -> void:
+func test_owner_settlement_arc_overlay_is_built_but_hidden() -> void:
 	var main := await _spawn_main()
-	assert_null(main.arc_overlay)
+	assert_not_null(main.arc_overlay)
+	assert_false(main.arc_overlay.visible)
+	assert_not_null(main.arc_store_background)
+	assert_not_null(main.arc_owner_portrait)
+	assert_not_null(main.arc_reward_reveal_overlay)
 
 
 func test_legacy_manifest_does_not_expose_an_incomplete_expedition() -> void:

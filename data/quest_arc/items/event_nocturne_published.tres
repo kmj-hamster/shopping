@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="QuestItemDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/quest_item_definition.gd" id="1_item"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_property_set.gd" id="2_props"]
+[ext_resource type="Texture2D" path="res://resources/items/nocturne_premium.png" id="3_image"]
+
+[sub_resource type="Resource" id="Props"]
+script = ExtResource("2_props")
+tags = Array[StringName]([&"cassette", &"keepsake"])
+values = {&"dream": 1, &"tear": 1}
+
+[resource]
+script = ExtResource("1_item")
+id = &"nocturne_published"
+display_name_key = &"opening.item.nocturne_published.name"
+description_key = &"opening.item.nocturne_published.description"
+image = ExtResource("3_image")
+store_id = &"record"
+can_recycle = false
+can_be_synthesis_base = false
+property_set = SubResource("Props")
+supply_mode = 2
+is_story_item = true

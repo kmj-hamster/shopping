@@ -6,6 +6,7 @@
 script = ExtResource("1_store")
 id = &"record"
 display_name_key = &"opening.store.record.name"
+owner_id = &"record_owner"
 unlock_definition_id = &"unlock_record"
 visible_after_store_ids = Array[StringName]([&"toy", &"fast_food", &"flower"])
 map_anchor = Vector2(0.40, 0.25)

@@ -28,7 +28,11 @@ func stage(card: CardItemState) -> Dictionary:
 	if card == null or not inventory.has(card) or card.location != CardItemState.Location.HAND:
 		return _result(false, RESULT_NOT_OWNED)
 	var definition := _definition_by_id(card.definition_id)
-	if definition == null or not definition.can_recycle:
+	if (
+		definition == null
+		or not definition.can_recycle
+		or definition.has_property(CardPropertySet.PROPERTY_KEEPSAKE)
+	):
 		return _result(false, RESULT_UNAVAILABLE)
 	card.assign_to(&"recycling", &"counter", CardItemState.Location.RECYCLE)
 	staged_instance_ids.append(card.instance_id)
@@ -79,7 +83,11 @@ func checkout() -> Dictionary:
 	var total := cart_total()
 	for card in staged:
 		var definition := _definition_by_id(card.definition_id)
-		if definition == null or not definition.can_recycle:
+		if (
+			definition == null
+			or not definition.can_recycle
+			or definition.has_property(CardPropertySet.PROPERTY_KEEPSAKE)
+		):
 			return _result(false, RESULT_UNAVAILABLE)
 
 	for card in staged:

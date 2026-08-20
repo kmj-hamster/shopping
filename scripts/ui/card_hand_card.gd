@@ -12,6 +12,15 @@ const FROSTED_DIALOGUE_SHADER: Shader = preload(
 )
 const PERSONA_PAPER_ALPHA := 0.10
 const PERSONA_GLASS_ALPHA := 0.72
+const ITEM_TITLE_FONT_SIZE := 10
+const SHELF_ZH_TITLE_FONT_SIZE := 12
+const PERSONA_TITLE_FONT_SIZE := 9
+const TITLE_MAX_FONT_REDUCTION := 4
+const TITLE_HOST_HEIGHT := 24.0
+const TITLE_AVAILABLE_WIDTH := 74.0
+const ITEM_IMAGE_HEIGHT := 70.0
+const SHELF_IMAGE_HEIGHT := 64.0
+const SHAPE_ICON_INSET := 8.0
 
 var card: CardItemState
 var definition: CardItemDefinition
@@ -19,8 +28,9 @@ var title_label: Label
 var title_host: Control
 var card_background: TextureRect
 var persona_glass: ColorRect
-var persona_icon_background: Panel
+var shape_icon_background: Panel
 var highlight_outline: Panel
+var image_host: Control
 var item_image: TextureRect
 var value_label: Label
 var drag_enabled := true
@@ -38,6 +48,7 @@ var rule_match_highlighted := false
 var return_animation_seconds := 0.18
 var return_animation_active := false
 var highlight_tween: Tween
+var shelf_presentation := false
 
 
 func setup(
@@ -52,6 +63,13 @@ func setup(
 		_refresh()
 
 
+func set_shelf_presentation(enabled: bool) -> void:
+	shelf_presentation = enabled
+	if is_node_ready():
+		_apply_presentation_layout(_is_persona_card())
+		_refresh()
+
+
 func _ready() -> void:
 	custom_minimum_size = CARD_SIZE
 	clip_contents = true
@@ -59,7 +77,7 @@ func _ready() -> void:
 	mouse_default_cursor_shape = Control.CURSOR_DRAG
 	add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	persona_glass = ColorRect.new()
-	persona_glass.name = "PersonaFrostedGlass"
+	persona_glass.name = "PersonaCardFrostedGlass"
 	persona_glass.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	persona_glass.color = Color.WHITE
 	persona_glass.self_modulate = Color(1.0, 1.0, 1.0, PERSONA_GLASS_ALPHA)
@@ -95,20 +113,20 @@ func _ready() -> void:
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_theme_constant_override("separation", 2)
 	margin.add_child(column)
-	var image_host := Control.new()
-	image_host.custom_minimum_size = Vector2(74, 70)
+	image_host = Control.new()
+	image_host.custom_minimum_size = Vector2(74, ITEM_IMAGE_HEIGHT)
 	image_host.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	image_host.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(image_host)
-	persona_icon_background = Panel.new()
-	persona_icon_background.name = "PersonaIconColor"
-	persona_icon_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	persona_icon_background.offset_left = 4.0
-	persona_icon_background.offset_top = 4.0
-	persona_icon_background.offset_right = -4.0
-	persona_icon_background.offset_bottom = -4.0
-	persona_icon_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	image_host.add_child(persona_icon_background)
+	shape_icon_background = Panel.new()
+	shape_icon_background.name = "ShapeIconColor"
+	shape_icon_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shape_icon_background.offset_left = 4.0
+	shape_icon_background.offset_top = 4.0
+	shape_icon_background.offset_right = -4.0
+	shape_icon_background.offset_bottom = -4.0
+	shape_icon_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	image_host.add_child(shape_icon_background)
 	item_image = TextureRect.new()
 	item_image.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	item_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -145,7 +163,7 @@ func _ready() -> void:
 	title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title_label.add_theme_font_size_override("font_size", 10)
+	title_label.add_theme_font_size_override("font_size", ITEM_TITLE_FONT_SIZE)
 	title_label.add_theme_color_override("font_color", UiPalette.INK_COLOR)
 	title_host.add_child(title_label)
 	highlight_outline = Panel.new()
@@ -154,6 +172,7 @@ func _ready() -> void:
 	highlight_outline.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	highlight_outline.z_index = 2
 	add_child(highlight_outline)
+	_apply_presentation_layout(false)
 	_refresh()
 	call_deferred("_update_persona_glass_size")
 
@@ -165,74 +184,146 @@ func _get_minimum_size() -> Vector2:
 
 
 func _refresh() -> void:
-	if title_label == null or definition == null:
+	if title_label == null:
+		return
+	_apply_presentation_layout(_is_persona_card())
+	if definition == null:
 		return
 	title_label.text = definition.localized_name()
-	var is_persona_mask := definition.has_property(CardPropertySet.PROPERTY_PERSONA)
-	var persona_id := _persona_id() if is_persona_mask else &""
+	var is_persona_card := _is_persona_card()
+	_apply_adaptive_title_layout(title_label.text, is_persona_card)
+	var shape_id := _shape_id() if is_persona_card else &""
 	item_image.texture = (
-		PersonaVisuals.symbol_texture(persona_id)
-		if is_persona_mask
+		ShapeVisuals.symbol_texture(shape_id)
+		if is_persona_card
 		else definition.image
 	)
-	persona_glass.visible = is_persona_mask
-	persona_icon_background.visible = is_persona_mask
+	item_image.self_modulate = Color.BLACK if is_persona_card else Color.WHITE
+	persona_glass.visible = is_persona_card
+	shape_icon_background.visible = is_persona_card
 	card_background.self_modulate = (
-		Color(1.0, 1.0, 1.0, PERSONA_PAPER_ALPHA) if is_persona_mask else Color.WHITE
+		Color(1.0, 1.0, 1.0, PERSONA_PAPER_ALPHA) if is_persona_card else Color.WHITE
 	)
-	item_image.offset_left = -12.0 if is_persona_mask else 0.0
-	item_image.offset_right = 12.0 if is_persona_mask else 0.0
-	_apply_persona_visuals(persona_id)
-	value_label.visible = is_persona_mask
-	title_host.custom_minimum_size.y = 24.0 if is_persona_mask else 15.0
-	title_label.autowrap_mode = (
-		TextServer.AUTOWRAP_WORD_SMART if is_persona_mask else TextServer.AUTOWRAP_OFF
-	)
-	title_label.max_lines_visible = 2 if is_persona_mask else 1
-	title_label.add_theme_font_size_override("font_size", 9 if is_persona_mask else 10)
+	_apply_persona_visuals(shape_id)
+	value_label.visible = is_persona_card
 	title_label.add_theme_color_override(
-		"font_color", Color("f4f7f2") if is_persona_mask else UiPalette.INK_COLOR
+		"font_color", Color("f4f7f2") if is_persona_card else UiPalette.INK_COLOR
 	)
 	title_label.add_theme_color_override(
-		"font_outline_color", Color("07151b", 0.92) if is_persona_mask else Color.TRANSPARENT
+		"font_outline_color", Color("07151b", 0.92) if is_persona_card else Color.TRANSPARENT
 	)
-	title_label.add_theme_constant_override("outline_size", 2 if is_persona_mask else 0)
-	if is_persona_mask:
+	title_label.add_theme_constant_override("outline_size", 2 if is_persona_card else 0)
+	if is_persona_card:
 		var amount := 0
-		for value_persona_id in CardPropertySet.PERSONAS:
-			amount = maxi(amount, definition.property_value(value_persona_id))
+		for value_shape_id in CardPropertySet.SHAPES:
+			amount = maxi(amount, definition.property_value(value_shape_id))
 		value_label.text = str(amount)
 	_apply_card_style()
 
 
-func _persona_id() -> StringName:
+func _is_persona_card() -> bool:
+	return definition != null and definition.has_property(CardPropertySet.PROPERTY_PERSONA)
+
+
+func _apply_presentation_layout(is_persona_card: bool) -> void:
+	if title_label == null or title_host == null or image_host == null or item_image == null:
+		return
+	image_host.custom_minimum_size.y = (
+		SHELF_IMAGE_HEIGHT if shelf_presentation and not is_persona_card else ITEM_IMAGE_HEIGHT
+	)
+	if is_persona_card:
+		item_image.offset_left = SHAPE_ICON_INSET
+		item_image.offset_top = SHAPE_ICON_INSET
+		item_image.offset_right = -SHAPE_ICON_INSET
+		item_image.offset_bottom = -SHAPE_ICON_INSET
+	elif shelf_presentation:
+		item_image.offset_left = 2.0
+		item_image.offset_top = 0.0
+		item_image.offset_right = -2.0
+		item_image.offset_bottom = -4.0
+	else:
+		item_image.offset_left = 0.0
+		item_image.offset_top = 0.0
+		item_image.offset_right = 0.0
+		item_image.offset_bottom = 0.0
+	title_host.custom_minimum_size.y = TITLE_HOST_HEIGHT
+	title_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	title_label.max_lines_visible = 1
+	title_label.add_theme_font_size_override(
+		"font_size", _base_title_font_size(is_persona_card)
+	)
+
+
+func _base_title_font_size(is_persona_card: bool) -> int:
+	if is_persona_card:
+		return PERSONA_TITLE_FONT_SIZE
+	return (
+		SHELF_ZH_TITLE_FONT_SIZE
+		if shelf_presentation and LocaleManager.current_locale == LocaleManager.LOCALE_ZH
+		else ITEM_TITLE_FONT_SIZE
+	)
+
+
+func _apply_adaptive_title_layout(title: String, is_persona_card: bool) -> void:
+	var base_size := _base_title_font_size(is_persona_card)
+	var minimum_size := maxi(base_size - TITLE_MAX_FONT_REDUCTION, 1)
+	var fitted_size := base_size
+	while fitted_size > minimum_size and not _title_fits_one_line(title, fitted_size):
+		fitted_size -= 1
+	var fits_one_line := _title_fits_one_line(title, fitted_size)
+	title_host.custom_minimum_size.y = TITLE_HOST_HEIGHT
+	title_label.add_theme_font_size_override("font_size", fitted_size)
+	title_label.autowrap_mode = (
+		TextServer.AUTOWRAP_OFF if fits_one_line else TextServer.AUTOWRAP_WORD
+	)
+	title_label.max_lines_visible = 1 if fits_one_line else 2
+
+
+func _title_fits_one_line(title: String, font_size: int) -> bool:
+	if title.contains("\n"):
+		return false
+	var font := title_label.get_theme_font("font")
+	if font == null:
+		return title.length() * font_size * 0.6 <= TITLE_AVAILABLE_WIDTH
+	return (
+		font.get_string_size(
+			title,
+			HORIZONTAL_ALIGNMENT_LEFT,
+			-1.0,
+			font_size,
+		).x
+		<= TITLE_AVAILABLE_WIDTH
+	)
+
+
+func _shape_id() -> StringName:
 	if definition == null:
 		return &""
-	for persona_id in CardPropertySet.PERSONAS:
-		if definition.has_property(persona_id):
-			return persona_id
+	for shape_id in CardPropertySet.SHAPES:
+		if definition.has_property(shape_id):
+			return shape_id
 	return &""
 
 
-func _apply_persona_visuals(persona_id: StringName) -> void:
-	if persona_icon_background == null or persona_glass == null:
+func _apply_persona_visuals(shape_id: StringName) -> void:
+	if shape_icon_background == null or persona_glass == null:
 		return
-	if persona_id.is_empty():
+	if shape_id.is_empty():
 		return
-	var persona_color := PersonaVisuals.color(persona_id)
+	var shape_color := ShapeVisuals.color(shape_id)
 	var icon_style := StyleBoxFlat.new()
-	icon_style.bg_color = persona_color
+	icon_style.bg_color = shape_color
 	icon_style.border_color = Color(1.0, 1.0, 1.0, 0.26)
 	icon_style.set_border_width_all(1)
 	icon_style.corner_radius_top_left = 5
 	icon_style.corner_radius_top_right = 5
 	icon_style.corner_radius_bottom_left = 5
 	icon_style.corner_radius_bottom_right = 5
-	persona_icon_background.add_theme_stylebox_override("panel", icon_style)
+	shape_icon_background.add_theme_stylebox_override("panel", icon_style)
 	var glass_material := persona_glass.material as ShaderMaterial
 	if glass_material != null:
 		glass_material.set_shader_parameter(
-			"glass_tint", Color("061218").lerp(persona_color, 0.16)
+			"glass_tint", Color("061218").lerp(shape_color, 0.16)
 		)
 
 
@@ -245,11 +336,11 @@ func _update_persona_glass_size() -> void:
 
 
 func _border_color() -> Color:
-	if definition.has_property(CardPropertySet.PERSONA_NIGHTWALKER):
+	if definition.has_property(CardPropertySet.SHAPE_LIGHT):
 		return Color("d5b66f")
-	if definition.has_property(CardPropertySet.PERSONA_MOURNER):
+	if definition.has_property(CardPropertySet.SHAPE_TEAR):
 		return Color("7ca9bd")
-	if definition.has_property(CardPropertySet.PERSONA_DREAMWALKER):
+	if definition.has_property(CardPropertySet.SHAPE_DREAM):
 		return Color("9a82bb")
 	return Color("bd8fa5")
 

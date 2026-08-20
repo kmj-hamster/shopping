@@ -61,45 +61,45 @@ func test_items_and_live_persona_cards_share_one_hand_without_entering_inventory
 	var inventory_count := main.state.inventory.size()
 	assert_eq(hand.active_tab, QuestHandBar.TAB_ITEMS)
 	assert_null(hand.find_child("ItemTabButton", true, false))
-	assert_null(hand.find_child("MaskTabButton", true, false))
+	assert_null(hand.find_child("PersonaTabButton", true, false))
 	assert_eq(hand.card_views.size(), inventory_count + 4)
 
-	hand.show_tab(QuestHandBar.TAB_MASKS)
-	assert_eq(hand.active_tab, QuestHandBar.TAB_MASKS)
+	hand.show_tab(QuestHandBar.TAB_PERSONAS)
+	assert_eq(hand.active_tab, QuestHandBar.TAB_PERSONAS)
 	assert_eq(hand.card_views.size(), inventory_count + 4)
-	for persona_id in PersonaMaskCatalog.MASK_PERSONAS:
-		var card := PersonaMaskCatalog.card_for_persona(persona_id)
+	for shape_id in PersonaCardCatalog.PERSONA_SHAPES:
+		var card := PersonaCardCatalog.card_for_shape(shape_id)
 		var view := hand.card_views[card.instance_id] as CardHandCard
 		assert_true(view.definition.has_property(CardPropertySet.PROPERTY_PERSONA))
 		assert_eq(
-			view.definition.property_value(persona_id),
-			int(main.state.protagonist_persona_counts[persona_id]),
+			view.definition.property_value(shape_id),
+			int(main.state.protagonist_shape_levels[shape_id]),
 		)
 		assert_true(view.value_label.visible)
-		assert_eq(view.value_label.text, str(main.state.protagonist_persona_counts[persona_id]))
+		assert_eq(view.value_label.text, str(main.state.protagonist_shape_levels[shape_id]))
 	assert_eq(main.state.inventory.size(), inventory_count)
-	var first_persona := hand.mask_persona_order[0]
-	var first_mask_card := PersonaMaskCatalog.card_for_persona(first_persona)
-	var first_mask_view := hand.card_views[first_mask_card.instance_id] as CardHandCard
-	first_mask_view._begin_drag_visual()
+	var first_shape := hand.persona_shape_order[0]
+	var first_persona_card := PersonaCardCatalog.card_for_shape(first_shape)
+	var first_persona_view := hand.card_views[first_persona_card.instance_id] as CardHandCard
+	first_persona_view._begin_drag_visual()
 	hand._drop_data(
 		Vector2(hand.size.x - 1.0, hand.size.y * 0.5),
 		{
 			"kind": &"card_item",
-			"card": first_mask_card,
+			"card": first_persona_card,
 			"grab_offset": CardHandCard.CARD_SIZE * 0.5,
 		},
 	)
-	first_mask_view._end_drag_visual(true)
-	assert_eq(hand.mask_persona_order.back(), first_persona)
-	assert_same(hand.card_views[first_mask_card.instance_id], first_mask_view)
-	assert_true(first_mask_view.visible)
+	first_persona_view._end_drag_visual(true)
+	assert_eq(hand.persona_shape_order.back(), first_shape)
+	assert_same(hand.card_views[first_persona_card.instance_id], first_persona_view)
+	assert_true(first_persona_view.visible)
 
-	var mask_rule := CardSlotRule.new()
-	mask_rule.id = &"mask_test"
-	mask_rule.required_all = [CardPropertySet.PROPERTY_PERSONA]
-	main._on_rule_focused(mask_rule)
-	assert_eq(hand.active_tab, QuestHandBar.TAB_MASKS)
+	var persona_rule := CardSlotRule.new()
+	persona_rule.id = &"persona_test"
+	persona_rule.required_all = [CardPropertySet.PROPERTY_PERSONA]
+	main._on_rule_focused(persona_rule)
+	assert_eq(hand.active_tab, QuestHandBar.TAB_PERSONAS)
 	var item_rule := CardSlotRule.new()
 	item_rule.id = &"item_test"
 	item_rule.required_all = [&"food"]
@@ -111,44 +111,115 @@ func test_persona_cards_use_colored_symbols_on_frosted_glass() -> void:
 	var main := await _spawn_main()
 	var hand := main.hand_bar
 	var expected_symbols := {
-		CardPropertySet.PERSONA_NIGHTWALKER: "res://resources/ui/persona/nightwalker.png",
-		CardPropertySet.PERSONA_MOURNER: "res://resources/ui/persona/mourner.png",
-		CardPropertySet.PERSONA_DREAMWALKER: "res://resources/ui/persona/dreamwalker.png",
-		CardPropertySet.PERSONA_HOMECOMER: "res://resources/ui/persona/homecomer.png",
+		CardPropertySet.SHAPE_LIGHT: "res://resources/ui/synthesis/shape/light.png",
+		CardPropertySet.SHAPE_TEAR: "res://resources/ui/synthesis/shape/tear.png",
+		CardPropertySet.SHAPE_DREAM: "res://resources/ui/synthesis/shape/dream.png",
+		CardPropertySet.SHAPE_SLEEP: "res://resources/ui/synthesis/shape/sleep.png",
 	}
-	for persona_id in PersonaMaskCatalog.MASK_PERSONAS:
-		var card := PersonaMaskCatalog.card_for_persona(persona_id)
+	for shape_id in PersonaCardCatalog.PERSONA_SHAPES:
+		var card := PersonaCardCatalog.card_for_shape(shape_id)
 		var view := hand.card_views[card.instance_id] as CardHandCard
-		assert_true(view.persona_glass.visible, persona_id)
-		assert_true(view.persona_glass.material is ShaderMaterial, persona_id)
+		assert_true(view.persona_glass.visible, shape_id)
+		assert_true(view.persona_glass.material is ShaderMaterial, shape_id)
 		assert_eq(
 			(view.persona_glass.material as ShaderMaterial).shader.resource_path,
 			"res://resources/shaders/frosted_dialogue.gdshader",
-			persona_id,
+			shape_id,
 		)
 		assert_almost_eq(
 			view.persona_glass.self_modulate.a,
 			CardHandCard.PERSONA_GLASS_ALPHA,
 			0.001,
-			persona_id,
+			shape_id,
 		)
 		assert_almost_eq(
 			view.card_background.self_modulate.a,
 			CardHandCard.PERSONA_PAPER_ALPHA,
 			0.001,
-			persona_id,
+			shape_id,
 		)
-		assert_true(view.persona_icon_background.visible, persona_id)
-		assert_eq(view.item_image.texture.resource_path, expected_symbols[persona_id], persona_id)
-		var icon_style := view.persona_icon_background.get_theme_stylebox("panel") as StyleBoxFlat
-		assert_not_null(icon_style, persona_id)
-		assert_eq(icon_style.bg_color, PersonaVisuals.COLORS[persona_id], persona_id)
+		assert_true(view.shape_icon_background.visible, shape_id)
+		assert_eq(view.item_image.texture.resource_path, expected_symbols[shape_id], shape_id)
+		assert_eq(view.item_image.self_modulate, Color.BLACK, shape_id)
+		assert_eq(view.item_image.offset_left, CardHandCard.SHAPE_ICON_INSET, shape_id)
+		assert_eq(view.item_image.offset_top, CardHandCard.SHAPE_ICON_INSET, shape_id)
+		assert_eq(view.item_image.offset_right, -CardHandCard.SHAPE_ICON_INSET, shape_id)
+		assert_eq(view.item_image.offset_bottom, -CardHandCard.SHAPE_ICON_INSET, shape_id)
+		var icon_style := view.shape_icon_background.get_theme_stylebox("panel") as StyleBoxFlat
+		assert_not_null(icon_style, shape_id)
+		assert_eq(icon_style.bg_color, ShapeVisuals.COLORS[shape_id], shape_id)
+
+	var dream_card := PersonaCardCatalog.card_for_shape(
+		CardPropertySet.SHAPE_DREAM
+	)
+	var dream_view := hand.card_views[dream_card.instance_id] as CardHandCard
+	main._show_item(dream_view.definition)
+	assert_eq(
+		main.detail_popup.item_image.texture.resource_path,
+		expected_symbols[CardPropertySet.SHAPE_DREAM],
+	)
+	assert_eq(main.detail_popup.item_image.self_modulate, Color.BLACK)
+	assert_eq(
+		main.detail_popup.item_image.custom_minimum_size,
+		Vector2.ONE * ItemDetailPopup.LARGE_ICON_SIDE,
+	)
+	var popup_icon_style := main.detail_popup.item_frame.get_theme_stylebox("panel") as StyleBoxFlat
+	assert_eq(
+		popup_icon_style.bg_color,
+		ShapeVisuals.color(CardPropertySet.SHAPE_DREAM),
+	)
 
 	var item_card := main.state.inventory[0] as CardItemState
 	var item_view := hand.card_views[item_card.instance_id] as CardHandCard
 	assert_false(item_view.persona_glass.visible)
-	assert_false(item_view.persona_icon_background.visible)
+	assert_false(item_view.shape_icon_background.visible)
 	assert_eq(item_view.card_background.self_modulate, Color.WHITE)
+	assert_eq(item_view.item_image.self_modulate, Color.WHITE)
+
+
+func test_card_titles_shrink_then_wrap_without_splitting_english_words() -> void:
+	var original_locale := LocaleManager.current_locale
+	LocaleManager.set_locale(LocaleManager.LOCALE_EN, false)
+	var view := CardHandCard.new()
+	add_child_autoqfree(view)
+	await get_tree().process_frame
+
+	view.setup(null, _title_probe_definition("Tea"), false)
+	assert_eq(
+		view.title_label.get_theme_font_size("font_size"),
+		CardHandCard.ITEM_TITLE_FONT_SIZE,
+	)
+	assert_eq(view.title_label.max_lines_visible, 1)
+	assert_eq(view.title_label.autowrap_mode, TextServer.AUTOWRAP_OFF)
+
+	view.setup(null, _title_probe_definition("Kaleidoscope Tape"), false)
+	var reduced_size := view.title_label.get_theme_font_size("font_size")
+	assert_lt(reduced_size, CardHandCard.ITEM_TITLE_FONT_SIZE)
+	assert_gte(
+		reduced_size,
+		CardHandCard.ITEM_TITLE_FONT_SIZE - CardHandCard.TITLE_MAX_FONT_REDUCTION,
+	)
+	assert_eq(view.title_label.max_lines_visible, 1)
+
+	view.setup(
+		null,
+		_title_probe_definition(
+			"A Very Long Card Name With Several Complete English Words"
+		),
+		false,
+	)
+	assert_eq(
+		view.title_label.get_theme_font_size("font_size"),
+		CardHandCard.ITEM_TITLE_FONT_SIZE - CardHandCard.TITLE_MAX_FONT_REDUCTION,
+	)
+	assert_eq(view.title_label.max_lines_visible, 2)
+	assert_eq(view.title_label.autowrap_mode, TextServer.AUTOWRAP_WORD)
+	assert_eq(
+		view.title_label.text_overrun_behavior,
+		TextServer.OVERRUN_TRIM_ELLIPSIS,
+	)
+	assert_eq(view.title_host.custom_minimum_size.y, CardHandCard.TITLE_HOST_HEIGHT)
+	LocaleManager.set_locale(original_locale, false)
 
 
 func test_overflowing_hand_overlaps_and_hovered_card_receives_full_space() -> void:
@@ -306,3 +377,11 @@ func _spawn_main() -> QuestMain:
 	add_child_autoqfree(main)
 	await get_tree().process_frame
 	return main
+
+
+func _title_probe_definition(title: String) -> CardItemDefinition:
+	var definition := CardItemDefinition.new()
+	definition.id = StringName(title.to_snake_case())
+	definition.display_name_key = StringName(title)
+	definition.property_set = CardPropertySet.new()
+	return definition

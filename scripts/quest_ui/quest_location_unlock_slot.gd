@@ -62,13 +62,13 @@ func can_accept_card(card: CardItemState) -> bool:
 	if card.location != CardItemState.Location.HAND:
 		return false
 	var definition := state.definition_for_card(card)
-	if state.is_disease_definition(definition):
+	if state.is_disease_definition(definition) or state.is_keepsake_definition(definition):
 		return false
 	var is_owned_item := card in state.inventory
-	var persona_id := PersonaMaskCatalog.persona_for_card(card)
+	var shape_id := PersonaCardCatalog.shape_for_card(card)
 	if not is_owned_item and (
-		persona_id.is_empty()
-		or int(state.protagonist_persona_counts.get(persona_id, 0)) <= 0
+		shape_id.is_empty()
+		or int(state.protagonist_shape_levels.get(shape_id, 0)) <= 0
 	):
 		return false
 	return CardRuleEvaluator.can_execute(rule, definition)

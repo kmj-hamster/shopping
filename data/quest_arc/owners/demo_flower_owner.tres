@@ -19,5 +19,7 @@ request_recipe_id = &""
 event_item_id = &"cola"
 event_item_store_id = &"flower"
 event_item_page = 2
+request_unlock_delay_days = 0
+request_min_purchase_count = 0
 state_dialogue_keys = {&"blooming": &"demo.owner.flower.state.blooming", &"trimmed": &"demo.owner.flower.state.trimmed"}
 dialogue_voice_streams = Array[AudioStream]([ExtResource("2_voice_a"), ExtResource("3_voice_b")])

@@ -43,11 +43,11 @@ func test_synthesis_placement_is_not_persisted() -> void:
 	var gardenia := source.grant_item(&"gardenia", &"test")
 	assert_true(source.assign_synthesis_base(jasmine).ok)
 	assert_true(source.assign_synthesis_helper(gardenia).ok)
-	assert_true(source.select_synthesis_persona(&"nightwalker"))
+	assert_true(source.select_synthesis_persona(&"light"))
 	var restored := _round_trip(source)
 	assert_eq(restored.synthesis_base_instance_id, 0)
 	assert_eq(restored.synthesis_helper_instance_id, 0)
-	assert_true(restored.synthesis_persona_id.is_empty())
+	assert_true(restored.synthesis_persona_shape_id.is_empty())
 	assert_eq(_card_by_definition(restored, &"jasmine").location, CardItemState.Location.HAND)
 	assert_eq(_card_by_definition(restored, &"gardenia").location, CardItemState.Location.HAND)
 
@@ -67,12 +67,14 @@ func test_expedition_checkpoint_preserves_candidates_progress_and_permanent_disc
 	assert_true(source.begin_mall_expedition(91234).ok)
 	source.expedition.rooms_completed = 1
 	source.expedition.entered_room_ids[&"home"] = true
+	source.expedition.economy_offer_seen = true
 	var candidates := source.expedition.current_door_ids.duplicate()
 	var rng_state := source.expedition.rng_state
 	var restored := _round_trip(source)
 	assert_true(restored.expedition.active)
 	assert_eq(restored.expedition.rooms_completed, 1)
 	assert_true(restored.expedition.has_entered(&"home"))
+	assert_true(restored.expedition.economy_offer_seen)
 	assert_true(restored.expedition.is_discovered(&"gray_hall"))
 	assert_true(restored.expedition.is_first_cleared(&"gray_hall"))
 	assert_eq(restored.expedition.current_door_ids, candidates)
@@ -83,13 +85,13 @@ func test_expedition_challenge_roll_is_identical_after_checkpoint_reload() -> vo
 	var source := QuestGameState.new()
 	assert_true(source.begin_mall_expedition(441122).ok)
 	source.expedition.current_door_ids = [&"gray_hall"]
-	source.protagonist_persona_counts[&"nightwalker"] = 4
+	source.protagonist_shape_levels[&"light"] = 4
 	var before := source.evaluate_expedition_challenge_round(
-		&"gray_hall", [], [&"nightwalker"], 0
+		&"gray_hall", [], [&"light"], 0
 	)
 	var restored := _round_trip(source)
 	var after := restored.evaluate_expedition_challenge_round(
-		&"gray_hall", [], [&"nightwalker"], 0
+		&"gray_hall", [], [&"light"], 0
 	)
 	assert_eq(after.roll_percent, before.roll_percent)
 	assert_eq(after.success_probability, before.success_probability)
@@ -98,19 +100,49 @@ func test_expedition_challenge_roll_is_identical_after_checkpoint_reload() -> vo
 
 func test_disease_recipe_growth_and_game_over_checkpoint_are_persisted() -> void:
 	var source := QuestGameState.new()
-	source.synthesis_recipe_use_counts[&"recipe_clear_wound_homecomer"] = 2
+	source.synthesis_recipe_use_counts[&"recipe_clear_wound_sleep"] = 2
 	source.gain_disease(&"expedition_wound", 3)
 	assert_true(source.begin_mall_expedition(1717).game_over)
 	var restored := _round_trip(source)
 	assert_eq(
 		restored.synthesis_recipe_requirements(
-			QuestArcCatalog.recipe_by_id(&"recipe_clear_wound_homecomer")
+			QuestArcCatalog.recipe_by_id(&"recipe_clear_wound_sleep")
 		),
-		{&"homecomer": 5},
+		{&"sleep": 5},
 	)
 	assert_true(restored.expedition.active)
 	assert_eq(restored.expedition.disease_game_over_id, &"expedition_wound")
 	assert_true(restored.expedition.current_door_ids.is_empty())
+
+
+func test_owner_request_history_and_partially_shown_settlement_are_persisted() -> void:
+	var source := QuestGameState.new()
+	source.store_unlock_days[&"toy"] = 1
+	source.store_purchase_counts[&"toy"] = 3
+	source.purchased_item_ids[&"concrete_city_vol_1"] = true
+	source.available_owner_request_ids[&"record_owner"] = true
+	source.unlocked_store_item_ids[&"gardenia"] = true
+	var task := source.activate_task(&"owner_toy_birthday_cake")
+	var cake := source.grant_item(&"birthday_cake", &"test")
+	assert_true(source.assign_card(task.instance_id, &"birthday_cake", cake).ok)
+	assert_true(source.confirm_task(task.instance_id).ok)
+	assert_true(source.prepare_owner_request_settlement().ok)
+	assert_true(source.settle_current_arc_entry().ok)
+	assert_eq(source.pending_arc.applied_entry_count, 1)
+	assert_eq(source.pending_arc.next_entry_index, 0)
+
+	var restored := _round_trip(source)
+	assert_eq(int(restored.store_unlock_days[&"toy"]), 1)
+	assert_eq(int(restored.store_purchase_counts[&"toy"]), 3)
+	assert_true(restored.purchased_item_ids.has(&"concrete_city_vol_1"))
+	assert_true(restored.available_owner_request_ids.has(&"record_owner"))
+	assert_true(restored.unlocked_store_item_ids.has(&"gardenia"))
+	assert_not_null(restored.pending_arc)
+	assert_eq(restored.pending_arc.applied_entry_count, 1)
+	assert_eq(restored.pending_arc.next_entry_index, 0)
+	assert_eq(restored.pending_arc.entries[0].store_id, &"toy")
+	assert_eq(restored.pending_arc.entries[0].owner_id, &"toy_owner")
+	assert_true(restored.task_instance(task.instance_id).settled)
 
 
 func _round_trip(source: QuestGameState) -> QuestGameState:

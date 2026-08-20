@@ -1,0 +1,46 @@
+[gd_resource type="Resource" script_class="TaskDefinition" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/task_definition.gd" id="1_task"]
+[ext_resource type="Script" path="res://scripts/slot_domain/card_slot_rule.gd" id="2_rule"]
+[ext_resource type="Script" path="res://scripts/quest_domain/task_outcome_definition.gd" id="3_outcome"]
+[ext_resource type="Script" path="res://scripts/quest_domain/story_effect.gd" id="4_effect"]
+
+[sub_resource type="Resource" id="TeddyRule"]
+script = ExtResource("2_rule")
+id = &"teddy"
+display_name_key = &"owner_request.flower.slot"
+accepted_item_ids = Array[StringName]([&"cold_teddy_bear", &"baby_soothing_bear"])
+
+[sub_resource type="Resource" id="UnlockGardenia"]
+script = ExtResource("4_effect")
+kind = 8
+target_id = &"gardenia"
+
+[sub_resource type="Resource" id="UnlockCandyFlower"]
+script = ExtResource("4_effect")
+kind = 8
+target_id = &"candy_fake_flower"
+
+[sub_resource type="Resource" id="GiveGardenia"]
+script = ExtResource("4_effect")
+kind = 7
+target_id = &"gardenia"
+
+[sub_resource type="Resource" id="Outcome"]
+script = ExtResource("3_outcome")
+id = &"soft_gift"
+result_text_key = &"owner_request.flower.result"
+is_fallback = true
+effects = Array[Resource]([SubResource("UnlockGardenia"), SubResource("UnlockCandyFlower"), SubResource("GiveGardenia")])
+
+[resource]
+script = ExtResource("1_task")
+id = &"owner_flower_teddy"
+display_name_key = &"owner_request.flower.name"
+body_text_key = &"owner_request.flower.body"
+footer_text_key = &"owner_request.flower.footer"
+category = 2
+owner_id = &"opening_flower_owner"
+store_id = &"flower"
+slot_rules = Array[Resource]([SubResource("TeddyRule")])
+outcomes = Array[Resource]([SubResource("Outcome")])

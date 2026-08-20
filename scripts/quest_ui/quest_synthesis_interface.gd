@@ -24,12 +24,12 @@ enum NarrativeState {
 
 const NARRATIVE_FADE_SECONDS := 0.55
 const NARRATIVE_HOLD_SECONDS := 1.25
-const FIELD_CENTER := PersonaStarChart.FIELD_CENTER
+const FIELD_CENTER := ShapeStarChart.FIELD_CENTER
 const CANDIDATE_NODE_SIZE := Vector2(44, 44)
-const PERSONA_ICON_SIZE := PersonaStarChart.PERSONA_ICON_SIZE
-const PERSONA_RAY_LEVEL_ONE_LENGTH := PersonaStarChart.LEVEL_ONE_LENGTH
-const PERSONA_RAY_FULL_LEVEL := PersonaStarChart.MAX_LEVEL
-const PERSONA_ICON_POSITIONS := PersonaStarChart.PERSONA_ICON_POSITIONS
+const SHAPE_ICON_SIZE := ShapeStarChart.SHAPE_ICON_SIZE
+const SHAPE_RAY_LEVEL_ONE_LENGTH := ShapeStarChart.LEVEL_ONE_LENGTH
+const SHAPE_RAY_FULL_LEVEL := ShapeStarChart.MAX_LEVEL
+const SHAPE_ICON_POSITIONS := ShapeStarChart.SHAPE_ICON_POSITIONS
 const REINFORCEMENT_SLOT_GAP := 14.0
 const REINFORCEMENT_TOP_GAP := 12.0
 const REINFORCEMENT_LABEL_HEIGHT := 20.0
@@ -39,24 +39,26 @@ const BASE_TYPE_BOTTOM_GAP := 8.0
 const BAG_BACKGROUND_PATH := "res://resources/ui/synthesis/bg-inbag.png"
 const BAG_BACKGROUND_OVERSCAN := 24.0
 const BAG_BACKGROUND_SHIFT := Vector2(24.0, 0.0)
-const PERSONA_ICON_DISPLAY_SCALES := {
-	CardPropertySet.PERSONA_NIGHTWALKER: 1.0,
-	CardPropertySet.PERSONA_MOURNER: 1.0,
-	CardPropertySet.PERSONA_DREAMWALKER: 1.22,
-	CardPropertySet.PERSONA_HOMECOMER: 0.72,
+const SHAPE_ICON_DISPLAY_SCALES := {
+	CardPropertySet.SHAPE_LIGHT: 1.0,
+	CardPropertySet.SHAPE_TEAR: 1.0,
+	CardPropertySet.SHAPE_DREAM: 1.22,
+	CardPropertySet.SHAPE_SLEEP: 0.72,
 }
-const PERSONA_ICON_TEXTURES := {
-	CardPropertySet.PERSONA_NIGHTWALKER: preload(
-		"res://resources/ui/synthesis/persona/nightwalker.png"
+const SHAPE_ICON_GLOW_SCALES := [1.08, 1.17, 1.29]
+const SHAPE_ICON_GLOW_ALPHAS := [0.42, 0.18, 0.065]
+const SHAPE_ICON_TEXTURES := {
+	CardPropertySet.SHAPE_LIGHT: preload(
+		"res://resources/ui/synthesis/shape/light.png"
 	),
-	CardPropertySet.PERSONA_MOURNER: preload(
-		"res://resources/ui/synthesis/persona/mourner.png"
+	CardPropertySet.SHAPE_TEAR: preload(
+		"res://resources/ui/synthesis/shape/tear.png"
 	),
-	CardPropertySet.PERSONA_DREAMWALKER: preload(
-		"res://resources/ui/synthesis/persona/dreamwalker.png"
+	CardPropertySet.SHAPE_DREAM: preload(
+		"res://resources/ui/synthesis/shape/dream.png"
 	),
-	CardPropertySet.PERSONA_HOMECOMER: preload(
-		"res://resources/ui/synthesis/persona/homecomer.png"
+	CardPropertySet.SHAPE_SLEEP: preload(
+		"res://resources/ui/synthesis/shape/sleep.png"
 	),
 }
 
@@ -65,7 +67,7 @@ var phase := Phase.DRAFT
 var background_image: TextureRect
 var background_input: QuestSynthesisBackgroundInput
 var draft_layer: Control
-var star_chart: PersonaStarChart
+var star_chart: ShapeStarChart
 var candidate_layer: Control
 var base_slot_host: CenterContainer
 var base_slot: QuestSynthesisMaterialSlot
@@ -82,8 +84,9 @@ var slot_help_definitions: Dictionary = {}
 var candidate_buttons: Dictionary = {}
 var candidate_views: Dictionary = {}
 var candidate_hover_tweens: Dictionary = {}
-var persona_buttons: Dictionary = {}
-var persona_value_labels: Dictionary = {}
+var shape_buttons: Dictionary = {}
+var shape_value_labels: Dictionary = {}
+var shape_glow_layers: Dictionary = {}
 var possibility_definitions: Dictionary = {}
 var candidate_ready_tweens: Dictionary = {}
 var candidate_breath_tweens: Dictionary = {}
@@ -167,14 +170,14 @@ func can_stage_card(role_id: StringName, card: CardItemState) -> bool:
 	if state == null or card == null:
 		return false
 	if role_id == &"persona":
-		var persona_id := PersonaMaskCatalog.persona_for_card(card)
+		var shape_id := PersonaCardCatalog.shape_for_card(card)
 		return (
-			not persona_id.is_empty()
+			not shape_id.is_empty()
 			and state.synthesis_base_instance_id > 0
 			and card.location == CardItemState.Location.HAND
-			and state.synthesis_persona_id != persona_id
+			and state.synthesis_persona_shape_id != shape_id
 		)
-	if card not in state.inventory or not PersonaMaskCatalog.persona_for_card(card).is_empty():
+	if card not in state.inventory or not PersonaCardCatalog.shape_for_card(card).is_empty():
 		return false
 	if card.location not in [CardItemState.Location.HAND, CardItemState.Location.ACTIVITY_SLOT]:
 		return false
@@ -186,12 +189,17 @@ func can_stage_card(role_id: StringName, card: CardItemState) -> bool:
 		return false
 	var definition := QuestArcCatalog.item_by_id(card.definition_id)
 	if role_id == &"base":
-		return definition != null and definition.can_be_synthesis_base
+		return (
+			definition != null
+			and not state.is_keepsake_definition(definition)
+			and definition.can_be_synthesis_base
+		)
 	if role_id == &"helper":
 		return (
 			state.synthesis_base_instance_id > 0
 			and card.instance_id != state.synthesis_base_instance_id
 			and not state.is_disease_definition(definition)
+			and not state.is_keepsake_definition(definition)
 		)
 	return false
 
@@ -201,7 +209,7 @@ func stage_card(role_id: StringName, card: CardItemState) -> bool:
 		return false
 	var staged := false
 	if role_id == &"persona":
-		staged = state.select_synthesis_persona(PersonaMaskCatalog.persona_for_card(card))
+		staged = state.select_synthesis_persona(PersonaCardCatalog.shape_for_card(card))
 	else:
 		var result := (
 			state.assign_synthesis_base(card)
@@ -215,9 +223,9 @@ func stage_card(role_id: StringName, card: CardItemState) -> bool:
 
 
 func definition_for_card(card: CardItemState) -> CardItemDefinition:
-	var persona_definition := PersonaMaskCatalog.definition_for_card(
+	var persona_definition := PersonaCardCatalog.definition_for_card(
 		card,
-		state.protagonist_persona_counts if state != null else {},
+		state.protagonist_shape_levels if state != null else {},
 	)
 	if persona_definition != null:
 		return persona_definition
@@ -226,13 +234,13 @@ func definition_for_card(card: CardItemState) -> CardItemDefinition:
 
 func request_hand_tab_for_role(role_id: StringName) -> void:
 	hand_tab_requested.emit(
-		QuestHandBar.TAB_MASKS if role_id == &"persona" else QuestHandBar.TAB_ITEMS
+		QuestHandBar.TAB_PERSONAS if role_id == &"persona" else QuestHandBar.TAB_ITEMS
 	)
 	hand_highlight_requested.emit(role_id)
 
 
 func show_drop_targets_for_card(card: CardItemState) -> void:
-	var is_persona := not PersonaMaskCatalog.persona_for_card(card).is_empty()
+	var is_persona := not PersonaCardCatalog.shape_for_card(card).is_empty()
 	for slot in material_slots:
 		var visible_target := slot == base_slot or (
 			reinforcement_group != null and reinforcement_group.visible
@@ -285,8 +293,8 @@ func _build_interface() -> void:
 	background_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	background_image.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(background_image)
-	star_chart = PersonaStarChart.new()
-	star_chart.name = "PersonaStarChart"
+	star_chart = ShapeStarChart.new()
+	star_chart.name = "ShapeStarChart"
 	add_child(star_chart)
 	background_input = QuestSynthesisBackgroundInput.new()
 	background_input.name = "SynthesisBackgroundInput"
@@ -317,33 +325,43 @@ func _apply_background_mode() -> void:
 
 
 func _build_persona_field() -> void:
-	for persona_id in CardPropertySet.PERSONAS:
+	for shape_id in CardPropertySet.SHAPES:
 		var button := Button.new()
-		button.name = "%sPersonaButton" % String(persona_id).to_pascal_case()
-		button.custom_minimum_size = PERSONA_ICON_SIZE
-		button.size = PERSONA_ICON_SIZE
+		button.name = "%sShapeButton" % String(shape_id).to_pascal_case()
+		button.custom_minimum_size = SHAPE_ICON_SIZE
+		button.size = SHAPE_ICON_SIZE
 		button.flat = true
 		button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		button.pressed.connect(_on_persona_pressed.bind(persona_id))
-		button.mouse_entered.connect(_on_persona_hovered.bind(persona_id))
-		button.mouse_exited.connect(_on_persona_unhovered.bind(persona_id))
+		button.pressed.connect(_on_shape_pressed.bind(shape_id))
+		button.mouse_entered.connect(_on_shape_hovered.bind(shape_id))
+		button.mouse_exited.connect(_on_shape_unhovered.bind(shape_id))
 		draft_layer.add_child(button)
+		var icon_texture := SHAPE_ICON_TEXTURES.get(shape_id) as Texture2D
+		var display_scale := float(SHAPE_ICON_DISPLAY_SCALES.get(shape_id, 1.0))
+		var display_size := SHAPE_ICON_SIZE * display_scale
+		var glow_layers: Array[TextureRect] = []
+		for glow_index in range(SHAPE_ICON_GLOW_SCALES.size()):
+			var glow := TextureRect.new()
+			glow.name = "PersonaGlow%d" % (glow_index + 1)
+			glow.texture = icon_texture
+			_configure_persona_texture(glow, display_size)
+			glow.pivot_offset = display_size * 0.5
+			glow.scale = Vector2.ONE * float(SHAPE_ICON_GLOW_SCALES[glow_index])
+			glow.self_modulate = Color(
+				ShapeVisuals.color(shape_id),
+				float(SHAPE_ICON_GLOW_ALPHAS[glow_index]),
+			)
+			var additive_material := CanvasItemMaterial.new()
+			additive_material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+			glow.material = additive_material
+			glow.visible = false
+			button.add_child(glow)
+			glow_layers.append(glow)
+		shape_glow_layers[shape_id] = glow_layers
 		var image := TextureRect.new()
 		image.name = "PersonaIcon"
-		image.texture = PERSONA_ICON_TEXTURES.get(persona_id) as Texture2D
-		var display_scale := float(PERSONA_ICON_DISPLAY_SCALES.get(persona_id, 1.0))
-		var display_size := PERSONA_ICON_SIZE * display_scale
-		image.anchor_left = 0.5
-		image.anchor_top = 0.5
-		image.anchor_right = 0.5
-		image.anchor_bottom = 0.5
-		image.offset_left = -display_size.x * 0.5
-		image.offset_top = -display_size.y * 0.5
-		image.offset_right = display_size.x * 0.5
-		image.offset_bottom = display_size.y * 0.5
-		image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		image.texture = icon_texture
+		_configure_persona_texture(image, display_size)
 		button.add_child(image)
 		var value := Label.new()
 		value.anchor_left = 0.72
@@ -358,8 +376,22 @@ func _build_persona_field() -> void:
 		value.add_theme_constant_override("outline_size", 4)
 		value.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		button.add_child(value)
-		persona_buttons[persona_id] = button
-		persona_value_labels[persona_id] = value
+		shape_buttons[shape_id] = button
+		shape_value_labels[shape_id] = value
+
+
+func _configure_persona_texture(image: TextureRect, display_size: Vector2) -> void:
+	image.anchor_left = 0.5
+	image.anchor_top = 0.5
+	image.anchor_right = 0.5
+	image.anchor_bottom = 0.5
+	image.offset_left = -display_size.x * 0.5
+	image.offset_top = -display_size.y * 0.5
+	image.offset_right = display_size.x * 0.5
+	image.offset_bottom = display_size.y * 0.5
+	image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	image.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
 func _build_base_slot() -> void:
@@ -526,20 +558,20 @@ func _layout_draft() -> void:
 				first_x + index * (QuestTaskSlot.CARD_SIZE.x + REINFORCEMENT_SLOT_GAP),
 				slots_y,
 			)
-	for persona_id in persona_buttons:
-		(persona_buttons[persona_id] as Button).position = PERSONA_ICON_POSITIONS[persona_id]
+	for shape_id in shape_buttons:
+		(shape_buttons[shape_id] as Button).position = SHAPE_ICON_POSITIONS[shape_id]
 
 
 func _rebuild_material_slots(snapshot: Dictionary, force_refresh: bool = false) -> void:
 	_record_update(&"materials")
-	PersonaMaskCatalog.sync_selection(state.synthesis_persona_id)
+	PersonaCardCatalog.sync_selection(state.synthesis_persona_shape_id)
 	base_slot.setup(self, &"base", snapshot.get("base_card") as CardItemState, force_refresh)
 	_update_base_type_icons(snapshot, force_refresh)
 	persona_slot.setup(
 		self,
 		&"persona",
-		PersonaMaskCatalog.card_for_persona(state.synthesis_persona_id)
-		if not state.synthesis_persona_id.is_empty()
+		PersonaCardCatalog.card_for_shape(state.synthesis_persona_shape_id)
+		if not state.synthesis_persona_shape_id.is_empty()
 		else null,
 		force_refresh,
 	)
@@ -580,18 +612,18 @@ func _update_reinforcement_visibility(snapshot: Dictionary) -> void:
 
 
 func _rebuild_persona_field(snapshot: Dictionary) -> void:
-	_record_update(&"personas")
+	_record_update(&"shapes")
 	var totals := snapshot.get("totals", {}) as Dictionary
 	star_chart.set_totals(totals)
-	for persona_id in CardPropertySet.PERSONAS:
-		var amount := int(totals.get(persona_id, 0))
-		(persona_value_labels[persona_id] as Label).text = str(amount)
+	for shape_id in CardPropertySet.SHAPES:
+		var amount := int(totals.get(shape_id, 0))
+		(shape_value_labels[shape_id] as Label).text = str(amount)
 
 
-func _persona_ray_points(persona_id: StringName, amount: int) -> PackedVector2Array:
+func _shape_ray_points(shape_id: StringName, amount: int) -> PackedVector2Array:
 	if star_chart == null:
 		return PackedVector2Array([FIELD_CENTER, FIELD_CENTER])
-	return star_chart.axis_progress_points(persona_id, float(amount))
+	return star_chart.axis_progress_points(shape_id, float(amount))
 
 
 func _rebuild_candidates(snapshot: Dictionary) -> void:
@@ -762,7 +794,7 @@ func _candidate_position(
 	return (
 		star_chart.candidate_position(
 			recipe,
-			candidate.get("required_personas", {}) as Dictionary,
+			candidate.get("required_shapes", {}) as Dictionary,
 		)
 		if star_chart != null
 		else FIELD_CENTER
@@ -792,23 +824,33 @@ func _update_action_button(snapshot: Dictionary = {}) -> void:
 		action_button.move_to_front()
 
 
-func _on_persona_pressed(persona_id: StringName) -> void:
-	property_inspected.emit(persona_id)
+func _on_shape_pressed(shape_id: StringName) -> void:
+	property_inspected.emit(shape_id)
 
 
-func _on_persona_hovered(persona_id: StringName) -> void:
-	star_chart.set_hovered_persona(persona_id)
-	_update_candidate_hover_state(persona_id)
+func _on_shape_hovered(shape_id: StringName) -> void:
+	_set_shape_icon_glow(shape_id)
+	star_chart.set_hovered_shape(shape_id)
+	_update_candidate_hover_state(shape_id)
 
 
-func _on_persona_unhovered(persona_id: StringName) -> void:
-	var button := persona_buttons.get(persona_id) as Button
+func _on_shape_unhovered(shape_id: StringName) -> void:
+	var button := shape_buttons.get(shape_id) as Button
 	if button != null and not button.get_global_rect().has_point(get_global_mouse_position()):
-		star_chart.set_hovered_persona(&"")
+		_set_shape_icon_glow(&"")
+		star_chart.set_hovered_shape(&"")
 		_update_candidate_hover_state(&"")
 
 
-func _update_candidate_hover_state(persona_id: StringName) -> void:
+func _set_shape_icon_glow(active_shape_id: StringName) -> void:
+	for raw_shape_id in shape_glow_layers:
+		var shape_id := StringName(raw_shape_id)
+		var layers := shape_glow_layers[raw_shape_id] as Array
+		for raw_layer in layers:
+			(raw_layer as TextureRect).visible = shape_id == active_shape_id
+
+
+func _update_candidate_hover_state(shape_id: StringName) -> void:
 	for raw_recipe_id in candidate_views:
 		var recipe_id := StringName(raw_recipe_id)
 		var view := candidate_views[recipe_id] as Dictionary
@@ -818,15 +860,15 @@ func _update_candidate_hover_state(persona_id: StringName) -> void:
 			tween.kill()
 		candidate_hover_tweens.erase(recipe_id)
 		button.modulate = Color.WHITE
-		if persona_id.is_empty() or not button.visible:
+		if shape_id.is_empty() or not button.visible:
 			continue
 		var recipe := QuestArcCatalog.recipe_by_id(recipe_id)
 		var output := QuestArcCatalog.item_by_id(recipe.output_id) if recipe != null else null
-		var matches_output := output != null and output.has_property(persona_id)
+		var matches_output := output != null and output.has_property(shape_id)
 		var matches_consumption_route := (
 			recipe != null
 			and recipe.consumes_without_output
-			and recipe.required_personas.has(persona_id)
+			and recipe.required_shapes.has(shape_id)
 		)
 		if not matches_output and not matches_consumption_route:
 			button.modulate = Color(0.46, 0.50, 0.55, 0.68)
@@ -938,9 +980,9 @@ func _possibility_definition(
 			if property != null and property.is_item_category:
 				definition.property_set.tags.append(property_id)
 	definition.property_set.values = (
-		(candidate.get("required_personas", {}) as Dictionary).duplicate()
+		(candidate.get("required_shapes", {}) as Dictionary).duplicate()
 		if not candidate.is_empty()
-		else recipe.required_personas.duplicate()
+		else recipe.required_shapes.duplicate()
 	)
 	return definition
 

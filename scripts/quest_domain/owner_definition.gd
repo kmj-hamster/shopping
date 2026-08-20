@@ -11,6 +11,14 @@ extends Resource
 @export var request_task_id: StringName
 @export var request_dialogue_key: StringName
 @export var reminder_dialogue_key: StringName
+@export var completed_dialogue_key: StringName
+@export_range(0, 30, 1) var request_unlock_delay_days := 1
+@export_range(0, 99, 1) var request_min_purchase_count := 1
+@export_range(0, 9999, 1) var request_min_money := 0
+@export var request_required_shape_id: StringName
+@export_range(0, 20, 1) var request_required_shape_level := 0
+@export var request_required_room_id: StringName
+@export var request_required_purchased_item_id: StringName
 @export var request_recipe_id: StringName
 @export var event_item_id: StringName
 @export var event_item_store_id: StringName
@@ -35,12 +43,7 @@ func validation_errors() -> PackedStringArray:
 		errors.append("Owner needs id, store, and display name: %s." % id)
 	if idle_dialogue_key.is_empty() or item_comment_key.is_empty():
 		errors.append("Owner %s needs idle and item-comment dialogue." % id)
-	var required_request_fields := [
-		request_available_flag,
-		request_task_id,
-		request_dialogue_key,
-		reminder_dialogue_key,
-	]
+	var required_request_fields := [request_task_id, request_dialogue_key, reminder_dialogue_key]
 	var has_request := required_request_fields.any(
 		func(value: StringName) -> bool: return not value.is_empty()
 	)
@@ -48,6 +51,13 @@ func validation_errors() -> PackedStringArray:
 		func(value: StringName) -> bool: return value.is_empty()
 	):
 		errors.append("Owner %s has an incomplete request definition." % id)
+	if (
+		not request_required_shape_id.is_empty()
+		and request_required_shape_id not in CardPropertySet.SHAPES
+	):
+		errors.append("Owner %s requires an unknown Shape." % id)
+	if request_required_shape_id.is_empty() != (request_required_shape_level <= 0):
+		errors.append("Owner %s has an incomplete shape request gate." % id)
 	var event_fields := [event_item_id, event_item_store_id]
 	if event_fields.any(func(value: StringName) -> bool: return not value.is_empty()) and event_fields.any(
 		func(value: StringName) -> bool: return value.is_empty()

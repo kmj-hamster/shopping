@@ -8,7 +8,7 @@ enum Kind {
 	TASK_COMPLETED,
 	ITEM_ID_IN,
 	ITEM_HAS_PROPERTY,
-	DOMINANT_PERSONA,
+	DOMINANT_SHAPE,
 }
 
 @export var kind := Kind.ALWAYS
@@ -29,7 +29,7 @@ func validation_errors() -> PackedStringArray:
 		Kind.FLAG_EQUALS:
 			if key.is_empty() or text_value.is_empty():
 				errors.append("FLAG_EQUALS requires a key and value.")
-		Kind.TASK_COMPLETED, Kind.ITEM_HAS_PROPERTY, Kind.DOMINANT_PERSONA:
+		Kind.TASK_COMPLETED, Kind.ITEM_HAS_PROPERTY, Kind.DOMINANT_SHAPE:
 			if key.is_empty():
 				errors.append("Story condition kind %s requires a key." % kind)
 		Kind.ITEM_ID_IN:

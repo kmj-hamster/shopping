@@ -4,8 +4,8 @@ extends Resource
 @export_range(0, 20, 1) var initial_money := 0
 @export_range(1, 999, 1) var maximum_item_price := 20
 @export_range(1, 8, 1) var maximum_properties_per_item := 4
-@export_range(1, 4, 1) var maximum_personas_per_item := 2
-@export var initial_protagonist_stats: Dictionary = {}
+@export_range(1, 4, 1) var maximum_shapes_per_item := 2
+@export var initial_shape_levels: Dictionary = {}
 @export var starting_item_ids: Array[StringName] = []
 @export var properties: Array[Resource] = []
 @export var items: Array[Resource] = []
@@ -29,8 +29,8 @@ func validation_errors() -> PackedStringArray:
 	for item_id in starting_item_ids:
 		if not items_by_id.has(item_id):
 			errors.append("Starting inventory references missing item %s." % item_id)
-	for stat_id in CardPropertySet.PERSONAS:
-		var amount := int(initial_protagonist_stats.get(stat_id, 0))
+	for stat_id in CardPropertySet.SHAPES:
+		var amount := int(initial_shape_levels.get(stat_id, 0))
 		if amount < 0 or amount > 20:
 			errors.append("Initial protagonist stat %s must be between 0 and 20." % stat_id)
 	var owners_by_id := _resources_by_id(owners, "owner", errors)
@@ -52,8 +52,13 @@ func validation_errors() -> PackedStringArray:
 			errors.append("Item %s exceeds manifest price limit." % item.id)
 		if item.property_set.property_count() > maximum_properties_per_item:
 			errors.append("Item %s exceeds manifest property limit." % item.id)
-		if item.property_set.present_personas().size() > maximum_personas_per_item:
-			errors.append("Item %s exceeds manifest persona limit." % item.id)
+		var shape_limit := (
+			CardPropertySet.SHAPES.size()
+			if item.allows_all_shapes
+			else maximum_shapes_per_item
+		)
+		if item.property_set.present_shapes().size() > shape_limit:
+			errors.append("Item %s exceeds manifest shape limit." % item.id)
 	for raw_task in tasks:
 		var task := raw_task as TaskDefinition
 		if task != null:
@@ -102,6 +107,10 @@ func validation_errors() -> PackedStringArray:
 			var item := items_by_id.get(item_id) as QuestItemDefinition
 			if item == null or item.store_id != store.id:
 				errors.append("Store %s has invalid initial item %s." % [store.id, item_id])
+		for item_id in store.unlockable_shelf_item_ids:
+			var item := items_by_id.get(item_id) as QuestItemDefinition
+			if item == null or item.store_id != store.id:
+				errors.append("Store %s has invalid unlockable item %s." % [store.id, item_id])
 	for raw_owner in owners:
 		var owner := raw_owner as OwnerDefinition
 		if owner == null:
@@ -118,10 +127,33 @@ func validation_errors() -> PackedStringArray:
 				and not recipes_by_id.has(owner.request_recipe_id)
 			):
 				errors.append("Owner %s references missing recipe %s." % [owner.id, owner.request_recipe_id])
-			var event_item := items_by_id.get(owner.event_item_id) as QuestItemDefinition
-			if event_item == null or event_item.store_id != owner.event_item_store_id:
-				errors.append("Owner %s references invalid event item %s." % [owner.id, owner.event_item_id])
+			if not owner.event_item_id.is_empty():
+				var event_item := items_by_id.get(owner.event_item_id) as QuestItemDefinition
+				if event_item == null or event_item.store_id != owner.event_item_store_id:
+					errors.append("Owner %s references invalid event item %s." % [owner.id, owner.event_item_id])
+			if (
+				not owner.request_required_room_id.is_empty()
+				and not _resource_id_exists(expedition_rooms, owner.request_required_room_id)
+			):
+				errors.append(
+					"Owner %s requires missing room %s."
+					% [owner.id, owner.request_required_room_id]
+				)
+			if (
+				not owner.request_required_purchased_item_id.is_empty()
+				and not items_by_id.has(owner.request_required_purchased_item_id)
+			):
+				errors.append(
+					"Owner %s requires missing purchase %s."
+					% [owner.id, owner.request_required_purchased_item_id]
+				)
 	return errors
+
+
+func _resource_id_exists(resources: Array[Resource], id: StringName) -> bool:
+	return resources.any(func(resource: Resource) -> bool:
+		return resource != null and resource.get("id") == id
+	)
 
 
 func _validate_item_properties(

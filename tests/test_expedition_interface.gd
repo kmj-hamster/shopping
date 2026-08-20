@@ -30,6 +30,115 @@ func test_map_exposes_distinct_expedition_entrance_and_main_enters_full_screen_m
 		main.expedition_screen.door_host.get_child_count(),
 		main.state.expedition.current_door_ids.size(),
 	)
+	assert_true(main.debug_button_row.visible)
+	assert_eq(main.debug_button_row.get_parent(), main.debug_button_layer)
+	assert_gt(main.debug_button_layer.layer, QuestMain.SCREEN_TRANSITION_CANVAS_LAYER)
+
+
+func test_shop_talk_button_notice_disappears_when_owner_request_is_accepted() -> void:
+	var main := await _spawn_main()
+	main.state.unlocked_store_ids[&"toy"] = true
+	main.state.store_unlock_days[&"toy"] = 1
+	main.state.available_owner_request_ids[&"toy_owner"] = true
+	main._show_shop_immediate(&"toy")
+	await get_tree().process_frame
+	var shop := main.current_screen as QuestShopScreen
+	assert_true(shop.talk_request_dot.visible)
+	for press_index in 4:
+		shop._on_owner_pressed()
+		if main.state.task_instance_for_definition(&"owner_toy_birthday_cake") != null:
+			break
+	assert_false(shop.talk_request_dot.visible)
+	assert_not_null(main.state.task_instance_for_definition(&"owner_toy_birthday_cake"))
+
+
+func test_expedition_plays_confirmed_owner_request_before_showing_doors() -> void:
+	var main := await _spawn_main()
+	main.arc_fade_seconds = 0.0
+	main.arc_typewriter_char_seconds = 0.0
+	var task := main.state.activate_task(&"owner_toy_birthday_cake")
+	var cake := main.state.grant_item(&"birthday_cake", &"test")
+	assert_true(main.state.assign_card(task.instance_id, &"birthday_cake", cake).ok)
+	assert_true(main.state.confirm_task(task.instance_id).ok)
+
+	main._start_expedition()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	assert_true(main.state.expedition.active)
+	assert_true(main.arc_overlay.visible)
+	assert_null(main.expedition_screen)
+	assert_eq(main.arc_store_background.texture.resource_path, "res://resources/background/toystore.png")
+	assert_eq(main.arc_owner_portrait.texture.resource_path, "res://resources/character/balloon-head.png")
+	assert_eq(main.state.wallet.money, 0)
+
+	main._on_arc_advance_requested()
+	await get_tree().process_frame
+	assert_eq(main.state.wallet.money, 20)
+	assert_true(task.settled)
+	assert_null(main.state.card_by_instance_id(cake.instance_id))
+	assert_false(main.arc_reward_label.text.is_empty())
+	main._on_arc_advance_requested()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	assert_false(main.arc_overlay.visible)
+	assert_not_null(main.expedition_screen)
+	assert_eq(main.state.day, 1)
+
+
+func test_flower_owner_reward_uses_a_gardenia_flip_before_the_doors() -> void:
+	var main := await _spawn_main()
+	main.arc_fade_seconds = 0.0
+	main.arc_typewriter_char_seconds = 0.0
+	var task := main.state.activate_task(&"owner_flower_teddy")
+	var bear := main.state.grant_item(&"cold_teddy_bear", &"test")
+	assert_true(main.state.assign_card(task.instance_id, &"teddy", bear).ok)
+	assert_true(main.state.confirm_task(task.instance_id).ok)
+
+	main._start_expedition()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	main._on_arc_advance_requested()
+	await get_tree().process_frame
+	assert_true(main.arc_reward_reveal_overlay.visible)
+	assert_true(main.arc_reward_reveal_back.visible)
+	assert_eq(main.arc_reward_reveal_card.definition.id, &"gardenia")
+	main._flip_arc_reward_reveal()
+	assert_true(main.arc_reward_reveal_card.visible)
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	main._on_arc_reward_reveal_input(click)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	assert_false(main.arc_reward_reveal_overlay.visible)
+	assert_false(main.arc_overlay.visible)
+	assert_not_null(main.expedition_screen)
+
+
+func test_language_debug_button_refreshes_the_active_expedition_in_place() -> void:
+	var original_locale := LocaleManager.current_locale
+	var target_locale := (
+		LocaleManager.LOCALE_EN
+		if original_locale == LocaleManager.LOCALE_ZH
+		else LocaleManager.LOCALE_ZH
+	)
+	var main := await _spawn_main()
+	main.state.expedition.begin_night(1, 4)
+	main.state.expedition.current_door_ids = [&"gray_hall"]
+	main._show_expedition_immediate()
+	await get_tree().process_frame
+	main.expedition_screen._enter_room(&"gray_hall")
+	main.language_button.pressed.emit()
+	assert_eq(LocaleManager.current_locale, target_locale)
+	assert_eq(
+		main.expedition_screen.room_title.text,
+		TranslationServer.translate(&"expedition.room.gray_hall.name"),
+	)
+	assert_eq(
+		main.expedition_screen.narrative_display_text,
+		TranslationServer.translate(&"expedition.room.gray_hall.intro.1"),
+	)
+	LocaleManager.set_locale(original_locale, false)
 
 
 func test_unknown_door_uses_white_asset_and_name_only_appears_on_hover() -> void:
@@ -97,7 +206,16 @@ func test_challenge_flow_exposes_two_irreversible_approaches_slots_and_feedback(
 	screen._on_action_pressed()
 	assert_eq(screen.phase, QuestExpeditionScreen.Phase.INTRO)
 	assert_false(screen.narrative_typing)
+	assert_true(screen.narrative_holding)
+	assert_eq(screen.narrative_segment_index, 0)
+	assert_true(screen.narrative_label.text.ends_with(QuestExpeditionScreen.NARRATIVE_CURSOR))
+	screen._toggle_narrative_cursor()
+	assert_false(screen.narrative_label.text.ends_with(QuestExpeditionScreen.NARRATIVE_CURSOR))
 	screen._on_action_pressed()
+	assert_eq(screen.phase, QuestExpeditionScreen.Phase.INTRO)
+	assert_true(screen.narrative_typing)
+	assert_eq(screen.narrative_segment_index, 1)
+	_advance_text_phase(screen)
 	assert_eq(screen.phase, QuestExpeditionScreen.Phase.CHALLENGE_INTRO)
 	assert_false(screen.approach_row.visible)
 	_advance_text_phase(screen)
@@ -111,17 +229,36 @@ func test_challenge_flow_exposes_two_irreversible_approaches_slots_and_feedback(
 	assert_false(screen.action_button.disabled)
 
 
+func test_blank_background_click_obeys_sentence_boundaries() -> void:
+	var state := QuestGameState.new()
+	state.expedition.begin_night(1, 10)
+	state.expedition.current_door_ids = [&"gray_hall"]
+	var screen := await _spawn_screen(state)
+	screen._enter_room(&"gray_hall")
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	screen._on_background_input(click)
+	assert_false(screen.narrative_typing)
+	assert_true(screen.narrative_holding)
+	assert_eq(screen.narrative_segment_index, 0)
+	screen._on_background_input(click)
+	assert_true(screen.narrative_typing)
+	assert_eq(screen.narrative_segment_index, 1)
+	assert_eq(screen.phase, QuestExpeditionScreen.Phase.INTRO)
+
+
 func test_failed_challenge_is_only_committed_after_reward_is_collected_and_room_left() -> void:
 	var state := QuestGameState.new()
 	state.expedition.begin_night(1, 13)
-	state.expedition.current_door_ids = [&"aquarium"]
+	state.expedition.current_door_ids = [&"birthday_party"]
 	var screen := await _spawn_screen(state)
-	screen._enter_room(&"aquarium")
+	screen._enter_room(&"birthday_party")
 	_advance_text_phase(screen)
 	_advance_text_phase(screen)
 	screen._choose_approach(1)
 	screen._submit_slots()
-	assert_false(state.expedition.is_discovered(&"aquarium"))
+	assert_false(state.expedition.is_discovered(&"birthday_party"))
 	assert_eq(screen.phase, QuestExpeditionScreen.Phase.ROUND_RESULT)
 	assert_false(screen.reward_host.visible)
 	_advance_text_phase(screen)
@@ -129,7 +266,7 @@ func test_failed_challenge_is_only_committed_after_reward_is_collected_and_room_
 	screen._flip_reward()
 	screen._on_reward_collected()
 	screen._leave_room()
-	assert_true(state.expedition.is_discovered(&"aquarium"))
+	assert_true(state.expedition.is_discovered(&"birthday_party"))
 	assert_eq(state.inventory[-1].definition_id, &"expedition_wound")
 
 
@@ -181,18 +318,17 @@ func test_room_phase_copy_refreshes_when_locale_changes_live() -> void:
 	_advance_text_phase(screen)
 	var chinese_narrative := screen.narrative_label.text
 	LocaleManager.set_locale(LocaleManager.LOCALE_EN, false)
-	var english_lines: PackedStringArray = []
-	for key in screen.room.challenge_text_keys:
-		english_lines.append(TranslationServer.translate(key))
 	assert_eq(
 		screen.room_title.text,
 		TranslationServer.translate(screen.room.display_name_key),
 	)
 	assert_eq(
-		screen.narrative_label.text,
-		"\n".join(english_lines),
+		screen.narrative_display_text,
+		TranslationServer.translate(screen.room.challenge_text_keys[0]),
 	)
-	assert_ne(screen.narrative_label.text, chinese_narrative)
+	assert_eq(screen.narrative_segment_index, 0)
+	assert_true(screen.narrative_holding)
+	assert_ne(screen.narrative_display_text, chinese_narrative)
 	assert_eq(
 		screen.action_button.text,
 		TranslationServer.translate(&"expedition.ui.continue"),
@@ -200,9 +336,9 @@ func test_room_phase_copy_refreshes_when_locale_changes_live() -> void:
 	LocaleManager.set_locale(original_locale, false)
 
 
-func test_first_persona_reveal_holds_the_rest_room_before_next_doors() -> void:
+func test_first_shape_growth_leaves_the_rest_room_without_a_reveal() -> void:
 	var state := QuestGameState.new()
-	state.protagonist_persona_counts[&"nightwalker"] = 0
+	state.protagonist_shape_levels[&"light"] = 0
 	var cactus := state.grant_item(&"cactus", &"test")
 	state.expedition.begin_night(1, 44)
 	state.expedition.current_door_ids = [&"home"]
@@ -213,23 +349,19 @@ func test_first_persona_reveal_holds_the_rest_room_before_next_doors() -> void:
 	screen.stage_card(0, cactus)
 	screen._preview_rest_result()
 	_advance_text_phase(screen)
-	assert_eq(screen.phase, QuestExpeditionScreen.Phase.WAITING_PERSONA_REVEAL)
-	assert_signal_emitted(screen, "persona_reveal_requested")
-	assert_true(state.pending_persona_reveal_ids.has(&"nightwalker"))
-	assert_true(screen.room_panel.visible)
-	state.acknowledge_persona_reveal(&"nightwalker")
-	screen.on_persona_reveals_completed()
 	assert_eq(screen.phase, QuestExpeditionScreen.Phase.DOORS)
 	assert_false(screen.room_panel.visible)
 	assert_true(state.expedition.is_discovered(&"home"))
+	assert_signal_not_emitted(screen, "persona_reveal_requested")
+	assert_true(state.pending_persona_reveal_shape_ids.is_empty())
 
 
-func test_work_room_flips_wage_then_commits_money_on_leave() -> void:
+func test_work_room_flips_twenty_wage_then_commits_money_on_leave() -> void:
 	var state := QuestGameState.new()
 	state.expedition.begin_night(1, 52)
-	state.expedition.current_door_ids = [&"cold_storage"]
+	state.expedition.current_door_ids = [&"shelf_shift"]
 	var screen := await _spawn_screen(state)
-	screen._enter_room(&"cold_storage")
+	screen._enter_room(&"shelf_shift")
 	_advance_text_phase(screen)
 	assert_eq(screen.phase, QuestExpeditionScreen.Phase.REWARD)
 	assert_true(screen.reward_back.visible)
@@ -237,26 +369,46 @@ func test_work_room_flips_wage_then_commits_money_on_leave() -> void:
 	assert_true(screen.reward_collected)
 	assert_eq(state.wallet.money, 0)
 	screen._leave_room()
-	assert_eq(state.wallet.money, 12)
-	assert_true(state.expedition.is_discovered(&"cold_storage"))
+	assert_eq(state.wallet.money, 20)
+	assert_true(state.expedition.is_discovered(&"shelf_shift"))
 
 
-func test_boss_ui_runs_three_rounds_before_demo_completion() -> void:
+func test_empty_rainforest_submission_previews_and_commits_twenty_without_disease() -> void:
 	var state := QuestGameState.new()
-	state.protagonist_persona_counts[&"nightwalker"] = 5
+	state.expedition.begin_night(1, 53)
+	state.expedition.current_door_ids = [&"rainforest"]
+	var screen := await _spawn_screen(state)
+	screen._enter_room(&"rainforest")
+	_advance_text_phase(screen)
+	assert_eq(screen.phase, QuestExpeditionScreen.Phase.SLOTS)
+	assert_false(screen.action_button.disabled)
+	screen._preview_rest_result()
+	assert_eq(screen.phase, QuestExpeditionScreen.Phase.REST_RESULT)
+	assert_eq(
+		screen.narrative_display_text,
+		TranslationServer.translate(&"expedition.room.rest.empty_result"),
+	)
+	screen._leave_room()
+	assert_eq(state.wallet.money, 20)
+	assert_eq(state.disease_count(&"white_flower"), 0)
+
+
+func test_boss_ui_runs_two_rounds_before_demo_completion() -> void:
+	var state := QuestGameState.new()
+	state.protagonist_shape_levels[&"light"] = 5
 	state.expedition.begin_night(1, 61)
 	state.expedition.current_door_ids = [&"scanner"]
 	var screen := await _spawn_screen(state)
 	screen._enter_room(&"scanner")
 	_advance_text_phase(screen)
 	_advance_text_phase(screen)
-	var persona_card := PersonaMaskCatalog.card_for_persona(&"nightwalker")
-	for round_index in 3:
+	var persona_card := PersonaCardCatalog.card_for_shape(&"light")
+	for round_index in 2:
 		screen._choose_approach(round_index % 2)
 		screen.stage_card(0, persona_card)
 		screen._submit_slots()
 		assert_eq(screen.phase, QuestExpeditionScreen.Phase.ROUND_RESULT)
-		if round_index < 2:
+		if round_index < 1:
 			assert_true(screen._has_next_boss_round())
 			_advance_text_phase(screen)
 			assert_eq(screen.phase, QuestExpeditionScreen.Phase.APPROACH)
@@ -278,9 +430,9 @@ func test_boss_ui_runs_three_rounds_before_demo_completion() -> void:
 	assert_true(state.expedition.boss_cleared)
 
 
-func test_main_persona_reveal_overlay_resumes_waiting_rest_room() -> void:
+func test_main_does_not_show_persona_reveal_after_rest_growth() -> void:
 	var main := await _spawn_main()
-	main.state.protagonist_persona_counts[&"nightwalker"] = 0
+	main.state.protagonist_shape_levels[&"light"] = 0
 	var cactus := main.state.grant_item(&"cactus", &"test")
 	main.state.expedition.begin_night(1, 71)
 	main.state.expedition.current_door_ids = [&"home"]
@@ -292,14 +444,6 @@ func test_main_persona_reveal_overlay_resumes_waiting_rest_room() -> void:
 	screen.stage_card(0, cactus)
 	screen._preview_rest_result()
 	_advance_text_phase(screen)
-	assert_true(main.persona_reveal_overlay.visible)
-	assert_eq(screen.phase, QuestExpeditionScreen.Phase.WAITING_PERSONA_REVEAL)
-	var click := InputEventMouseButton.new()
-	click.button_index = MOUSE_BUTTON_LEFT
-	click.pressed = true
-	main._on_persona_reveal_input(click)
-	assert_true(main.persona_reveal_flipped)
-	main._on_persona_reveal_input(click)
 	assert_false(main.persona_reveal_overlay.visible)
 	assert_eq(screen.phase, QuestExpeditionScreen.Phase.DOORS)
 
@@ -318,6 +462,20 @@ func test_lethal_disease_enters_a_persistent_arc_ending_instead_of_doors() -> vo
 	)
 
 
+func test_map_confirmation_warns_about_the_specific_lethal_disease() -> void:
+	var state := QuestGameState.new()
+	state.gain_disease(&"white_flower", 3)
+	var map := QuestMapScreen.new()
+	map.setup(state)
+	add_child_autofree(map)
+	await get_tree().process_frame
+	map._refresh_expedition_text()
+	assert_eq(
+		map.expedition_confirm_dialog.dialog_text,
+		TranslationServer.translate(&"expedition.ui.confirm_enter.lethal_white_flower"),
+	)
+
+
 func test_outputless_disease_synthesis_returns_directly_to_the_draft() -> void:
 	var main := await _spawn_main()
 	main._show_synthesis_immediate()
@@ -328,9 +486,9 @@ func test_outputless_disease_synthesis_returns_directly_to_the_draft() -> void:
 	var cactus := main.state.grant_item(&"cactus", &"test")
 	assert_true(main.state.assign_synthesis_base(flower).ok)
 	assert_true(main.state.assign_synthesis_helper(cactus).ok)
-	assert_true(main.state.select_synthesis_persona(&"nightwalker"))
+	assert_true(main.state.select_synthesis_persona(&"light"))
 	assert_true(
-		main.state.select_synthesis_candidate(&"recipe_clear_white_flower_nightwalker")
+		main.state.select_synthesis_candidate(&"recipe_clear_white_flower_light")
 	)
 	synthesis._on_action_pressed()
 	assert_eq(synthesis.phase, QuestSynthesisInterface.Phase.NARRATIVE)
@@ -359,5 +517,9 @@ func _spawn_screen(state: QuestGameState) -> QuestExpeditionScreen:
 
 
 func _advance_text_phase(screen: QuestExpeditionScreen) -> void:
-	screen._finish_narrative_typewriter()
+	while screen.narrative_typing or screen._has_next_narrative_segment():
+		if screen.narrative_typing:
+			screen._finish_narrative_typewriter()
+		if screen._has_next_narrative_segment():
+			screen._on_action_pressed()
 	screen._on_action_pressed()

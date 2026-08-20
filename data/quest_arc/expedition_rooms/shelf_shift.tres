@@ -7,4 +7,6 @@ script = ExtResource("1_room")
 id = &"shelf_shift"
 display_name_key = &"expedition.room.shelf_shift.name"
 category = 2
+generation_weight = 3
+generation_pool = 1
 intro_text_keys = Array[StringName]([&"expedition.room.shelf_shift.intro.1", &"expedition.room.shelf_shift.intro.2"])

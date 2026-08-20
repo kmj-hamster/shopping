@@ -34,7 +34,7 @@ enum SlotMode {
 @export_range(0, 9999, 1) var gift_money := 0
 @export var slot_rules: Array[Resource] = []
 @export var outcomes: Array[Resource] = []
-@export var persona_tie_priority: Array[StringName] = []
+@export var shape_tie_priority: Array[StringName] = []
 
 
 func outcome_by_id(outcome_id: StringName) -> TaskOutcomeDefinition:
@@ -100,7 +100,7 @@ func validation_errors() -> PackedStringArray:
 	if category == Category.OWNER_REQUEST:
 		if owner_id.is_empty() or store_id.is_empty():
 			errors.append("Owner task %s needs owner and store ids." % id)
-	for persona_id in persona_tie_priority:
-		if persona_id not in CardPropertySet.PERSONAS:
-			errors.append("Task %s has unknown tie-priority persona %s." % [id, persona_id])
+	for shape_id in shape_tie_priority:
+		if shape_id not in CardPropertySet.SHAPES:
+			errors.append("Task %s has unknown tie-priority shape %s." % [id, shape_id])
 	return errors

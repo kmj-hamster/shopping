@@ -20,7 +20,8 @@ const RESULT_STORE_ALREADY_OPEN := &"store_already_open"
 const RESULT_STORE_LOCKED := &"store_locked"
 const RESULT_UNKNOWN_RECIPE := &"unknown_recipe"
 const RESULT_UNKNOWN_OWNER := &"unknown_owner"
-const EXPEDITION_WORK_REWARD := 12
+const EXPEDITION_WORK_REWARD := 20
+const EXPEDITION_EMPTY_REST_REWARD := 20
 const EXPEDITION_SUCCESS_ITEM_ID := &"expedition_salvage"
 const EXPEDITION_FAILURE_ITEM_ID := &"expedition_wound"
 const EXPEDITION_WHITE_FLOWER_ITEM_ID := &"white_flower"
@@ -36,18 +37,23 @@ var inventory: Array[CardItemState] = []
 var task_instances: Array[TaskInstanceState] = []
 var task_history: Dictionary = {}
 var story_flags: Dictionary = {}
-var protagonist_persona_counts: Dictionary = {}
+var protagonist_shape_levels: Dictionary = {}
 var unlocked_store_ids: Dictionary = {}
+var store_unlock_days: Dictionary = {}
+var store_purchase_counts: Dictionary = {}
+var purchased_item_ids: Dictionary = {}
+var available_owner_request_ids: Dictionary = {}
+var unlocked_store_item_ids: Dictionary = {}
 var discovered_recipe_ids: Dictionary = {}
 var owner_states: Dictionary = {}
-var pending_persona_reveal_ids: Array[StringName] = []
+var pending_persona_reveal_shape_ids: Array[StringName] = []
 var visited_store_ids: Dictionary = {}
 var bgm_playback_positions: Dictionary = {}
 var pending_arc: ArcTransitionState
 var expedition := MallExpeditionState.new()
 var synthesis_base_instance_id := 0
 var synthesis_helper_instance_id := 0
-var synthesis_persona_id: StringName
+var synthesis_persona_shape_id: StringName
 var synthesis_candidate_recipe_id: StringName
 var synthesis_recipe_use_counts: Dictionary = {}
 var store_transactions: Dictionary = {}
@@ -75,27 +81,33 @@ func reset() -> void:
 	task_instances = []
 	task_history = {}
 	story_flags = {&"flower_request_available": &"true"}
-	protagonist_persona_counts = {}
-	for stat_id in CardPropertySet.PERSONAS:
-		protagonist_persona_counts[stat_id] = int(
-			content.initial_protagonist_stats.get(stat_id, 0) if content != null else 0
+	protagonist_shape_levels = {}
+	for stat_id in CardPropertySet.SHAPES:
+		protagonist_shape_levels[stat_id] = int(
+			content.initial_shape_levels.get(stat_id, 0) if content != null else 0
 		)
 	unlocked_store_ids = {}
+	store_unlock_days = {}
+	store_purchase_counts = {}
+	purchased_item_ids = {}
+	available_owner_request_ids = {}
+	unlocked_store_item_ids = {}
 	if content != null:
 		for raw_store in content.stores:
 			var store := raw_store as StoreDefinition
 			if store != null and store.initially_unlocked:
 				unlocked_store_ids[store.id] = true
+				store_unlock_days[store.id] = 0
 	discovered_recipe_ids = {}
 	owner_states = {}
-	pending_persona_reveal_ids = []
+	pending_persona_reveal_shape_ids = []
 	visited_store_ids = {}
 	bgm_playback_positions = {}
 	pending_arc = null
 	expedition = MallExpeditionState.new()
 	synthesis_base_instance_id = 0
 	synthesis_helper_instance_id = 0
-	synthesis_persona_id = &""
+	synthesis_persona_shape_id = &""
 	synthesis_candidate_recipe_id = &""
 	synthesis_recipe_use_counts = {}
 	next_card_instance_id = 1
@@ -105,7 +117,9 @@ func reset() -> void:
 		for item_id in content.starting_item_ids:
 			grant_item(item_id, &"demo_start")
 	activate_scheduled_tasks(day)
-	_mark_state_changed(QuestStateDelta.new().mark_full_reconcile(&"reset"))
+	var reset_delta := QuestStateDelta.new().mark_full_reconcile(&"reset")
+	_latch_owner_request_availability(reset_delta)
+	_mark_state_changed(reset_delta)
 	_end_change_batch()
 
 
@@ -325,7 +339,7 @@ func definition_for_card(card: CardItemState) -> CardItemDefinition:
 	var definition := QuestArcCatalog.item_by_id(card.definition_id)
 	if definition != null:
 		return definition
-	return PersonaMaskCatalog.definition_for_card(card, protagonist_persona_counts)
+	return PersonaCardCatalog.definition_for_card(card, protagonist_shape_levels)
 
 
 func transaction_for_store(store_id: StringName) -> CardShopTransaction:
@@ -336,15 +350,21 @@ func checkout_store(store_id: StringName) -> Dictionary:
 	var transaction := transaction_for_store(store_id)
 	if transaction == null or not is_store_unlocked(store_id):
 		return _result(false, RESULT_STORE_LOCKED)
+	_begin_change_batch()
 	var result := transaction.checkout(day)
 	if result.ok:
 		_sync_next_card_instance_id()
+		store_purchase_counts[store_id] = int(store_purchase_counts.get(store_id, 0)) + 1
 		var delta := QuestStateDelta.new().mark_wallet(&"shop_checkout").mark_shelf(
 			store_id, &"shop_checkout"
 		)
 		for purchased_card in result.purchased:
-			delta.mark_hand_added((purchased_card as CardItemState).instance_id, &"shop_checkout")
+			var card := purchased_card as CardItemState
+			delta.mark_hand_added(card.instance_id, &"shop_checkout")
+			purchased_item_ids[card.definition_id] = true
+		_latch_owner_request_availability(delta)
 		_mark_delta(delta)
+	_end_change_batch()
 	return result
 
 
@@ -357,6 +377,8 @@ func owner_dialogue_key(store_id: StringName) -> StringName:
 		return owner.dialogue_for_state(owner_state)
 	if task_instance_for_definition(owner.request_task_id) != null:
 		return owner.reminder_dialogue_key
+	if task_history.has(owner.request_task_id) and not owner.completed_dialogue_key.is_empty():
+		return owner.completed_dialogue_key
 	return owner.idle_dialogue_key
 
 
@@ -379,11 +401,8 @@ func interact_with_store_owner(store_id: StringName) -> Dictionary:
 	if task_instance_for_definition(owner.request_task_id) != null:
 		return _owner_result(owner, owner.reminder_dialogue_key, false)
 	if task_history.has(owner.request_task_id):
-		return _owner_result(owner, owner.idle_dialogue_key, false)
-	if (
-		StringName(story_flags.get(owner.request_available_flag, &""))
-		!= owner.request_required_value
-	):
+		return _owner_result(owner, owner_dialogue_key(store_id), false)
+	if not available_owner_request_ids.has(owner.id):
 		return _owner_result(owner, owner.idle_dialogue_key, false)
 
 	var recipe := QuestArcCatalog.recipe_by_id(owner.request_recipe_id)
@@ -394,13 +413,93 @@ func interact_with_store_owner(store_id: StringName) -> Dictionary:
 	var task := activate_task(owner.request_task_id)
 	if task == null:
 		return _owner_result(owner, owner.idle_dialogue_key, false)
+	available_owner_request_ids.erase(owner.id)
 	var stocked_event_item := _stock_owner_event_item(owner)
-	_mark_state_changed(
-		QuestStateDelta.new().mark_shelf(owner.event_item_store_id, &"owner_event_stock")
-		if stocked_event_item
-		else null
-	)
+	var delta := QuestStateDelta.new().mark_store_state(store_id, &"owner_request_accepted")
+	if stocked_event_item:
+		delta.mark_shelf(owner.event_item_store_id, &"owner_event_stock")
+	_mark_state_changed(delta)
 	return _owner_result(owner, owner.request_dialogue_key, true, task.instance_id)
+
+
+func owner_request_notice_visible(store_id: StringName) -> bool:
+	var owner := QuestArcCatalog.owner_for_store(store_id)
+	return (
+		owner != null
+		and not owner.request_task_id.is_empty()
+		and available_owner_request_ids.has(owner.id)
+		and not has_task_definition(owner.request_task_id)
+	)
+
+
+func refresh_owner_request_availability() -> Array[StringName]:
+	var delta := QuestStateDelta.new()
+	var changed := _latch_owner_request_availability(delta)
+	if not changed.is_empty():
+		_mark_state_changed(delta)
+	return changed
+
+
+func _latch_owner_request_availability(
+	delta: QuestStateDelta = null,
+	only_store_id: StringName = &"",
+) -> Array[StringName]:
+	var changed: Array[StringName] = []
+	var content := QuestArcCatalog.manifest()
+	if content == null:
+		return changed
+	for raw_owner in content.owners:
+		var owner := raw_owner as OwnerDefinition
+		if (
+			owner == null
+			or owner.request_task_id.is_empty()
+			or (not only_store_id.is_empty() and owner.store_id != only_store_id)
+			or available_owner_request_ids.has(owner.id)
+			or has_task_definition(owner.request_task_id)
+			or not _owner_request_conditions_met(owner)
+		):
+			continue
+		available_owner_request_ids[owner.id] = true
+		changed.append(owner.store_id)
+		if delta != null:
+			delta.mark_store_state(owner.store_id, &"owner_request_available")
+	return changed
+
+
+func _owner_request_conditions_met(owner: OwnerDefinition) -> bool:
+	if owner == null or not is_store_unlocked(owner.store_id):
+		return false
+	if not store_unlock_days.has(owner.store_id):
+		return false
+	if day < int(store_unlock_days[owner.store_id]) + owner.request_unlock_delay_days:
+		return false
+	if int(store_purchase_counts.get(owner.store_id, 0)) < owner.request_min_purchase_count:
+		return false
+	if wallet.money < owner.request_min_money:
+		return false
+	if (
+		not owner.request_required_shape_id.is_empty()
+		and int(protagonist_shape_levels.get(owner.request_required_shape_id, 0))
+		< owner.request_required_shape_level
+	):
+		return false
+	if (
+		not owner.request_required_room_id.is_empty()
+		and not expedition.discovered_room_ids.has(owner.request_required_room_id)
+	):
+		return false
+	if (
+		not owner.request_required_purchased_item_id.is_empty()
+		and not purchased_item_ids.has(owner.request_required_purchased_item_id)
+	):
+		return false
+	if (
+		not owner.request_available_flag.is_empty()
+		and StringName(story_flags.get(owner.request_available_flag, &""))
+		!= owner.request_required_value
+	):
+		return false
+	return true
 
 
 func stage_recycle_card(card: CardItemState) -> Dictionary:
@@ -419,12 +518,15 @@ func unstage_recycle_card(card: CardItemState) -> bool:
 
 func checkout_recycle() -> Dictionary:
 	var removed_ids := recycle_transaction.staged_instance_ids.duplicate()
+	_begin_change_batch()
 	var result := recycle_transaction.checkout()
 	if result.ok:
 		var delta := QuestStateDelta.new().mark_wallet(&"recycle_checkout")
 		for instance_id in removed_ids:
 			delta.mark_hand_removed(instance_id, &"recycle_checkout")
-		_mark_delta(delta)
+		_latch_owner_request_availability(delta)
+		_mark_state_changed(delta)
+	_end_change_batch()
 	return result
 
 
@@ -546,16 +648,33 @@ func refill_scheduled_shelves(for_day: int = day) -> void:
 		if store == null or transaction == null or not store.is_restock_day(for_day):
 			continue
 		transaction.clear_selection()
-		for index in mini(store.initial_shelf_item_ids.size(), transaction.shelf_slots.size()):
+		for index in transaction.shelf_slots.size():
 			var slot := transaction.shelf_slots[index]
-			var item := QuestArcCatalog.item_by_id(store.initial_shelf_item_ids[index])
+			var scheduled_item_id := _scheduled_store_item_id(store, index)
+			var item := QuestArcCatalog.item_by_id(scheduled_item_id)
+			var is_unlocked_event_item := unlocked_store_item_ids.has(scheduled_item_id)
 			if (
 				slot.is_empty()
 				and item != null
-				and item.supply_mode == QuestItemDefinition.SupplyMode.DAILY_BASIC
+				and (
+					item.supply_mode == QuestItemDefinition.SupplyMode.DAILY_BASIC
+					or is_unlocked_event_item
+				)
 			):
 				slot.stock(item.id)
 	_mark_state_changed()
+
+
+func _scheduled_store_item_id(store: StoreDefinition, slot_index: int) -> StringName:
+	if store == null or slot_index < 0:
+		return &""
+	if slot_index < store.initial_shelf_item_ids.size():
+		return store.initial_shelf_item_ids[slot_index]
+	var unlockable_index := slot_index - store.initial_shelf_item_ids.size()
+	if unlockable_index < 0 or unlockable_index >= store.unlockable_shelf_item_ids.size():
+		return &""
+	var item_id := store.unlockable_shelf_item_ids[unlockable_index]
+	return item_id if unlocked_store_item_ids.has(item_id) else &""
 
 
 func restock_nights_remaining(store_id: StringName) -> int:
@@ -705,7 +824,7 @@ func clear_synthesis_draft() -> bool:
 	var changed := (
 		synthesis_base_instance_id > 0
 		or synthesis_helper_instance_id > 0
-		or not synthesis_persona_id.is_empty()
+		or not synthesis_persona_shape_id.is_empty()
 		or not synthesis_candidate_recipe_id.is_empty()
 	)
 	var delta := QuestStateDelta.new().mark_synthesis_draft(&"synthesis_clear")
@@ -717,7 +836,7 @@ func clear_synthesis_draft() -> bool:
 			delta.mark_hand_location(card.instance_id, &"synthesis_clear")
 	synthesis_base_instance_id = 0
 	synthesis_helper_instance_id = 0
-	synthesis_persona_id = &""
+	synthesis_persona_shape_id = &""
 	synthesis_candidate_recipe_id = &""
 	if changed:
 		_mark_transient_changed(delta, true)
@@ -747,7 +866,11 @@ func available_synthesis_recipe_ids() -> Array[StringName]:
 
 func assign_synthesis_base(card: CardItemState) -> Dictionary:
 	var definition := definition_for_card(card)
-	if definition == null or not definition.can_be_synthesis_base:
+	if (
+		definition == null
+		or is_keepsake_definition(definition)
+		or not definition.can_be_synthesis_base
+	):
 		return _result(false, RESULT_REJECTED)
 	return _assign_synthesis_card(&"base", card)
 
@@ -755,7 +878,8 @@ func assign_synthesis_base(card: CardItemState) -> Dictionary:
 func assign_synthesis_helper(card: CardItemState) -> Dictionary:
 	if synthesis_base_instance_id <= 0 or card == null or card.instance_id == synthesis_base_instance_id:
 		return _result(false, RESULT_NOT_READY)
-	if is_disease_definition(definition_for_card(card)):
+	var definition := definition_for_card(card)
+	if is_disease_definition(definition) or is_keepsake_definition(definition):
 		return _result(false, RESULT_REJECTED)
 	return _assign_synthesis_card(&"helper", card)
 
@@ -812,14 +936,14 @@ func _assign_synthesis_card(role_id: StringName, card: CardItemState) -> Diction
 	return _result(true, RESULT_OK)
 
 
-func select_synthesis_persona(persona_id: StringName) -> bool:
+func select_synthesis_persona(shape_id: StringName) -> bool:
 	if (
 		synthesis_base_instance_id <= 0
-		or persona_id not in CardPropertySet.PERSONAS
-		or int(protagonist_persona_counts.get(persona_id, 0)) <= 0
+		or shape_id not in CardPropertySet.SHAPES
+		or int(protagonist_shape_levels.get(shape_id, 0)) <= 0
 	):
 		return false
-	synthesis_persona_id = &"" if synthesis_persona_id == persona_id else persona_id
+	synthesis_persona_shape_id = &"" if synthesis_persona_shape_id == shape_id else shape_id
 	synthesis_candidate_recipe_id = &""
 	_mark_transient_changed(
 		QuestStateDelta.new().mark_synthesis_persona(&"synthesis_persona"),
@@ -836,7 +960,7 @@ func synthesis_helper_card() -> CardItemState:
 	return card_by_instance_id(synthesis_helper_instance_id)
 
 
-func synthesis_persona_totals() -> Dictionary:
+func synthesis_shape_totals() -> Dictionary:
 	return (synthesis_evaluation_snapshot().totals as Dictionary).duplicate()
 
 
@@ -848,11 +972,11 @@ func synthesis_evaluation_snapshot() -> Dictionary:
 	var base_item := (
 		QuestArcCatalog.item_by_id(base_card.definition_id) if base_card != null else null
 	)
-	var totals := SynthesisRules.persona_totals(
+	var totals := SynthesisRules.shape_totals(
 		base_item,
 		QuestArcCatalog.item_by_id(helper_card.definition_id) if helper_card != null else null,
-		synthesis_persona_id,
-		protagonist_persona_counts,
+		synthesis_persona_shape_id,
+		protagonist_shape_levels,
 	)
 	var candidates: Array[Dictionary] = []
 	if base_item != null:
@@ -864,7 +988,7 @@ func synthesis_evaluation_snapshot() -> Dictionary:
 			)
 			if evaluation.is_visible:
 				evaluation["recipe_id"] = recipe.id
-				evaluation["required_personas"] = effective_requirements
+				evaluation["required_shapes"] = effective_requirements
 				evaluation["is_discovered"] = discovered_recipe_ids.has(recipe.id)
 				evaluation["shows_output"] = (
 					evaluation.is_complete or discovered_recipe_ids.has(recipe.id)
@@ -884,12 +1008,12 @@ func synthesis_evaluation_snapshot() -> Dictionary:
 func synthesis_recipe_requirements(recipe: SynthesisRecipeDefinition) -> Dictionary:
 	if recipe == null:
 		return {}
-	var requirements := recipe.required_personas.duplicate()
-	if not recipe.escalating_persona_requirement:
+	var requirements := recipe.required_shapes.duplicate()
+	if not recipe.escalating_shape_requirement:
 		return requirements
 	var growth := maxi(0, int(synthesis_recipe_use_counts.get(recipe.id, 0)))
-	for raw_persona_id in requirements:
-		requirements[raw_persona_id] = int(requirements[raw_persona_id]) + growth
+	for raw_shape_id in requirements:
+		requirements[raw_shape_id] = int(requirements[raw_shape_id]) + growth
 	return requirements
 
 
@@ -954,9 +1078,9 @@ func begin_synthesis() -> Dictionary:
 	discovered_recipe_ids[recipe.id] = true
 	synthesis_base_instance_id = 0
 	synthesis_helper_instance_id = 0
-	synthesis_persona_id = &""
+	synthesis_persona_shape_id = &""
 	synthesis_candidate_recipe_id = &""
-	if recipe.escalating_persona_requirement:
+	if recipe.escalating_shape_requirement:
 		synthesis_recipe_use_counts[recipe.id] = (
 			int(synthesis_recipe_use_counts.get(recipe.id, 0)) + 1
 		)
@@ -1018,6 +1142,10 @@ func item_category_ids(item: CardItemDefinition) -> Array[StringName]:
 
 func is_disease_definition(item: CardItemDefinition) -> bool:
 	return item != null and item.has_property(CardPropertySet.PROPERTY_DISEASE)
+
+
+func is_keepsake_definition(item: CardItemDefinition) -> bool:
+	return item != null and item.has_property(CardPropertySet.PROPERTY_KEEPSAKE)
 
 
 func disease_count(disease_id: StringName) -> int:
@@ -1093,37 +1221,36 @@ func confirm_task(task_instance_id: int) -> Dictionary:
 
 
 func cancel_task_confirmation(task_instance_id: int) -> bool:
-	# shopping0807 treats submission as a permanent choice.
-	# Keep this API for save compatibility, but never reopen a submitted task.
+	# Submission is a permanent choice in the current prototype rules.
 	return false
 
 
 func _self_care_growth_for_items(item_definition_ids: Array[StringName]) -> Dictionary:
-	var persona_totals: Dictionary = {}
-	for persona_id in CardPropertySet.PERSONAS:
-		persona_totals[persona_id] = 0
+	var shape_totals: Dictionary = {}
+	for shape_id in CardPropertySet.SHAPES:
+		shape_totals[shape_id] = 0
 	for item_definition_id in item_definition_ids:
 		var item := QuestArcCatalog.item_by_id(item_definition_id)
 		if item == null:
 			continue
-		for persona_id in CardPropertySet.PERSONAS:
-			persona_totals[persona_id] = (
-				int(persona_totals[persona_id]) + item.property_value(persona_id)
+		for shape_id in CardPropertySet.SHAPES:
+			shape_totals[shape_id] = (
+				int(shape_totals[shape_id]) + item.property_value(shape_id)
 			)
 	var result: Dictionary = {}
-	for persona_id in CardPropertySet.PERSONAS:
-		var difference := int(persona_totals.get(persona_id, 0)) - int(
-			protagonist_persona_counts.get(persona_id, 0)
+	for shape_id in CardPropertySet.SHAPES:
+		var difference := int(shape_totals.get(shape_id, 0)) - int(
+			protagonist_shape_levels.get(shape_id, 0)
 		)
 		if difference > 0:
-			result[persona_id] = 1
+			result[shape_id] = 1
 	return result
 
 
-func acknowledge_persona_reveal(persona_id: StringName) -> bool:
-	if persona_id not in pending_persona_reveal_ids:
+func acknowledge_persona_reveal(shape_id: StringName) -> bool:
+	if shape_id not in pending_persona_reveal_shape_ids:
 		return false
-	pending_persona_reveal_ids.erase(persona_id)
+	pending_persona_reveal_shape_ids.erase(shape_id)
 	_mark_state_changed()
 	return true
 
@@ -1163,7 +1290,7 @@ func begin_mall_expedition(seed_value: int = 0) -> Dictionary:
 func evaluate_expedition_challenge_round(
 	room_id: StringName,
 	card_instance_ids: Array[int],
-	persona_ids: Array[StringName],
+	persona_shape_ids: Array[StringName],
 	approach_index: int,
 	round_index: int = 0,
 ) -> Dictionary:
@@ -1178,17 +1305,17 @@ func evaluate_expedition_challenge_round(
 		or approach_index >= room.approach_title_keys.size()
 		or round_index < 0
 		or round_index >= room.boss_round_count
-		or card_instance_ids.size() + persona_ids.size() > room.slot_count
+		or card_instance_ids.size() + persona_shape_ids.size() > room.slot_count
 	):
 		return _result(false, RESULT_NOT_READY)
-	var resolved := _expedition_input_definitions(card_instance_ids, persona_ids)
+	var resolved := _expedition_input_definitions(card_instance_ids, persona_shape_ids)
 	if not bool(resolved.ok):
 		return resolved
 	var evaluation := MallChallengeRules.evaluate(room, resolved.definitions)
 	var roll := _expedition_challenge_roll(
 		room_id,
 		card_instance_ids,
-		persona_ids,
+		persona_shape_ids,
 		approach_index,
 		round_index,
 	)
@@ -1202,7 +1329,7 @@ func evaluate_expedition_challenge_round(
 func complete_expedition_room(
 	room_id: StringName,
 	card_instance_ids: Array[int] = [],
-	persona_ids: Array[StringName] = [],
+	persona_shape_ids: Array[StringName] = [],
 	challenge_rounds: Array[Dictionary] = [],
 ) -> Dictionary:
 	if not expedition.active or not expedition.has_current_door(room_id):
@@ -1211,10 +1338,9 @@ func complete_expedition_room(
 	if room == null:
 		return _result(false, RESULT_NOT_READY)
 	var consumed_ids: Array[int] = []
-	var persona_growth: Dictionary = {}
+	var shape_growth: Dictionary = {}
 	var money_gained := 0
 	var reward_item_id: StringName
-	var new_persona_ids: Array[StringName] = []
 	var white_flower_amount := 0
 	var room_success := true
 	var boss_failed := false
@@ -1236,19 +1362,25 @@ func complete_expedition_room(
 			)
 		MallRoomDefinition.Category.REST:
 			var rest_result := _resolve_expedition_rest_submission(
-				room, card_instance_ids, persona_ids
+				room, card_instance_ids, persona_shape_ids
 			)
 			if not bool(rest_result.ok):
 				return rest_result
 			consumed_ids = _int_array_from_variant(rest_result.consumed_card_ids)
-			persona_growth = rest_result.persona_growth
+			shape_growth = rest_result.shape_growth
 			money_gained = int(rest_result.money_gained)
-			if room.rest_mode == MallRoomDefinition.RestMode.PERSONA_GROWTH:
+			if (
+				room.rest_mode == MallRoomDefinition.RestMode.PERSONA_GROWTH
+				and not persona_shape_ids.is_empty()
+			):
 				white_flower_amount = 2
-			elif not consumed_ids.is_empty():
+			elif (
+				room.rest_mode == MallRoomDefinition.RestMode.ITEM_GROWTH
+				and not consumed_ids.is_empty()
+			):
 				white_flower_amount = 1
 		MallRoomDefinition.Category.WORK:
-			if not card_instance_ids.is_empty() or not persona_ids.is_empty():
+			if not card_instance_ids.is_empty() or not persona_shape_ids.is_empty():
 				return _result(false, RESULT_REJECTED)
 			money_gained = EXPEDITION_WORK_REWARD
 
@@ -1259,17 +1391,14 @@ func complete_expedition_room(
 		if card != null:
 			inventory.erase(card)
 			delta.mark_hand_removed(card.instance_id, &"expedition_consumed")
-	for raw_persona_id in persona_growth:
-		var persona_id := StringName(raw_persona_id)
-		var previous_amount := int(protagonist_persona_counts.get(persona_id, 0))
-		protagonist_persona_counts[persona_id] = previous_amount + int(
-			persona_growth[raw_persona_id]
+	for raw_shape_id in shape_growth:
+		var shape_id := StringName(raw_shape_id)
+		protagonist_shape_levels[shape_id] = int(
+			protagonist_shape_levels.get(shape_id, 0)
+		) + int(
+			shape_growth[raw_shape_id]
 		)
-		if previous_amount <= 0 and int(persona_growth[raw_persona_id]) > 0:
-			if persona_id not in pending_persona_reveal_ids:
-				pending_persona_reveal_ids.append(persona_id)
-			new_persona_ids.append(persona_id)
-		delta.mark_synthesis_persona(&"expedition_persona_growth")
+		delta.mark_synthesis_persona(&"expedition_shape_growth")
 	if money_gained > 0:
 		wallet.money += money_gained
 	var disease_changes: Array[Dictionary] = []
@@ -1297,6 +1426,7 @@ func complete_expedition_room(
 			_finish_expedition_night(delta)
 		else:
 			_generate_expedition_doors()
+	_latch_owner_request_availability(delta)
 	_mark_state_changed(delta)
 	_end_change_batch()
 	return {
@@ -1308,8 +1438,8 @@ func complete_expedition_room(
 		"night_finished": not expedition.active and not demo_complete,
 		"reward_item_id": reward_item_id,
 		"money_gained": money_gained,
-		"persona_growth": persona_growth,
-		"new_persona_ids": new_persona_ids,
+		"shape_growth": shape_growth,
+		"new_persona_shape_ids": [],
 		"disease_changes": disease_changes,
 		"door_ids": expedition.current_door_ids.duplicate(),
 	}
@@ -1321,6 +1451,7 @@ func expedition_card_can_be_used(card: CardItemState) -> bool:
 	var definition := definition_for_card(card)
 	return (
 		not is_disease_definition(definition)
+		and not is_keepsake_definition(definition)
 		and MallChallengeRules.can_use_in_challenge(definition)
 	)
 
@@ -1328,14 +1459,14 @@ func expedition_card_can_be_used(card: CardItemState) -> bool:
 func expedition_room_accepts_card(
 	room_id: StringName,
 	card: CardItemState,
-	persona_id: StringName = &"",
+	shape_id: StringName = &"",
 ) -> bool:
 	var room := QuestArcCatalog.mall_room_by_id(room_id)
 	if room == null:
 		return false
-	if not persona_id.is_empty():
+	if not shape_id.is_empty():
 		return (
-			int(protagonist_persona_counts.get(persona_id, 0)) > 0
+			int(protagonist_shape_levels.get(shape_id, 0)) > 0
 			and (
 				room.category in [
 					MallRoomDefinition.Category.CHALLENGE,
@@ -1374,14 +1505,14 @@ func _resolve_expedition_challenge_submission(
 	for round_index in challenge_rounds.size():
 		var round := challenge_rounds[round_index]
 		var round_card_ids := _int_array_from_variant(round.get("card_instance_ids", []))
-		var round_persona_ids := _name_array_from_variant(round.get("persona_ids", []))
+		var round_persona_shape_ids := _name_array_from_variant(round.get("persona_shape_ids", []))
 		for card_id in round_card_ids:
 			if card_id in consumed_ids:
 				return _result(false, RESULT_REJECTED)
 		var evaluation := evaluate_expedition_challenge_round(
 			room.id,
 			round_card_ids,
-			round_persona_ids,
+			round_persona_shape_ids,
 			int(round.get("approach_index", -1)),
 			round_index,
 		)
@@ -1404,24 +1535,32 @@ func _resolve_expedition_challenge_submission(
 func _resolve_expedition_rest_submission(
 	room: MallRoomDefinition,
 	card_instance_ids: Array[int],
-	persona_ids: Array[StringName],
+	persona_shape_ids: Array[StringName],
 ) -> Dictionary:
-	if card_instance_ids.size() + persona_ids.size() > room.slot_count:
+	if card_instance_ids.size() + persona_shape_ids.size() > room.slot_count:
 		return _result(false, RESULT_REJECTED)
 	if room.rest_mode == MallRoomDefinition.RestMode.PERSONA_GROWTH:
-		if card_instance_ids.size() > 0 or persona_ids.size() != 1:
+		if card_instance_ids.size() > 0 or persona_shape_ids.size() > 1:
 			return _result(false, RESULT_NOT_READY)
-		var persona_id := persona_ids[0]
-		if int(protagonist_persona_counts.get(persona_id, 0)) <= 0:
+		if persona_shape_ids.is_empty():
+			return {
+				"ok": true,
+				"reason": RESULT_OK,
+				"consumed_card_ids": [],
+				"shape_growth": {},
+				"money_gained": EXPEDITION_EMPTY_REST_REWARD,
+			}
+		var shape_id := persona_shape_ids[0]
+		if int(protagonist_shape_levels.get(shape_id, 0)) <= 0:
 			return _result(false, RESULT_REJECTED)
 		return {
 			"ok": true,
 			"reason": RESULT_OK,
 			"consumed_card_ids": [],
-			"persona_growth": {persona_id: 1},
+			"shape_growth": {shape_id: 1},
 			"money_gained": 0,
 		}
-	if not persona_ids.is_empty():
+	if not persona_shape_ids.is_empty():
 		return _result(false, RESULT_REJECTED)
 	var resolved_cards: Array[CardItemState] = []
 	var seen_card_ids: Dictionary = {}
@@ -1444,29 +1583,36 @@ func _resolve_expedition_rest_submission(
 			"ok": true,
 			"reason": RESULT_OK,
 			"consumed_card_ids": card_instance_ids.duplicate(),
-			"persona_growth": {},
+			"shape_growth": {},
 			"money_gained": total,
 		}
+	if resolved_cards.is_empty():
+		return {
+			"ok": true,
+			"reason": RESULT_OK,
+			"consumed_card_ids": [],
+			"shape_growth": {},
+			"money_gained": EXPEDITION_EMPTY_REST_REWARD,
+		}
 	var growth: Dictionary = {}
-	if not resolved_cards.is_empty():
-		var definition := definition_for_card(resolved_cards[0])
-		for persona_id in CardPropertySet.PERSONAS:
-			if definition.property_value(persona_id) > int(
-				protagonist_persona_counts.get(persona_id, 0)
-			):
-				growth[persona_id] = 1
+	var definition := definition_for_card(resolved_cards[0])
+	for shape_id in CardPropertySet.SHAPES:
+		if definition.property_value(shape_id) > int(
+			protagonist_shape_levels.get(shape_id, 0)
+		):
+			growth[shape_id] = 1
 	return {
 		"ok": true,
 		"reason": RESULT_OK,
 		"consumed_card_ids": card_instance_ids.duplicate(),
-		"persona_growth": growth,
+		"shape_growth": growth,
 		"money_gained": 0,
 	}
 
 
 func _expedition_input_definitions(
 	card_instance_ids: Array[int],
-	persona_ids: Array[StringName],
+	persona_shape_ids: Array[StringName],
 ) -> Dictionary:
 	var definitions: Array[CardItemDefinition] = []
 	var seen_card_ids: Dictionary = {}
@@ -1476,20 +1622,20 @@ func _expedition_input_definitions(
 			return _result(false, RESULT_REJECTED)
 		seen_card_ids[card_id] = true
 		definitions.append(definition_for_card(card))
-	for persona_id in persona_ids:
-		var amount := int(protagonist_persona_counts.get(persona_id, 0))
-		if persona_id not in CardPropertySet.PERSONAS or amount <= 0:
+	for shape_id in persona_shape_ids:
+		var amount := int(protagonist_shape_levels.get(shape_id, 0))
+		if shape_id not in CardPropertySet.SHAPES or amount <= 0:
 			return _result(false, RESULT_REJECTED)
-		definitions.append(_expedition_persona_definition(persona_id, amount))
+		definitions.append(_expedition_persona_definition(shape_id, amount))
 	return {"ok": true, "reason": RESULT_OK, "definitions": definitions}
 
 
-func _expedition_persona_definition(persona_id: StringName, amount: int) -> CardItemDefinition:
+func _expedition_persona_definition(shape_id: StringName, amount: int) -> CardItemDefinition:
 	var properties := CardPropertySet.new()
 	properties.tags = [CardPropertySet.PROPERTY_PERSONA]
-	properties.values = {persona_id: amount}
+	properties.values = {shape_id: amount}
 	var definition := CardItemDefinition.new()
-	definition.id = StringName("expedition_persona_%s" % persona_id)
+	definition.id = StringName("expedition_persona_%s" % shape_id)
 	definition.property_set = properties
 	return definition
 
@@ -1497,14 +1643,14 @@ func _expedition_persona_definition(persona_id: StringName, amount: int) -> Card
 func _expedition_challenge_roll(
 	room_id: StringName,
 	card_instance_ids: Array[int],
-	persona_ids: Array[StringName],
+	persona_shape_ids: Array[StringName],
 	approach_index: int,
 	round_index: int,
 ) -> int:
 	var card_key := card_instance_ids.duplicate()
 	card_key.sort()
-	var persona_key := persona_ids.duplicate()
-	persona_key.sort()
+	var shape_key := persona_shape_ids.duplicate()
+	shape_key.sort()
 	var signature := "%d|%d|%s|%d|%d|%s|%s" % [
 		expedition.rng_seed,
 		expedition.checkpoint_serial,
@@ -1512,7 +1658,7 @@ func _expedition_challenge_roll(
 		approach_index,
 		round_index,
 		card_key,
-		persona_key,
+		shape_key,
 	]
 	return absi(hash(signature)) % 100
 
@@ -1541,6 +1687,7 @@ func _finish_expedition_night(delta: QuestStateDelta) -> void:
 	delta.mark_day(&"expedition_night_finished")
 	for store_id in store_transactions:
 		delta.mark_shelf(StringName(store_id), &"expedition_shelf_refill")
+	_latch_owner_request_availability(delta)
 
 
 func _int_array_from_variant(values: Variant) -> Array[int]:
@@ -1557,7 +1704,7 @@ func _name_array_from_variant(values: Variant) -> Array[StringName]:
 	return result
 
 
-func begin_next_day() -> Dictionary:
+func prepare_owner_request_settlement() -> Dictionary:
 	if pending_arc != null:
 		return _result(false, RESULT_TRANSITION_ACTIVE)
 	var entries: Array[Dictionary] = []
@@ -1565,7 +1712,11 @@ func begin_next_day() -> Dictionary:
 		if not instance.confirmed:
 			continue
 		var definition := QuestArcCatalog.task_by_id(instance.definition_id)
-		if definition == null or definition.settlement_mode != TaskDefinition.SettlementMode.ARC:
+		if (
+			definition == null
+			or definition.category != TaskDefinition.Category.OWNER_REQUEST
+			or definition.settlement_mode != TaskDefinition.SettlementMode.ARC
+		):
 			continue
 		var outcome := definition.outcome_by_id(instance.resolved_outcome_id)
 		if outcome == null:
@@ -1587,16 +1738,11 @@ func begin_next_day() -> Dictionary:
 				reward_stats[effect.target_id] = int(
 					reward_stats.get(effect.target_id, 0)
 				) + effect.amount
-		var persona_growth := (
-			_self_care_growth_for_items(item_definition_ids)
-			if definition.category == TaskDefinition.Category.SELF_CARE
-			else {}
-		)
-		for raw_persona_id in persona_growth:
-			var persona_id := StringName(raw_persona_id)
-			reward_stats[persona_id] = int(reward_stats.get(persona_id, 0)) + int(
-				persona_growth[raw_persona_id]
-		)
+		var reward_item_ids: Array[StringName] = []
+		for raw_effect in outcome.effects:
+			var effect := raw_effect as StoryEffect
+			if effect != null and effect.kind == StoryEffect.Kind.GIVE_ITEM:
+				reward_item_ids.append(effect.target_id)
 		entries.append({
 			"task_instance_id": instance.instance_id,
 			"task_definition_id": definition.id,
@@ -1606,11 +1752,14 @@ func begin_next_day() -> Dictionary:
 			"item_definition_ids": item_definition_ids,
 			"reward_money": reward_money,
 			"reward_stats": reward_stats,
-			"persona_growth": persona_growth,
+			"reward_item_ids": reward_item_ids,
+			"owner_id": definition.owner_id,
+			"store_id": definition.store_id,
 		})
 	var confirmed_task_count := entries.size()
-	pending_arc = ArcTransitionState.new(day, entries)
-	_mark_state_changed()
+	if not entries.is_empty():
+		pending_arc = ArcTransitionState.new(day, entries)
+		_mark_state_changed()
 	return {
 		"ok": true,
 		"reason": RESULT_OK,
@@ -1619,92 +1768,63 @@ func begin_next_day() -> Dictionary:
 	}
 
 
-func apply_arc_effects() -> Dictionary:
+func settle_current_arc_entry() -> Dictionary:
 	if pending_arc == null:
 		return _result(false, RESULT_NO_TRANSITION)
-	if pending_arc.effects_applied:
-		return {"ok": true, "reason": RESULT_OK, "already_applied": true}
-	var resolved_entries: Array[Dictionary] = []
-	var claimed_card_ids: Dictionary = {}
-	# Validate every referenced task, outcome, and card before the first mutation.
-	# This keeps a multi-task Arc atomic even if a save payload is corrupted.
-	for entry in pending_arc.entries:
-		var instance := task_instance(int(entry.task_instance_id))
-		var definition := QuestArcCatalog.task_by_id(StringName(entry.task_definition_id))
-		var outcome := (
-			definition.outcome_by_id(StringName(entry.outcome_id))
-			if definition != null
-			else null
-		)
-		if instance == null or definition == null or outcome == null or instance.settled:
+	var entry_index := pending_arc.applied_entry_count
+	if entry_index < 0 or entry_index >= pending_arc.entries.size():
+		return _result(false, RESULT_EFFECTS_PENDING)
+	var entry := pending_arc.entries[entry_index]
+	var instance := task_instance(int(entry.task_instance_id))
+	var definition := QuestArcCatalog.task_by_id(StringName(entry.task_definition_id))
+	var outcome := (
+		definition.outcome_by_id(StringName(entry.outcome_id))
+		if definition != null
+		else null
+	)
+	if instance == null or definition == null or outcome == null or instance.settled:
+		return _result(false, RESULT_NOT_READY)
+	var cards: Array[CardItemState] = []
+	for raw_card_id in entry.card_instance_ids:
+		var card := card_by_instance_id(int(raw_card_id))
+		if card == null or QuestArcCatalog.item_by_id(card.definition_id) == null:
 			return _result(false, RESULT_NOT_READY)
-		var cards: Array[CardItemState] = []
-		var items: Array[QuestItemDefinition] = []
-		for raw_card_id in entry.card_instance_ids:
-			var card_id := int(raw_card_id)
-			var card := card_by_instance_id(card_id)
-			var item := QuestArcCatalog.item_by_id(card.definition_id) if card != null else null
-			if card == null or item == null or claimed_card_ids.has(card_id):
-				return _result(false, RESULT_NOT_READY)
-			claimed_card_ids[card_id] = true
-			cards.append(card)
-			items.append(item)
-		resolved_entries.append({
-			"entry": entry,
-			"instance": instance,
-			"definition": definition,
-			"outcome": outcome,
-			"cards": cards,
-			"items": items,
-		})
+		cards.append(card)
 	_begin_change_batch()
 	var consumed_count := 0
 	var hand_delta := QuestStateDelta.new()
 	var money_before := wallet.money
-	for resolved in resolved_entries:
-		var instance := resolved.instance as TaskInstanceState
-		var definition := resolved.definition as TaskDefinition
-		var outcome := resolved.outcome as TaskOutcomeDefinition
-		var entry := resolved.entry as Dictionary
-		for raw_effect in outcome.effects:
-			_apply_story_effect(raw_effect as StoryEffect, hand_delta)
-		for raw_persona_id in (entry.get("persona_growth", {}) as Dictionary):
-			var persona_id := StringName(raw_persona_id)
-			var previous_amount := int(protagonist_persona_counts.get(persona_id, 0))
-			var growth := int((entry.persona_growth as Dictionary)[raw_persona_id])
-			protagonist_persona_counts[persona_id] = previous_amount + growth
-			if previous_amount <= 0 and growth > 0 and persona_id not in pending_persona_reveal_ids:
-				pending_persona_reveal_ids.append(persona_id)
-			if growth > 0:
-				hand_delta.mark_synthesis_persona(&"self_care_growth")
-		for raw_card in resolved.cards:
-			var consumed_card := raw_card as CardItemState
-			inventory.erase(consumed_card)
-			hand_delta.mark_hand_removed(consumed_card.instance_id, &"arc_settlement")
-			consumed_count += 1
-		instance.assignments.clear()
-		instance.confirmed = false
-		instance.settled = true
-		hand_delta.mark_task_instance(instance.instance_id, &"arc_settlement")
-		task_history[definition.id] = outcome.id
-	pending_arc.effects_applied = true
-	if not resolved_entries.is_empty():
-		hand_delta.mark_task_list(&"arc_settlement")
+	for raw_effect in outcome.effects:
+		_apply_story_effect(raw_effect as StoryEffect, hand_delta)
+	for consumed_card in cards:
+		inventory.erase(consumed_card)
+		hand_delta.mark_hand_removed(consumed_card.instance_id, &"arc_settlement")
+		consumed_count += 1
+	instance.assignments.clear()
+	instance.confirmed = false
+	instance.settled = true
+	hand_delta.mark_task_instance(instance.instance_id, &"arc_settlement")
+	hand_delta.mark_task_list(&"arc_settlement")
+	task_history[definition.id] = outcome.id
+	pending_arc.applied_entry_count += 1
+	pending_arc.effects_applied = pending_arc.applied_entry_count >= pending_arc.entries.size()
+	_latch_owner_request_availability(hand_delta)
 	_mark_state_changed(hand_delta)
 	_end_change_batch()
 	return {
 		"ok": true,
 		"reason": RESULT_OK,
-		"already_applied": false,
+		"entry_index": entry_index,
 		"consumed_count": consumed_count,
 		"money_gained": wallet.money - money_before,
+		"reward_item_ids": (entry.get("reward_item_ids", []) as Array).duplicate(),
 	}
 
 
 func mark_arc_entry_shown() -> bool:
-	if pending_arc == null or not pending_arc.effects_applied:
+	if pending_arc == null:
 		return false
-	if pending_arc.next_entry_index >= pending_arc.entries.size():
+	if pending_arc.next_entry_index >= pending_arc.applied_entry_count:
 		return false
 	pending_arc.next_entry_index += 1
 	_mark_state_changed()
@@ -1716,23 +1836,12 @@ func finish_arc() -> Dictionary:
 		return _result(false, RESULT_NO_TRANSITION)
 	if not pending_arc.is_complete():
 		return _result(false, RESULT_EFFECTS_PENDING)
-	_begin_change_batch()
-	day += 1
 	pending_arc = null
-	refill_scheduled_shelves(day)
-	var activated := activate_scheduled_tasks(day)
-	var finish_delta := QuestStateDelta.new().mark_day(&"arc_finished")
-	for store_id in store_transactions:
-		finish_delta.mark_shelf(StringName(store_id), &"daily_shelf_refill")
-	_mark_state_changed(finish_delta)
-	_end_change_batch()
+	_mark_state_changed()
 	return {
 		"ok": true,
 		"reason": RESULT_OK,
 		"day": day,
-		"activated_task_instance_ids": activated.map(
-			func(instance: TaskInstanceState) -> int: return instance.instance_id
-		),
 	}
 
 
@@ -1772,14 +1881,14 @@ func unlock_store(store_id: StringName, card: CardItemState) -> Dictionary:
 	if unlock == null or card == null or card.location != CardItemState.Location.HAND:
 		return _result(false, RESULT_NOT_OWNED)
 	var item := definition_for_card(card)
-	if is_disease_definition(item):
+	if is_disease_definition(item) or is_keepsake_definition(item):
 		return _result(false, RESULT_REJECTED)
-	var persona_id := PersonaMaskCatalog.persona_for_card(card)
-	if not persona_id.is_empty() and int(protagonist_persona_counts.get(persona_id, 0)) <= 0:
+	var shape_id := PersonaCardCatalog.shape_for_card(card)
+	if not shape_id.is_empty() and int(protagonist_shape_levels.get(shape_id, 0)) <= 0:
 		return _result(false, RESULT_REJECTED)
 	if unlock == null or not QuestArcRules.store_unlock_accepts(unlock, item):
 		return _result(false, RESULT_REJECTED)
-	var is_persona := not persona_id.is_empty()
+	var is_persona := not shape_id.is_empty()
 	if unlock.consume_item and (is_persona or not inventory.has(card)):
 		return _result(false, RESULT_NOT_OWNED)
 	if not unlock.consume_item and not is_persona:
@@ -1788,10 +1897,12 @@ func unlock_store(store_id: StringName, card: CardItemState) -> Dictionary:
 	if unlock.consume_item:
 		inventory.erase(card)
 	unlocked_store_ids[store_id] = true
+	store_unlock_days[store_id] = day
 	var activated := _activate_tasks_for_store(store_id)
 	var delta := QuestStateDelta.new().mark_store_state(store_id, &"store_unlock")
 	if unlock.consume_item:
 		delta.mark_hand_removed(card.instance_id, &"store_unlock")
+	_latch_owner_request_availability(delta, store_id)
 	_mark_state_changed(
 		delta
 	)
@@ -1819,16 +1930,9 @@ func _apply_story_effect(effect: StoryEffect, delta: QuestStateDelta = null) -> 
 		StoryEffect.Kind.SET_FLAG:
 			story_flags[effect.target_id] = effect.text_value
 		StoryEffect.Kind.ADD_PROTAGONIST_PERSONA:
-			var previous_amount := int(
-				protagonist_persona_counts.get(effect.target_id, 0)
-			)
-			protagonist_persona_counts[effect.target_id] = previous_amount + effect.amount
-			if (
-				previous_amount <= 0
-				and effect.amount > 0
-				and effect.target_id not in pending_persona_reveal_ids
-			):
-				pending_persona_reveal_ids.append(effect.target_id)
+			protagonist_shape_levels[effect.target_id] = int(
+				protagonist_shape_levels.get(effect.target_id, 0)
+			) + effect.amount
 			if delta != null:
 				delta.mark_synthesis_persona(&"story_effect")
 		StoryEffect.Kind.DISCOVER_RECIPE:
@@ -1839,10 +1943,37 @@ func _apply_story_effect(effect: StoryEffect, delta: QuestStateDelta = null) -> 
 			owner_states[effect.target_id] = effect.text_value
 		StoryEffect.Kind.UNLOCK_STORE:
 			unlocked_store_ids[effect.target_id] = true
+			store_unlock_days[effect.target_id] = day
 			if delta != null:
 				delta.mark_store_state(effect.target_id, &"story_effect")
 		StoryEffect.Kind.GIVE_ITEM:
 			grant_item(effect.target_id, &"story")
+		StoryEffect.Kind.UNLOCK_STORE_ITEM:
+			_unlock_store_item(effect.target_id, delta)
+
+
+func _unlock_store_item(item_id: StringName, delta: QuestStateDelta = null) -> bool:
+	var item := QuestArcCatalog.item_by_id(item_id)
+	var store := QuestArcCatalog.store_by_id(item.store_id) if item != null else null
+	if (
+		item == null
+		or store == null
+		or item_id not in store.unlockable_shelf_item_ids
+	):
+		return false
+	unlocked_store_item_ids[item_id] = true
+	var slot_index := store.initial_shelf_item_ids.size() + store.unlockable_shelf_item_ids.find(
+		item_id
+	)
+	var transaction := transaction_for_store(store.id)
+	if transaction == null or slot_index < 0 or slot_index >= transaction.shelf_slots.size():
+		return false
+	var slot := transaction.shelf_slots[slot_index]
+	if slot.is_empty():
+		slot.stock(item_id)
+	if delta != null:
+		delta.mark_shelf(store.id, &"owner_request_item_unlocked")
+	return true
 
 
 func _stock_owner_event_item(owner: OwnerDefinition) -> bool:
@@ -1988,8 +2119,8 @@ func _end_change_batch() -> void:
 
 
 func _mark_state_changed(delta: QuestStateDelta = null) -> void:
-	# Persistent changes may alter story gates or protagonist Personas used by
-	# synthesis, so invalidate its input cache conservatively. Transient draft
+	# Persistent changes may alter story gates or Persona-card shape values used
+	# by synthesis, so invalidate its input cache conservatively. Transient draft
 	# changes use _mark_transient_changed() and never request autosave.
 	_synthesis_input_revision += 1
 	_mark_delta(delta)
@@ -2055,7 +2186,7 @@ func _clear_synthesis_reinforcement() -> void:
 	if helper != null:
 		helper.return_to_hand()
 	synthesis_helper_instance_id = 0
-	synthesis_persona_id = &""
+	synthesis_persona_shape_id = &""
 	synthesis_candidate_recipe_id = &""
 
 

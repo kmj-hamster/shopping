@@ -24,6 +24,8 @@ const INK := Color("e6ece8")
 const MUTED := Color("91aaa7")
 const ACCENT := Color("d2bd7d")
 const TYPEWRITER_CHARACTER_SECONDS := 0.024
+const NARRATIVE_CURSOR_BLINK_SECONDS := 0.48
+const NARRATIVE_CURSOR := "▌"
 
 var state: QuestGameState
 var phase := Phase.DOORS
@@ -38,9 +40,18 @@ var last_round_success := false
 var current_reward_id: StringName
 var pending_completion_result: Dictionary = {}
 var narrative_timer: Timer
+var narrative_cursor_timer: Timer
+var narrative_segments := PackedStringArray()
+var narrative_separator := "\n"
+var narrative_segment_index := -1
+var narrative_display_text := ""
 var narrative_typing := false
+var narrative_holding := false
+var narrative_cursor_visible := false
 var narrative_character_index := 0
 var suppress_narrative_animation := false
+var narrative_locale_restore_segment := -1
+var narrative_locale_restore_active := false
 
 var background_input: Control
 var door_prompt: Label
@@ -81,6 +92,10 @@ func _ready() -> void:
 	narrative_timer.one_shot = true
 	narrative_timer.timeout.connect(_advance_narrative_typewriter)
 	add_child(narrative_timer)
+	narrative_cursor_timer = Timer.new()
+	narrative_cursor_timer.wait_time = NARRATIVE_CURSOR_BLINK_SECONDS
+	narrative_cursor_timer.timeout.connect(_toggle_narrative_cursor)
+	add_child(narrative_cursor_timer)
 	LocaleManager.locale_changed.connect(_on_locale_changed)
 	if state != null:
 		show_checkpoint()
@@ -111,21 +126,21 @@ func can_stage_card(slot_index: int, card: CardItemState) -> bool:
 		return false
 	if slot_index < 0 or slot_index >= slots.size():
 		return false
-	var persona_id := PersonaMaskCatalog.persona_for_card(card)
-	if persona_id.is_empty() and used_card_ids.has(card.instance_id):
+	var shape_id := PersonaCardCatalog.shape_for_card(card)
+	if shape_id.is_empty() and used_card_ids.has(card.instance_id):
 		return false
 	for index in staged_entries.size():
 		if index != slot_index and staged_entries[index].get("card") == card:
 			return false
-	return state.expedition_room_accepts_card(room.id, card, persona_id)
+	return state.expedition_room_accepts_card(room.id, card, shape_id)
 
 
 func stage_card(slot_index: int, card: CardItemState) -> void:
 	if not can_stage_card(slot_index, card):
 		return
 	_unhide_entry(staged_entries[slot_index])
-	var persona_id := PersonaMaskCatalog.persona_for_card(card)
-	staged_entries[slot_index] = {"card": card, "persona_id": persona_id}
+	var shape_id := PersonaCardCatalog.shape_for_card(card)
+	staged_entries[slot_index] = {"card": card, "shape_id": shape_id}
 	hand_bar.set_card_temporarily_hidden(card, true)
 	_refresh_slots()
 	_refresh_feedback()
@@ -256,7 +271,8 @@ func _build_room_panel() -> void:
 	narrative_label.bbcode_enabled = true
 	narrative_label.add_theme_font_size_override("normal_font_size", 20)
 	narrative_label.add_theme_color_override("default_color", INK)
-	narrative_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	narrative_label.mouse_filter = Control.MOUSE_FILTER_STOP
+	narrative_label.gui_input.connect(_on_narrative_input)
 	right_column.add_child(narrative_label)
 	approach_row = HBoxContainer.new()
 	approach_row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -369,6 +385,10 @@ func _on_action_pressed() -> void:
 	if narrative_typing:
 		_finish_narrative_typewriter()
 		return
+	if narrative_holding and _has_next_narrative_segment():
+		_start_narrative_segment(narrative_segment_index + 1)
+		return
+	_stop_narrative_hold()
 	match phase:
 		Phase.INTRO:
 			_advance_from_intro()
@@ -415,6 +435,7 @@ func _show_challenge_intro() -> void:
 func _show_approaches() -> void:
 	phase = Phase.APPROACH
 	_set_room_image(&"challenge")
+	_stop_narrative_hold()
 	narrative_label.visible_characters = -1
 	narrative_typing = false
 	approach_row.visible = true
@@ -438,13 +459,13 @@ func _choose_approach(index: int) -> void:
 	]
 	if not room.post_choice_text_key.is_empty():
 		narrative_lines.append(TranslationServer.translate(room.post_choice_text_key))
-	_set_narrative_text("\n\n".join(narrative_lines))
+	_set_narrative_segments(narrative_lines, "\n\n")
 	_set_room_image(&"response")
 	_prepare_slots(room.slot_count)
 	feedback_label.visible = true
 	action_button.visible = true
 	action_button.disabled = false
-	action_button.text = TranslationServer.translate(&"expedition.ui.submit")
+	_refresh_action_button_text()
 	_refresh_feedback()
 
 
@@ -456,7 +477,7 @@ func _show_rest_slots() -> void:
 	action_button.text = TranslationServer.translate(
 		&"expedition.ui.sell" if room.rest_mode == MallRoomDefinition.RestMode.SALVAGE else &"expedition.ui.confirm"
 	)
-	action_button.disabled = room.rest_mode == MallRoomDefinition.RestMode.PERSONA_GROWTH
+	action_button.disabled = false
 
 
 func _prepare_slots(count: int) -> void:
@@ -480,7 +501,7 @@ func _submit_challenge_round() -> void:
 	var evaluation := state.evaluate_expedition_challenge_round(
 		room.id,
 		round.card_instance_ids,
-		round.persona_ids,
+		round.persona_shape_ids,
 		approach_index,
 		boss_round_index,
 	)
@@ -490,7 +511,7 @@ func _submit_challenge_round() -> void:
 	last_round_success = bool(evaluation.success)
 	for card_id in round.card_instance_ids:
 		used_card_ids[card_id] = true
-	_release_current_personas_only()
+	_release_current_persona_cards_only()
 	phase = Phase.ROUND_RESULT
 	_set_room_image(&"result")
 	_set_narrative_text(TranslationServer.translate(
@@ -504,6 +525,7 @@ func _submit_challenge_round() -> void:
 		if _has_next_boss_round()
 		else &"expedition.ui.continue"
 	)
+	_refresh_action_button_text()
 	reward_host.visible = false
 	reward_target.visible = false
 
@@ -530,8 +552,6 @@ func _start_next_boss_round() -> void:
 
 
 func _preview_rest_result() -> void:
-	if room.rest_mode == MallRoomDefinition.RestMode.PERSONA_GROWTH and _current_persona_ids().size() != 1:
-		return
 	phase = Phase.REST_RESULT
 	slot_row.visible = false
 	feedback_label.visible = false
@@ -539,10 +559,15 @@ func _preview_rest_result() -> void:
 	_set_narrative_text(TranslationServer.translate(
 		&"expedition.room.salvage.result"
 		if room.rest_mode == MallRoomDefinition.RestMode.SALVAGE
-		else &"expedition.room.rest.result"
+		else (
+			&"expedition.room.rest.empty_result"
+			if _is_empty_rest_submission()
+			else &"expedition.room.rest.result"
+		)
 	))
 	action_button.visible = true
 	action_button.text = TranslationServer.translate(&"expedition.ui.leave")
+	_refresh_action_button_text()
 
 
 func _show_reward(reward_id: StringName) -> void:
@@ -595,12 +620,12 @@ func _leave_room() -> void:
 		result = state.complete_expedition_room(room.id, [], [], challenge_rounds)
 	else:
 		result = state.complete_expedition_room(
-			room.id, _current_card_ids(), _current_persona_ids()
+			room.id, _current_card_ids(), _current_persona_shape_ids()
 		)
 	if not bool(result.get("ok", false)):
 		return
 	_clear_room_draft()
-	if not (result.get("new_persona_ids", []) as Array).is_empty():
+	if not (result.get("new_persona_shape_ids", []) as Array).is_empty():
 		pending_completion_result = result
 		phase = Phase.WAITING_PERSONA_REVEAL
 		action_button.visible = false
@@ -660,16 +685,13 @@ func _refresh_feedback() -> void:
 	if room == null or phase != Phase.SLOTS:
 		return
 	if room.category not in [MallRoomDefinition.Category.CHALLENGE, MallRoomDefinition.Category.BOSS]:
-		action_button.disabled = (
-			room.rest_mode == MallRoomDefinition.RestMode.PERSONA_GROWTH
-			and _current_persona_ids().size() != 1
-		)
+		action_button.disabled = false
 		return
 	var round := _current_round_dictionary()
 	var evaluation := state.evaluate_expedition_challenge_round(
 		room.id,
 		round.card_instance_ids,
-		round.persona_ids,
+		round.persona_shape_ids,
 		approach_index,
 		boss_round_index,
 	)
@@ -685,7 +707,7 @@ func _current_round_dictionary() -> Dictionary:
 	return {
 		"approach_index": approach_index,
 		"card_instance_ids": _current_card_ids(),
-		"persona_ids": _current_persona_ids(),
+		"persona_shape_ids": _current_persona_shape_ids(),
 	}
 
 
@@ -693,18 +715,22 @@ func _current_card_ids() -> Array[int]:
 	var result: Array[int] = []
 	for entry in staged_entries:
 		var card := entry.get("card") as CardItemState
-		if card != null and StringName(entry.get("persona_id", "")).is_empty():
+		if card != null and StringName(entry.get("shape_id", "")).is_empty():
 			result.append(card.instance_id)
 	return result
 
 
-func _current_persona_ids() -> Array[StringName]:
+func _current_persona_shape_ids() -> Array[StringName]:
 	var result: Array[StringName] = []
 	for entry in staged_entries:
-		var persona_id := StringName(entry.get("persona_id", ""))
-		if not persona_id.is_empty():
-			result.append(persona_id)
+		var shape_id := StringName(entry.get("shape_id", ""))
+		if not shape_id.is_empty():
+			result.append(shape_id)
 	return result
+
+
+func _is_empty_rest_submission() -> bool:
+	return _current_card_ids().is_empty() and _current_persona_shape_ids().is_empty()
 
 
 func _refresh_slots() -> void:
@@ -714,7 +740,7 @@ func _refresh_slots() -> void:
 			self,
 			index,
 			entry.get("card") as CardItemState,
-			StringName(entry.get("persona_id", "")),
+			StringName(entry.get("shape_id", "")),
 		)
 
 
@@ -730,7 +756,14 @@ func _clear_room_draft() -> void:
 	pending_completion_result = {}
 	if narrative_timer != null:
 		narrative_timer.stop()
+	if narrative_cursor_timer != null:
+		narrative_cursor_timer.stop()
+	narrative_segments.clear()
+	narrative_segment_index = -1
+	narrative_display_text = ""
 	narrative_typing = false
+	narrative_holding = false
+	narrative_cursor_visible = false
 	narrative_character_index = 0
 	if hand_bar != null:
 		hand_bar.clear_temporarily_hidden_cards()
@@ -741,8 +774,8 @@ func _clear_slot_entries(unhide_used_items: bool) -> void:
 		var card := entry.get("card") as CardItemState
 		if card == null:
 			continue
-		var persona_id := StringName(entry.get("persona_id", ""))
-		if not persona_id.is_empty() or unhide_used_items or not used_card_ids.has(card.instance_id):
+		var shape_id := StringName(entry.get("shape_id", ""))
+		if not shape_id.is_empty() or unhide_used_items or not used_card_ids.has(card.instance_id):
 			hand_bar.set_card_temporarily_hidden(card, false)
 	staged_entries.clear()
 	for index in slots.size():
@@ -750,10 +783,10 @@ func _clear_slot_entries(unhide_used_items: bool) -> void:
 		slots[index].setup(self, index)
 
 
-func _release_current_personas_only() -> void:
+func _release_current_persona_cards_only() -> void:
 	for entry in staged_entries:
-		var persona_id := StringName(entry.get("persona_id", ""))
-		if persona_id.is_empty():
+		var shape_id := StringName(entry.get("shape_id", ""))
+		if shape_id.is_empty():
 			continue
 		var card := entry.get("card") as CardItemState
 		if card != null:
@@ -784,27 +817,107 @@ func _on_background_input(event: InputEvent) -> void:
 	var click := event as InputEventMouseButton
 	if click != null and click.button_index == MOUSE_BUTTON_LEFT and click.pressed:
 		detail_popup.close()
+		if _advance_narrative_from_click():
+			background_input.accept_event()
+
+
+func _on_narrative_input(event: InputEvent) -> void:
+	var click := event as InputEventMouseButton
+	if click != null and click.button_index == MOUSE_BUTTON_LEFT and click.pressed:
+		detail_popup.close()
+		if _advance_narrative_from_click():
+			narrative_label.accept_event()
+
+
+func _advance_narrative_from_click() -> bool:
+	if narrative_typing:
+		_finish_narrative_typewriter()
+		return true
+	if narrative_holding and _has_next_narrative_segment():
+		_start_narrative_segment(narrative_segment_index + 1)
+		return true
+	if narrative_holding and phase in [Phase.INTRO, Phase.CHALLENGE_INTRO]:
+		_on_action_pressed()
+		return true
+	return false
 
 
 func _set_narrative(keys: Array[StringName]) -> void:
 	var lines: PackedStringArray = []
 	for key in keys:
 		lines.append(TranslationServer.translate(key))
-	_set_narrative_text("\n".join(lines))
+	_set_narrative_segments(lines, "\n")
 
 
 func _set_narrative_text(full_text: String) -> void:
+	var segments := PackedStringArray()
+	if not full_text.is_empty():
+		segments.append(full_text)
+	_set_narrative_segments(segments, "\n")
+
+
+func _set_narrative_segments(segments: PackedStringArray, separator: String) -> void:
 	if narrative_timer != null:
 		narrative_timer.stop()
-	narrative_label.text = full_text
+	_stop_narrative_cursor()
+	narrative_segments = segments.duplicate()
+	narrative_separator = separator
+	narrative_segment_index = -1
+	narrative_display_text = ""
 	narrative_character_index = 0
-	if suppress_narrative_animation or full_text.is_empty():
+	narrative_typing = false
+	narrative_holding = false
+	if narrative_segments.is_empty():
+		narrative_label.text = ""
 		narrative_label.visible_characters = -1
-		narrative_typing = false
 		return
-	narrative_label.visible_characters = 0
+	if suppress_narrative_animation:
+		narrative_segment_index = clampi(
+			narrative_locale_restore_segment,
+			0,
+			narrative_segments.size() - 1,
+		)
+		narrative_display_text = _narrative_text_through(narrative_segment_index)
+		narrative_label.text = narrative_display_text
+		narrative_label.visible_characters = -1
+		narrative_character_index = narrative_label.get_total_character_count()
+		narrative_holding = narrative_locale_restore_active
+		if narrative_holding:
+			_start_narrative_cursor()
+		_refresh_action_button_text()
+		return
+	_start_narrative_segment(0)
+
+
+func _start_narrative_segment(segment_index: int) -> void:
+	if segment_index < 0 or segment_index >= narrative_segments.size():
+		return
+	_stop_narrative_cursor()
+	narrative_segment_index = segment_index
+	narrative_display_text = _narrative_text_through(segment_index)
+	narrative_label.text = narrative_display_text
+	var prefix_text := _narrative_text_through(segment_index - 1)
+	if segment_index > 0:
+		prefix_text += narrative_separator
+	narrative_character_index = prefix_text.length()
+	narrative_label.visible_characters = narrative_character_index
 	narrative_typing = true
+	narrative_holding = false
+	_refresh_action_button_text()
 	_advance_narrative_typewriter()
+
+
+func _narrative_text_through(segment_index: int) -> String:
+	if segment_index < 0 or narrative_segments.is_empty():
+		return ""
+	var visible_segments := PackedStringArray()
+	for index in range(mini(segment_index + 1, narrative_segments.size())):
+		visible_segments.append(narrative_segments[index])
+	return narrative_separator.join(visible_segments)
+
+
+func _has_next_narrative_segment() -> bool:
+	return narrative_segment_index >= 0 and narrative_segment_index + 1 < narrative_segments.size()
 
 
 func _advance_narrative_typewriter() -> void:
@@ -821,9 +934,90 @@ func _advance_narrative_typewriter() -> void:
 func _finish_narrative_typewriter() -> void:
 	if narrative_timer != null:
 		narrative_timer.stop()
+	narrative_label.text = narrative_display_text
 	narrative_label.visible_characters = -1
 	narrative_character_index = narrative_label.get_total_character_count()
 	narrative_typing = false
+	narrative_holding = not narrative_display_text.is_empty()
+	if narrative_holding:
+		_start_narrative_cursor()
+	_refresh_action_button_text()
+
+
+func _start_narrative_cursor() -> void:
+	if not narrative_holding:
+		return
+	narrative_cursor_visible = true
+	_refresh_narrative_cursor()
+	if narrative_cursor_timer != null:
+		narrative_cursor_timer.start()
+
+
+func _toggle_narrative_cursor() -> void:
+	if not narrative_holding:
+		_stop_narrative_cursor()
+		return
+	narrative_cursor_visible = not narrative_cursor_visible
+	_refresh_narrative_cursor()
+
+
+func _refresh_narrative_cursor() -> void:
+	if narrative_label == null:
+		return
+	narrative_label.text = (
+		narrative_display_text + NARRATIVE_CURSOR
+		if narrative_holding and narrative_cursor_visible
+		else narrative_display_text
+	)
+	narrative_label.visible_characters = -1
+
+
+func _stop_narrative_cursor() -> void:
+	if narrative_cursor_timer != null:
+		narrative_cursor_timer.stop()
+	narrative_cursor_visible = false
+	if narrative_label != null:
+		narrative_label.text = narrative_display_text
+
+
+func _stop_narrative_hold() -> void:
+	_stop_narrative_cursor()
+	narrative_holding = false
+
+
+func _refresh_action_button_text() -> void:
+	if action_button == null:
+		return
+	if narrative_typing or _has_next_narrative_segment():
+		action_button.text = TranslationServer.translate(&"expedition.ui.continue")
+		return
+	match phase:
+		Phase.INTRO, Phase.CHALLENGE_INTRO:
+			action_button.text = TranslationServer.translate(&"expedition.ui.continue")
+		Phase.SLOTS:
+			action_button.text = TranslationServer.translate(
+				&"expedition.ui.submit"
+				if room != null and room.category in [
+					MallRoomDefinition.Category.CHALLENGE,
+					MallRoomDefinition.Category.BOSS,
+				]
+				else (
+					&"expedition.ui.sell"
+					if room != null and room.rest_mode == MallRoomDefinition.RestMode.SALVAGE
+					else &"expedition.ui.confirm"
+				)
+			)
+		Phase.ROUND_RESULT:
+			action_button.text = TranslationServer.translate(
+				&"expedition.ui.next_round"
+				if _has_next_boss_round()
+				else &"expedition.ui.continue"
+			)
+		Phase.REST_RESULT:
+			action_button.text = TranslationServer.translate(&"expedition.ui.leave")
+		Phase.REWARD:
+			if reward_collected:
+				action_button.text = TranslationServer.translate(&"expedition.ui.leave")
 
 
 func _set_room_image(stage_id: StringName) -> void:
@@ -847,9 +1041,13 @@ func _refresh_localized_text() -> void:
 
 
 func _on_locale_changed(_locale: String) -> void:
+	narrative_locale_restore_segment = narrative_segment_index
+	narrative_locale_restore_active = narrative_typing or narrative_holding
 	suppress_narrative_animation = true
 	_refresh_localized_text()
 	suppress_narrative_animation = false
+	narrative_locale_restore_segment = -1
+	narrative_locale_restore_active = false
 
 
 func _refresh_room_phase_text() -> void:
@@ -914,7 +1112,11 @@ func _refresh_room_phase_text() -> void:
 			_set_narrative_text(TranslationServer.translate(
 				&"expedition.room.salvage.result"
 				if room.rest_mode == MallRoomDefinition.RestMode.SALVAGE
-				else &"expedition.room.rest.result"
+				else (
+					&"expedition.room.rest.empty_result"
+					if _is_empty_rest_submission()
+					else &"expedition.room.rest.result"
+				)
 			))
 			action_button.text = TranslationServer.translate(&"expedition.ui.leave")
 		Phase.REWARD:
@@ -938,6 +1140,7 @@ func _refresh_room_phase_text() -> void:
 				)
 			if reward_collected:
 				action_button.text = TranslationServer.translate(&"expedition.ui.leave")
+	_refresh_action_button_text()
 
 
 func _panel_style(background: Color, border: Color) -> StyleBoxFlat:

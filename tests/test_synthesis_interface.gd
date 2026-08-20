@@ -32,11 +32,11 @@ func test_synthesis_uses_full_screen_in_bag_shell() -> void:
 	assert_lt(synthesis.background_input.get_index(), synthesis.draft_layer.get_index())
 	assert_null(synthesis.find_child("InBagBackground", true, false))
 	assert_null(synthesis.find_child("SynthesisBackgroundDimmer", true, false))
-	var star_chart := synthesis.find_child("PersonaStarChart", true, false) as PersonaStarChart
+	var star_chart := synthesis.find_child("ShapeStarChart", true, false) as ShapeStarChart
 	assert_not_null(star_chart)
-	assert_eq(PersonaStarChart.BACKGROUND_COLOR, Color("050a18"))
+	assert_eq(ShapeStarChart.BACKGROUND_COLOR, Color("050a18"))
 	assert_lt(star_chart.get_index(), synthesis.draft_layer.get_index())
-	assert_eq(PersonaStarChart.MAX_LEVEL, 10)
+	assert_eq(ShapeStarChart.MAX_LEVEL, 10)
 
 	main._show_map_immediate()
 	assert_true(main.global_frame.visible)
@@ -47,10 +47,10 @@ func test_synthesis_uses_the_dedicated_four_persona_art() -> void:
 	var main := await _spawn_synthesis_main()
 	var synthesis := main.current_screen as QuestSynthesisInterface
 	var expected_paths := {
-		&"nightwalker": "res://resources/ui/synthesis/persona/nightwalker.png",
-		&"mourner": "res://resources/ui/synthesis/persona/mourner.png",
-		&"dreamwalker": "res://resources/ui/synthesis/persona/dreamwalker.png",
-		&"homecomer": "res://resources/ui/synthesis/persona/homecomer.png",
+		&"light": "res://resources/ui/synthesis/shape/light.png",
+		&"tear": "res://resources/ui/synthesis/shape/tear.png",
+		&"dream": "res://resources/ui/synthesis/shape/dream.png",
+		&"sleep": "res://resources/ui/synthesis/shape/sleep.png",
 	}
 	assert_eq(
 		synthesis.background_image.texture.resource_path,
@@ -65,20 +65,51 @@ func test_synthesis_uses_the_dedicated_four_persona_art() -> void:
 		),
 		Vector4(0.0, -24.0, 48.0, 24.0),
 	)
-	for persona_id in expected_paths:
-		var button := synthesis.persona_buttons[persona_id] as Button
+	for shape_id in expected_paths:
+		var button := synthesis.shape_buttons[shape_id] as Button
 		var icon := button.get_node("PersonaIcon") as TextureRect
-		assert_not_null(icon, persona_id)
-		assert_eq(icon.texture.resource_path, expected_paths[persona_id], persona_id)
+		assert_not_null(icon, shape_id)
+		assert_eq(icon.texture.resource_path, expected_paths[shape_id], shape_id)
 		var display_scale := float(
-			QuestSynthesisInterface.PERSONA_ICON_DISPLAY_SCALES[persona_id]
+			QuestSynthesisInterface.SHAPE_ICON_DISPLAY_SCALES[shape_id]
 		)
-		var expected_size := QuestSynthesisInterface.PERSONA_ICON_SIZE * display_scale
+		var expected_size := QuestSynthesisInterface.SHAPE_ICON_SIZE * display_scale
 		var expected_position := (button.size - icon.size) * 0.5
-		assert_almost_eq(icon.size.x, expected_size.x, 0.001, persona_id)
-		assert_almost_eq(icon.size.y, expected_size.y, 0.001, persona_id)
-		assert_almost_eq(icon.position.x, expected_position.x, 0.001, persona_id)
-		assert_almost_eq(icon.position.y, expected_position.y, 0.001, persona_id)
+		assert_almost_eq(icon.size.x, expected_size.x, 0.001, shape_id)
+		assert_almost_eq(icon.size.y, expected_size.y, 0.001, shape_id)
+		assert_almost_eq(icon.position.x, expected_position.x, 0.001, shape_id)
+		assert_almost_eq(icon.position.y, expected_position.y, 0.001, shape_id)
+
+
+func test_persona_hover_adds_matching_icon_and_axis_glow_colors() -> void:
+	var main := await _spawn_synthesis_main()
+	var synthesis := main.current_screen as QuestSynthesisInterface
+	var expected_colors := {
+		&"light": Color("f2d14f"),
+		&"tear": Color("6faed9"),
+		&"dream": Color("9a78c5"),
+		&"sleep": Color("f3c6d6"),
+	}
+	for shape_id in CardPropertySet.SHAPES:
+		assert_eq(ShapeVisuals.color(shape_id), expected_colors[shape_id], shape_id)
+		assert_eq(synthesis.star_chart.shape_color(shape_id), expected_colors[shape_id])
+		var layers := synthesis.shape_glow_layers[shape_id] as Array
+		assert_eq(layers.size(), QuestSynthesisInterface.SHAPE_ICON_GLOW_SCALES.size())
+		for raw_layer in layers:
+			assert_false((raw_layer as TextureRect).visible, shape_id)
+
+	synthesis._on_shape_hovered(&"dream")
+	assert_eq(synthesis.star_chart.hovered_shape_id, &"dream")
+	for shape_id in CardPropertySet.SHAPES:
+		var layers := synthesis.shape_glow_layers[shape_id] as Array
+		for raw_layer in layers:
+			var layer := raw_layer as TextureRect
+			assert_eq(layer.visible, shape_id == &"dream", shape_id)
+			assert_eq(
+				Color(layer.self_modulate, 1.0),
+				Color(expected_colors[shape_id], 1.0),
+				shape_id,
+			)
 
 
 func test_synthesis_shell_does_not_block_hand_cards_or_bag_button() -> void:
@@ -132,11 +163,11 @@ func test_clicking_material_and_borrow_slots_lifts_only_cards_they_accept() -> v
 	var synthesis := main.current_screen as QuestSynthesisInterface
 	var jasmine := _card_by_definition(main.state, &"jasmine")
 	var helper := _card_by_definition(main.state, &"soft_gauze")
-	var dreamwalker := PersonaMaskCatalog.card_for_persona(&"dreamwalker")
+	var dream := PersonaCardCatalog.card_for_shape(&"dream")
 	var jasmine_view := main.hand_bar.card_views[jasmine.instance_id] as CardHandCard
 	var helper_view := main.hand_bar.card_views[helper.instance_id] as CardHandCard
-	var dreamwalker_view := (
-		main.hand_bar.card_views[dreamwalker.instance_id] as CardHandCard
+	var dream_view := (
+		main.hand_bar.card_views[dream.instance_id] as CardHandCard
 	)
 	var click := InputEventMouseButton.new()
 	click.button_index = MOUSE_BUTTON_LEFT
@@ -145,19 +176,19 @@ func test_clicking_material_and_borrow_slots_lifts_only_cards_they_accept() -> v
 	synthesis.base_slot._on_gui_input(click)
 	assert_true(main.hand_bar.card_highlight_predicate.is_valid())
 	assert_true(jasmine_view.rule_match_highlighted)
-	assert_false(dreamwalker_view.rule_match_highlighted)
+	assert_false(dream_view.rule_match_highlighted)
 	assert_almost_eq(jasmine_view.offset_top, -QuestHandBar.RULE_MATCH_LIFT, 0.01)
-	assert_almost_eq(dreamwalker_view.offset_top, 0.0, 0.01)
+	assert_almost_eq(dream_view.offset_top, 0.0, 0.01)
 
 	assert_true(synthesis.stage_card(&"base", jasmine))
 	assert_false(main.hand_bar.card_highlight_predicate.is_valid())
 	synthesis.persona_slot._on_gui_input(click)
-	assert_true(dreamwalker_view.rule_match_highlighted)
+	assert_true(dream_view.rule_match_highlighted)
 	assert_false(helper_view.rule_match_highlighted)
-	assert_almost_eq(dreamwalker_view.offset_top, -QuestHandBar.RULE_MATCH_LIFT, 0.01)
+	assert_almost_eq(dream_view.offset_top, -QuestHandBar.RULE_MATCH_LIFT, 0.01)
 
 	(synthesis.reinforcement_labels[&"helper"] as Label).gui_input.emit(click)
-	assert_false(dreamwalker_view.rule_match_highlighted)
+	assert_false(dream_view.rule_match_highlighted)
 	assert_true(helper_view.rule_match_highlighted)
 	assert_almost_eq(helper_view.offset_top, -QuestHandBar.RULE_MATCH_LIFT, 0.01)
 
@@ -228,26 +259,26 @@ func test_material_type_icons_appear_above_the_base_and_open_property_details() 
 	assert_true(synthesis.displayed_base_type_ids.is_empty())
 
 
-func test_persona_rays_clear_the_card_and_reach_distant_icons_at_level_ten() -> void:
+func test_shape_rays_clear_the_card_and_reach_distant_icons_at_level_ten() -> void:
 	var main := await _spawn_synthesis_main()
 	var synthesis := main.current_screen as QuestSynthesisInterface
 	var card_rect := Rect2(
 		synthesis.base_slot_host.position,
 		synthesis.base_slot_host.size,
 	)
-	for persona_id in CardPropertySet.PERSONAS:
-		var button := synthesis.persona_buttons[persona_id] as Button
+	for shape_id in CardPropertySet.SHAPES:
+		var button := synthesis.shape_buttons[shape_id] as Button
 		var button_rect := Rect2(button.position, button.size)
-		var level_zero := synthesis._persona_ray_points(persona_id, 0)
-		var level_one := synthesis._persona_ray_points(persona_id, 1)
-		var level_two := synthesis._persona_ray_points(persona_id, 2)
-		var level_nine := synthesis._persona_ray_points(persona_id, 9)
-		var level_ten := synthesis._persona_ray_points(persona_id, 10)
+		var level_zero := synthesis._shape_ray_points(shape_id, 0)
+		var level_one := synthesis._shape_ray_points(shape_id, 1)
+		var level_two := synthesis._shape_ray_points(shape_id, 2)
+		var level_nine := synthesis._shape_ray_points(shape_id, 9)
+		var level_ten := synthesis._shape_ray_points(shape_id, 10)
 		assert_eq(level_zero[0], level_zero[1])
 		assert_false(card_rect.has_point(level_one[0]))
 		assert_almost_eq(
 			level_one[0].distance_to(level_one[1]),
-			QuestSynthesisInterface.PERSONA_RAY_LEVEL_ONE_LENGTH,
+			QuestSynthesisInterface.SHAPE_RAY_LEVEL_ONE_LENGTH,
 			0.01,
 		)
 		assert_almost_eq(
@@ -259,21 +290,21 @@ func test_persona_rays_clear_the_card_and_reach_distant_icons_at_level_ten() -> 
 		)
 		assert_true(button_rect.has_point(level_ten[1]))
 
-	var nightwalker := synthesis.persona_buttons[&"nightwalker"] as Button
-	var mourner := synthesis.persona_buttons[&"mourner"] as Button
-	var dreamwalker := synthesis.persona_buttons[&"dreamwalker"] as Button
-	var homecomer := synthesis.persona_buttons[&"homecomer"] as Button
-	assert_lt(nightwalker.get_rect().get_center().x + nightwalker.position.x, 240.0)
-	assert_lt(mourner.get_rect().get_center().x + mourner.position.x, 240.0)
-	assert_gt(dreamwalker.get_rect().get_center().x + dreamwalker.position.x, 1040.0)
-	assert_gt(homecomer.get_rect().get_center().x + homecomer.position.x, 1040.0)
-	assert_lt(nightwalker.get_rect().get_center().y + nightwalker.position.y, 180.0)
-	assert_gt(dreamwalker.position.y, PersonaStarChart.POPUP_SAFE_RECT.end.y)
-	assert_false(PersonaStarChart.POPUP_SAFE_RECT.intersects(
-		Rect2(dreamwalker.position, dreamwalker.size)
+	var light := synthesis.shape_buttons[&"light"] as Button
+	var tear := synthesis.shape_buttons[&"tear"] as Button
+	var dream := synthesis.shape_buttons[&"dream"] as Button
+	var sleep := synthesis.shape_buttons[&"sleep"] as Button
+	assert_lt(light.get_rect().get_center().x + light.position.x, 240.0)
+	assert_lt(tear.get_rect().get_center().x + tear.position.x, 240.0)
+	assert_gt(dream.get_rect().get_center().x + dream.position.x, 1040.0)
+	assert_gt(sleep.get_rect().get_center().x + sleep.position.x, 1040.0)
+	assert_lt(light.get_rect().get_center().y + light.position.y, 180.0)
+	assert_gt(dream.position.y, ShapeStarChart.POPUP_SAFE_RECT.end.y)
+	assert_false(ShapeStarChart.POPUP_SAFE_RECT.intersects(
+		Rect2(dream.position, dream.size)
 	))
-	assert_gt(mourner.get_rect().get_center().y + mourner.position.y, 340.0)
-	assert_gt(homecomer.get_rect().get_center().y + homecomer.position.y, 340.0)
+	assert_gt(tear.get_rect().get_center().y + tear.position.y, 340.0)
+	assert_gt(sleep.get_rect().get_center().y + sleep.position.y, 340.0)
 	assert_gt(QuestSynthesisInterface.FIELD_CENTER.x, 640.0)
 	assert_gt(QuestSynthesisInterface.FIELD_CENTER.y, 280.0)
 
@@ -284,28 +315,28 @@ func test_recipe_nodes_keep_fixed_star_chart_coordinates_when_totals_change() ->
 	var single_recipe := QuestArcCatalog.recipe_by_id(&"recipe_midnight_rose")
 	var pair_recipe := SynthesisRecipeDefinition.new()
 	pair_recipe.id = &"star_chart_pair_probe"
-	pair_recipe.required_personas = {&"nightwalker": 5, &"dreamwalker": 5}
+	pair_recipe.required_shapes = {&"light": 5, &"dream": 5}
 	var lower_pair_recipe := SynthesisRecipeDefinition.new()
 	lower_pair_recipe.id = &"star_chart_lower_pair_probe"
-	lower_pair_recipe.required_personas = {&"mourner": 5, &"dreamwalker": 5}
+	lower_pair_recipe.required_shapes = {&"tear": 5, &"dream": 5}
 	assert_not_null(single_recipe)
 	var single_position := synthesis._candidate_position(single_recipe)
 	var pair_position := synthesis._candidate_position(pair_recipe)
 	var lower_pair_position := synthesis._candidate_position(lower_pair_recipe)
 	assert_eq(
 		single_position,
-		synthesis.star_chart.axis_point(&"dreamwalker", 5.0),
+		synthesis.star_chart.axis_point(&"dream", 5.0),
 	)
-	assert_true(PersonaStarChart.CANDIDATE_BOUNDS.has_point(pair_position))
+	assert_true(ShapeStarChart.CANDIDATE_BOUNDS.has_point(pair_position))
 	assert_ne(pair_position, QuestSynthesisInterface.FIELD_CENTER)
 	var pair_track := synthesis.star_chart.pair_track_points(pair_recipe)
 	assert_eq(
 		pair_track[0],
-		synthesis.star_chart.axis_point(&"nightwalker", 5.0),
+		synthesis.star_chart.axis_point(&"light", 5.0),
 	)
 	assert_eq(
 		pair_track[-1],
-		synthesis.star_chart.axis_point(&"dreamwalker", 5.0),
+		synthesis.star_chart.axis_point(&"dream", 5.0),
 	)
 	assert_true(pair_position in pair_track)
 	var visible_pair_recipes: Array[SynthesisRecipeDefinition] = [
@@ -328,10 +359,10 @@ func test_recipe_nodes_keep_fixed_star_chart_coordinates_when_totals_change() ->
 		)
 		assert_false(lower_pair_rect.intersects(reinforcement_slot_rect))
 	synthesis.star_chart.set_totals({
-		&"nightwalker": 10,
-		&"mourner": 7,
-		&"dreamwalker": 9,
-		&"homecomer": 6,
+		&"light": 10,
+		&"tear": 7,
+		&"dream": 9,
+		&"sleep": 6,
 	})
 	assert_eq(synthesis._candidate_position(single_recipe), single_position)
 	assert_eq(synthesis._candidate_position(pair_recipe), pair_position)
@@ -368,10 +399,10 @@ func test_reinforcement_slots_appear_only_after_material_is_placed() -> void:
 	var main := await _spawn_synthesis_main()
 	var synthesis := main.current_screen as QuestSynthesisInterface
 	var helper := _card_by_definition(main.state, &"soft_gauze")
-	var dreamwalker := PersonaMaskCatalog.card_for_persona(&"dreamwalker")
+	var dream := PersonaCardCatalog.card_for_shape(&"dream")
 	assert_false(synthesis.reinforcement_group.visible)
 	assert_false(synthesis.stage_card(&"helper", helper))
-	assert_false(synthesis.stage_card(&"persona", dreamwalker))
+	assert_false(synthesis.stage_card(&"persona", dream))
 
 	assert_true(synthesis.stage_card(&"base", _card_by_definition(main.state, &"jasmine")))
 	assert_true(synthesis.reinforcement_group.visible)
@@ -396,14 +427,14 @@ func test_reinforcement_slots_appear_only_after_material_is_placed() -> void:
 		560.0,
 	)
 	assert_true(synthesis.stage_card(&"helper", helper))
-	assert_true(synthesis.stage_card(&"persona", dreamwalker))
+	assert_true(synthesis.stage_card(&"persona", dream))
 	assert_same(synthesis.helper_slot.card, helper)
-	assert_same(synthesis.persona_slot.card, dreamwalker)
-	var totals := main.state.synthesis_persona_totals()
-	assert_eq(int(totals[&"dreamwalker"]), 5)
-	assert_eq(int(totals[&"homecomer"]), 4)
-	assert_eq(int(totals[&"mourner"]), 0)
-	assert_eq(int(totals[&"nightwalker"]), 0)
+	assert_same(synthesis.persona_slot.card, dream)
+	var totals := main.state.synthesis_shape_totals()
+	assert_eq(int(totals[&"dream"]), 5)
+	assert_eq(int(totals[&"sleep"]), 4)
+	assert_eq(int(totals[&"tear"]), 0)
+	assert_eq(int(totals[&"light"]), 0)
 
 
 func test_replacing_or_removing_base_clears_reinforcement_and_returns_helper() -> void:
@@ -416,12 +447,12 @@ func test_replacing_or_removing_base_clears_reinforcement_and_returns_helper() -
 	assert_true(synthesis.stage_card(&"helper", helper))
 	assert_true(
 		synthesis.stage_card(
-			&"persona", PersonaMaskCatalog.card_for_persona(&"dreamwalker")
+			&"persona", PersonaCardCatalog.card_for_shape(&"dream")
 		)
 	)
 	assert_true(synthesis.stage_card(&"base", replacement))
 	assert_eq(main.state.synthesis_helper_instance_id, 0)
-	assert_true(main.state.synthesis_persona_id.is_empty())
+	assert_true(main.state.synthesis_persona_shape_id.is_empty())
 	assert_eq(helper.location, CardItemState.Location.HAND)
 	assert_eq(jasmine.location, CardItemState.Location.HAND)
 
@@ -451,7 +482,7 @@ func test_unknown_gray_candidate_opens_possibility_with_types_and_requirements()
 		TranslationServer.translate(&"quest.ui.synthesis.possibility.title"),
 	)
 	assert_true(main.detail_popup.current_definition.has_property(&"flower"))
-	assert_eq(main.detail_popup.current_definition.property_value(&"dreamwalker"), 5)
+	assert_eq(main.detail_popup.current_definition.property_value(&"dream"), 5)
 
 
 func test_candidate_selection_clears_on_repeat_or_blank_background_click() -> void:
@@ -491,7 +522,7 @@ func test_complete_click_discovers_recipe_and_discovered_gray_click_reveals_outp
 	assert_true(synthesis.stage_card(&"helper", helper))
 	assert_true(
 		synthesis.stage_card(
-			&"persona", PersonaMaskCatalog.card_for_persona(&"dreamwalker")
+			&"persona", PersonaCardCatalog.card_for_shape(&"dream")
 		)
 	)
 	(synthesis.candidate_buttons[&"recipe_midnight_rose"] as Button).pressed.emit()
@@ -508,21 +539,21 @@ func test_complete_click_discovers_recipe_and_discovered_gray_click_reveals_outp
 	assert_false(synthesis.action_button.visible)
 
 
-func test_persona_icon_click_opens_details_and_hover_pulses_matching_outputs() -> void:
+func test_shape_icon_click_opens_details_and_hover_pulses_matching_outputs() -> void:
 	var main := await _spawn_synthesis_main()
 	var synthesis := main.current_screen as QuestSynthesisInterface
 	assert_true(synthesis.stage_card(&"base", _card_by_definition(main.state, &"jasmine")))
-	(synthesis.persona_buttons[&"dreamwalker"] as Button).pressed.emit()
+	(synthesis.shape_buttons[&"dream"] as Button).pressed.emit()
 	assert_true(main.detail_popup.visible)
-	assert_eq(main.detail_popup.primary_property_id, &"dreamwalker")
+	assert_eq(main.detail_popup.primary_property_id, &"dream")
 	assert_eq(
 		main.detail_popup.title_label.text,
-		TranslationServer.translate(&"demo.mask.dreamwalker.name"),
+		TranslationServer.translate(&"demo.shape.dream.name"),
 	)
 
-	synthesis._on_persona_hovered(&"dreamwalker")
+	synthesis._on_shape_hovered(&"dream")
 	assert_true(synthesis.candidate_hover_tweens.has(&"recipe_midnight_rose"))
-	synthesis._on_persona_hovered(&"nightwalker")
+	synthesis._on_shape_hovered(&"light")
 	assert_false(synthesis.candidate_hover_tweens.has(&"recipe_midnight_rose"))
 
 
@@ -531,7 +562,7 @@ func test_success_consumes_base_and_helper_but_returns_persona_then_preserves_re
 	var synthesis := main.current_screen as QuestSynthesisInterface
 	var jasmine := _card_by_definition(main.state, &"jasmine")
 	var helper := _card_by_definition(main.state, &"soft_gauze")
-	var persona := PersonaMaskCatalog.card_for_persona(&"dreamwalker")
+	var persona := PersonaCardCatalog.card_for_shape(&"dream")
 	assert_true(synthesis.stage_card(&"base", jasmine))
 	assert_true(synthesis.stage_card(&"helper", helper))
 	assert_true(synthesis.stage_card(&"persona", persona))
@@ -541,7 +572,7 @@ func test_success_consumes_base_and_helper_but_returns_persona_then_preserves_re
 	assert_null(main.state.card_by_instance_id(jasmine.instance_id))
 	assert_null(main.state.card_by_instance_id(helper.instance_id))
 	assert_eq(persona.location, CardItemState.Location.HAND)
-	assert_true(main.state.synthesis_persona_id.is_empty())
+	assert_true(main.state.synthesis_persona_shape_id.is_empty())
 	var output := synthesis.pending_output
 	assert_not_null(output)
 	assert_true(main.hand_bar.temporarily_hidden_card_ids.has(output.instance_id))
@@ -570,7 +601,7 @@ func test_drop_highlights_follow_visible_inline_reinforcement_slots() -> void:
 	assert_true(synthesis.stage_card(&"base", jasmine))
 	synthesis.show_drop_targets_for_card(_card_by_definition(main.state, &"soft_gauze"))
 	_assert_drop_highlights(synthesis, {&"helper": true})
-	synthesis.show_drop_targets_for_card(PersonaMaskCatalog.card_for_persona(&"dreamwalker"))
+	synthesis.show_drop_targets_for_card(PersonaCardCatalog.card_for_shape(&"dream"))
 	_assert_drop_highlights(synthesis, {&"persona": true})
 
 

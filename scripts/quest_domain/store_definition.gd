@@ -12,6 +12,7 @@ extends Resource
 @export_range(1, 30, 1) var restock_phase_day := 1
 @export_range(0, 6, 1) var initial_capacity := 6
 @export var initial_shelf_item_ids: Array[StringName] = []
+@export var unlockable_shelf_item_ids: Array[StringName] = []
 
 
 func validation_errors() -> PackedStringArray:
@@ -24,6 +25,8 @@ func validation_errors() -> PackedStringArray:
 		errors.append("Locked store %s needs a map unlock definition." % id)
 	if initial_shelf_item_ids.size() > initial_capacity:
 		errors.append("Store %s has more initial items than shelf positions." % id)
+	if initial_shelf_item_ids.size() + unlockable_shelf_item_ids.size() > initial_capacity:
+		errors.append("Store %s has more declared items than shelf positions." % id)
 	if map_anchor.x < 0.0 or map_anchor.x > 1.0 or map_anchor.y < 0.0 or map_anchor.y > 1.0:
 		errors.append("Store %s has an invalid map anchor." % id)
 	if restock_phase_day > restock_interval_days:

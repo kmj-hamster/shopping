@@ -172,6 +172,7 @@ func _on_store_pressed(store_id: StringName) -> void:
 
 func _on_expedition_pressed() -> void:
 	_close_location_popup()
+	_refresh_expedition_text()
 	expedition_confirm_dialog.popup_centered(Vector2i(480, 190))
 
 
@@ -180,9 +181,13 @@ func _refresh_expedition_text() -> void:
 		return
 	expedition_button.text = TranslationServer.translate(&"expedition.ui.enter")
 	expedition_confirm_dialog.title = TranslationServer.translate(&"expedition.ui.enter")
-	expedition_confirm_dialog.dialog_text = TranslationServer.translate(
-		&"expedition.ui.confirm_enter"
-	)
+	var lethal_disease_id := state.lethal_disease_id() if state != null else &""
+	var confirmation_key := &"expedition.ui.confirm_enter"
+	if lethal_disease_id == QuestGameState.EXPEDITION_WHITE_FLOWER_ITEM_ID:
+		confirmation_key = &"expedition.ui.confirm_enter.lethal_white_flower"
+	elif lethal_disease_id == QuestGameState.EXPEDITION_FAILURE_ITEM_ID:
+		confirmation_key = &"expedition.ui.confirm_enter.lethal_wound"
+	expedition_confirm_dialog.dialog_text = TranslationServer.translate(confirmation_key)
 	expedition_confirm_dialog.ok_button_text = TranslationServer.translate(&"demo.ui.confirm")
 	expedition_confirm_dialog.cancel_button_text = TranslationServer.translate(&"demo.ui.cancel")
 

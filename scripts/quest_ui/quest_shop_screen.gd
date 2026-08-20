@@ -9,21 +9,18 @@ signal background_pressed
 const DIALOGUE_SILENT_CHARACTERS := " \t\r\n，。！？、；：,.!?;:…—-（）()“”\"'"
 const DIALOGUE_VOICE_PLAYER_COUNT := 3
 const DIALOGUE_MAX_VISIBLE_LINES := 2
+const SHELF_LABEL_FONT_SIZE := 13
+const SHELF_ZH_LABEL_FONT_SIZE := 15
 const DIALOGUE_TEXT_COLOR := Color("edf2ee")
 const DIALOGUE_FEEDBACK_COLOR := Color("f0d8ce")
+const CHECKOUT_NORMAL_COLOR := Color("dce8e4", 0.12)
+const CHECKOUT_NORMAL_BORDER := Color("f2f7f5", 0.46)
 const SHOP_BACK_TEXTURE: Texture2D = preload("res://resources/ui/shell/shop-back.png")
 const SHOP_SHELF_TEXTURE: Texture2D = preload("res://resources/ui/shell/shop-shelf.png")
 const SHOP_TALK_TEXTURE: Texture2D = preload("res://resources/ui/shell/shop-talk.png")
 const FROSTED_DIALOGUE_SHADER: Shader = preload(
 	"res://resources/shaders/frosted_dialogue.gdshader"
 )
-const OWNER_TEXTURE_PATHS := {
-	&"toy": "res://resources/character/balloon-head.png",
-	&"fast_food": "res://resources/character/rat-head.png",
-	&"flower": "res://resources/character/flower-head.png",
-	&"record": "res://resources/character/phonograph-head.png",
-	&"bookstore": "res://resources/character/manga-head.png",
-}
 const LOWERED_OWNER_STORES: Array[StringName] = [&"fast_food", &"record", &"bookstore"]
 
 var state: QuestGameState
@@ -46,6 +43,7 @@ var owner_name_label: Label
 var owner_dialogue_label: Label
 var shelf_nav_button: Button
 var talk_nav_button: Button
+var talk_request_dot: Panel
 var leave_nav_button: Button
 var restock_label: Label
 var shelf_buttons: Dictionary = {}
@@ -166,6 +164,26 @@ func _build_interface() -> void:
 	_configure_navigation_button(talk_nav_button, SHOP_TALK_TEXTURE)
 	talk_nav_button.pressed.connect(_on_owner_pressed)
 	navigation_column.add_child(talk_nav_button)
+	talk_request_dot = Panel.new()
+	talk_request_dot.name = "OwnerRequestNotice"
+	talk_request_dot.anchor_left = 0.78
+	talk_request_dot.anchor_top = -0.08
+	talk_request_dot.anchor_right = 0.78
+	talk_request_dot.anchor_bottom = -0.08
+	talk_request_dot.offset_left = -5
+	talk_request_dot.offset_top = -5
+	talk_request_dot.offset_right = 7
+	talk_request_dot.offset_bottom = 7
+	talk_request_dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var notice_style := StyleBoxFlat.new()
+	notice_style.bg_color = Color("b83b45")
+	notice_style.border_color = Color("ffd2c7", 0.72)
+	notice_style.set_border_width_all(1)
+	notice_style.set_corner_radius_all(7)
+	notice_style.shadow_color = Color("e64a55", 0.56)
+	notice_style.shadow_size = 5
+	talk_request_dot.add_theme_stylebox_override("panel", notice_style)
+	talk_nav_button.add_child(talk_request_dot)
 	leave_nav_button = Button.new()
 	leave_nav_button.name = "LeaveButton"
 	_configure_navigation_button(leave_nav_button, SHOP_BACK_TEXTURE)
@@ -181,7 +199,7 @@ func _build_interface() -> void:
 	dialogue_panel.name = "OwnerDialoguePanel"
 	dialogue_panel.anchor_left = 0.405
 	dialogue_panel.anchor_top = 0.735
-	dialogue_panel.anchor_right = 0.815
+	dialogue_panel.anchor_right = 0.865
 	dialogue_panel.anchor_bottom = 0.97
 	dialogue_panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	dialogue_panel.clip_contents = true
@@ -239,7 +257,7 @@ func _build_interface() -> void:
 	owner_dialogue_label.mouse_filter = Control.MOUSE_FILTER_PASS
 	owner_dialogue_label.anchor_left = 0.055
 	owner_dialogue_label.anchor_top = 0.28
-	owner_dialogue_label.anchor_right = 0.77
+	owner_dialogue_label.anchor_right = 0.715
 	owner_dialogue_label.anchor_bottom = 0.73
 	owner_dialogue_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	owner_dialogue_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -252,16 +270,17 @@ func _build_interface() -> void:
 	feedback_label.mouse_filter = Control.MOUSE_FILTER_PASS
 	feedback_label.anchor_left = 0.055
 	feedback_label.anchor_top = 0.74
-	feedback_label.anchor_right = 0.77
+	feedback_label.anchor_right = 0.715
 	feedback_label.anchor_bottom = 0.95
 	feedback_label.add_theme_font_size_override("font_size", 12)
 	feedback_label.add_theme_color_override("font_color", DIALOGUE_FEEDBACK_COLOR)
 	dialogue_content.add_child(feedback_label)
 	checkout_button = Button.new()
-	checkout_button.anchor_left = 0.79
+	checkout_button.anchor_left = 0.735
 	checkout_button.anchor_top = 0.35
-	checkout_button.anchor_right = 0.97
+	checkout_button.anchor_right = 0.94
 	checkout_button.anchor_bottom = 0.82
+	_configure_checkout_button()
 	checkout_button.pressed.connect(_on_checkout_pressed)
 	dialogue_content.add_child(checkout_button)
 
@@ -285,6 +304,45 @@ func _configure_navigation_button(button: Button, texture: Texture2D) -> void:
 	button.text = ""
 	for state_name in ["normal", "hover", "pressed", "focus", "disabled"]:
 		button.add_theme_stylebox_override(state_name, StyleBoxEmpty.new())
+
+
+func _configure_checkout_button() -> void:
+	checkout_button.focus_mode = Control.FOCUS_NONE
+	checkout_button.add_theme_font_size_override("font_size", 15)
+	checkout_button.add_theme_color_override("font_color", DIALOGUE_TEXT_COLOR)
+	checkout_button.add_theme_color_override("font_hover_color", Color("ffffff"))
+	checkout_button.add_theme_color_override("font_pressed_color", Color("f7fbf9"))
+	checkout_button.add_theme_color_override("font_disabled_color", Color("aab8b3", 0.64))
+	checkout_button.add_theme_stylebox_override(
+		"normal", _checkout_style(CHECKOUT_NORMAL_COLOR, CHECKOUT_NORMAL_BORDER)
+	)
+	checkout_button.add_theme_stylebox_override(
+		"hover", _checkout_style(Color("e7f0ed", 0.20), Color("ffffff", 0.68), 0.26)
+	)
+	checkout_button.add_theme_stylebox_override(
+		"pressed", _checkout_style(Color("cbd9d5", 0.18), Color("eef6f3", 0.56), 0.12)
+	)
+	checkout_button.add_theme_stylebox_override(
+		"disabled", _checkout_style(Color("8fa09a", 0.07), Color("c8d4d0", 0.20), 0.0)
+	)
+	checkout_button.add_theme_stylebox_override(
+		"focus", _checkout_style(CHECKOUT_NORMAL_COLOR, Color("ffffff", 0.58), 0.22)
+	)
+
+
+func _checkout_style(background: Color, border: Color, glow_alpha := 0.16) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = background
+	style.border_color = border
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(6)
+	style.shadow_color = Color("f4fbf8", glow_alpha)
+	style.shadow_size = 5 if glow_alpha > 0.0 else 0
+	style.content_margin_left = 5.0
+	style.content_margin_right = 5.0
+	style.content_margin_top = 3.0
+	style.content_margin_bottom = 3.0
+	return style
 
 
 func _build_dialogue_voice_players() -> void:
@@ -343,7 +401,7 @@ func _build_shelf_popup() -> void:
 	restock_label.custom_minimum_size.y = 20
 	restock_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	restock_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	restock_label.add_theme_font_size_override("font_size", 13)
+	restock_label.add_theme_font_size_override("font_size", SHELF_LABEL_FONT_SIZE)
 	restock_label.add_theme_color_override("font_color", Color("e8eeea"))
 	restock_label.add_theme_color_override("font_shadow_color", Color("071217", 0.74))
 	restock_label.add_theme_constant_override("shadow_offset_x", 1)
@@ -375,6 +433,7 @@ func _build_shelf_views() -> void:
 		holder.add_child(card_host)
 		var card_view := CardHandCard.new()
 		card_view.name = "ShelfItemCard"
+		card_view.set_shelf_presentation(true)
 		card_view.setup(null, null, false)
 		card_view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		card_host.add_child(card_view)
@@ -399,7 +458,7 @@ func _build_shelf_views() -> void:
 		price.custom_minimum_size.y = 18
 		price.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		price.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		price.add_theme_font_size_override("font_size", 13)
+		price.add_theme_font_size_override("font_size", SHELF_LABEL_FONT_SIZE)
 		price.add_theme_color_override("font_color", Color("f0dc9f"))
 		price.add_theme_color_override("font_shadow_color", Color("071217", 0.78))
 		price.add_theme_constant_override("shadow_offset_x", 1)
@@ -453,14 +512,27 @@ func refresh() -> void:
 	owner_name_label.text = TranslationServer.translate(owner.display_name_key) if owner != null else ""
 	owner_portrait.visible = owner_portrait.texture != null
 	talk_nav_button.visible = owner != null
+	talk_request_dot.visible = owner != null and state.owner_request_notice_visible(store_id)
 	dialogue_panel.visible = owner != null
 	shelf_nav_button.text = ""
 	talk_nav_button.text = ""
 	leave_nav_button.text = ""
 	restock_label.text = TranslationServer.translate(&"opening.ui.shop.restock") % state.restock_nights_remaining(store_id)
+	_apply_shelf_locale_typography()
 	_refresh_owner_dialogue()
 	_refresh_shelf()
 	_refresh_checkout_state()
+
+
+func _apply_shelf_locale_typography() -> void:
+	var font_size := (
+		SHELF_ZH_LABEL_FONT_SIZE
+		if LocaleManager.current_locale == LocaleManager.LOCALE_ZH
+		else SHELF_LABEL_FONT_SIZE
+	)
+	restock_label.add_theme_font_size_override("font_size", font_size)
+	for view in shelf_views:
+		(view.price as Label).add_theme_font_size_override("font_size", font_size)
 
 
 func _refresh_checkout_state() -> void:
@@ -569,6 +641,7 @@ func _on_owner_pressed() -> void:
 		return
 	owner_dialogue_override_key = StringName(result.text_key)
 	owner_dialogue_item_name = ""
+	talk_request_dot.visible = state.owner_request_notice_visible(store_id)
 	_refresh_owner_dialogue(true)
 
 
@@ -851,24 +924,16 @@ func _on_checkout_pressed() -> void:
 		_set_shelf_popup_visible(false)
 		checkout_completed.emit()
 		_refresh_shelf()
+		talk_request_dot.visible = state.owner_request_notice_visible(store_id)
 	_refresh_checkout_state()
 
 
 func _owner_texture() -> Texture2D:
-	var path := String(OWNER_TEXTURE_PATHS.get(store_id, ""))
-	return load(path) as Texture2D if not path.is_empty() else null
+	return QuestStoreVisuals.owner_texture(store_id)
 
 
 func _store_background_texture() -> Texture2D:
-	var paths := {
-		&"toy": "res://resources/background/toystore.png",
-		&"fast_food": "res://resources/background/food.png",
-		&"flower": "res://resources/background/flowerstore.png",
-		&"record": "res://resources/background/musicstore.png",
-		&"bookstore": "res://resources/background/bookstore.png",
-	}
-	var path := String(paths.get(store_id, ""))
-	return load(path) as Texture2D if not path.is_empty() else null
+	return QuestStoreVisuals.background_texture(store_id)
 
 
 func _on_locale_changed(_locale: String) -> void:

@@ -3,6 +3,7 @@ extends Control
 
 signal arc_text_revealed
 signal arc_text_advanced
+signal arc_reward_reveal_advanced
 signal persona_reveals_completed
 
 const ZH_UI_THEME: Theme = preload("res://resources/fonts/shancha_ui_theme.tres")
@@ -36,6 +37,7 @@ const PROTAGONIST_ANCHOR_BOTTOM := 1.08
 const HAND_VERTICAL_OFFSET := 16.0
 const DRAG_RETURN_CANVAS_LAYER := 200
 const SCREEN_TRANSITION_CANVAS_LAYER := 300
+const GLOBAL_DEBUG_CANVAS_LAYER := 400
 const FRAME_TEXTURE_PATHS := {
 	&"map": "res://resources/ui/frames/frame-map.png",
 	&"toy": "res://resources/ui/frames/frame-toy.png",
@@ -66,6 +68,7 @@ var rule_detail_popup: QuestRuleDetailPopup
 var money_label: Label
 var day_label: Label
 var next_day_button: Button
+var debug_button_layer: CanvasLayer
 var debug_button_row: HBoxContainer
 var language_button: Button
 var clear_save_button: Button
@@ -82,11 +85,17 @@ var arc_task_source_row: HBoxContainer
 var arc_task_source_tag_label: Label
 var arc_task_source_name_label: Label
 var arc_task_source_name_key: StringName
-var arc_image: TextureRect
+var arc_store_background: TextureRect
+var arc_owner_portrait: TextureRect
 var arc_used_card: CardHandCard
 var arc_reward_label: Label
 var arc_cursor_label: Label
 var arc_cursor_tween: Tween
+var arc_reward_reveal_overlay: ColorRect
+var arc_reward_reveal_back: Button
+var arc_reward_reveal_card: CardHandCard
+var arc_reward_reveal_hint: Label
+var arc_reward_reveal_flipped := false
 var transition_in_progress := false
 var focused_rule: CardSlotRule
 var synthesis_highlight_role: StringName
@@ -108,7 +117,7 @@ var persona_reveal_title: Label
 var persona_reveal_back: Button
 var persona_reveal_card: CardHandCard
 var persona_reveal_hint: Label
-var persona_reveal_persona_id: StringName
+var persona_reveal_shape_id: StringName
 var persona_reveal_flipped := false
 var expedition_screen: QuestExpeditionScreen
 var english_font_by_size: Dictionary = {}
@@ -128,9 +137,11 @@ func _ready() -> void:
 	_refresh_global_text()
 	_show_map_immediate()
 	call_deferred("_apply_locale_typography")
-	if state.expedition.active:
+	if state.pending_arc != null:
+		call_deferred("_resume_arc")
+	elif state.expedition.active:
 		call_deferred("_show_expedition_immediate")
-	elif not state.pending_persona_reveal_ids.is_empty():
+	elif not state.pending_persona_reveal_shape_ids.is_empty():
 		call_deferred("_run_pending_persona_reveals")
 
 
@@ -221,6 +232,10 @@ func _build_shell() -> void:
 	global_shadow.z_index = 60
 	art_canvas.add_child(global_shadow)
 
+	debug_button_layer = CanvasLayer.new()
+	debug_button_layer.name = "GlobalDebugLayer"
+	debug_button_layer.layer = GLOBAL_DEBUG_CANVAS_LAYER
+	add_child(debug_button_layer)
 	debug_button_row = HBoxContainer.new()
 	debug_button_row.name = "DebugButtonRow"
 	debug_button_row.anchor_left = 0.008
@@ -228,8 +243,7 @@ func _build_shell() -> void:
 	debug_button_row.anchor_right = 0.265
 	debug_button_row.anchor_bottom = 0.992
 	debug_button_row.add_theme_constant_override("separation", 5)
-	debug_button_row.z_index = 600
-	add_child(debug_button_row)
+	debug_button_layer.add_child(debug_button_row)
 	language_button = Button.new()
 	language_button.name = "LanguageButton"
 	language_button.custom_minimum_size = Vector2(42, 0)
@@ -292,6 +306,7 @@ func _build_global_interface() -> void:
 	add_child(rule_detail_popup)
 	_build_drag_return_layer()
 	_build_screen_transition_overlay()
+	_build_arc_overlay()
 	_build_persona_reveal_overlay()
 
 
@@ -402,7 +417,7 @@ func _build_persona_reveal_overlay() -> void:
 
 
 func _run_pending_persona_reveals() -> void:
-	if state.pending_persona_reveal_ids.is_empty():
+	if state.pending_persona_reveal_shape_ids.is_empty():
 		persona_reveal_overlay.visible = false
 		return
 	transition_in_progress = true
@@ -411,21 +426,21 @@ func _run_pending_persona_reveals() -> void:
 
 
 func _show_next_persona_reveal() -> void:
-	if state.pending_persona_reveal_ids.is_empty():
+	if state.pending_persona_reveal_shape_ids.is_empty():
 		persona_reveal_overlay.visible = false
 		transition_in_progress = false
 		persona_reveals_completed.emit()
 		return
-	persona_reveal_persona_id = state.pending_persona_reveal_ids[0]
+	persona_reveal_shape_id = state.pending_persona_reveal_shape_ids[0]
 	persona_reveal_flipped = false
 	persona_reveal_title.text = TranslationServer.translate(&"opening.ui.persona.reveal")
 	persona_reveal_hint.text = TranslationServer.translate(&"opening.ui.persona.flip")
 	persona_reveal_back.visible = true
 	persona_reveal_card.visible = false
-	var amount := int(state.protagonist_persona_counts.get(persona_reveal_persona_id, 0))
+	var amount := int(state.protagonist_shape_levels.get(persona_reveal_shape_id, 0))
 	persona_reveal_card.setup(
-		PersonaMaskCatalog.card_for_persona(persona_reveal_persona_id),
-		PersonaMaskCatalog.definition_for_persona(persona_reveal_persona_id, amount),
+		PersonaCardCatalog.card_for_shape(persona_reveal_shape_id),
+		PersonaCardCatalog.definition_for_shape(persona_reveal_shape_id, amount),
 		false,
 	)
 
@@ -450,7 +465,7 @@ func _on_persona_reveal_input(event: InputEvent) -> void:
 	if not persona_reveal_flipped:
 		_flip_persona_reveal()
 		return
-	state.acknowledge_persona_reveal(persona_reveal_persona_id)
+	state.acknowledge_persona_reveal(persona_reveal_shape_id)
 	_show_next_persona_reveal()
 
 
@@ -791,11 +806,26 @@ func _on_next_day_pressed() -> void:
 func _start_expedition() -> void:
 	if transition_in_progress:
 		return
+	if state.pending_arc != null:
+		_prepare_for_arc_display()
+		_run_arc()
+		return
 	if not state.expedition.active:
 		var result := state.begin_mall_expedition()
 		if not result.ok:
 			return
 		GameState.save_game_now()
+		if bool(result.get("game_over", false)):
+			_run_screen_transition(Callable(self, "_show_expedition_immediate"), 0.24, 0.28)
+			return
+		var settlement := state.prepare_owner_request_settlement()
+		if not bool(settlement.get("ok", false)):
+			return
+		GameState.save_game_now()
+		if state.pending_arc != null:
+			_prepare_for_arc_display()
+			_run_arc()
+			return
 	_run_screen_transition(Callable(self, "_show_expedition_immediate"), 0.24, 0.28)
 
 
@@ -825,7 +855,7 @@ func _show_expedition_immediate() -> void:
 	add_child(expedition_screen)
 	expedition_screen.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	debug_button_row.visible = true
-	if not state.pending_persona_reveal_ids.is_empty():
+	if not state.pending_persona_reveal_shape_ids.is_empty():
 		call_deferred("_run_pending_persona_reveals")
 
 
@@ -849,8 +879,7 @@ func _on_expedition_checkpoint_reached() -> void:
 
 
 func _on_clear_save_pressed() -> void:
-	if transition_in_progress:
-		return
+	clear_save_button.disabled = true
 	GameState.start_new_game()
 	get_tree().reload_current_scene()
 
@@ -882,6 +911,7 @@ func _run_arc() -> void:
 	transition_in_progress = true
 	hand_bar.visible = false
 	detail_popup.close()
+	rule_detail_popup.close()
 	arc_day_label.text = TranslationServer.translate(&"quest.ui.arc.night") % state.day
 	arc_result_label.text = ""
 	arc_reward_label.text = ""
@@ -893,52 +923,43 @@ func _run_arc() -> void:
 	var fade := create_tween()
 	fade.tween_property(arc_overlay, "modulate:a", 1.0, arc_fade_seconds)
 	await fade.finished
-	var applied := state.apply_arc_effects()
-	if not applied.ok:
-		push_error("Arc application failed: %s" % applied.reason)
-		transition_in_progress = false
-		return
-	arc_money_label.text = TranslationServer.translate(&"demo.ui.money") % state.wallet.money
-	if state.pending_arc.entries.is_empty():
-		arc_image.texture = load("res://resources/character/bag-head.png") as Texture2D
-		arc_used_card.visible = false
-		await _present_arc_text(TranslationServer.translate(&"quest.ui.arc.empty"))
 	while state.pending_arc != null and state.pending_arc.next_entry_index < state.pending_arc.entries.size():
-		var entry := state.pending_arc.entries[state.pending_arc.next_entry_index]
+		var entry_index := state.pending_arc.next_entry_index
+		var entry := state.pending_arc.entries[entry_index]
 		_prepare_arc_entry(entry)
 		await _present_arc_text(TranslationServer.translate(StringName(entry.result_text_key)))
-		var entry_definition := QuestArcCatalog.task_by_id(
-			StringName(entry.get("task_definition_id", ""))
-		)
-		state.mark_arc_entry_shown()
-		if (
-			entry_definition != null
-			and entry_definition.category == TaskDefinition.Category.SELF_CARE
-			and not state.pending_persona_reveal_ids.is_empty()
-		):
-			_run_pending_persona_reveals()
-			await persona_reveals_completed
-			transition_in_progress = true
+		if entry_index >= state.pending_arc.applied_entry_count:
+			var settled := state.settle_current_arc_entry()
+			if not bool(settled.get("ok", false)):
+				push_error("Owner request settlement failed: %s" % settled.get("reason", ""))
+				transition_in_progress = false
+				return
+			GameState.save_game_now()
+		arc_money_label.text = TranslationServer.translate(&"demo.ui.money") % state.wallet.money
+		var reward_text := _arc_reward_text(entry)
+		if not reward_text.is_empty():
+			arc_reward_label.text = reward_text
+			await _wait_for_arc_advance()
+		var reward_item_ids := entry.get("reward_item_ids", []) as Array
+		for raw_item_id in reward_item_ids:
+			await _present_arc_reward_item(StringName(raw_item_id))
+		if not state.mark_arc_entry_shown():
+			push_error("Owner request Arc entry could not be marked shown")
+			transition_in_progress = false
+			return
+		GameState.save_game_now()
 	var finish := state.finish_arc()
 	if not finish.ok:
 		push_error("Arc finish failed: %s" % finish.reason)
 		transition_in_progress = false
 		return
-	arc_day_label.text = TranslationServer.translate(&"quest.ui.arc.new_day") % state.day
-	_clear_arc_task_source()
-	arc_money_label.text = TranslationServer.translate(&"demo.ui.money") % state.wallet.money
-	arc_image.texture = load("res://resources/character/bag-head.png") as Texture2D
-	arc_used_card.visible = false
-	arc_reward_label.text = ""
-	await _present_arc_text(TranslationServer.translate(&"demo.ui.arc.new_day.body"))
-	bgm_director.play_track(QuestBgmDirector.TRACK_EMPTY)
+	GameState.save_game_now()
 	var fade_out := create_tween()
 	fade_out.tween_property(arc_overlay, "modulate:a", 0.0, arc_fade_seconds)
 	await fade_out.finished
 	arc_overlay.visible = false
 	transition_in_progress = false
-	hand_bar.visible = true
-	_show_map_immediate()
+	_show_expedition_immediate()
 
 
 func _build_arc_overlay() -> void:
@@ -965,10 +986,10 @@ func _build_arc_overlay() -> void:
 	arc_overlay.add_child(arc_money_label)
 	arc_task_source_row = HBoxContainer.new()
 	arc_task_source_row.name = "ArcTaskSource"
-	arc_task_source_row.anchor_left = 0.035
-	arc_task_source_row.anchor_top = 0.112
-	arc_task_source_row.anchor_right = 0.41
-	arc_task_source_row.anchor_bottom = 0.164
+	arc_task_source_row.anchor_left = 0.555
+	arc_task_source_row.anchor_top = 0.105
+	arc_task_source_row.anchor_right = 0.955
+	arc_task_source_row.anchor_bottom = 0.16
 	arc_task_source_row.add_theme_constant_override("separation", 10)
 	arc_task_source_row.modulate.a = 0.68
 	arc_task_source_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -996,106 +1017,175 @@ func _build_arc_overlay() -> void:
 	arc_task_source_name_label.add_theme_color_override("font_color", Color("bdc9c4"))
 	arc_task_source_name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	arc_task_source_row.add_child(arc_task_source_name_label)
-	var center := CenterContainer.new()
-	center.anchor_left = 0.18
-	center.anchor_top = 0.08
-	center.anchor_right = 0.82
-	center.anchor_bottom = 0.92
-	arc_overlay.add_child(center)
-	var column := VBoxContainer.new()
-	column.custom_minimum_size = Vector2(820, 0)
-	column.alignment = BoxContainer.ALIGNMENT_CENTER
-	column.add_theme_constant_override("separation", 15)
-	center.add_child(column)
 	arc_day_label = Label.new()
+	arc_day_label.anchor_left = 0.39
+	arc_day_label.anchor_top = 0.045
+	arc_day_label.anchor_right = 0.61
+	arc_day_label.anchor_bottom = 0.10
 	arc_day_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	arc_day_label.add_theme_font_size_override("font_size", 16)
 	arc_day_label.add_theme_color_override("font_color", Color("718582"))
-	column.add_child(arc_day_label)
-	var image_frame := PanelContainer.new()
-	image_frame.name = "ArcImageFrame"
-	image_frame.custom_minimum_size = Vector2(820, 230)
-	image_frame.add_theme_stylebox_override(
+	arc_overlay.add_child(arc_day_label)
+
+	var visual_frame := PanelContainer.new()
+	visual_frame.name = "ArcOwnerVisualFrame"
+	visual_frame.anchor_left = 0.035
+	visual_frame.anchor_top = 0.155
+	visual_frame.anchor_right = 0.515
+	visual_frame.anchor_bottom = 0.86
+	visual_frame.clip_contents = true
+	visual_frame.add_theme_stylebox_override(
 		"panel", UiPalette.panel_style(Color("061116", 0.98), Color("647874", 0.7))
 	)
-	column.add_child(image_frame)
-	arc_image = TextureRect.new()
-	arc_image.name = "ArcResultImage"
-	arc_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	arc_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	arc_image.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	image_frame.add_child(arc_image)
-	var text_panel := PanelContainer.new()
-	text_panel.name = "ArcTextPanel"
-	text_panel.custom_minimum_size = Vector2(820, 154)
-	text_panel.add_theme_stylebox_override(
-		"panel", UiPalette.panel_style(Color("020507", 0.98), Color.TRANSPARENT)
-	)
-	column.add_child(text_panel)
-	var text_margin := MarginContainer.new()
-	text_margin.add_theme_constant_override("margin_left", 16)
-	text_margin.add_theme_constant_override("margin_right", 20)
-	text_margin.add_theme_constant_override("margin_top", 12)
-	text_margin.add_theme_constant_override("margin_bottom", 10)
-	text_panel.add_child(text_margin)
-	var text_row := HBoxContainer.new()
-	text_row.add_theme_constant_override("separation", 18)
-	text_margin.add_child(text_row)
+	arc_overlay.add_child(visual_frame)
+	var visual_stack := Control.new()
+	visual_stack.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	visual_stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	visual_frame.add_child(visual_stack)
+	arc_store_background = TextureRect.new()
+	arc_store_background.name = "ArcStoreBackground"
+	arc_store_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	arc_store_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	arc_store_background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	arc_store_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	visual_stack.add_child(arc_store_background)
+	var visual_shade := ColorRect.new()
+	visual_shade.color = Color(0.015, 0.025, 0.035, 0.24)
+	visual_shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	visual_shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	visual_stack.add_child(visual_shade)
+	arc_owner_portrait = TextureRect.new()
+	arc_owner_portrait.name = "ArcOwnerPortrait"
+	arc_owner_portrait.anchor_left = 0.20
+	arc_owner_portrait.anchor_top = 0.08
+	arc_owner_portrait.anchor_right = 0.92
+	arc_owner_portrait.anchor_bottom = 1.08
+	arc_owner_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	arc_owner_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	arc_owner_portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	visual_stack.add_child(arc_owner_portrait)
 	var used_card_holder := CenterContainer.new()
-	used_card_holder.custom_minimum_size = Vector2(112, 126)
+	used_card_holder.anchor_left = 0.015
+	used_card_holder.anchor_top = 0.62
+	used_card_holder.anchor_right = 0.235
+	used_card_holder.anchor_bottom = 0.98
 	used_card_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	text_row.add_child(used_card_holder)
+	visual_stack.add_child(used_card_holder)
 	arc_used_card = CardHandCard.new()
 	arc_used_card.name = "ArcUsedCard"
 	arc_used_card.drag_enabled = false
 	arc_used_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	arc_used_card.modulate = Color(1.0, 1.0, 1.0, 0.48)
+	arc_used_card.modulate = Color(1.0, 1.0, 1.0, 0.52)
+	arc_used_card.scale = Vector2(0.72, 0.72)
 	arc_used_card.visible = false
 	used_card_holder.add_child(arc_used_card)
-	# CardHandCard configures PASS in _ready; the Arc preview is presentation only.
-	arc_used_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var text_panel := PanelContainer.new()
+	text_panel.name = "ArcTextPanel"
+	text_panel.anchor_left = 0.555
+	text_panel.anchor_top = 0.18
+	text_panel.anchor_right = 0.955
+	text_panel.anchor_bottom = 0.82
+	text_panel.add_theme_stylebox_override(
+		"panel", UiPalette.panel_style(Color("020507", 0.78), Color.TRANSPARENT)
+	)
+	arc_overlay.add_child(text_panel)
+	var text_margin := MarginContainer.new()
+	text_margin.add_theme_constant_override("margin_left", 32)
+	text_margin.add_theme_constant_override("margin_right", 34)
+	text_margin.add_theme_constant_override("margin_top", 28)
+	text_margin.add_theme_constant_override("margin_bottom", 24)
+	text_panel.add_child(text_margin)
 	var text_column := VBoxContainer.new()
 	text_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	text_column.add_theme_constant_override("separation", 2)
-	text_row.add_child(text_column)
+	text_column.add_theme_constant_override("separation", 16)
+	text_margin.add_child(text_column)
 	arc_result_label = Label.new()
-	arc_result_label.custom_minimum_size = Vector2(650, 82)
+	arc_result_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	arc_result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	arc_result_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	arc_result_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	arc_result_label.add_theme_font_size_override("font_size", 23)
-	arc_result_label.add_theme_color_override("font_color", Color("d7d0b9"))
+	arc_result_label.add_theme_font_size_override("font_size", 24)
+	arc_result_label.add_theme_color_override("font_color", Color("e4e7e2"))
 	text_column.add_child(arc_result_label)
 	arc_reward_label = Label.new()
-	arc_reward_label.custom_minimum_size = Vector2(650, 24)
+	arc_reward_label.custom_minimum_size = Vector2(0, 62)
 	arc_reward_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	arc_reward_label.add_theme_font_size_override("font_size", 17)
+	arc_reward_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	arc_reward_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	arc_reward_label.add_theme_font_size_override("font_size", 20)
 	arc_reward_label.add_theme_color_override("font_color", Color("e4c978"))
 	text_column.add_child(arc_reward_label)
 	arc_cursor_label = Label.new()
 	arc_cursor_label.text = "◆"
-	arc_cursor_label.custom_minimum_size = Vector2(650, 20)
+	arc_cursor_label.custom_minimum_size = Vector2(0, 20)
 	arc_cursor_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	arc_cursor_label.add_theme_color_override("font_color", Color("9fb2ac"))
 	arc_cursor_label.visible = false
 	text_column.add_child(arc_cursor_label)
 
+	arc_reward_reveal_overlay = ColorRect.new()
+	arc_reward_reveal_overlay.name = "ArcRewardReveal"
+	arc_reward_reveal_overlay.color = Color("010306", 0.96)
+	arc_reward_reveal_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	arc_reward_reveal_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	arc_reward_reveal_overlay.z_index = 30
+	arc_reward_reveal_overlay.visible = false
+	arc_reward_reveal_overlay.gui_input.connect(_on_arc_reward_reveal_input)
+	arc_overlay.add_child(arc_reward_reveal_overlay)
+	var reward_center := CenterContainer.new()
+	reward_center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	reward_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	arc_reward_reveal_overlay.add_child(reward_center)
+	var reward_column := VBoxContainer.new()
+	reward_column.alignment = BoxContainer.ALIGNMENT_CENTER
+	reward_column.add_theme_constant_override("separation", 18)
+	reward_center.add_child(reward_column)
+	var reward_card_holder := CenterContainer.new()
+	reward_card_holder.custom_minimum_size = CardHandCard.CARD_SIZE * 1.45 + Vector2(30, 30)
+	reward_column.add_child(reward_card_holder)
+	arc_reward_reveal_back = Button.new()
+	arc_reward_reveal_back.custom_minimum_size = CardHandCard.CARD_SIZE * 1.45
+	arc_reward_reveal_back.text = "◇\n◇\n◇"
+	arc_reward_reveal_back.add_theme_font_size_override("font_size", 23)
+	arc_reward_reveal_back.add_theme_stylebox_override(
+		"normal", UiPalette.panel_style(Color("071013"), Color("8ba19a"))
+	)
+	arc_reward_reveal_back.pressed.connect(_flip_arc_reward_reveal)
+	reward_card_holder.add_child(arc_reward_reveal_back)
+	arc_reward_reveal_card = CardHandCard.new()
+	arc_reward_reveal_card.drag_enabled = false
+	arc_reward_reveal_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	arc_reward_reveal_card.scale = Vector2(1.45, 1.45)
+	arc_reward_reveal_card.visible = false
+	reward_card_holder.add_child(arc_reward_reveal_card)
+	arc_reward_reveal_hint = Label.new()
+	arc_reward_reveal_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	arc_reward_reveal_hint.add_theme_font_size_override("font_size", 18)
+	arc_reward_reveal_hint.add_theme_color_override("font_color", Color("d8c480"))
+	reward_column.add_child(arc_reward_reveal_hint)
+
 
 func _prepare_arc_entry(entry: Dictionary) -> void:
-	arc_image.texture = null
+	var store_id := StringName(entry.get("store_id", ""))
+	arc_store_background.texture = QuestStoreVisuals.background_texture(store_id)
+	arc_owner_portrait.texture = QuestStoreVisuals.owner_texture(store_id)
 	arc_used_card.visible = false
+	arc_reward_label.text = ""
 	_set_arc_task_source(StringName(entry.get("task_definition_id", "")))
 	var item_ids := entry.get("item_definition_ids", []) as Array
 	if not item_ids.is_empty():
 		var definition := QuestArcCatalog.item_by_id(StringName(item_ids[0]))
 		if definition != null:
-			arc_image.texture = definition.image
 			arc_used_card.setup(
 				CardItemState.new(-1, definition.id, state.day, &"arc_preview"),
 				definition,
 				false,
 			)
 			arc_used_card.visible = true
+
+
+func _arc_reward_text(entry: Dictionary) -> String:
 	var reward_parts: Array[String] = []
 	var reward_money := int(entry.get("reward_money", 0))
 	if reward_money > 0:
@@ -1106,18 +1196,75 @@ func _prepare_arc_entry(entry: Dictionary) -> void:
 	for raw_stat_id in reward_stats:
 		var stat_id := StringName(raw_stat_id)
 		var property := QuestArcCatalog.property_by_id(stat_id)
-		var stat_name := TranslationServer.translate(
+		var fallback_name_key := (
 			property.display_name_key
 			if property != null
 			else StringName("demo.stat.%s.name" % stat_id)
 		)
+		var stat_name_key := StringName(
+			PersonaCardCatalog.PERSONA_NAME_KEYS.get(stat_id, fallback_name_key)
+		)
+		var stat_name := TranslationServer.translate(stat_name_key)
 		reward_parts.append(
 			TranslationServer.translate(&"demo.ui.arc.stat_reward") % [
 				stat_name,
 				int(reward_stats[raw_stat_id]),
 			]
 		)
-	arc_reward_label.text = "  ·  ".join(reward_parts)
+	return "  ·  ".join(reward_parts)
+
+
+func _wait_for_arc_advance() -> void:
+	arc_waiting_for_click = true
+	_start_arc_cursor()
+	await arc_text_advanced
+	arc_waiting_for_click = false
+	_stop_arc_cursor()
+
+
+func _present_arc_reward_item(item_id: StringName) -> void:
+	var definition := QuestArcCatalog.item_by_id(item_id)
+	if definition == null:
+		return
+	arc_reward_reveal_flipped = false
+	arc_reward_reveal_back.visible = true
+	arc_reward_reveal_card.visible = false
+	arc_reward_reveal_hint.text = TranslationServer.translate(&"quest.ui.arc.flip_reward")
+	arc_reward_reveal_card.setup(
+		CardItemState.new(-1, definition.id, state.day, &"arc_reward_preview"),
+		definition,
+		false,
+	)
+	arc_reward_reveal_overlay.visible = true
+	await arc_reward_reveal_advanced
+	arc_reward_reveal_overlay.visible = false
+
+
+func _flip_arc_reward_reveal() -> void:
+	if arc_reward_reveal_flipped:
+		return
+	arc_reward_reveal_flipped = true
+	arc_reward_reveal_back.visible = false
+	arc_reward_reveal_card.visible = true
+	var item_name := TranslationServer.translate(arc_reward_reveal_card.definition.display_name_key)
+	arc_reward_reveal_hint.text = "%s\n%s" % [
+		TranslationServer.translate(&"quest.ui.arc.item_reward") % item_name,
+		TranslationServer.translate(&"quest.ui.arc.continue_reward"),
+	]
+
+
+func _on_arc_reward_reveal_input(event: InputEvent) -> void:
+	var click := event as InputEventMouseButton
+	var key := event as InputEventKey
+	if not (
+		(click != null and click.button_index == MOUSE_BUTTON_LEFT and click.pressed)
+		or (key != null and key.pressed and not key.echo and key.is_action("ui_accept"))
+	):
+		return
+	if not arc_reward_reveal_flipped:
+		_flip_arc_reward_reveal()
+		return
+	arc_reward_reveal_advanced.emit()
 
 
 func _set_arc_task_source(task_definition_id: StringName) -> void:
@@ -1348,4 +1495,12 @@ func _on_scene_node_added(node: Node) -> void:
 		or not is_ancestor_of(node)
 	):
 		return
-	call_deferred("_apply_locale_typography_to_subtree", node)
+	# Passing a newly-added Node directly to a deferred typed method is unsafe:
+	# transient card previews can be freed before the deferred call is decoded.
+	call_deferred("_apply_locale_typography_to_instance", node.get_instance_id())
+
+
+func _apply_locale_typography_to_instance(instance_id: int) -> void:
+	var instance := instance_from_id(instance_id)
+	if instance is Node and is_instance_valid(instance):
+		_apply_locale_typography_to_subtree(instance as Node)

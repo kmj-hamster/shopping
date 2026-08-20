@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="OwnerDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/owner_definition.gd" id="1_owner"]
+[ext_resource type="AudioStream" path="res://resources/audio/dialogue/robot_blip_a.wav" id="2_voice_a"]
+[ext_resource type="AudioStream" path="res://resources/audio/dialogue/robot_blip_b.wav" id="3_voice_b"]
+
+[resource]
+script = ExtResource("1_owner")
+id = &"bookstore_owner"
+store_id = &"bookstore"
+display_name_key = &"opening.owner.bookstore.name"
+idle_dialogue_key = &"opening.owner.bookstore.idle"
+item_comment_key = &"opening.owner.bookstore.item"
+request_task_id = &"owner_bookstore_concrete_city"
+request_dialogue_key = &"owner_request.bookstore.accept"
+reminder_dialogue_key = &"owner_request.bookstore.reminder"
+completed_dialogue_key = &"owner_request.bookstore.completed"
+request_required_purchased_item_id = &"concrete_city_vol_1"
+dialogue_voice_streams = Array[AudioStream]([ExtResource("2_voice_a"), ExtResource("3_voice_b")])

@@ -11,6 +11,7 @@ enum SupplyMode {
 @export var supply_mode := SupplyMode.DAILY_BASIC
 @export var is_map_key := false
 @export var is_story_item := false
+@export var allows_all_shapes := false
 
 
 func validation_errors() -> PackedStringArray:
@@ -18,8 +19,9 @@ func validation_errors() -> PackedStringArray:
 	if property_set != null:
 		if property_set.property_count() > 4:
 			errors.append("Item %s cannot have more than four properties." % id)
-		if property_set.present_personas().size() > 2:
-			errors.append("Item %s cannot have more than two personas." % id)
+		var shape_limit := CardPropertySet.SHAPES.size() if allows_all_shapes else 2
+		if property_set.present_shapes().size() > shape_limit:
+			errors.append("Item %s cannot have more than two shapes." % id)
 	if supply_mode == SupplyMode.CRAFT_ONLY and not is_crafted:
 		errors.append("Craft-only item %s must be marked crafted." % id)
 	if is_crafted and supply_mode != SupplyMode.CRAFT_ONLY:

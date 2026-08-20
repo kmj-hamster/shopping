@@ -20,8 +20,8 @@ func test_formal_opening_has_no_tasks_and_starts_with_tin_frog_and_expedition_en
 	assert_eq(main.state.inventory.size(), 1)
 	assert_eq(main.state.inventory[0].definition_id, &"tin_frog")
 	assert_true(main.hand_bar.card_views.has(main.state.inventory[0].instance_id))
-	for persona_id in CardPropertySet.PERSONAS:
-		var persona_card := PersonaMaskCatalog.card_for_persona(persona_id)
+	for shape_id in CardPropertySet.SHAPES:
+		var persona_card := PersonaCardCatalog.card_for_shape(shape_id)
 		assert_true(main.hand_bar.card_views.has(persona_card.instance_id))
 	assert_eq(main.hand_bar.card_views.size(), 5)
 	assert_eq(main.map_screen.store_hotspots.size(), 5)

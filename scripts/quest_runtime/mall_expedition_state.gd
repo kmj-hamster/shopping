@@ -1,13 +1,13 @@
 class_name MallExpeditionState
 extends RefCounted
 
-const ROOMS_PER_NIGHT := 3
+const ROOMS_PER_NIGHT := 2
 
 var active := false
 var from_day := 1
 var rooms_completed := 0
 var entered_room_ids: Dictionary = {}
-var work_offer_seen := false
+var economy_offer_seen := false
 var current_door_ids: Array[StringName] = []
 var rng_seed := 1
 var rng_state := 0
@@ -24,7 +24,7 @@ func begin_night(day: int, seed_value: int) -> void:
 	from_day = maxi(1, day)
 	rooms_completed = 0
 	entered_room_ids.clear()
-	work_offer_seen = false
+	economy_offer_seen = false
 	current_door_ids.clear()
 	rng_seed = maxi(1, seed_value)
 	rng_state = 0
@@ -37,7 +37,7 @@ func begin_disease_end(day: int, disease_id: StringName) -> void:
 	from_day = maxi(1, day)
 	rooms_completed = 0
 	entered_room_ids.clear()
-	work_offer_seen = false
+	economy_offer_seen = false
 	current_door_ids.clear()
 	rng_seed = 1
 	rng_state = 0
@@ -49,7 +49,7 @@ func end_night() -> void:
 	active = false
 	rooms_completed = 0
 	entered_room_ids.clear()
-	work_offer_seen = false
+	economy_offer_seen = false
 	current_door_ids.clear()
 	rng_state = 0
 	checkpoint_serial = 0

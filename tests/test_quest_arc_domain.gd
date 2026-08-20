@@ -4,7 +4,7 @@ extends GutTest
 func test_tag_properties_have_presence_without_fake_numeric_strength() -> void:
 	var properties := CardPropertySet.new()
 	properties.tags = [&"food", &"drink"]
-	properties.values = {&"relaxing": 3, &"homecomer": 4}
+	properties.values = {&"relaxing": 3, &"sleep": 4}
 	assert_true(properties.has(&"food"))
 	assert_eq(properties.value(&"food"), 0)
 	assert_eq(properties.value(&"relaxing"), 3)
@@ -14,19 +14,41 @@ func test_tag_properties_have_presence_without_fake_numeric_strength() -> void:
 
 func test_quest_item_rejects_more_than_four_properties_or_two_aspects() -> void:
 	var too_many := _item(&"too_many", [&"food", &"drink"], {
-		&"soft": 2, &"nightwalker": 1, &"mourner": 1,
+		&"soft": 2, &"light": 1, &"tear": 1,
 	})
 	assert_true(_contains(too_many.validation_errors(), "more than four"))
 
 	var too_many_aspects := _item(&"too_many_aspects", [&"food"], {
-		&"nightwalker": 1, &"mourner": 1, &"dreamwalker": 1,
+		&"light": 1, &"tear": 1, &"dream": 1,
 	})
 	assert_true(_contains(too_many_aspects.validation_errors(), "more than two"))
+
+	var explicitly_all_shapes := _item(&"shopping_card", [], {
+		&"light": 2,
+		&"tear": 2,
+		&"dream": 2,
+		&"sleep": 2,
+	})
+	explicitly_all_shapes.allows_all_shapes = true
+	assert_false(_contains(explicitly_all_shapes.validation_errors(), "more than two"))
+	assert_true(explicitly_all_shapes.validation_errors().is_empty())
+
+
+func test_keepsake_is_a_normal_task_tag() -> void:
+	var keepsake := _item(&"concrete_city_vol_2", [&"book", &"keepsake"], {
+		&"dream": 4,
+		&"light": 1,
+	})
+	var request_rule := CardSlotRule.new()
+	request_rule.id = &"keepsake_request"
+	request_rule.required_all = [&"keepsake"]
+	assert_true(CardRuleEvaluator.can_place(request_rule, keepsake))
+	assert_true(CardRuleEvaluator.can_execute(request_rule, keepsake))
 
 
 func test_tag_presence_and_scaled_threshold_are_evaluated_separately() -> void:
 	var item := _item(&"warm_milk", [&"food", &"drink"], {
-		&"relaxing": 3, &"homecomer": 4,
+		&"relaxing": 3, &"sleep": 4,
 	})
 	var requirement := SlotValueRequirement.new()
 	requirement.tags = [&"relaxing"]
@@ -63,10 +85,10 @@ func test_exact_item_rule_is_suitable_for_map_unlocks() -> void:
 	assert_false(QuestArcRules.store_unlock_accepts(unlock, _item(&"jasmine")))
 
 
-func test_task_outcome_uses_dominant_persona_and_declared_tie_priority() -> void:
+func test_task_outcome_uses_dominant_shape_and_declared_tie_priority() -> void:
 	var gauze_condition := StoryCondition.new()
-	gauze_condition.kind = StoryCondition.Kind.DOMINANT_PERSONA
-	gauze_condition.key = &"dreamwalker"
+	gauze_condition.kind = StoryCondition.Kind.DOMINANT_SHAPE
+	gauze_condition.key = &"dream"
 	var gauze_outcome := _outcome(&"tide", false, [gauze_condition])
 	var fallback := _outcome(&"plain", true)
 	var task := TaskDefinition.new()
@@ -75,8 +97,8 @@ func test_task_outcome_uses_dominant_persona_and_declared_tie_priority() -> void
 	task.body_text_key = &"task.radio.body"
 	task.slot_rules = [_simple_rule(&"sound")]
 	task.outcomes = [gauze_outcome, fallback]
-	task.persona_tie_priority = [&"dreamwalker", &"mourner", &"homecomer", &"nightwalker"]
-	var tied_item := _item(&"rain_tape", [&"music"], {&"dreamwalker": 3, &"homecomer": 3})
+	task.shape_tie_priority = [&"dream", &"tear", &"sleep", &"light"]
+	var tied_item := _item(&"rain_tape", [&"music"], {&"dream": 3, &"sleep": 3})
 	assert_eq(QuestArcRules.outcome_for(task, [tied_item]).id, &"tide")
 
 

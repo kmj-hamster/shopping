@@ -19,11 +19,18 @@ const PROPERTY_VALUE_MIN_WIDTH := 30
 const PROPERTY_ICON_VALUE_GAP := 8
 const PROPERTY_GROUP_GAP := 3
 const POPUP_BACKGROUND := Color("020304", 0.5)
-const PERSONA_POPUP_ICON_PATHS := {
-	&"nightwalker": "res://resources/ui/property-lamp.svg",
-	&"mourner": "res://resources/ui/property-mirror.svg",
-	&"dreamwalker": "res://resources/ui/property-gauze.svg",
-	&"homecomer": "res://resources/ui/property-pillow.svg",
+const DEFAULT_ICON_BACKGROUND := Color("090b0c", 0.995)
+const DEFAULT_ICON_BORDER := Color("8c7a52", 0.86)
+const SHAPE_ICON_INK := Color.BLACK
+const LARGE_ICON_SIDE := 78.0
+const SHRUNK_SHAPE_ICON_SIDE := 70.0
+const LARGE_PROPERTY_ICON_INSET := 2.0
+const SHRUNK_SHAPE_PROPERTY_ICON_INSET := 6.0
+const SHAPE_POPUP_ICON_PATHS := {
+	&"light": "res://resources/ui/synthesis/shape/light.png",
+	&"tear": "res://resources/ui/synthesis/shape/tear.png",
+	&"dream": "res://resources/ui/synthesis/shape/dream.png",
+	&"sleep": "res://resources/ui/synthesis/shape/sleep.png",
 }
 
 var current_definition: CardItemDefinition
@@ -37,6 +44,7 @@ var description_label: Label
 var property_band: MarginContainer
 var property_row: HBoxContainer
 var property_panel: PanelContainer
+var property_icon_frame: PanelContainer
 var property_icon_image: TextureRect
 var property_icon_fallback: Label
 var property_name: Label
@@ -140,17 +148,11 @@ func _build_detail_panel() -> void:
 	item_frame.custom_minimum_size = Vector2(82, 82)
 	item_frame.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	item_frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var item_frame_style := panel_style(
-		Color("090b0c", 0.995), Color("8c7a52", 0.86), 1
-	)
-	item_frame_style.content_margin_left = 0.0
-	item_frame_style.content_margin_top = 0.0
-	item_frame_style.content_margin_right = 0.0
-	item_frame_style.content_margin_bottom = 0.0
+	var item_frame_style := _icon_frame_style(&"")
 	item_frame.add_theme_stylebox_override("panel", item_frame_style)
 	top_row.add_child(item_frame)
 	item_image = TextureRect.new()
-	item_image.custom_minimum_size = Vector2(78, 78)
+	item_image.custom_minimum_size = Vector2.ONE * LARGE_ICON_SIDE
 	item_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	item_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	item_image.modulate = Color.WHITE
@@ -230,22 +232,16 @@ func _build_property_panel() -> void:
 	row.custom_minimum_size = Vector2(0, 104)
 	row.add_theme_constant_override("separation", 9)
 	margin.add_child(row)
-	var icon_frame := PanelContainer.new()
-	icon_frame.custom_minimum_size = Vector2(82, 82)
-	icon_frame.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	icon_frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var icon_frame_style := panel_style(
-		Color("090b0c", 0.995), Color("8c7a52", 0.86), 1
-	)
-	icon_frame_style.content_margin_left = 0.0
-	icon_frame_style.content_margin_top = 0.0
-	icon_frame_style.content_margin_right = 0.0
-	icon_frame_style.content_margin_bottom = 0.0
-	icon_frame.add_theme_stylebox_override("panel", icon_frame_style)
-	row.add_child(icon_frame)
+	property_icon_frame = PanelContainer.new()
+	property_icon_frame.custom_minimum_size = Vector2(82, 82)
+	property_icon_frame.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	property_icon_frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var icon_frame_style := _icon_frame_style(&"")
+	property_icon_frame.add_theme_stylebox_override("panel", icon_frame_style)
+	row.add_child(property_icon_frame)
 	var icon_stack := Control.new()
 	icon_stack.custom_minimum_size = Vector2(82, 82)
-	icon_frame.add_child(icon_stack)
+	property_icon_frame.add_child(icon_stack)
 	property_icon_image = TextureRect.new()
 	property_icon_image.anchor_right = 1.0
 	property_icon_image.anchor_bottom = 1.0
@@ -346,6 +342,10 @@ func _refresh() -> void:
 	description_label.add_theme_font_size_override("font_size", DESCRIPTION_FONT_SIZE)
 	close_button.tooltip_text = TranslationServer.translate(&"slot.item_detail.close")
 	item_image.texture = popup_item_texture(current_definition)
+	var shape_id := _definition_shape_id(current_definition)
+	item_image.self_modulate = SHAPE_ICON_INK if not shape_id.is_empty() else Color.WHITE
+	_apply_large_item_icon_layout(shape_id)
+	item_frame.add_theme_stylebox_override("panel", _icon_frame_style(shape_id))
 	item_frame.visible = item_image.texture != null
 	property_band.visible = (
 		current_definition.property_set != null
@@ -366,6 +366,13 @@ func _refresh_primary_property() -> void:
 	description_label.add_theme_font_size_override("font_size", DESCRIPTION_FONT_SIZE)
 	close_button.tooltip_text = TranslationServer.translate(&"slot.item_detail.close")
 	item_image.texture = popup_property_icon_texture(primary_property_id)
+	item_image.self_modulate = (
+		SHAPE_ICON_INK if _is_shape_id(primary_property_id) else Color.WHITE
+	)
+	_apply_large_item_icon_layout(primary_property_id)
+	item_frame.add_theme_stylebox_override(
+		"panel", _icon_frame_style(primary_property_id)
+	)
 	item_frame.visible = item_image.texture != null
 	property_band.visible = false
 	property_panel.visible = false
@@ -456,13 +463,13 @@ func _ensure_property_view(tag: StringName) -> Dictionary:
 
 func _ordered_property_tags(properties: CardPropertySet) -> Array[StringName]:
 	var result: Array[StringName] = []
-	for persona_id in CardPropertySet.PERSONAS:
-		if properties.has(persona_id):
-			result.append(persona_id)
+	for shape_id in CardPropertySet.SHAPES:
+		if properties.has(shape_id):
+			result.append(shape_id)
 	var remaining: Array[StringName] = []
 	for raw_tag in properties.property_ids():
 		var tag := StringName(raw_tag)
-		if tag not in CardPropertySet.PERSONAS and properties.has(tag):
+		if tag not in CardPropertySet.SHAPES and properties.has(tag):
 			remaining.append(tag)
 	remaining.sort()
 	result.append_array(remaining)
@@ -486,6 +493,9 @@ func _show_property(tag: StringName) -> void:
 func _update_property_panel(tag: StringName) -> void:
 	var texture := popup_property_icon_texture(tag)
 	property_icon_image.texture = texture
+	property_icon_image.self_modulate = SHAPE_ICON_INK if _is_shape_id(tag) else Color.WHITE
+	_apply_large_property_icon_layout(tag)
+	property_icon_frame.add_theme_stylebox_override("panel", _icon_frame_style(tag))
 	property_icon_image.visible = texture != null
 	property_icon_fallback.text = property_symbol(tag)
 	property_icon_fallback.visible = texture == null
@@ -501,6 +511,35 @@ func _queue_property_description_font_fit() -> void:
 		return
 	property_description_fit_queued = true
 	_fit_property_description_after_layout()
+
+
+func _apply_large_item_icon_layout(shape_id: StringName) -> void:
+	var should_shrink := _should_shrink_large_shape_icon(shape_id)
+	item_image.custom_minimum_size = Vector2.ONE * (
+		SHRUNK_SHAPE_ICON_SIDE if should_shrink else LARGE_ICON_SIDE
+	)
+	item_image.size_flags_horizontal = (
+		Control.SIZE_SHRINK_CENTER if should_shrink else Control.SIZE_FILL
+	)
+	item_image.size_flags_vertical = (
+		Control.SIZE_SHRINK_CENTER if should_shrink else Control.SIZE_FILL
+	)
+
+
+func _apply_large_property_icon_layout(shape_id: StringName) -> void:
+	var inset := (
+		SHRUNK_SHAPE_PROPERTY_ICON_INSET
+		if _should_shrink_large_shape_icon(shape_id)
+		else LARGE_PROPERTY_ICON_INSET
+	)
+	property_icon_image.offset_left = inset
+	property_icon_image.offset_top = inset
+	property_icon_image.offset_right = -inset
+	property_icon_image.offset_bottom = -inset
+
+
+static func _should_shrink_large_shape_icon(shape_id: StringName) -> bool:
+	return _is_shape_id(shape_id) and shape_id != CardPropertySet.SHAPE_DREAM
 
 
 func _fit_property_description_after_layout() -> void:
@@ -560,14 +599,17 @@ static func make_property_icon_button(tag: StringName, side: int = 30) -> Button
 	button.tooltip_text = TranslationServer.translate(property_name_key(tag))
 	button.add_theme_font_size_override("font_size", maxi(13, int(side / 2)))
 	button.add_theme_color_override("font_color", UiPalette.INK_COLOR)
+	var is_shape := _is_shape_id(tag)
+	var normal_color := ShapeVisuals.color(tag) if is_shape else Color("f1eee5")
+	var normal_border := Color("101315", 0.72) if is_shape else Color("8c7a52")
+	button.add_theme_stylebox_override("normal", panel_style(normal_color, normal_border, 1))
 	button.add_theme_stylebox_override(
-		"normal", panel_style(Color("f1eee5"), Color("8c7a52"), 1)
+		"hover",
+		panel_style(normal_color.lightened(0.12), normal_border.lightened(0.20), 2),
 	)
 	button.add_theme_stylebox_override(
-		"hover", panel_style(Color("fff9e8"), Color("d4b76e"), 2)
-	)
-	button.add_theme_stylebox_override(
-		"pressed", panel_style(Color("fff2c7"), Color("e3c679"), 2)
+		"pressed",
+		panel_style(normal_color.lightened(0.06), normal_border.lightened(0.12), 2),
 	)
 	if texture != null:
 		var icon_image := TextureRect.new()
@@ -581,8 +623,40 @@ static func make_property_icon_button(tag: StringName, side: int = 30) -> Button
 		icon_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon_image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		icon_image.self_modulate = SHAPE_ICON_INK if is_shape else Color.WHITE
 		button.add_child(icon_image)
 	return button
+
+
+static func _is_shape_id(property_id: StringName) -> bool:
+	return property_id in CardPropertySet.SHAPES
+
+
+static func _definition_shape_id(definition: CardItemDefinition) -> StringName:
+	if (
+		definition == null
+		or definition.property_set == null
+		or not definition.property_set.has(CardPropertySet.PROPERTY_PERSONA)
+	):
+		return &""
+	for shape_id in CardPropertySet.SHAPES:
+		if definition.property_set.has(shape_id):
+			return shape_id
+	return &""
+
+
+static func _icon_frame_style(shape_id: StringName) -> StyleBoxFlat:
+	var is_shape := _is_shape_id(shape_id)
+	var style := panel_style(
+		ShapeVisuals.color(shape_id) if is_shape else DEFAULT_ICON_BACKGROUND,
+		Color("101315", 0.72) if is_shape else DEFAULT_ICON_BORDER,
+		1,
+	)
+	style.content_margin_left = 0.0
+	style.content_margin_top = 0.0
+	style.content_margin_right = 0.0
+	style.content_margin_bottom = 0.0
+	return style
 
 
 static func property_name_key(tag: StringName) -> StringName:
@@ -599,10 +673,10 @@ static func property_icon_texture(tag: StringName) -> Texture2D:
 	var paths := {
 		&"food": "res://resources/ui/property-food.png",
 		&"salty": "res://resources/ui/property-salty.png",
-		&"nightwalker": "res://resources/ui/persona/nightwalker.png",
-		&"mourner": "res://resources/ui/persona/mourner.png",
-		&"dreamwalker": "res://resources/ui/persona/dreamwalker.png",
-		&"homecomer": "res://resources/ui/persona/homecomer.png",
+		&"light": "res://resources/ui/shape/light.png",
+		&"tear": "res://resources/ui/shape/tear.png",
+		&"dream": "res://resources/ui/shape/dream.png",
+		&"sleep": "res://resources/ui/shape/sleep.png",
 		&"plant": "res://resources/ui/property-plant.png",
 		&"flower": "res://resources/ui/property-plant.png",
 		&"rose": "res://resources/item-midnight-rose.svg",
@@ -617,7 +691,7 @@ static func property_icon_texture(tag: StringName) -> Texture2D:
 
 
 static func popup_property_icon_texture(tag: StringName) -> Texture2D:
-	var path := String(PERSONA_POPUP_ICON_PATHS.get(tag, ""))
+	var path := String(SHAPE_POPUP_ICON_PATHS.get(tag, ""))
 	if not path.is_empty() and ResourceLoader.exists(path):
 		return load(path) as Texture2D
 	return property_icon_texture(tag)
@@ -629,18 +703,18 @@ static func popup_item_texture(definition: CardItemDefinition) -> Texture2D:
 		and definition.property_set != null
 		and definition.property_set.has(CardPropertySet.PROPERTY_PERSONA)
 	):
-		for persona_id in CardPropertySet.PERSONAS:
-			if definition.property_set.has(persona_id):
-				return popup_property_icon_texture(persona_id)
+		for shape_id in CardPropertySet.SHAPES:
+			if definition.property_set.has(shape_id):
+				return popup_property_icon_texture(shape_id)
 	return definition.image if definition != null else null
 
 
 static func property_symbol(tag: StringName) -> String:
 	var symbols := {
-		&"nightwalker": "✦",
-		&"mourner": "◇",
-		&"dreamwalker": "▽",
-		&"homecomer": "▱",
+		&"light": "✦",
+		&"tear": "◇",
+		&"dream": "▽",
+		&"sleep": "▱",
 		&"food": "●",
 		&"salty": "≋",
 		&"plant": "♧",
@@ -653,6 +727,7 @@ static func property_symbol(tag: StringName) -> String:
 		&"candle": "♨",
 		&"clothing": "⌑",
 		&"disease": "✚",
+		&"keepsake": "◈",
 		&"teddy_bear": "⌁",
 		&"drink": "∪",
 		&"metal": "◆",

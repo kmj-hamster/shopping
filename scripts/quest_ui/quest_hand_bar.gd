@@ -14,7 +14,7 @@ const REORDER_DROP_MARGIN := Vector2(32, 38)
 const REORDER_OVERLAP_SLOP := 12.0
 const HAND_HEIGHT := CardHandCard.CARD_SIZE.y + 8.0
 const TAB_ITEMS := &"items"
-const TAB_MASKS := &"masks"
+const TAB_PERSONAS := &"personas"
 
 var state: QuestGameState
 var highlight_rule: CardSlotRule
@@ -22,7 +22,7 @@ var card_highlight_predicate: Callable
 var card_scroll: ScrollContainer
 var card_row: Control
 var active_tab: StringName = TAB_ITEMS
-var mask_persona_order: Array[StringName] = PersonaMaskCatalog.MASK_PERSONAS.duplicate()
+var persona_shape_order: Array[StringName] = PersonaCardCatalog.PERSONA_SHAPES.duplicate()
 var card_views: Dictionary = {}
 var card_wrappers: Dictionary = {}
 var temporarily_hidden_card_ids: Dictionary = {}
@@ -71,7 +71,7 @@ func refresh() -> void:
 
 
 func show_tab(tab_id: StringName) -> void:
-	if tab_id not in [TAB_ITEMS, TAB_MASKS]:
+	if tab_id not in [TAB_ITEMS, TAB_PERSONAS]:
 		return
 	if active_tab == tab_id:
 		return
@@ -80,7 +80,7 @@ func show_tab(tab_id: StringName) -> void:
 
 
 func show_tab_for_rule(rule: CardSlotRule) -> void:
-	show_tab(TAB_MASKS if PersonaMaskCatalog.rule_uses_masks(rule) else TAB_ITEMS)
+	show_tab(TAB_PERSONAS if PersonaCardCatalog.rule_uses_persona_cards(rule) else TAB_ITEMS)
 
 
 func _visible_card_entries() -> Array:
@@ -95,18 +95,18 @@ func _visible_card_entries() -> Array:
 		var definition := QuestArcCatalog.item_by_id(card.definition_id)
 		if definition != null:
 			entries.append([card, definition])
-	PersonaMaskCatalog.sync_selection(state.synthesis_persona_id)
-	for persona_id in mask_persona_order:
-		var amount := int(state.protagonist_persona_counts.get(persona_id, 0))
+	PersonaCardCatalog.sync_selection(state.synthesis_persona_shape_id)
+	for shape_id in persona_shape_order:
+		var amount := int(state.protagonist_shape_levels.get(shape_id, 0))
 		if amount <= 0:
 			continue
-		var mask_card := PersonaMaskCatalog.card_for_persona(persona_id)
-		if mask_card.location != CardItemState.Location.HAND:
+		var persona_card := PersonaCardCatalog.card_for_shape(shape_id)
+		if persona_card.location != CardItemState.Location.HAND:
 			continue
 		entries.append([
-			mask_card,
-			PersonaMaskCatalog.definition_for_persona(
-				persona_id,
+			persona_card,
+			PersonaCardCatalog.definition_for_shape(
+				shape_id,
 				amount,
 			),
 		])
@@ -395,11 +395,11 @@ func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 		return false
 	if card.activity_id == &"task_gift":
 		return state.can_claim_task_gift(int(String(card.slot_id)))
-	var persona_id := PersonaMaskCatalog.persona_for_card(card)
-	if not persona_id.is_empty():
+	var shape_id := PersonaCardCatalog.shape_for_card(card)
+	if not shape_id.is_empty():
 		return (
 			card.location == CardItemState.Location.HAND
-			or state.synthesis_persona_id == persona_id
+			or state.synthesis_persona_shape_id == shape_id
 		)
 	return card in state.inventory
 
@@ -416,21 +416,21 @@ func _drop_data(at_position: Vector2, data: Variant) -> void:
 		show_tab(TAB_ITEMS)
 		state.claim_task_gift(int(String(card.slot_id)))
 		return
-	var persona_id := PersonaMaskCatalog.persona_for_card(card)
-	if not persona_id.is_empty():
-		if state.synthesis_persona_id == persona_id:
-			state.select_synthesis_persona(persona_id)
-			show_tab(TAB_MASKS)
+	var shape_id := PersonaCardCatalog.shape_for_card(card)
+	if not shape_id.is_empty():
+		if state.synthesis_persona_shape_id == shape_id:
+			state.select_synthesis_persona(shape_id)
+			show_tab(TAB_PERSONAS)
 			return
-		var mask_grab_offset: Vector2 = data.get(
+		var persona_grab_offset: Vector2 = data.get(
 			"grab_offset", CardHandCard.CARD_SIZE * 0.5
 		)
-		var mask_target_index := _hand_insertion_index(
+		var persona_target_index := _hand_insertion_index(
 			at_position,
 			card,
-			mask_grab_offset,
+			persona_grab_offset,
 		)
-		_reorder_mask_card(persona_id, mask_target_index)
+		_reorder_persona_card(shape_id, persona_target_index)
 		return
 	var grab_offset: Vector2 = data.get("grab_offset", CardHandCard.CARD_SIZE * 0.5)
 	var target_index := _hand_insertion_index(at_position, card, grab_offset)
@@ -491,12 +491,12 @@ func _hand_insertion_index(
 	return candidate_centers.size()
 
 
-func _reorder_mask_card(persona_id: StringName, target_index: int) -> void:
-	var current_index := mask_persona_order.find(persona_id)
+func _reorder_persona_card(shape_id: StringName, target_index: int) -> void:
+	var current_index := persona_shape_order.find(shape_id)
 	if current_index < 0:
 		return
-	mask_persona_order.remove_at(current_index)
-	mask_persona_order.insert(clampi(target_index, 0, mask_persona_order.size()), persona_id)
+	persona_shape_order.remove_at(current_index)
+	persona_shape_order.insert(clampi(target_index, 0, persona_shape_order.size()), shape_id)
 	_layout_cards_for_rule()
 
 
@@ -512,8 +512,8 @@ func _on_state_delta(delta: QuestStateDelta) -> void:
 	if delta == null:
 		return
 	if delta.affects_hand() or delta.synthesis_persona_changed:
-		# Persona levels can change without a physical inventory mutation. The
-		# unified hand must still add or update the corresponding mask cards.
+		# A Persona card's shape value can change without an inventory mutation.
+		# The unified hand must still add or update the corresponding card.
 		_reconcile_cards(true)
 
 

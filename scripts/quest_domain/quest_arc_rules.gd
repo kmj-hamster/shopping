@@ -2,32 +2,32 @@ class_name QuestArcRules
 extends RefCounted
 
 
-static func dominant_persona(
+static func dominant_shape(
 	items: Array[CardItemDefinition],
-	personas: Array[StringName],
+	shapes: Array[StringName],
 	tie_priority: Array[StringName] = [],
 ) -> StringName:
-	if personas.is_empty():
+	if shapes.is_empty():
 		return &""
 	var totals: Dictionary = {}
 	var highest := -1
-	for persona_id in personas:
-		totals[persona_id] = 0
+	for shape_id in shapes:
+		totals[shape_id] = 0
 	for item in items:
 		if item == null:
 			continue
-		for persona_id in personas:
-			totals[persona_id] = (
-				int(totals[persona_id]) + item.property_value(persona_id)
+		for shape_id in shapes:
+			totals[shape_id] = (
+				int(totals[shape_id]) + item.property_value(shape_id)
 			)
-			highest = maxi(highest, int(totals[persona_id]))
+			highest = maxi(highest, int(totals[shape_id]))
 	var tied: Array[StringName] = []
-	for persona_id in personas:
-		if int(totals[persona_id]) == highest:
-			tied.append(persona_id)
-	for persona_id in tie_priority:
-		if persona_id in tied:
-			return persona_id
+	for shape_id in shapes:
+		if int(totals[shape_id]) == highest:
+			tied.append(shape_id)
+	for shape_id in tie_priority:
+		if shape_id in tied:
+			return shape_id
 	return tied[0] if not tied.is_empty() else &""
 
 
@@ -58,10 +58,10 @@ static func outcome_for(
 		"day": day,
 		"story_flags": story_flags,
 		"completed_tasks": completed_tasks,
-		"dominant_persona": dominant_persona(
+		"dominant_shape": dominant_shape(
 			items,
-			task.persona_tie_priority,
-			task.persona_tie_priority,
+			task.shape_tie_priority,
+			task.shape_tie_priority,
 		),
 	}
 	for outcome in sorted_outcomes:
@@ -78,6 +78,7 @@ static func store_unlock_accepts(
 		definition != null
 		and item != null
 		and not item.has_property(CardPropertySet.PROPERTY_DISEASE)
+		and not item.has_property(CardPropertySet.PROPERTY_KEEPSAKE)
 		and CardRuleEvaluator.can_execute(definition.slot_rule, item)
 	)
 
@@ -109,6 +110,6 @@ static func _condition_matches(condition: StoryCondition, context: Dictionary) -
 			return items.any(func(item: CardItemDefinition) -> bool:
 				return item != null and item.has_property(condition.key)
 			)
-		StoryCondition.Kind.DOMINANT_PERSONA:
-			return StringName(context.dominant_persona) == condition.key
+		StoryCondition.Kind.DOMINANT_SHAPE:
+			return StringName(context.dominant_shape) == condition.key
 	return false

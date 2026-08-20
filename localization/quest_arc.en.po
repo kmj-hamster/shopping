@@ -680,7 +680,7 @@ msgstr "Two thin blades bite together in your imagination."
 msgid "quest.ui.hand.items"
 msgstr "Items"
 
-msgid "quest.ui.hand.masks"
+msgid "quest.ui.hand.personas"
 msgstr "Personas"
 
 msgid "demo.property.persona.name"
@@ -689,29 +689,53 @@ msgstr "Persona"
 msgid "demo.property.persona.description"
 msgstr "A Persona that names how you feel and answer the night."
 
-msgid "demo.mask.nightwalker.name"
-msgstr "Nightwalker"
+msgid "demo.persona.lamplighter.name"
+msgstr "The Lamplighter"
 
-msgid "demo.mask.nightwalker.description"
-msgstr "Alternating current, a brightly lit street corner, moths crackling. Night makes my mind clearer. [Persona of the night: reason, curiosity]"
+msgid "demo.persona.lamplighter.description"
+msgstr "A detective, an investigator, a scholar working at midnight. Night makes my mind clearer."
 
-msgid "demo.mask.mourner.name"
-msgstr "Mourner"
+msgid "demo.persona.nightwatcher.name"
+msgstr "The Nightwatcher"
 
-msgid "demo.mask.mourner.description"
-msgstr "See me, and you see another self. Hold me, and you hold your own other hand. Night makes me remember sorrowful things. [Persona of the night: empathy, nostalgia]"
+msgid "demo.persona.nightwatcher.description"
+msgstr "A nostalgic ghost, a late night call-in radio host, Proust. Night makes me remember sorrowful things."
 
-msgid "demo.mask.dreamwalker.name"
+msgid "demo.persona.dreamwalker.name"
 msgstr "Dreamwalker"
 
-msgid "demo.mask.dreamwalker.description"
-msgstr "Ancient fish swim across the bedroom wall; wet concrete branches bloom with white flowers. Night leaves my inspiration nowhere to hide. [Persona of the night: hallucination, reverie]"
+msgid "demo.persona.dreamwalker.description"
+msgstr "A nightingale, a surrealist writer, Van Gogh beneath the stars. Night leaves my inspiration nowhere to hide."
 
-msgid "demo.mask.homecomer.name"
+msgid "demo.persona.homecomer.name"
 msgstr "Homecomer"
 
-msgid "demo.mask.homecomer.description"
-msgstr "A cool goose-down quilt, lavender at the bedside, a moment of solace before dawn. May I sleep well tonight, tonight. [Persona of the night: pleasure, rest]"
+msgid "demo.persona.homecomer.description"
+msgstr "Someone leaving work, someone enjoying a late-night meal, someone sleeping soundly. May I sleep well tonight, tonight."
+
+msgid "demo.shape.light.name"
+msgstr "Light"
+
+msgid "demo.shape.light.description"
+msgstr "Alternating current, a brightly lit street corner, moths crackling. [Shape of the night: reason, curiosity]"
+
+msgid "demo.shape.tear.name"
+msgstr "Tear"
+
+msgid "demo.shape.tear.description"
+msgstr "See me, and you see another self. Hold me, and you hold your own other hand. [Shape of the night: empathy, compassion]"
+
+msgid "demo.shape.dream.name"
+msgstr "Dream"
+
+msgid "demo.shape.dream.description"
+msgstr "Ancient fish swim across the bedroom wall; wet concrete branches bloom with white flowers. [Shape of the night: hallucination, inspiration]"
+
+msgid "demo.shape.sleep.name"
+msgstr "Sleep"
+
+msgid "demo.shape.sleep.description"
+msgstr "A cool goose-down quilt, lavender at the bedside, a moment of solace before dawn. [Shape of the night: pleasure, rest]"
 
 msgid "demo.ui.synthesis.candidates"
 msgstr "Possible Shapes"
@@ -1072,7 +1096,7 @@ msgid "opening.unlock.flower.slot"
 msgstr "Any Persona"
 
 msgid "opening.unlock.flower.result"
-msgstr "The mask appears in the glass, and the shop opens through its reflection."
+msgstr "Your Persona appears in the glass, and the shop opens through its reflection."
 
 msgid "opening.unlock.record.prompt"
 msgstr "The needle rests on a silent record. This place specifically asks for a rose."
@@ -1084,10 +1108,10 @@ msgid "opening.unlock.record.result"
 msgstr "The rose remains beside the door. A record begins to turn."
 
 msgid "opening.unlock.bookstore.prompt"
-msgstr "Pages turn by themselves behind the door. Only a level 3 Nightwalker or Dreamwalker Persona can read the sign."
+msgstr "Pages turn by themselves behind the door. Only The Lamplighter or Dreamwalker at level 3 can read the sign."
 
 msgid "opening.unlock.bookstore.slot"
-msgstr "Level 3 Nightwalker or Dreamwalker"
+msgstr "The Lamplighter or Dreamwalker, level 3"
 
 msgid "opening.unlock.bookstore.result"
 msgstr "Book spines click in sequence, and a door appears between two shelves."
@@ -1118,3 +1142,174 @@ msgstr "Shh... The flowers are asleep. Choose gently."
 
 msgid "opening.owner.flower.item"
 msgstr "%s. At night, do not ask whether it is real."
+
+msgid "opening.property.keepsake.name"
+msgstr "Keepsake"
+
+msgid "opening.property.keepsake.description"
+msgstr "An object recognized by a particular bond. [A Keepsake can only be placed in a request slot.]"
+
+msgid "opening.item.concrete_city_vol_2.name"
+msgstr "Welcome to Concrete City (Vol. II)"
+
+msgid "opening.item.concrete_city_vol_2.description"
+msgstr "Volume I predicted the end. In Volume II, everyone reports to work as usual. The final page insists: begin anywhere."
+
+msgid "opening.item.nocturne_published.name"
+msgstr "Nocturne - Published Cassette"
+
+msgid "opening.item.nocturne_published.description"
+msgstr "The pops have been cleaned away, along with half the drunkenness. The performer's name is printed smaller than the night."
+
+msgid "opening.item.shopping_card.name"
+msgstr "Shopping Card"
+
+msgid "opening.item.shopping_card.description"
+msgstr "A shopping card with no store name. Four nights that cancel one another are stored in its magnetic stripe."
+
+msgid "opening.owner.record.name"
+msgstr "Miss Gramophone"
+
+msgid "opening.owner.record.idle"
+msgstr "\"Bach for anxiety, Mozart for fatigue. Chopin, though... every feeling the night contains is there. Which do you need?\""
+
+msgid "opening.owner.record.item"
+msgstr "\"%s. At least it knows how it ought to be heard.\""
+
+msgid "opening.owner.bookstore.name"
+msgstr "Chika"
+
+msgid "opening.owner.bookstore.idle"
+msgstr "\"Are you looking for a book, or someone to talk to? Either is fine. I happen to handle both.\""
+
+msgid "opening.owner.bookstore.item"
+msgstr "\"%s! I've read this one. Or possibly only from somewhere in the middle.\""
+
+msgid "owner_request.fast_food.name"
+msgstr "Ratty's Kitchen: Cola"
+
+msgid "owner_request.fast_food.body"
+msgstr "\"I miss the taste of cola, but perhaps there isn't any left in this building. If you find some, I'd be glad to share it.\" Ratty sets two straws on the polished counter."
+
+msgid "owner_request.fast_food.footer"
+msgstr "Reward: $60, Homecomer +1"
+
+msgid "owner_request.fast_food.slot"
+msgstr "Cola"
+
+msgid "owner_request.fast_food.accept"
+msgstr "\"If you see any cola... could you bring it back? There may be none in this building. But if there is, we'll split it.\""
+
+msgid "owner_request.fast_food.reminder"
+msgstr "\"Cola. I'm not rushing you! I just... still remember the taste.\""
+
+msgid "owner_request.fast_food.completed"
+msgstr "\"So that was the old taste... more or less. Thank you for finishing it with me.\""
+
+msgid "owner_request.fast_food.result"
+msgstr "Ratty holds the can in both hands, cradling a small piece of ordinary life that has not quite ended. \"That's it. Half for each of us—though I haven't worked out how this suit is meant to drink.\""
+
+msgid "owner_request.flower.name"
+msgstr "Flower Shop: Something Soft"
+
+msgid "owner_request.flower.body"
+msgstr "Mr. Sunflower opens a palm broader than a flowerpot. \"Want... something soft...\" Cold or soothing, either teddy bear will do."
+
+msgid "owner_request.flower.footer"
+msgstr "Reward: two new flowers and one gardenia"
+
+msgid "owner_request.flower.slot"
+msgstr "Any Teddy Bear"
+
+msgid "owner_request.flower.accept"
+msgstr "He lowers his enormous body and points to the empty space in his arms. \"Want... something soft...\""
+
+msgid "owner_request.flower.reminder"
+msgstr "\"Soft... bear.\" He shapes something very small between his arms."
+
+msgid "owner_request.flower.completed"
+msgstr "The teddy bear sits on his shoulder. Every new flower leans toward it."
+
+msgid "owner_request.flower.result"
+msgstr "He settles the bear on his shoulder. The new flowers bend toward it. After a long silence, he cuts a gardenia from his shoulder and offers it to you. Soil begins to stir in the empty shelf spaces."
+
+msgid "owner_request.toy.name"
+msgstr "Joy Joy Toys: Birthday Cake"
+
+msgid "owner_request.toy.body"
+msgstr "\"If you find a birthday cake, could you bring it back? I want to know whether those children ever got to blow out their candles.\" Uncle Balloon is still smiling, but his string has gone taut."
+
+msgid "owner_request.toy.footer"
+msgstr "Reward: $20, The Nightwatcher +1"
+
+msgid "owner_request.toy.slot"
+msgstr "Birthday Cake"
+
+msgid "owner_request.toy.accept"
+msgstr "\"If you find a birthday cake, could you bring it back? I want to know whether those children ever got to blow out their candles.\""
+
+msgid "owner_request.toy.reminder"
+msgstr "\"The cake doesn't have to be pretty. It only needs candles.\""
+
+msgid "owner_request.toy.completed"
+msgstr "\"At least this birthday wasn't forgotten.\""
+
+msgid "owner_request.toy.result"
+msgstr "Uncle Balloon holds the cake while the string above him pulls taut. \"Thank you. At least this birthday wasn't forgotten.\" You hold his lowered hand until he stops drifting upward."
+
+msgid "owner_request.record.name"
+msgstr "Nocturne: Published Cassette"
+
+msgid "owner_request.record.body"
+msgstr "\"You may have heard her playing. What did you think?\" Miss Gramophone wants the polished published recording of Nocturne."
+
+msgid "owner_request.record.footer"
+msgstr "Reward: $60, The Lamplighter +1"
+
+msgid "owner_request.record.slot"
+msgstr "Nocturne - Published Cassette"
+
+msgid "owner_request.record.accept"
+msgstr "\"You may have heard her playing. What did you think? If you find the published Nocturne, bring it to me. I need to verify... a few details.\""
+
+msgid "owner_request.record.reminder"
+msgstr "\"The published cassette. Precise, spotless, without a single accident. That person was always like that.\""
+
+msgid "owner_request.record.completed"
+msgstr "\"Bach for anxiety, Mozart for fatigue. Chopin, though... every feeling of the night is there.\""
+
+msgid "owner_request.record.result"
+msgstr "She reaches the end without lifting the needle. \"Not one wrong note. She is always like that.\" The needle continues across the blank tail. She slides your payment over without saying whether she liked it."
+
+msgid "owner_request.bookstore.name"
+msgstr "Sun & Moon Books: Volume II"
+
+msgid "owner_request.bookstore.body"
+msgstr "Chika opens Volume I somewhere in the middle, then flips back. \"Have you seen Volume II? I drew a manga for this book once. My friends said it was scary—only a little.\""
+
+msgid "owner_request.bookstore.footer"
+msgstr "Reward: $60, Dreamwalker +1"
+
+msgid "owner_request.bookstore.slot"
+msgstr "Welcome to Concrete City (Vol. II)"
+
+msgid "owner_request.bookstore.accept"
+msgstr "\"Have you seen Volume II? I drew a manga for this book once. My friends said it was scary—only a little.\""
+
+msgid "owner_request.bookstore.reminder"
+msgstr "\"Welcome to Concrete City, Volume II. Starting at the final page won't hurt. It may actually be better.\""
+
+msgid "owner_request.bookstore.completed"
+msgstr "\"My manga can be started on any page too! My friends just don't like starting it.\""
+
+msgid "owner_request.bookstore.result"
+msgstr "Chika presses Volume II flat beneath her hands. The magical girl on her mask is still smiling. \"See? Starting here makes perfect sense. My manga is the same. Probably.\" She has reached the last page and still hasn't stopped talking."
+
+msgid "quest.ui.arc.item_reward"
+msgstr "Received: %s"
+
+msgid "quest.ui.arc.flip_reward"
+msgstr "Flip"
+
+msgid "quest.ui.arc.continue_reward"
+msgstr "Click to continue"
