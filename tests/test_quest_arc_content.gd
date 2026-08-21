@@ -19,16 +19,14 @@ const EXPECTED_ILLUSTRATED_ITEM_IDS: Array[StringName] = [
 	&"candy_fake_flower", &"goldberg_variations", &"debussy_clair_de_lune",
 	&"conservatory_story", &"nocturne_competition_recording", &"concrete_city_vol_1",
 	&"mirror_and_lamp", &"ufo_exploration_magazine", &"mania_manga",
-	&"baby_soothing_bear", &"birthday_cake", &"cola", &"rose",
+	&"cold_teddy_bear", &"baby_soothing_bear", &"birthday_cake", &"cola", &"rose",
 	&"concrete_city_vol_2", &"nocturne_published",
+	&"expedition_wound", &"white_flower",
 ]
 
 const EXPECTED_ITEMS_WITHOUT_IMAGES: Array[StringName] = [
-	&"cold_teddy_bear",
 	&"expedition_salvage",
-	&"expedition_wound",
 	&"expedition_wage",
-	&"white_flower",
 	&"shopping_card",
 ]
 
@@ -43,7 +41,7 @@ const EXPECTED_SHAPE_LEVELS := {
 func test_manifest_is_the_live_content_whitelist_without_test_cards() -> void:
 	var manifest := QuestArcCatalog.manifest()
 	assert_not_null(manifest)
-	assert_eq(manifest.initial_money, 0)
+	assert_eq(manifest.initial_money, 40)
 	assert_eq(manifest.starting_item_ids, [&"tin_frog"])
 	assert_eq(manifest.maximum_item_price, 84)
 	assert_eq(manifest.properties.size(), 16)
@@ -79,6 +77,23 @@ func test_manifest_is_the_live_content_whitelist_without_test_cards() -> void:
 	expected_ids.sort()
 	assert_eq(actual_ids, expected_ids)
 	assert_true(manifest.validation_errors().is_empty(), str(manifest.validation_errors()))
+
+
+func test_new_disease_and_cold_teddy_art_is_bound_to_live_items() -> void:
+	var expected_paths := {
+		&"white_flower": "res://resources/items/white_flower.png",
+		&"expedition_wound": "res://resources/items/expedition_wound.png",
+		&"cold_teddy_bear": "res://resources/items/cold_teddy_bear.png",
+	}
+	for item_id in expected_paths:
+		var definition := QuestArcCatalog.item_by_id(item_id)
+		assert_not_null(definition, item_id)
+		assert_not_null(definition.image, item_id)
+		assert_eq(definition.image.resource_path, expected_paths[item_id], item_id)
+	for disease_id in [&"white_flower", &"expedition_wound"]:
+		var image := QuestArcCatalog.item_by_id(disease_id).image.get_image()
+		assert_eq(image.get_size(), Vector2i(512, 512), disease_id)
+		assert_eq(image.get_pixel(0, 0).a, 0.0, disease_id)
 
 
 func test_retail_cards_match_the_declared_prices_types_and_shapes() -> void:
@@ -230,12 +245,49 @@ func test_disease_recipes_are_outputless_single_shape_paths() -> void:
 func test_store_unlocks_use_items_or_non_consuming_persona_cards() -> void:
 	var toy_unlock := QuestArcCatalog.store_unlock_for_store(&"toy")
 	assert_true(QuestArcRules.store_unlock_accepts(toy_unlock, QuestArcCatalog.item_by_id(&"tin_frog")))
+	assert_false(QuestArcRules.store_unlock_accepts(toy_unlock, QuestArcCatalog.item_by_id(&"ratty_doll")))
 	assert_true(toy_unlock.consume_item)
+	var bookstore_unlock := QuestArcCatalog.store_unlock_for_store(&"bookstore")
+	assert_true(QuestArcRules.store_unlock_accepts(bookstore_unlock, QuestArcCatalog.item_by_id(&"kaleidoscope")))
+	assert_eq(bookstore_unlock.slot_rule.required_all, [&"dream"])
+	assert_eq(bookstore_unlock.slot_rule.forbidden_any, [CardPropertySet.PROPERTY_PERSONA])
+	assert_eq(bookstore_unlock.slot_rule.required_label_key, &"expedition.ui.slot.accepts")
+	assert_eq(bookstore_unlock.slot_rule.forbidden_label_key, &"expedition.ui.slot.rejects")
+	assert_false(CardRuleEvaluator.can_place(
+		bookstore_unlock.slot_rule,
+		PersonaCardCatalog.definition_for_shape(&"dream", 5),
+	))
+	assert_false(QuestArcRules.store_unlock_accepts(
+		bookstore_unlock,
+		PersonaCardCatalog.definition_for_shape(&"dream", 5),
+	))
+	assert_true(bookstore_unlock.consume_item)
 	var record_unlock := QuestArcCatalog.store_unlock_for_store(&"record")
 	assert_true(QuestArcRules.store_unlock_accepts(record_unlock, QuestArcCatalog.item_by_id(&"rose")))
 	assert_false(QuestArcRules.store_unlock_accepts(record_unlock, QuestArcCatalog.item_by_id(&"jasmine")))
 	assert_false(QuestArcCatalog.store_unlock_for_store(&"flower").consume_item)
-	assert_false(QuestArcCatalog.store_unlock_for_store(&"bookstore").consume_item)
+
+
+func test_bookstore_unlock_popup_separates_dream_item_from_rejected_persona() -> void:
+	var unlock := QuestArcCatalog.store_unlock_for_store(&"bookstore")
+	var popup := QuestRuleDetailPopup.new()
+	add_child_autofree(popup)
+	await get_tree().process_frame
+	popup.show_rule(unlock.slot_rule)
+	assert_true(popup.required_summary.visible)
+	assert_eq(popup.required_summary.get_child_count(), 2)
+	var accepted_row := popup.required_summary.get_child(0) as HBoxContainer
+	var rejected_row := popup.required_summary.get_child(1) as HBoxContainer
+	assert_eq(
+		(accepted_row.get_child(0) as Label).text,
+		TranslationServer.translate(&"expedition.ui.slot.accepts"),
+	)
+	assert_eq((accepted_row.get_child(1) as HBoxContainer).get_child_count(), 1)
+	assert_eq(
+		(rejected_row.get_child(0) as Label).text,
+		TranslationServer.translate(&"expedition.ui.slot.rejects"),
+	)
+	assert_eq((rejected_row.get_child(1) as HBoxContainer).get_child_count(), 1)
 
 
 func test_live_rose_recipe_consumes_its_base_and_creates_the_declared_output() -> void:
@@ -264,7 +316,7 @@ func test_finite_shelf_cards_do_not_return_on_their_store_restock_day() -> void:
 
 func test_new_game_starts_with_only_tin_frog_and_keeps_four_shapes() -> void:
 	var state := QuestGameState.new()
-	assert_eq(state.wallet.money, 0)
+	assert_eq(state.wallet.money, 40)
 	assert_eq(state.inventory.size(), 1)
 	assert_eq(state.inventory[0].definition_id, &"tin_frog")
 	assert_true(state.unlocked_store_ids.is_empty())

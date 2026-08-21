@@ -73,7 +73,7 @@ func test_owner_requests_settle_one_at_a_time_without_advancing_the_day() -> voi
 
 	var first := state.settle_current_arc_entry()
 	assert_true(first.ok)
-	assert_eq(state.wallet.money, 20)
+	assert_eq(state.wallet.money, 60)
 	assert_eq(int(state.protagonist_shape_levels[&"tear"]), starting_tear + 1)
 	assert_null(state.card_by_instance_id(cake.instance_id))
 	assert_not_null(state.card_by_instance_id(bear.instance_id))

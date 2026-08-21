@@ -297,9 +297,9 @@ msgstr "气球叔叔"
 msgid "quest.owner.balloon.idle"
 msgstr "气球叔叔把手套叠在柜台上。印上去的笑容纹丝不动。"
 msgid "quest.owner.balloon.item_comment"
-msgstr "“%s。”他轻轻敲了敲价签，“它在这里等得比我久。”"
+msgstr "%s。他轻轻敲了敲价签，它在这里等得比我久。"
 msgid "quest.owner.balloon.request"
-msgstr "“香蕉水也许能擦掉笑。更重的空气，也许能让我留下。”"
+msgstr "香蕉水也许能擦掉笑。更重的空气，也许能让我留下。"
 msgid "quest.owner.balloon.reminder"
 msgstr "气球叔叔按住自己的笑脸，等着你带回一种答案。"
 msgid "quest.owner.balloon.departed"
@@ -319,21 +319,21 @@ msgstr "大老鼠"
 msgid "quest.owner.mouse.idle"
 msgstr "老鼠玩偶服向你挥手。厨房里只剩自动售货机的嗡鸣。"
 msgid "quest.owner.mouse.item_comment"
-msgstr "“%s！这个在夜里吃，味道会更认真一点。”"
+msgstr "%s！这个在夜里吃，味道会更认真一点。"
 
 msgid "quest.owner.gramophone.name"
 msgstr "留声机女士"
 msgid "quest.owner.gramophone.idle"
 msgstr "留声机女士擦拭唱针，假装没有注意到你。"
 msgid "quest.owner.gramophone.item_comment"
-msgstr "“%s。唱片有记性，价钱可没有。”"
+msgstr "%s。唱片有记性，价钱可没有。"
 
 msgid "quest.owner.magical_girl.name"
 msgstr "千花"
 msgid "quest.owner.magical_girl.idle"
 msgstr "千花从书堆后探出头，像是已经等了很久。"
 msgid "quest.owner.magical_girl.item_comment"
-msgstr "“%s。别被封面骗了，里面的夜晚更长。”"
+msgstr "%s。别被封面骗了，里面的夜晚更长。"
 
 msgid "quest.store_unlock.record.slot"
 msgstr "飞蛾形的凹槽"
@@ -430,10 +430,6 @@ msgid "quest.ui.synthesis.working"
 msgstr "纸袋深处传来很轻的摩擦声……"
 msgid "quest.ui.synthesis.action"
 msgstr "合成"
-msgid "debug.ui.synthesis_background.blue"
-msgstr "背景：深蓝"
-msgid "debug.ui.synthesis_background.bag"
-msgstr "背景：袋中"
 msgid "quest.ui.synthesis.material"
 msgstr "原料"
 msgid "quest.ui.synthesis.material.description"
@@ -1072,49 +1068,49 @@ msgid "opening.store.bookstore.name"
 msgstr "日月光书店"
 
 msgid "opening.unlock.toy.prompt"
-msgstr "卷帘门后传来发条空转的声音。拿出任何玩具，证明你知道该怎样和这里相处。"
+msgstr "欣欣玩具店的卷帘门只抬起一条缝。气球叔叔隔着玻璃，指了指我手里的铁皮青蛙，又轻轻敲了敲门锁。"
 
 msgid "opening.unlock.toy.slot"
-msgstr "任何玩具"
+msgstr "铁皮青蛙"
 
 msgid "opening.unlock.toy.result"
-msgstr "门锁认出了玩具，卷帘门缓慢升起。"
+msgstr "铁皮青蛙贴近门锁，腹中传来一声空响。气球叔叔替我抬起卷帘门。"
 
 msgid "opening.unlock.fast_food.prompt"
-msgstr "店门口挂着牌子：请自带食物。带来任何食物，门才会打开。"
+msgstr "取餐窗中，穿着老鼠服的人向我鞠躬，说今天已经打烊了。但或许我只是想在这里坐一会儿，食物可以自己准备。"
 
 msgid "opening.unlock.fast_food.slot"
 msgstr "任何食物"
 
 msgid "opening.unlock.fast_food.result"
-msgstr "牌子晃了一下，店里的灯亮了。"
+msgstr "大老鼠收起了打烊的牌子，为我擦出一张靠窗的桌子。"
 
 msgid "opening.unlock.flower.prompt"
-msgstr "玻璃门后全是沉睡的白花。展示任何一张 Persona，让它们认出今夜的你。"
+msgstr "花店的玻璃上贴着一张歪斜的纸：请证明你是什么人。门后高大的影子低下头，等待我的倒影先开口。"
 
 msgid "opening.unlock.flower.slot"
-msgstr "任何 Persona"
+msgstr "证明我是什么人"
 
 msgid "opening.unlock.flower.result"
-msgstr "你的面相映在玻璃上，花店从倒影里打开。"
+msgstr "我的面相映在玻璃上。向日葵先生看了很久，然后从里面推开门。"
 
 msgid "opening.unlock.record.prompt"
-msgstr "唱针停在寂静的唱片上。这里明确要求一朵玫瑰。"
+msgstr "天鹅绒窗帘透出留声机的影子。气球叔叔告诉我，唱片店老板对人毫无耐心，但对手捧玫瑰的人除外。可是新千年商场中绝不存在玫瑰。"
 
 msgid "opening.unlock.record.slot"
 msgstr "玫瑰"
 
 msgid "opening.unlock.record.result"
-msgstr "玫瑰被留在门边，唱片开始转动。"
+msgstr "玫瑰被留在门边。窗帘后传来唱针落下的声音。"
 
 msgid "opening.unlock.bookstore.prompt"
-msgstr "书页在门缝里自行翻动。提灯者或梦游者 Persona 达到 3 级，才看得清门牌。"
+msgstr "日月光书店的招牌还亮着，门却藏在一排没有尽头的书脊后。千花从缝隙里递出一张便签：带来一样能让灵感继续生长的东西。"
 
 msgid "opening.unlock.bookstore.slot"
-msgstr "3级提灯者或梦游者"
+msgstr "有助于灵感的东西"
 
 msgid "opening.unlock.bookstore.result"
-msgstr "书脊依次发出轻响，门出现在两排书之间。"
+msgstr "那件东西做了一个短梦。书脊依次退开，门出现在两排书之间。"
 
 msgid "opening.owner.toy.name"
 msgstr "气球叔叔"
@@ -1171,19 +1167,19 @@ msgid "opening.owner.record.name"
 msgstr "留声机女士"
 
 msgid "opening.owner.record.idle"
-msgstr "“巴赫抗焦虑，莫扎特抗疲劳。至于肖邦……夜晚的一切情感都在那里。你需要哪一种？”"
+msgstr "巴赫抗焦虑，莫扎特抗疲劳。至于肖邦……夜晚的一切情感都在那里。你需要哪一种？"
 
 msgid "opening.owner.record.item"
-msgstr "“%s。至少它还知道自己应该被怎样聆听。”"
+msgstr "%s。至少它还知道自己应该被怎样聆听。"
 
 msgid "opening.owner.bookstore.name"
 msgstr "千花"
 
 msgid "opening.owner.bookstore.idle"
-msgstr "“你想找书，还是想找人说话？都可以，我正好两样都管。”"
+msgstr "你想找书，还是想找人说话？都可以，我正好两样都管。"
 
 msgid "opening.owner.bookstore.item"
-msgstr "“%s！这本我看过。当然，也可能只是从中间看过。”"
+msgstr "%s！这本我看过。当然，也可能只是从中间看过。"
 
 msgid "owner_request.fast_food.name"
 msgstr "老鼠厨房：可乐"
@@ -1198,13 +1194,13 @@ msgid "owner_request.fast_food.slot"
 msgstr "可乐"
 
 msgid "owner_request.fast_food.accept"
-msgstr "“你要是见到可乐……能带回来吗？这座楼里或许根本没有。要是真有，我们一人一半。”"
+msgstr "你要是见到可乐……能带回来吗？这座楼里或许根本没有。要是真有，我们一人一半。"
 
 msgid "owner_request.fast_food.reminder"
-msgstr "“可乐。不是催你！只是……我还记得那个味道。”"
+msgstr "可乐。不是催你！只是……我还记得那个味道。"
 
 msgid "owner_request.fast_food.completed"
-msgstr "“原来的味道……大概就是这样。谢谢你陪我喝完。”"
+msgstr "原来的味道……大概就是这样。谢谢你陪我喝完。"
 
 msgid "owner_request.fast_food.result"
 msgstr "大老鼠双手捧住罐子，像接住一小段尚未结束的日常。“就是这个。我们一人一半——虽然我还没想好这套衣服要怎么喝。”"
@@ -1222,10 +1218,10 @@ msgid "owner_request.flower.slot"
 msgstr "任一种泰迪熊"
 
 msgid "owner_request.flower.accept"
-msgstr "他低下庞大的身体，指了指空着的臂弯。“想要个……柔软的东西……”"
+msgstr "他低下庞大的身体，指了指空着的臂弯。想要个……柔软的东西……"
 
 msgid "owner_request.flower.reminder"
-msgstr "“柔软的……熊。”他用双臂比出一个很小的形状。"
+msgstr "柔软的……熊。他用双臂比出一个很小的形状。"
 
 msgid "owner_request.flower.completed"
 msgstr "泰迪熊坐在他的肩头。周围的新花全都向它倾斜。"
@@ -1246,13 +1242,13 @@ msgid "owner_request.toy.slot"
 msgstr "生日蛋糕"
 
 msgid "owner_request.toy.accept"
-msgstr "“如果你见到生日蛋糕，能替我带回来吗？我想知道那些孩子最后有没有等到吹蜡烛。”"
+msgstr "如果你见到生日蛋糕，能替我带回来吗？我想知道那些孩子最后有没有等到吹蜡烛。"
 
 msgid "owner_request.toy.reminder"
-msgstr "“蛋糕不用很漂亮。能点上蜡烛就好。”"
+msgstr "蛋糕不用很漂亮。能点上蜡烛就好。"
 
 msgid "owner_request.toy.completed"
-msgstr "“至少这一次，生日没有被忘掉。”"
+msgstr "至少这一次，生日没有被忘掉。"
 
 msgid "owner_request.toy.result"
 msgstr "气球叔叔托住蛋糕，头顶的细绳轻轻绷直。“谢谢。至少这一次，生日没有被忘掉。”你握住他垂下来的手，直到他不再向上飘。"
@@ -1270,13 +1266,13 @@ msgid "owner_request.record.slot"
 msgstr "夜曲-出版磁带"
 
 msgid "owner_request.record.accept"
-msgstr "“你可能听到她的琴声了。你觉得她弹得怎么样？如果见到出版的《夜曲》，把它带给我。我要确认……一些细节。”"
+msgstr "你可能听到她的琴声了。你觉得她弹得怎么样？如果见到出版的《夜曲》，把它带给我。我要确认……一些细节。"
 
 msgid "owner_request.record.reminder"
-msgstr "“是出版磁带。精确、洁净、没有一次意外。那个人一向如此。”"
+msgstr "是出版磁带。精确、洁净、没有一次意外。那个人一向如此。"
 
 msgid "owner_request.record.completed"
-msgstr "“巴赫抗焦虑，莫扎特抗疲劳。至于肖邦……夜晚的情感都在那里。”"
+msgstr "巴赫抗焦虑，莫扎特抗疲劳。至于肖邦……夜晚的情感都在那里。"
 
 msgid "owner_request.record.result"
 msgstr "她听完磁带，没有立刻抬起唱针。“一个音也没有错。她总是这样。”唱针继续摩擦空白的末尾。她把报酬推向你，没有回答自己是否喜欢。"
@@ -1294,13 +1290,13 @@ msgid "owner_request.bookstore.slot"
 msgstr "欢迎来到砼城（下半）"
 
 msgid "owner_request.bookstore.accept"
-msgstr "“下半册你见过吗？我还给这本书画过漫画。朋友们都说有点吓人——只是有点。”"
+msgstr "下半册你见过吗？我还给这本书画过漫画。朋友们都说有点吓人——只是有点。"
 
 msgid "owner_request.bookstore.reminder"
-msgstr "“《欢迎来到砼城》下半册。要是从最后一页开始看，也不影响。可能更好看。”"
+msgstr "《欢迎来到砼城》下半册。要是从最后一页开始看，也不影响。可能更好看。"
 
 msgid "owner_request.bookstore.completed"
-msgstr "“我的漫画也可以从任意一页开始！只是朋友们不太愿意开始。”"
+msgstr "我的漫画也可以从任意一页开始！只是朋友们不太愿意开始。"
 
 msgid "owner_request.bookstore.result"
 msgstr "千花把下半册压在桌上，头套上的魔法少女仍在微笑。“你看，从这里开始读也完全说得通。我的漫画也是。大概。”她已经翻到最后一页，仍没有停下说话。"
@@ -1313,3 +1309,9 @@ msgstr "翻开"
 
 msgid "quest.ui.arc.continue_reward"
 msgstr "点击继续"
+
+msgid "archive.room_001.title"
+msgstr "Room 001 新千年商场"
+
+msgid "archive.room_001.body"
+msgstr "罕有调查员报告其存在，更没有人从那里顺利回来。\n结合某一首诗歌，在1999年，我们的世界曾拥有另一种可能性。\n而这座被流放在时间外的商场，是这种可能性的证据。"

@@ -47,6 +47,10 @@ func _ready() -> void:
 	add_child(holder)
 	empty_label = Label.new()
 	empty_label.text = "+"
+	empty_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	empty_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	empty_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	empty_label.add_theme_font_size_override("font_size", 42)
 	empty_label.add_theme_color_override("font_color", EMPTY_COLOR)
 	empty_label.mouse_filter = Control.MOUSE_FILTER_IGNORE

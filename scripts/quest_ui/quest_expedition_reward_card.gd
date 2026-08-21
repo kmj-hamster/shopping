@@ -14,3 +14,9 @@ func _get_drag_data(at_position: Vector2) -> Variant:
 		"card": card,
 		"grab_offset": grab_position,
 	}
+
+
+func _card_remained_at_drag_origin() -> bool:
+	# Reward cards are previews rather than persistent hand instances. Once the
+	# hand target accepts one, the preview must stay hidden until room completion.
+	return false

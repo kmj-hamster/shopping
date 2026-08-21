@@ -10,7 +10,9 @@ var current_rule: CardSlotRule
 var current_task_definition: TaskDefinition
 var panel: PanelContainer
 var title_label: Label
+var required_scroll: ScrollContainer
 var required_row: HBoxContainer
+var required_summary: VBoxContainer
 var bonus_section: VBoxContainer
 var bonus_row: HBoxContainer
 var property_panel: PanelContainer
@@ -78,7 +80,7 @@ func _ready() -> void:
 	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(divider)
 
-	var required_scroll := ScrollContainer.new()
+	required_scroll = ScrollContainer.new()
 	required_scroll.custom_minimum_size = Vector2(0, RULE_LINE_HEIGHT)
 	required_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	required_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -89,6 +91,11 @@ func _ready() -> void:
 	required_row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	required_row.add_theme_constant_override("separation", 9)
 	required_scroll.add_child(required_row)
+	required_summary = VBoxContainer.new()
+	required_summary.name = "RequiredPropertySummary"
+	required_summary.add_theme_constant_override("separation", 5)
+	required_summary.visible = false
+	column.add_child(required_summary)
 
 	bonus_section = VBoxContainer.new()
 	column.add_child(bonus_section)
@@ -151,9 +158,10 @@ func _refresh() -> void:
 		current_task_definition != null
 		and current_task_definition.category == TaskDefinition.Category.OWNER_REQUEST
 	)
-	title_label.text = TranslationServer.translate(
-		current_rule.display_name_key if owner_request else &"demo.ui.rule.title"
-	)
+	var title_key := current_rule.detail_title_key
+	if title_key.is_empty():
+		title_key = current_rule.display_name_key if owner_request else &"demo.ui.rule.title"
+	title_label.text = TranslationServer.translate(title_key)
 	title_label.add_theme_font_size_override(
 		"font_size", OWNER_RULE_TITLE_FONT_SIZE if owner_request else RULE_TITLE_FONT_SIZE
 	)
@@ -162,14 +170,37 @@ func _refresh() -> void:
 	property_buttons.clear()
 	requirement_occurrences.clear()
 	requirement_row_positions = {&"required": 0, &"bonus": 0}
-	for item_id in current_rule.accepted_item_ids:
-		_add_item_requirement(item_id)
-	for property_id in current_rule.required_all:
-		_add_property_requirement(required_row, property_id)
-	for property_id in current_rule.allowed_any:
-		_add_property_requirement(required_row, property_id)
-	for property_id in current_rule.forbidden_any:
-		_add_property_requirement(required_row, property_id, &"demo.ui.rule.recently_used")
+	var grouped_property_summary := _uses_grouped_property_summary()
+	required_scroll.visible = not grouped_property_summary
+	required_summary.visible = grouped_property_summary
+	_clear_grouped_property_summary()
+	if grouped_property_summary:
+		_build_grouped_property_summary()
+	else:
+		for item_id in _visible_detail_item_ids(current_rule.accepted_item_ids):
+			_add_item_requirement(item_id, current_rule.required_label_key)
+		for property_id in current_rule.required_all:
+			_add_property_requirement(
+				required_row,
+				property_id,
+				current_rule.required_label_key,
+			)
+		for property_id in current_rule.allowed_any:
+			_add_property_requirement(
+				required_row,
+				property_id,
+				current_rule.allowed_label_key,
+			)
+		for property_id in current_rule.forbidden_any:
+			_add_property_requirement(
+				required_row,
+				property_id,
+				(
+					current_rule.forbidden_label_key
+					if not current_rule.forbidden_label_key.is_empty()
+					else &"demo.ui.rule.recently_used"
+				),
+			)
 	_add_bonus_requirements()
 	bonus_section.visible = int(requirement_row_positions.get(&"bonus", 0)) > 0
 	if property_panel.visible and not selected_property_id.is_empty():
@@ -179,7 +210,115 @@ func _refresh() -> void:
 	call_deferred("_position_property_panel")
 
 
-func _add_item_requirement(item_id: StringName) -> void:
+func _uses_grouped_property_summary() -> bool:
+	return (
+		current_rule != null
+		and current_rule.required_label_key == &"expedition.ui.slot.accepts"
+		and current_rule.allowed_label_key == &"expedition.ui.slot.accepts"
+		and current_rule.forbidden_label_key == &"expedition.ui.slot.rejects"
+	)
+
+
+func _build_grouped_property_summary() -> void:
+	var accepted_properties: Array[StringName] = []
+	for property_id in current_rule.required_all + current_rule.allowed_any:
+		if property_id not in accepted_properties:
+			accepted_properties.append(property_id)
+	var rejected_properties: Array[StringName] = []
+	for property_id in current_rule.forbidden_any:
+		if property_id not in rejected_properties:
+			rejected_properties.append(property_id)
+	var accepted_item_ids := _visible_detail_item_ids(current_rule.accepted_item_ids)
+	var rejected_item_ids := _visible_detail_item_ids(current_rule.rejected_item_ids)
+	if not accepted_properties.is_empty() or not accepted_item_ids.is_empty():
+		_add_grouped_requirement_row(
+			current_rule.allowed_label_key,
+			accepted_properties,
+			accepted_item_ids,
+		)
+	if not rejected_properties.is_empty() or not rejected_item_ids.is_empty():
+		_add_grouped_requirement_row(
+			current_rule.forbidden_label_key,
+			rejected_properties,
+			rejected_item_ids,
+		)
+
+
+func _visible_detail_item_ids(item_ids: Array[StringName]) -> Array[StringName]:
+	var visible_ids: Array[StringName] = []
+	for item_id in item_ids:
+		if item_id not in current_rule.hidden_detail_item_ids:
+			visible_ids.append(item_id)
+	return visible_ids
+
+
+func _add_grouped_requirement_row(
+	label_key: StringName,
+	property_ids: Array[StringName],
+	item_ids: Array[StringName] = [],
+) -> void:
+	var row := HBoxContainer.new()
+	row.custom_minimum_size = Vector2(0, RULE_LINE_HEIGHT)
+	row.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	row.add_theme_constant_override("separation", 12)
+	var label := Label.new()
+	label.name = "RuleSummaryLabel"
+	label.custom_minimum_size = Vector2(0, RULE_LINE_HEIGHT)
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", RULE_CONDITION_FONT_SIZE)
+	label.add_theme_color_override("font_color", Color("d9d0b4"))
+	label.text = TranslationServer.translate(label_key)
+	row.add_child(label)
+	var icon_row := HBoxContainer.new()
+	icon_row.name = "RuleSummaryIcons"
+	icon_row.custom_minimum_size = Vector2(0, RULE_LINE_HEIGHT)
+	icon_row.add_theme_constant_override("separation", 9)
+	row.add_child(icon_row)
+	for item_id in item_ids:
+		var item_icon := _make_grouped_item_icon(item_id)
+		if item_icon != null:
+			icon_row.add_child(item_icon)
+	for property_id in property_ids:
+		var icon := ItemDetailPopup.make_property_icon_button(property_id, RULE_LINE_HEIGHT)
+		icon.tooltip_text = TranslationServer.translate(
+			ItemDetailPopup.property_name_key(property_id)
+		)
+		icon.pressed.connect(_show_property.bind(property_id))
+		icon_row.add_child(icon)
+		_register_property_button(property_id, icon)
+	required_summary.add_child(row)
+
+
+func _make_grouped_item_icon(item_id: StringName) -> Control:
+	var definition := QuestArcCatalog.item_by_id(item_id)
+	if definition == null:
+		return null
+	var frame := PanelContainer.new()
+	frame.custom_minimum_size = Vector2(RULE_LINE_HEIGHT, RULE_LINE_HEIGHT)
+	frame.tooltip_text = TranslationServer.translate(definition.display_name_key)
+	frame.mouse_filter = Control.MOUSE_FILTER_PASS
+	frame.add_theme_stylebox_override(
+		"panel", ItemDetailPopup.panel_style(Color("090b0c"), Color("8c7a52"), 1)
+	)
+	var image := TextureRect.new()
+	image.texture = definition.image
+	image.custom_minimum_size = Vector2(RULE_LINE_HEIGHT - 4, RULE_LINE_HEIGHT - 4)
+	image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.add_child(image)
+	return frame
+
+
+func _clear_grouped_property_summary() -> void:
+	if required_summary == null:
+		return
+	for child in required_summary.get_children():
+		required_summary.remove_child(child)
+		child.queue_free()
+
+
+func _add_item_requirement(item_id: StringName, label_key: StringName = &"") -> void:
 	var definition := QuestArcCatalog.item_by_id(item_id)
 	if definition == null:
 		return
@@ -212,7 +351,9 @@ func _add_item_requirement(item_id: StringName) -> void:
 		view = {"root": chip, "image": image, "label": label}
 		requirement_views[key] = view
 	(view.image as TextureRect).texture = definition.image
-	(view.label as Label).text = TranslationServer.translate(&"demo.ui.rule.must")
+	(view.label as Label).text = TranslationServer.translate(
+		label_key if not label_key.is_empty() else &"demo.ui.rule.must"
+	)
 	_show_requirement_view(key, required_row)
 
 

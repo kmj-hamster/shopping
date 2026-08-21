@@ -7,7 +7,7 @@
 script = ExtResource("2_rule")
 id = &"toy_store_lock"
 display_name_key = &"opening.unlock.toy.slot"
-required_all = Array[StringName]([&"toy"])
+accepted_item_ids = Array[StringName]([&"tin_frog"])
 
 [resource]
 script = ExtResource("1_unlock")

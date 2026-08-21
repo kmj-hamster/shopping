@@ -1,8 +1,8 @@
 class_name QuestSaveRepository
 extends RefCounted
 
-const SAVE_VERSION := 15
-const CONTENT_VERSION := "shape-ids-1"
+const SAVE_VERSION := 16
+const CONTENT_VERSION := "store-unlock-chain-1"
 const DEFAULT_PATH := "user://save_shopping0807_v1.json"
 
 var save_path: String

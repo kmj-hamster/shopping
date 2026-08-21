@@ -177,6 +177,33 @@ func test_persona_cards_use_colored_symbols_on_frosted_glass() -> void:
 	assert_eq(item_view.item_image.self_modulate, Color.WHITE)
 
 
+func test_disease_cards_use_smaller_rounded_black_icon_tiles() -> void:
+	var definition := CardItemDefinition.new()
+	definition.id = &"visual_disease"
+	definition.display_name_key = &"expedition.disease.white_flower.name"
+	definition.image = load("res://resources/items/white_flower.png") as Texture2D
+	definition.property_set = CardPropertySet.new()
+	definition.property_set.tags = [CardPropertySet.PROPERTY_DISEASE]
+	var view := CardHandCard.new()
+	view.setup(CardItemState.new(1, definition.id), definition)
+	add_child_autoqfree(view)
+	await get_tree().process_frame
+
+	assert_false(view.persona_glass.visible)
+	assert_true(view.shape_icon_background.visible)
+	assert_eq(view.shape_icon_background.offset_left, CardHandCard.DISEASE_BACKGROUND_INSET)
+	assert_eq(view.shape_icon_background.offset_top, CardHandCard.DISEASE_BACKGROUND_INSET)
+	assert_eq(view.item_image.offset_left, CardHandCard.DISEASE_ICON_INSET)
+	assert_eq(view.item_image.offset_top, CardHandCard.DISEASE_ICON_INSET)
+	var icon_style := view.shape_icon_background.get_theme_stylebox("panel") as StyleBoxFlat
+	assert_not_null(icon_style)
+	assert_eq(icon_style.bg_color, Color.BLACK)
+	assert_eq(icon_style.corner_radius_top_left, 5)
+	assert_eq(icon_style.corner_radius_top_right, 5)
+	assert_eq(icon_style.corner_radius_bottom_left, 5)
+	assert_eq(icon_style.corner_radius_bottom_right, 5)
+
+
 func test_card_titles_shrink_then_wrap_without_splitting_english_words() -> void:
 	var original_locale := LocaleManager.current_locale
 	LocaleManager.set_locale(LocaleManager.LOCALE_EN, false)

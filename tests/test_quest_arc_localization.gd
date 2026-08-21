@@ -4,6 +4,8 @@ const RUNTIME_UI_KEYS: Array[StringName] = [
 	&"slot.item_detail.close",
 	&"demo.ui.money",
 	&"demo.ui.night",
+	&"quest.ui.todo.night",
+	&"quest.ui.todo.money",
 	&"demo.ui.next_day",
 	&"demo.ui.next_day.question",
 	&"demo.ui.confirm",
@@ -31,8 +33,20 @@ const RUNTIME_UI_KEYS: Array[StringName] = [
 	&"quest.ui.arc.flip_reward",
 	&"quest.ui.arc.continue_reward",
 	&"quest.ui.synthesis.open",
-	&"debug.ui.synthesis_background.blue",
-	&"debug.ui.synthesis_background.bag",
+	&"debug.ui.opening_rules",
+	&"opening.rules.0.welcome",
+	&"opening.rules.0.intro",
+	&"opening.rules.1",
+	&"opening.rules.2.1",
+	&"opening.rules.2.2",
+	&"opening.rules.3.1",
+	&"opening.rules.3.2",
+	&"opening.rules.4",
+	&"opening.rules.5.1",
+	&"opening.rules.5.2",
+	&"opening.rules.6.1",
+	&"opening.rules.6.2",
+	&"opening.rules.6.3",
 	&"quest.ui.back",
 	&"quest.ui.owner.talk",
 	&"quest.ui.shop.checkout",
@@ -65,6 +79,7 @@ const RUNTIME_UI_KEYS: Array[StringName] = [
 	&"expedition.ui.enter",
 	&"expedition.ui.enter_short",
 	&"expedition.ui.confirm_enter",
+	&"expedition.ui.confirm_enter.hint",
 	&"expedition.ui.confirm_enter.lethal_white_flower",
 	&"expedition.ui.confirm_enter.lethal_wound",
 	&"expedition.ui.door_prompt",
@@ -75,14 +90,29 @@ const RUNTIME_UI_KEYS: Array[StringName] = [
 	&"expedition.ui.sell",
 	&"expedition.ui.leave",
 	&"expedition.ui.next_round",
+	&"expedition.ui.previous_night",
 	&"expedition.ui.demo_complete",
 	&"expedition.ui.placeholder.intro",
 	&"expedition.ui.placeholder.challenge",
 	&"expedition.ui.placeholder.response",
 	&"expedition.ui.placeholder.result",
-	&"expedition.feedback.enough",
-	&"expedition.feedback.maybe",
-	&"expedition.feedback.hopeless",
+	&"expedition.room.rest.empty_result",
+	&"expedition.room.rest.no_growth",
+	&"expedition.room.rest.no_growth_healed_wound",
+	&"expedition.room.work.result",
+	&"expedition.disease.wound.removed_white_flower",
+	&"expedition.feedback.light.enough",
+	&"expedition.feedback.light.maybe",
+	&"expedition.feedback.light.hopeless",
+	&"expedition.feedback.tear.enough",
+	&"expedition.feedback.tear.maybe",
+	&"expedition.feedback.tear.hopeless",
+	&"expedition.feedback.dream.enough",
+	&"expedition.feedback.dream.maybe",
+	&"expedition.feedback.dream.hopeless",
+	&"expedition.feedback.sleep.enough",
+	&"expedition.feedback.sleep.maybe",
+	&"expedition.feedback.sleep.hopeless",
 	&"expedition.room.rest.result",
 	&"expedition.room.salvage.result",
 ]
@@ -153,16 +183,19 @@ func test_all_quest_arc_content_keys_exist_in_chinese_and_english() -> void:
 		var room := raw_room as MallRoomDefinition
 		keys.append(room.display_name_key)
 		keys.append_array(room.intro_text_keys)
-		keys.append_array(room.challenge_text_keys)
-		keys.append_array(room.approach_title_keys)
-		keys.append_array(room.approach_text_keys)
-		for optional_key in [
-			room.post_choice_text_key,
-			room.success_text_key,
-			room.failure_text_key,
-		]:
-			if not optional_key.is_empty():
-				keys.append(optional_key)
+		for raw_round in room.challenge_rounds:
+			var challenge_round := raw_round as MallChallengeRoundDefinition
+			keys.append_array(challenge_round.challenge_text_keys)
+			for raw_approach in challenge_round.approaches:
+				var approach := raw_approach as MallChallengeApproachDefinition
+				keys.append(approach.title_text_key)
+				keys.append(approach.prompt_text_key)
+				keys.append(approach.success_text_key)
+				keys.append(approach.failure_text_key)
+	for raw_archive in manifest.archive_entries:
+		var archive := raw_archive as ArchiveEntryDefinition
+		keys.append(archive.title_key)
+		keys.append(archive.body_key)
 
 	for locale in [&"zh_CN", &"en"]:
 		TranslationServer.set_locale(locale)
@@ -182,8 +215,8 @@ func test_persona_cards_match_each_confirmed_role() -> void:
 		&"en": {
 			&"light": ["The Lamplighter", "A detective, an investigator, a scholar working at midnight. Night makes my mind clearer."],
 			&"tear": ["The Nightwatcher", "A nostalgic ghost, a late night call-in radio host, Proust. Night makes me remember sorrowful things."],
-			&"dream": ["Dreamwalker", "A nightingale, a surrealist writer, Van Gogh beneath the stars. Night leaves my inspiration nowhere to hide."],
-			&"sleep": ["Homecomer", "Someone leaving work, someone enjoying a late-night meal, someone sleeping soundly. May I sleep well tonight, tonight."],
+			&"dream": ["The Dreamwalker", "A nightingale, a surrealist writer, Van Gogh beneath the stars. Night leaves my inspiration nowhere to hide."],
+			&"sleep": ["The Homecomer", "Someone leaving work, someone enjoying a late-night meal, someone sleeping soundly. May I sleep well tonight, tonight."],
 		},
 	}
 	for locale in expected_copy:
@@ -284,6 +317,9 @@ func test_shop_owner_copy_is_spoken_dialogue_in_both_locales() -> void:
 			&"opening.owner.toy.idle": "欢迎光临。今晚的玩具都在货架上，发条和轮子暂时还算听话。",
 			&"opening.owner.fast_food.idle": "炸锅正热着。想吃什么就说，别让它们等凉了。",
 			&"opening.owner.flower.idle": "嘘……花已经睡了。挑选的时候轻一点。",
+			&"opening.owner.record.idle": "巴赫抗焦虑，莫扎特抗疲劳。至于肖邦……夜晚的一切情感都在那里。你需要哪一种？",
+			&"opening.owner.bookstore.idle": "你想找书，还是想找人说话？都可以，我正好两样都管。",
+			&"owner_request.fast_food.accept": "你要是见到可乐……能带回来吗？这座楼里或许根本没有。要是真有，我们一人一半。",
 			&"demo.owner.flower.reminder": "再看看我的茎……那些小白花还在。",
 			&"demo.owner.flower.state.trimmed": "轻多了……那些小白花已经不见了。",
 			&"demo.owner.flower.state.blooming": "就让它们继续开吧……水已经喝饱了。",
@@ -292,6 +328,9 @@ func test_shop_owner_copy_is_spoken_dialogue_in_both_locales() -> void:
 			&"opening.owner.toy.idle": "Welcome. Tonight's toys are all on the shelf, and their springs and wheels are behaving—for now.",
 			&"opening.owner.fast_food.idle": "The fryer is hot. Tell me what you want before it gets cold.",
 			&"opening.owner.flower.idle": "Shh... The flowers are asleep. Choose gently.",
+			&"opening.owner.record.idle": "Bach for anxiety, Mozart for fatigue. Chopin, though... every feeling the night contains is there. Which do you need?",
+			&"opening.owner.bookstore.idle": "Are you looking for a book, or someone to talk to? Either is fine. I happen to handle both.",
+			&"owner_request.fast_food.accept": "If you see any cola... could you bring it back? There may be none in this building. But if there is, we'll split it.",
 			&"demo.owner.flower.reminder": "Look at my stem again... Those tiny white flowers are still there.",
 			&"demo.owner.flower.state.trimmed": "I feel lighter... Those tiny white flowers are gone.",
 			&"demo.owner.flower.state.blooming": "Let them keep blooming... They have had plenty to drink.",

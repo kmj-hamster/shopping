@@ -1,18 +1,41 @@
-[gd_resource type="Resource" script_class="MallRoomDefinition" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="MallRoomDefinition" load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/quest_domain/mall_room_definition.gd" id="1_room"]
+[ext_resource type="Script" path="res://scripts/quest_domain/mall_challenge_round_definition.gd" id="2_round"]
+[ext_resource type="Script" path="res://scripts/quest_domain/mall_challenge_approach_definition.gd" id="3_approach"]
+
+[sub_resource type="Resource" id="ApproachGift"]
+script = ExtResource("3_approach")
+title_text_key = &"expedition.room.birthday_party.gift.title"
+prompt_text_key = &"expedition.room.birthday_party.gift.prompt"
+success_text_key = &"expedition.room.birthday_party.gift.success"
+failure_text_key = &"expedition.room.birthday_party.gift.failure"
+required_any_type_ids = Array[StringName]([&"toy", &"flower"])
+required_shape_ids = Array[StringName]([&"tear", &"sleep"])
+shape_total_required = 4
+feedback_primary_shape_id = &"tear"
+
+[sub_resource type="Resource" id="ApproachSing"]
+script = ExtResource("3_approach")
+title_text_key = &"expedition.room.birthday_party.sing.title"
+prompt_text_key = &"expedition.room.birthday_party.sing.prompt"
+success_text_key = &"expedition.room.birthday_party.sing.success"
+failure_text_key = &"expedition.room.birthday_party.sing.failure"
+required_persona_shape_id = &"sleep"
+required_shape_ids = Array[StringName]([&"sleep"])
+shape_total_required = 3
+feedback_primary_shape_id = &"sleep"
+
+[sub_resource type="Resource" id="ChallengeRound"]
+script = ExtResource("2_round")
+challenge_text_keys = Array[StringName]([&"expedition.room.birthday_party.challenge.1", &"expedition.room.birthday_party.challenge.2"])
+approaches = Array[Resource]([SubResource("ApproachGift"), SubResource("ApproachSing")])
 
 [resource]
 script = ExtResource("1_room")
 id = &"birthday_party"
 display_name_key = &"expedition.room.birthday_party.name"
 intro_text_keys = Array[StringName]([&"expedition.room.birthday_party.intro.1", &"expedition.room.birthday_party.intro.2"])
-challenge_text_keys = Array[StringName]([&"expedition.room.common.challenge.1", &"expedition.room.common.challenge.2"])
-approach_title_keys = Array[StringName]([&"expedition.approach.observe.title", &"expedition.approach.advance.title"])
-approach_text_keys = Array[StringName]([&"expedition.approach.observe.text", &"expedition.approach.advance.text"])
-post_choice_text_key = &"expedition.room.common.post_choice"
-success_text_key = &"expedition.room.common.success"
-failure_text_key = &"expedition.room.common.failure"
-required_shape_ids = Array[StringName]([&"light"])
-shape_total_required = 5
+challenge_rounds = Array[Resource]([SubResource("ChallengeRound")])
+reward_item_id = &"birthday_cake"
 slot_count = 2

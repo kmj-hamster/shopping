@@ -17,7 +17,8 @@ var location_popups: Dictionary = {}
 var background_input: Control
 var debug_refresh_count := 0
 var expedition_button: Button
-var expedition_confirm_dialog: ConfirmationDialog
+var expedition_confirm_dialog: QuestExpeditionConfirmationPopup
+var defer_new_store_hotspots_until_hidden := false
 
 
 func setup(game_state: QuestGameState) -> void:
@@ -47,14 +48,15 @@ func refresh() -> void:
 	for store_id in store_hotspots:
 		var hotspot := store_hotspots[store_id] as QuestStoreHotspot
 		var map_visible := state.is_store_visible(store_id)
-		hotspot.visible = map_visible
 		if not map_visible:
+			hotspot.visible = false
 			continue
-		var unlocked := state.is_store_unlocked(store_id)
-		hotspot.text = "➜" if unlocked else "▣"
-		hotspot.add_theme_font_size_override("font_size", 32 if unlocked else 26)
-		hotspot.modulate = Color.WHITE if unlocked else Color(0.62, 0.71, 0.69, 0.92)
-		hotspot.tooltip_text = ""
+		if not hotspot.visible and defer_new_store_hotspots_until_hidden:
+			continue
+		hotspot.visible = true
+		hotspot.refresh()
+	if expedition_button != null:
+		expedition_button.visible = state.has_visited_store(&"toy")
 
 
 func show_notice(message_key: StringName) -> void:
@@ -106,17 +108,12 @@ func _build_interface() -> void:
 			hotspot.anchor_top = anchor.y
 			hotspot.anchor_right = anchor.x
 			hotspot.anchor_bottom = anchor.y
-			hotspot.offset_left = -42
-			hotspot.offset_top = -42
-			hotspot.offset_right = 42
-			hotspot.offset_bottom = 42
+			var half_size := QuestStoreHotspot.HOTSPOT_SIZE * 0.5
+			hotspot.offset_left = -half_size.x
+			hotspot.offset_top = -half_size.y
+			hotspot.offset_right = half_size.x
+			hotspot.offset_bottom = half_size.y
 			hotspot.pressed.connect(_on_store_pressed.bind(store.id))
-			hotspot.add_theme_stylebox_override(
-				"normal", UiPalette.round_button_style(Color("081b20", 0.82), Color("9bb8ad", 0.9), 44)
-			)
-			hotspot.add_theme_stylebox_override(
-				"hover", UiPalette.round_button_style(Color("17373a", 0.96), Color("f0d28a"), 44)
-			)
 			store_hotspots[store.id] = hotspot
 			add_child(hotspot)
 
@@ -139,10 +136,10 @@ func _build_interface() -> void:
 
 	expedition_button = Button.new()
 	expedition_button.name = "MallExpeditionEntrance"
-	expedition_button.anchor_left = 0.405
-	expedition_button.anchor_top = 0.69
-	expedition_button.anchor_right = 0.595
-	expedition_button.anchor_bottom = 0.785
+	expedition_button.anchor_left = 0.384
+	expedition_button.anchor_top = 0.864
+	expedition_button.anchor_right = 0.574
+	expedition_button.anchor_bottom = 0.959
 	expedition_button.add_theme_font_size_override("font_size", 18)
 	expedition_button.add_theme_color_override("font_color", Color("e7eee8"))
 	expedition_button.add_theme_stylebox_override(
@@ -154,7 +151,7 @@ func _build_interface() -> void:
 	expedition_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	expedition_button.pressed.connect(_on_expedition_pressed)
 	add_child(expedition_button)
-	expedition_confirm_dialog = ConfirmationDialog.new()
+	expedition_confirm_dialog = QuestExpeditionConfirmationPopup.new()
 	expedition_confirm_dialog.name = "ExpeditionConfirmation"
 	expedition_confirm_dialog.confirmed.connect(expedition_requested.emit)
 	add_child(expedition_confirm_dialog)
@@ -167,6 +164,13 @@ func _on_store_pressed(store_id: StringName) -> void:
 	if state.is_store_unlocked(store_id):
 		shop_requested.emit(store_id)
 	else:
+		if (
+			location_popup != null
+			and location_popup.visible
+			and location_popup.store_id == store_id
+		):
+			_close_location_popup()
+			return
 		_open_location_popup(store_id)
 
 
@@ -180,16 +184,20 @@ func _refresh_expedition_text() -> void:
 	if expedition_button == null or expedition_confirm_dialog == null:
 		return
 	expedition_button.text = TranslationServer.translate(&"expedition.ui.enter")
-	expedition_confirm_dialog.title = TranslationServer.translate(&"expedition.ui.enter")
 	var lethal_disease_id := state.lethal_disease_id() if state != null else &""
-	var confirmation_key := &"expedition.ui.confirm_enter"
+	var warning_key := &""
 	if lethal_disease_id == QuestGameState.EXPEDITION_WHITE_FLOWER_ITEM_ID:
-		confirmation_key = &"expedition.ui.confirm_enter.lethal_white_flower"
+		warning_key = &"expedition.ui.confirm_enter.lethal_white_flower"
 	elif lethal_disease_id == QuestGameState.EXPEDITION_FAILURE_ITEM_ID:
-		confirmation_key = &"expedition.ui.confirm_enter.lethal_wound"
-	expedition_confirm_dialog.dialog_text = TranslationServer.translate(confirmation_key)
-	expedition_confirm_dialog.ok_button_text = TranslationServer.translate(&"demo.ui.confirm")
-	expedition_confirm_dialog.cancel_button_text = TranslationServer.translate(&"demo.ui.cancel")
+		warning_key = &"expedition.ui.confirm_enter.lethal_wound"
+	expedition_confirm_dialog.set_copy(
+		TranslationServer.translate(&"expedition.ui.enter"),
+		TranslationServer.translate(&"expedition.ui.confirm_enter"),
+		TranslationServer.translate(&"expedition.ui.confirm_enter.hint"),
+		TranslationServer.translate(warning_key) if not warning_key.is_empty() else "",
+		TranslationServer.translate(&"demo.ui.confirm"),
+		TranslationServer.translate(&"demo.ui.cancel"),
+	)
 
 
 func _open_location_popup(store_id: StringName) -> void:
@@ -231,13 +239,17 @@ func clear_drop_target_highlights() -> void:
 
 
 func _on_unlock_confirmed(store_id: StringName, card: CardItemState) -> void:
+	defer_new_store_hotspots_until_hidden = true
 	var result := state.unlock_store(store_id, card)
 	if result.ok:
 		_close_location_popup()
 		refresh()
 		shop_requested.emit(store_id)
 	elif location_popup != null:
+		defer_new_store_hotspots_until_hidden = false
 		location_popup.show_feedback(StringName(result.reason))
+	else:
+		defer_new_store_hotspots_until_hidden = false
 
 
 func _on_locale_changed(_locale: String) -> void:
@@ -256,4 +268,14 @@ func _on_background_gui_input(event: InputEvent) -> void:
 
 func _on_state_delta(delta: QuestStateDelta) -> void:
 	if delta != null and delta.affects_map():
+		refresh()
+
+
+func _notification(what: int) -> void:
+	if (
+		what == NOTIFICATION_VISIBILITY_CHANGED
+		and not visible
+		and defer_new_store_hotspots_until_hidden
+	):
+		defer_new_store_hotspots_until_hidden = false
 		refresh()

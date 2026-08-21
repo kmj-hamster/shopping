@@ -39,14 +39,7 @@ func _ready() -> void:
 	custom_minimum_size = Vector2(210, 390)
 	alignment = BoxContainer.ALIGNMENT_CENTER
 	add_theme_constant_override("separation", 8)
-	name_label = Label.new()
-	name_label.custom_minimum_size = Vector2(210, 34)
-	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	name_label.add_theme_font_size_override("font_size", 18)
-	name_label.add_theme_color_override("font_color", Color("d9e4e0"))
-	name_label.add_theme_color_override("font_outline_color", Color("051015"))
-	name_label.add_theme_constant_override("outline_size", 4)
+	name_label = make_name_label(210)
 	add_child(name_label)
 	door_button = TextureButton.new()
 	door_button.custom_minimum_size = Vector2(205, 345)
@@ -99,3 +92,16 @@ func _on_hover_changed(hovered: bool) -> void:
 func _on_pressed() -> void:
 	if room != null:
 		chosen.emit(room.id)
+
+
+static func make_name_label(minimum_width: float = 210.0) -> Label:
+	var label := Label.new()
+	label.custom_minimum_size = Vector2(minimum_width, 34)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 18)
+	label.add_theme_color_override("font_color", Color("d9e4e0"))
+	label.add_theme_color_override("font_outline_color", Color("051015"))
+	label.add_theme_constant_override("outline_size", 4)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return label

@@ -98,10 +98,10 @@ func _visible_card_entries() -> Array:
 	PersonaCardCatalog.sync_selection(state.synthesis_persona_shape_id)
 	for shape_id in persona_shape_order:
 		var amount := int(state.protagonist_shape_levels.get(shape_id, 0))
-		if amount <= 0:
-			continue
 		var persona_card := PersonaCardCatalog.card_for_shape(shape_id)
 		if persona_card.location != CardItemState.Location.HAND:
+			continue
+		if temporarily_hidden_card_ids.has(persona_card.instance_id):
 			continue
 		entries.append([
 			persona_card,

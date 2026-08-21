@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="GameContentManifest" load_steps=45 format=3]
+[gd_resource type="Resource" script_class="GameContentManifest" load_steps=46 format=3]
 
 [ext_resource type="Script" path="res://scripts/quest_domain/game_content_manifest.gd" id="1_manifest"]
 [ext_resource type="Script" path="res://scripts/quest_domain/property_definition.gd" id="2_property"]
@@ -29,6 +29,7 @@
 [ext_resource type="Resource" path="res://data/quest_arc/items/demo_mirror_shard.tres" id="27_item"]
 [ext_resource type="Resource" path="res://data/quest_arc/items/demo_tin_frog.tres" id="28_item"]
 [ext_resource type="Resource" path="res://data/quest_arc/tasks/demo_tin_boy_gift.tres" id="29_task"]
+[ext_resource type="Resource" path="res://data/quest_arc/archives/room_001_mall.tres" id="30_archive"]
 
 [sub_resource type="Resource" id="PropertyFood"]
 script = ExtResource("2_property")
@@ -147,3 +148,4 @@ recipes = Array[Resource]([ExtResource("12_recipe"), ExtResource("23_recipe"), E
 stores = Array[Resource]([ExtResource("13_store"), ExtResource("14_store")])
 store_unlocks = Array[Resource]([ExtResource("15_unlock")])
 owners = Array[Resource]([ExtResource("16_owner"), ExtResource("17_owner")])
+archive_entries = Array[Resource]([ExtResource("30_archive")])

@@ -1,6 +1,62 @@
-[gd_resource type="Resource" script_class="MallRoomDefinition" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="MallRoomDefinition" load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/quest_domain/mall_room_definition.gd" id="1_room"]
+[ext_resource type="Script" path="res://scripts/quest_domain/mall_challenge_round_definition.gd" id="2_round"]
+[ext_resource type="Script" path="res://scripts/quest_domain/mall_challenge_approach_definition.gd" id="3_approach"]
+
+[sub_resource type="Resource" id="ApproachFaceScan"]
+script = ExtResource("3_approach")
+title_text_key = &"expedition.room.scanner.face.title"
+prompt_text_key = &"expedition.room.scanner.face.prompt"
+success_text_key = &"expedition.room.scanner.face.success"
+failure_text_key = &"expedition.room.scanner.face.failure"
+required_persona_shape_id = &"light"
+required_shape_ids = Array[StringName]([&"light"])
+shape_total_required = 6
+feedback_primary_shape_id = &"light"
+
+[sub_resource type="Resource" id="ApproachHide"]
+script = ExtResource("3_approach")
+title_text_key = &"expedition.room.scanner.hide.title"
+prompt_text_key = &"expedition.room.scanner.hide.prompt"
+success_text_key = &"expedition.room.scanner.hide.success"
+failure_text_key = &"expedition.room.scanner.hide.failure"
+required_persona_shape_id = &"dream"
+required_shape_ids = Array[StringName]([&"dream"])
+shape_total_required = 6
+feedback_primary_shape_id = &"dream"
+
+[sub_resource type="Resource" id="RoundScanning"]
+script = ExtResource("2_round")
+challenge_text_keys = Array[StringName]([&"expedition.room.scanner.round1.challenge.1", &"expedition.room.scanner.round1.challenge.2"])
+approaches = Array[Resource]([SubResource("ApproachFaceScan"), SubResource("ApproachHide")])
+
+[sub_resource type="Resource" id="ApproachTime"]
+script = ExtResource("3_approach")
+title_text_key = &"expedition.room.scanner.time.title"
+prompt_text_key = &"expedition.room.scanner.time.prompt"
+success_text_key = &"expedition.room.scanner.time.success"
+failure_text_key = &"expedition.room.scanner.time.failure"
+required_persona_shape_id = &"sleep"
+required_shape_ids = Array[StringName]([&"sleep"])
+shape_total_required = 6
+feedback_primary_shape_id = &"sleep"
+
+[sub_resource type="Resource" id="ApproachRose"]
+script = ExtResource("3_approach")
+title_text_key = &"expedition.room.scanner.rose.title"
+prompt_text_key = &"expedition.room.scanner.rose.prompt"
+success_text_key = &"expedition.room.scanner.rose.success"
+failure_text_key = &"expedition.room.scanner.rose.failure"
+required_all_type_ids = Array[StringName]([&"flower"])
+required_shape_ids = Array[StringName]([&"sleep", &"dream"])
+shape_total_required = 7
+feedback_primary_shape_id = &"dream"
+
+[sub_resource type="Resource" id="RoundAtrium"]
+script = ExtResource("2_round")
+challenge_text_keys = Array[StringName]([&"expedition.room.scanner.round2.challenge.1", &"expedition.room.scanner.round2.challenge.2"])
+approaches = Array[Resource]([SubResource("ApproachTime"), SubResource("ApproachRose")])
 
 [resource]
 script = ExtResource("1_room")
@@ -8,13 +64,5 @@ id = &"scanner"
 display_name_key = &"expedition.room.scanner.name"
 category = 3
 intro_text_keys = Array[StringName]([&"expedition.room.scanner.intro.1", &"expedition.room.scanner.intro.2"])
-challenge_text_keys = Array[StringName]([&"expedition.room.scanner.challenge.1", &"expedition.room.scanner.challenge.2"])
-approach_title_keys = Array[StringName]([&"expedition.approach.observe.title", &"expedition.approach.advance.title"])
-approach_text_keys = Array[StringName]([&"expedition.approach.observe.text", &"expedition.approach.advance.text"])
-post_choice_text_key = &"expedition.room.scanner.post_choice"
-success_text_key = &"expedition.room.scanner.success"
-failure_text_key = &"expedition.room.scanner.failure"
-required_shape_ids = Array[StringName]([&"light"])
-shape_total_required = 5
+challenge_rounds = Array[Resource]([SubResource("RoundScanning"), SubResource("RoundAtrium")])
 slot_count = 2
-boss_round_count = 2

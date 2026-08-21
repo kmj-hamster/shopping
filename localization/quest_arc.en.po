@@ -297,9 +297,9 @@ msgstr "Uncle Balloon"
 msgid "quest.owner.balloon.idle"
 msgstr "Uncle Balloon folds his gloves on the counter. His printed smile does not move."
 msgid "quest.owner.balloon.item_comment"
-msgstr "“%s.” He taps the price tag. “It has waited here longer than I have.”"
+msgstr "%s. He taps the price tag. It has waited here longer than I have."
 msgid "quest.owner.balloon.request"
-msgstr "“Banana solvent might erase a smile. Heavier air might keep me here.”"
+msgstr "Banana solvent might erase a smile. Heavier air might keep me here."
 msgid "quest.owner.balloon.reminder"
 msgstr "Uncle Balloon holds down his smile, waiting for you to bring back one answer."
 msgid "quest.owner.balloon.departed"
@@ -319,21 +319,21 @@ msgstr "Ratty"
 msgid "quest.owner.mouse.idle"
 msgstr "The mouse costume waves. Only the vending machines hum in the kitchen."
 msgid "quest.owner.mouse.item_comment"
-msgstr "“%s! Eat it at night and the flavor gets a little more serious.”"
+msgstr "%s! Eat it at night and the flavor gets a little more serious."
 
 msgid "quest.owner.gramophone.name"
 msgstr "Miss Gramophone"
 msgid "quest.owner.gramophone.idle"
 msgstr "Miss Gramophone polishes the needle and pretends not to notice you."
 msgid "quest.owner.gramophone.item_comment"
-msgstr "“%s. Records remember. Prices do not.”"
+msgstr "%s. Records remember. Prices do not."
 
 msgid "quest.owner.magical_girl.name"
 msgstr "Chika"
 msgid "quest.owner.magical_girl.idle"
 msgstr "Chika peers over a stack of books as if she has waited all night."
 msgid "quest.owner.magical_girl.item_comment"
-msgstr "“%s. Do not trust the cover; the night inside is longer.”"
+msgstr "%s. Do not trust the cover; the night inside is longer."
 
 msgid "quest.store_unlock.record.slot"
 msgstr "Moth-shaped recess"
@@ -430,10 +430,6 @@ msgid "quest.ui.synthesis.working"
 msgstr "Something rustles softly in the bottom of the bag…"
 msgid "quest.ui.synthesis.action"
 msgstr "Combine"
-msgid "debug.ui.synthesis_background.blue"
-msgstr "BG: Blue"
-msgid "debug.ui.synthesis_background.bag"
-msgstr "BG: Bag"
 msgid "quest.ui.synthesis.material"
 msgstr "Material"
 msgid "quest.ui.synthesis.material.description"
@@ -702,13 +698,13 @@ msgid "demo.persona.nightwatcher.description"
 msgstr "A nostalgic ghost, a late night call-in radio host, Proust. Night makes me remember sorrowful things."
 
 msgid "demo.persona.dreamwalker.name"
-msgstr "Dreamwalker"
+msgstr "The Dreamwalker"
 
 msgid "demo.persona.dreamwalker.description"
 msgstr "A nightingale, a surrealist writer, Van Gogh beneath the stars. Night leaves my inspiration nowhere to hide."
 
 msgid "demo.persona.homecomer.name"
-msgstr "Homecomer"
+msgstr "The Homecomer"
 
 msgid "demo.persona.homecomer.description"
 msgstr "Someone leaving work, someone enjoying a late-night meal, someone sleeping soundly. May I sleep well tonight, tonight."
@@ -1072,49 +1068,49 @@ msgid "opening.store.bookstore.name"
 msgstr "Sun & Moon Books"
 
 msgid "opening.unlock.toy.prompt"
-msgstr "A loose spring turns behind the shutter. Show any toy to prove you know how to behave here."
+msgstr "The shutter of Joy Joy Toys is raised only a crack. Behind the glass, Uncle Balloon points to the tin frog in my hand, then taps gently on the lock."
 
 msgid "opening.unlock.toy.slot"
-msgstr "Any toy"
+msgstr "Tin Frog"
 
 msgid "opening.unlock.toy.result"
-msgstr "The lock recognizes the toy, and the shutter rises slowly."
+msgstr "The tin frog touches the lock. Something hollow answers from its belly. Uncle Balloon lifts the shutter for me."
 
 msgid "opening.unlock.fast_food.prompt"
-msgstr "A sign hangs on the door: PLEASE BRING YOUR OWN FOOD. Any food will open it."
+msgstr "At the service window, someone in a rat costume bows and says they are closed for the day. But perhaps I only want somewhere to sit. I can bring my own food."
 
 msgid "opening.unlock.fast_food.slot"
 msgstr "Any food"
 
 msgid "opening.unlock.fast_food.result"
-msgstr "The sign sways once. The lights inside come on."
+msgstr "Ratty puts away the CLOSED sign and wipes clean a table beside the window."
 
 msgid "opening.unlock.flower.prompt"
-msgstr "Sleeping white flowers fill the other side of the glass. Show any Persona so they recognize tonight's you."
+msgstr "A crooked note is taped to the flower shop window: PROVE WHO YOU ARE. The enormous shadow beyond the glass lowers its head and waits for my reflection to speak first."
 
 msgid "opening.unlock.flower.slot"
-msgstr "Any Persona"
+msgstr "Proof of who I am"
 
 msgid "opening.unlock.flower.result"
-msgstr "Your Persona appears in the glass, and the shop opens through its reflection."
+msgstr "My Persona appears in the glass. Mr. Sunflower studies it for a long time, then pushes the door open from within."
 
 msgid "opening.unlock.record.prompt"
-msgstr "The needle rests on a silent record. This place specifically asks for a rose."
+msgstr "A gramophone's shadow shows through the velvet curtains. Uncle Balloon tells me the owner has no patience for people—except those carrying roses. But roses cannot possibly exist in New Millennium Mall."
 
 msgid "opening.unlock.record.slot"
 msgstr "A rose"
 
 msgid "opening.unlock.record.result"
-msgstr "The rose remains beside the door. A record begins to turn."
+msgstr "The rose is left beside the door. Behind the curtain, a needle settles onto a record."
 
 msgid "opening.unlock.bookstore.prompt"
-msgstr "Pages turn by themselves behind the door. Only The Lamplighter or Dreamwalker at level 3 can read the sign."
+msgstr "The sign of Sun & Moon Books is still lit, but its door is hidden behind an endless row of spines. Chika slips a note through a gap: BRING SOMETHING THAT LETS INSPIRATION KEEP GROWING."
 
 msgid "opening.unlock.bookstore.slot"
-msgstr "The Lamplighter or Dreamwalker, level 3"
+msgstr "Something that feeds inspiration"
 
 msgid "opening.unlock.bookstore.result"
-msgstr "Book spines click in sequence, and a door appears between two shelves."
+msgstr "The object dreams briefly. The book spines retreat one by one, and a door appears between two shelves."
 
 msgid "opening.owner.toy.name"
 msgstr "Uncle Balloon"
@@ -1171,19 +1167,19 @@ msgid "opening.owner.record.name"
 msgstr "Miss Gramophone"
 
 msgid "opening.owner.record.idle"
-msgstr "\"Bach for anxiety, Mozart for fatigue. Chopin, though... every feeling the night contains is there. Which do you need?\""
+msgstr "Bach for anxiety, Mozart for fatigue. Chopin, though... every feeling the night contains is there. Which do you need?"
 
 msgid "opening.owner.record.item"
-msgstr "\"%s. At least it knows how it ought to be heard.\""
+msgstr "%s. At least it knows how it ought to be heard."
 
 msgid "opening.owner.bookstore.name"
 msgstr "Chika"
 
 msgid "opening.owner.bookstore.idle"
-msgstr "\"Are you looking for a book, or someone to talk to? Either is fine. I happen to handle both.\""
+msgstr "Are you looking for a book, or someone to talk to? Either is fine. I happen to handle both."
 
 msgid "opening.owner.bookstore.item"
-msgstr "\"%s! I've read this one. Or possibly only from somewhere in the middle.\""
+msgstr "%s! I've read this one. Or possibly only from somewhere in the middle."
 
 msgid "owner_request.fast_food.name"
 msgstr "Ratty's Kitchen: Cola"
@@ -1198,13 +1194,13 @@ msgid "owner_request.fast_food.slot"
 msgstr "Cola"
 
 msgid "owner_request.fast_food.accept"
-msgstr "\"If you see any cola... could you bring it back? There may be none in this building. But if there is, we'll split it.\""
+msgstr "If you see any cola... could you bring it back? There may be none in this building. But if there is, we'll split it."
 
 msgid "owner_request.fast_food.reminder"
-msgstr "\"Cola. I'm not rushing you! I just... still remember the taste.\""
+msgstr "Cola. I'm not rushing you! I just... still remember the taste."
 
 msgid "owner_request.fast_food.completed"
-msgstr "\"So that was the old taste... more or less. Thank you for finishing it with me.\""
+msgstr "So that was the old taste... more or less. Thank you for finishing it with me."
 
 msgid "owner_request.fast_food.result"
 msgstr "Ratty holds the can in both hands, cradling a small piece of ordinary life that has not quite ended. \"That's it. Half for each of us—though I haven't worked out how this suit is meant to drink.\""
@@ -1222,10 +1218,10 @@ msgid "owner_request.flower.slot"
 msgstr "Any Teddy Bear"
 
 msgid "owner_request.flower.accept"
-msgstr "He lowers his enormous body and points to the empty space in his arms. \"Want... something soft...\""
+msgstr "He lowers his enormous body and points to the empty space in his arms. Want... something soft..."
 
 msgid "owner_request.flower.reminder"
-msgstr "\"Soft... bear.\" He shapes something very small between his arms."
+msgstr "Soft... bear. He shapes something very small between his arms."
 
 msgid "owner_request.flower.completed"
 msgstr "The teddy bear sits on his shoulder. Every new flower leans toward it."
@@ -1246,13 +1242,13 @@ msgid "owner_request.toy.slot"
 msgstr "Birthday Cake"
 
 msgid "owner_request.toy.accept"
-msgstr "\"If you find a birthday cake, could you bring it back? I want to know whether those children ever got to blow out their candles.\""
+msgstr "If you find a birthday cake, could you bring it back? I want to know whether those children ever got to blow out their candles."
 
 msgid "owner_request.toy.reminder"
-msgstr "\"The cake doesn't have to be pretty. It only needs candles.\""
+msgstr "The cake doesn't have to be pretty. It only needs candles."
 
 msgid "owner_request.toy.completed"
-msgstr "\"At least this birthday wasn't forgotten.\""
+msgstr "At least this birthday wasn't forgotten."
 
 msgid "owner_request.toy.result"
 msgstr "Uncle Balloon holds the cake while the string above him pulls taut. \"Thank you. At least this birthday wasn't forgotten.\" You hold his lowered hand until he stops drifting upward."
@@ -1270,13 +1266,13 @@ msgid "owner_request.record.slot"
 msgstr "Nocturne - Published Cassette"
 
 msgid "owner_request.record.accept"
-msgstr "\"You may have heard her playing. What did you think? If you find the published Nocturne, bring it to me. I need to verify... a few details.\""
+msgstr "You may have heard her playing. What did you think? If you find the published Nocturne, bring it to me. I need to verify... a few details."
 
 msgid "owner_request.record.reminder"
-msgstr "\"The published cassette. Precise, spotless, without a single accident. That person was always like that.\""
+msgstr "The published cassette. Precise, spotless, without a single accident. That person was always like that."
 
 msgid "owner_request.record.completed"
-msgstr "\"Bach for anxiety, Mozart for fatigue. Chopin, though... every feeling of the night is there.\""
+msgstr "Bach for anxiety, Mozart for fatigue. Chopin, though... every feeling of the night is there."
 
 msgid "owner_request.record.result"
 msgstr "She reaches the end without lifting the needle. \"Not one wrong note. She is always like that.\" The needle continues across the blank tail. She slides your payment over without saying whether she liked it."
@@ -1294,13 +1290,13 @@ msgid "owner_request.bookstore.slot"
 msgstr "Welcome to Concrete City (Vol. II)"
 
 msgid "owner_request.bookstore.accept"
-msgstr "\"Have you seen Volume II? I drew a manga for this book once. My friends said it was scary—only a little.\""
+msgstr "Have you seen Volume II? I drew a manga for this book once. My friends said it was scary—only a little."
 
 msgid "owner_request.bookstore.reminder"
-msgstr "\"Welcome to Concrete City, Volume II. Starting at the final page won't hurt. It may actually be better.\""
+msgstr "Welcome to Concrete City, Volume II. Starting at the final page won't hurt. It may actually be better."
 
 msgid "owner_request.bookstore.completed"
-msgstr "\"My manga can be started on any page too! My friends just don't like starting it.\""
+msgstr "My manga can be started on any page too! My friends just don't like starting it."
 
 msgid "owner_request.bookstore.result"
 msgstr "Chika presses Volume II flat beneath her hands. The magical girl on her mask is still smiling. \"See? Starting here makes perfect sense. My manga is the same. Probably.\" She has reached the last page and still hasn't stopped talking."
@@ -1313,3 +1309,9 @@ msgstr "Flip"
 
 msgid "quest.ui.arc.continue_reward"
 msgstr "Click to continue"
+
+msgid "archive.room_001.title"
+msgstr "Room 001 Next Millennium Mall"
+
+msgid "archive.room_001.body"
+msgstr "Few investigators have reported its existence, and fewer still have returned safely.\nRead alongside a certain poem, the evidence suggests that in 1999 our world possessed another possibility.\nThis mall, exiled beyond time, is proof that possibility once existed."

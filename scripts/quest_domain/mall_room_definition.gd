@@ -22,23 +22,26 @@ enum GenerationPool {
 
 @export var id: StringName
 @export var display_name_key: StringName
+@export_file("*.png", "*.jpg", "*.jpeg", "*.webp") var image_path: String
 @export var category := Category.CHALLENGE
 @export_range(1, 20, 1) var generation_weight := 1
 @export var intro_text_keys: Array[StringName] = []
-@export var challenge_text_keys: Array[StringName] = []
-@export var approach_title_keys: Array[StringName] = []
-@export var approach_text_keys: Array[StringName] = []
-@export var post_choice_text_key: StringName
-@export var success_text_key: StringName
-@export var failure_text_key: StringName
-@export var required_type_ids: Array[StringName] = []
-@export var required_shape_ids: Array[StringName] = []
-@export_range(0, 40, 1) var shape_total_required := 0
+@export var challenge_rounds: Array[Resource] = []
+@export var reward_item_id: StringName
 @export var allowed_type_ids: Array[StringName] = []
 @export var rest_mode := RestMode.NONE
 @export var generation_pool := GenerationPool.DEFAULT
 @export_range(1, 3, 1) var slot_count := 1
-@export_range(1, 5, 1) var boss_round_count := 1
+
+
+func challenge_round_at(index: int) -> MallChallengeRoundDefinition:
+	if index < 0 or index >= challenge_rounds.size():
+		return null
+	return challenge_rounds[index] as MallChallengeRoundDefinition
+
+
+func challenge_round_count() -> int:
+	return challenge_rounds.size()
 
 
 func validation_errors() -> PackedStringArray:
@@ -47,18 +50,26 @@ func validation_errors() -> PackedStringArray:
 		errors.append("Mall room id cannot be empty.")
 	if display_name_key.is_empty():
 		errors.append("Mall room %s needs a display name key." % id)
+	if not image_path.is_empty() and not ResourceLoader.exists(image_path):
+		errors.append("Mall room %s image does not exist: %s" % [id, image_path])
 	if intro_text_keys.is_empty():
 		errors.append("Mall room %s needs introduction text." % id)
 	if category in [Category.CHALLENGE, Category.BOSS]:
-		if challenge_text_keys.is_empty():
-			errors.append("Challenge room %s needs challenge text." % id)
-		if approach_title_keys.size() != 2 or approach_text_keys.size() != 2:
-			errors.append("Challenge room %s needs exactly two approaches." % id)
-		if required_shape_ids.is_empty() and shape_total_required > 0:
-			errors.append("Challenge room %s has a threshold without Shapes." % id)
-		for shape_id in required_shape_ids:
-			if shape_id not in CardPropertySet.SHAPES:
-				errors.append("Challenge room %s uses unknown Shape %s." % [id, shape_id])
+		var expected_rounds := 2 if category == Category.BOSS else 1
+		if challenge_rounds.size() != expected_rounds:
+			errors.append("Challenge room %s needs exactly %d challenge rounds." % [
+				id, expected_rounds,
+			])
+		for index in challenge_rounds.size():
+			var round := challenge_round_at(index)
+			if round == null:
+				errors.append("Challenge room %s round %d is invalid." % [id, index])
+				continue
+			errors.append_array(round.validation_errors("Room %s round %d" % [id, index]))
+		if category == Category.CHALLENGE and reward_item_id.is_empty():
+			errors.append("Challenge room %s needs a reward item." % id)
+		if category == Category.BOSS and not reward_item_id.is_empty():
+			errors.append("Boss room %s cannot grant a room reward." % id)
 	elif category == Category.REST and rest_mode == RestMode.NONE:
 		errors.append("Rest room %s needs a rest mode." % id)
 	elif category == Category.WORK and rest_mode != RestMode.NONE:
@@ -73,6 +84,4 @@ func validation_errors() -> PackedStringArray:
 		errors.append("Salvage room %s must use the economy generation pool." % id)
 	if rest_mode == RestMode.SALVAGE and slot_count != 3:
 		errors.append("Salvage room %s must expose three slots." % id)
-	if category != Category.BOSS and boss_round_count != 1:
-		errors.append("Only a Boss room may contain multiple challenge rounds.")
 	return errors

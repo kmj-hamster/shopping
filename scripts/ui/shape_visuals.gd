@@ -29,3 +29,34 @@ static func color(shape_id: StringName) -> Color:
 
 static func symbol_texture(shape_id: StringName) -> Texture2D:
 	return SYMBOL_TEXTURES.get(shape_id) as Texture2D
+
+
+static func rebuild_persona_growth_rows(
+	container: VBoxContainer,
+	growth: Dictionary,
+	font_size := 20,
+) -> int:
+	if container == null:
+		return 0
+	for child in container.get_children():
+		container.remove_child(child)
+		child.queue_free()
+	var row_count := 0
+	for shape_id in CardPropertySet.SHAPES:
+		var amount := int(growth.get(shape_id, 0))
+		if amount <= 0:
+			continue
+		var name_key := StringName(PersonaCardCatalog.PERSONA_NAME_KEYS.get(shape_id, &""))
+		var persona_name := TranslationServer.translate(name_key)
+		var label := Label.new()
+		label.name = "PersonaGrowth%s" % String(shape_id).capitalize()
+		label.text = TranslationServer.translate(&"demo.ui.arc.stat_reward") % [
+			persona_name,
+			amount,
+		]
+		label.add_theme_font_size_override("font_size", font_size)
+		label.add_theme_color_override("font_color", color(shape_id))
+		container.add_child(label)
+		row_count += 1
+	container.visible = row_count > 0
+	return row_count

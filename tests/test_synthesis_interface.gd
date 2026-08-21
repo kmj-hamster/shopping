@@ -13,6 +13,21 @@ func before_each() -> void:
 	GameState.reset_game()
 
 
+func test_empty_material_slot_plus_uses_the_full_centered_slot_rect() -> void:
+	var slot := QuestSynthesisMaterialSlot.new()
+	add_child_autofree(slot)
+	await get_tree().process_frame
+	assert_eq(slot.empty_label.horizontal_alignment, HORIZONTAL_ALIGNMENT_CENTER)
+	assert_eq(slot.empty_label.vertical_alignment, VERTICAL_ALIGNMENT_CENTER)
+	assert_eq(slot.empty_label.size_flags_horizontal, Control.SIZE_EXPAND_FILL)
+	assert_eq(slot.empty_label.size_flags_vertical, Control.SIZE_EXPAND_FILL)
+	assert_almost_eq(
+		slot.empty_label.get_global_rect().get_center().x,
+		slot.get_global_rect().get_center().x,
+		0.01,
+	)
+
+
 func test_synthesis_uses_full_screen_in_bag_shell() -> void:
 	var main := await _spawn_synthesis_main()
 	var synthesis := main.current_screen as QuestSynthesisInterface
@@ -34,6 +49,8 @@ func test_synthesis_uses_full_screen_in_bag_shell() -> void:
 	assert_null(synthesis.find_child("SynthesisBackgroundDimmer", true, false))
 	var star_chart := synthesis.find_child("ShapeStarChart", true, false) as ShapeStarChart
 	assert_not_null(star_chart)
+	assert_true(synthesis.background_image.visible)
+	assert_false(star_chart.background_visible)
 	assert_eq(ShapeStarChart.BACKGROUND_COLOR, Color("050a18"))
 	assert_lt(star_chart.get_index(), synthesis.draft_layer.get_index())
 	assert_eq(ShapeStarChart.MAX_LEVEL, 10)
@@ -294,17 +311,50 @@ func test_shape_rays_clear_the_card_and_reach_distant_icons_at_level_ten() -> vo
 	var tear := synthesis.shape_buttons[&"tear"] as Button
 	var dream := synthesis.shape_buttons[&"dream"] as Button
 	var sleep := synthesis.shape_buttons[&"sleep"] as Button
-	assert_lt(light.get_rect().get_center().x + light.position.x, 240.0)
-	assert_lt(tear.get_rect().get_center().x + tear.position.x, 240.0)
-	assert_gt(dream.get_rect().get_center().x + dream.position.x, 1040.0)
-	assert_gt(sleep.get_rect().get_center().x + sleep.position.x, 1040.0)
-	assert_lt(light.get_rect().get_center().y + light.position.y, 180.0)
+	var light_center := light.get_rect().get_center()
+	var tear_center := tear.get_rect().get_center()
+	var dream_center := dream.get_rect().get_center()
+	var sleep_center := sleep.get_rect().get_center()
+	assert_lt(light_center.x, 240.0)
+	assert_lt(tear_center.x, 240.0)
+	assert_gt(dream_center.x, 1040.0)
+	assert_gt(sleep_center.x, 1040.0)
+	assert_almost_eq(light_center.y, dream_center.y, 0.01)
+	assert_almost_eq(tear_center.y, sleep_center.y, 0.01)
+	assert_almost_eq(
+		QuestSynthesisInterface.FIELD_CENTER.x - light_center.x,
+		dream_center.x - QuestSynthesisInterface.FIELD_CENTER.x,
+		0.01,
+	)
+	assert_almost_eq(
+		QuestSynthesisInterface.FIELD_CENTER.x - tear_center.x,
+		sleep_center.x - QuestSynthesisInterface.FIELD_CENTER.x,
+		0.01,
+	)
+	assert_almost_eq(
+		synthesis.star_chart._axis_start(&"light").distance_to(
+			synthesis.star_chart._axis_end(&"light")
+		),
+		synthesis.star_chart._axis_start(&"dream").distance_to(
+			synthesis.star_chart._axis_end(&"dream")
+		),
+		0.01,
+	)
+	assert_almost_eq(
+		synthesis.star_chart._axis_start(&"tear").distance_to(
+			synthesis.star_chart._axis_end(&"tear")
+		),
+		synthesis.star_chart._axis_start(&"sleep").distance_to(
+			synthesis.star_chart._axis_end(&"sleep")
+		),
+		0.01,
+	)
 	assert_gt(dream.position.y, ShapeStarChart.POPUP_SAFE_RECT.end.y)
 	assert_false(ShapeStarChart.POPUP_SAFE_RECT.intersects(
 		Rect2(dream.position, dream.size)
 	))
-	assert_gt(tear.get_rect().get_center().y + tear.position.y, 340.0)
-	assert_gt(sleep.get_rect().get_center().y + sleep.position.y, 340.0)
+	assert_gt(tear_center.y, 340.0)
+	assert_gt(sleep_center.y, 340.0)
 	assert_gt(QuestSynthesisInterface.FIELD_CENTER.x, 640.0)
 	assert_gt(QuestSynthesisInterface.FIELD_CENTER.y, 280.0)
 
@@ -494,6 +544,22 @@ func test_candidate_selection_clears_on_repeat_or_blank_background_click() -> vo
 	button.pressed.emit()
 	assert_eq(main.state.synthesis_candidate_recipe_id, &"recipe_midnight_rose")
 	assert_true(button.button_pressed)
+	assert_eq(
+		button.get_theme_color("font_pressed_color"),
+		QuestSynthesisInterface.CANDIDATE_WHITE,
+	)
+	assert_eq(
+		button.get_theme_color("font_outline_color"),
+		Color(QuestSynthesisInterface.CANDIDATE_WHITE_GLOW, 0.98),
+	)
+	assert_eq(button.get_theme_constant("outline_size"), 7)
+	var selected_view := synthesis.candidate_views[&"recipe_midnight_rose"] as Dictionary
+	var selected_halo := selected_view.halo as Label
+	assert_eq(
+		selected_halo.get_theme_color("font_color"),
+		Color(QuestSynthesisInterface.CANDIDATE_WHITE, 0.86),
+	)
+	assert_false(synthesis.candidate_breath_tweens.has(&"recipe_midnight_rose"))
 	assert_true(main.detail_popup.visible)
 
 	button.pressed.emit()

@@ -39,6 +39,8 @@ const BASE_TYPE_BOTTOM_GAP := 8.0
 const BAG_BACKGROUND_PATH := "res://resources/ui/synthesis/bg-inbag.png"
 const BAG_BACKGROUND_OVERSCAN := 24.0
 const BAG_BACKGROUND_SHIFT := Vector2(24.0, 0.0)
+const CANDIDATE_WHITE := Color("f8fbff")
+const CANDIDATE_WHITE_GLOW := Color("e8f3ff")
 const SHAPE_ICON_DISPLAY_SCALES := {
 	CardPropertySet.SHAPE_LIGHT: 1.0,
 	CardPropertySet.SHAPE_TEAR: 1.0,
@@ -108,7 +110,6 @@ var result_revealed := false
 var debug_update_counts: Dictionary = {}
 var last_delta_update_usec := 0
 var max_delta_update_usec := 0
-var image_background_enabled := false
 
 
 func setup(game_state: QuestGameState) -> void:
@@ -124,11 +125,6 @@ func setup(game_state: QuestGameState) -> void:
 func set_background_passthrough_controls(controls: Array) -> void:
 	if background_input != null:
 		background_input.set_passthrough_controls(controls)
-
-
-func set_image_background_enabled(enabled: bool) -> void:
-	image_background_enabled = enabled
-	_apply_background_mode()
 
 
 func _ready() -> void:
@@ -295,6 +291,7 @@ func _build_interface() -> void:
 	add_child(background_image)
 	star_chart = ShapeStarChart.new()
 	star_chart.name = "ShapeStarChart"
+	star_chart.set_background_visible(false)
 	add_child(star_chart)
 	background_input = QuestSynthesisBackgroundInput.new()
 	background_input.name = "SynthesisBackgroundInput"
@@ -313,15 +310,7 @@ func _build_interface() -> void:
 	_build_reinforcement_slots()
 	_build_narrative_overlay()
 	_build_result_layer()
-	_apply_background_mode()
 	_layout_draft()
-
-
-func _apply_background_mode() -> void:
-	if background_image != null:
-		background_image.visible = image_background_enabled
-	if star_chart != null:
-		star_chart.set_background_visible(not image_background_enabled)
 
 
 func _build_persona_field() -> void:
@@ -731,16 +720,23 @@ func _apply_candidate_visual(
 	button.add_theme_color_override(
 		"font_hover_color", Color("ffffff") if is_complete else Color("dce7ef")
 	)
-	button.add_theme_color_override("font_pressed_color", Color("f2d99a"))
-	button.add_theme_color_override("font_hover_pressed_color", Color("fff2c7"))
+	button.add_theme_color_override("font_pressed_color", CANDIDATE_WHITE)
+	button.add_theme_color_override("font_hover_pressed_color", Color.WHITE)
 	button.add_theme_color_override(
 		"font_outline_color",
-		Color("f2d99a", 0.88) if is_selected else Color("bcd1e2", 0.60),
+		Color(CANDIDATE_WHITE_GLOW, 0.98)
+		if is_selected
+		else Color("bcd1e2", 0.60),
 	)
-	button.add_theme_constant_override("outline_size", 5 if is_complete or is_selected else 3)
-	if is_complete:
-		halo.add_theme_color_override("font_color", Color("f2d99a", 0.62))
-		halo.add_theme_color_override("font_outline_color", Color("fff2c7", 0.24))
+	button.add_theme_constant_override("outline_size", 7 if is_selected else (5 if is_complete else 3))
+	if is_selected:
+		halo.add_theme_color_override("font_color", Color(CANDIDATE_WHITE, 0.86))
+		halo.add_theme_color_override("font_outline_color", Color(CANDIDATE_WHITE_GLOW, 0.46))
+		halo.modulate = Color.WHITE
+		_set_candidate_breathing(recipe_id, view, false)
+	elif is_complete:
+		halo.add_theme_color_override("font_color", Color(CANDIDATE_WHITE, 0.62))
+		halo.add_theme_color_override("font_outline_color", Color(CANDIDATE_WHITE_GLOW, 0.24))
 		halo.modulate = Color.WHITE
 		_set_candidate_breathing(recipe_id, view, false)
 	else:

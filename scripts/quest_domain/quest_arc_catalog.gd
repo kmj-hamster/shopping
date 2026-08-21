@@ -15,6 +15,7 @@ static var _recipes_by_id: Dictionary = {}
 static var _properties_by_id: Dictionary = {}
 static var _store_unlocks_by_id: Dictionary = {}
 static var _rooms_by_id: Dictionary = {}
+static var _archive_entries_by_id: Dictionary = {}
 static var _manifest_path_override := ""
 
 
@@ -60,6 +61,7 @@ static func _clear_cache() -> void:
 	_properties_by_id.clear()
 	_store_unlocks_by_id.clear()
 	_rooms_by_id.clear()
+	_archive_entries_by_id.clear()
 
 
 static func _is_gut_process() -> bool:
@@ -123,6 +125,20 @@ static func mall_room_by_id(room_id: StringName) -> MallRoomDefinition:
 	return _rooms_by_id.get(room_id) as MallRoomDefinition
 
 
+static func archive_entry_by_id(entry_id: StringName) -> ArchiveEntryDefinition:
+	_ensure_indexes()
+	return _archive_entries_by_id.get(entry_id) as ArchiveEntryDefinition
+
+
+static func archive_entries() -> Array[ArchiveEntryDefinition]:
+	var result: Array[ArchiveEntryDefinition] = []
+	for raw_entry in manifest().archive_entries:
+		var entry := raw_entry as ArchiveEntryDefinition
+		if entry != null:
+			result.append(entry)
+	return result
+
+
 static func _ensure_indexes() -> void:
 	var content := manifest()
 	if content == null:
@@ -139,6 +155,7 @@ static func _ensure_indexes() -> void:
 	_properties_by_id.clear()
 	_store_unlocks_by_id.clear()
 	_rooms_by_id.clear()
+	_archive_entries_by_id.clear()
 	_index_resources(content.items, _items_by_id)
 	_index_resources(content.tasks, _tasks_by_id)
 	_index_resources(content.stores, _stores_by_id)
@@ -147,6 +164,7 @@ static func _ensure_indexes() -> void:
 	_index_resources(content.properties, _properties_by_id)
 	_index_resources(content.store_unlocks, _store_unlocks_by_id)
 	_index_resources(content.expedition_rooms, _rooms_by_id)
+	_index_resources(content.archive_entries, _archive_entries_by_id)
 
 
 static func _index_resources(resources: Array, target: Dictionary) -> void:

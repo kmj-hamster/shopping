@@ -1,18 +1,42 @@
-[gd_resource type="Resource" script_class="MallRoomDefinition" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="MallRoomDefinition" load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/quest_domain/mall_room_definition.gd" id="1_room"]
+[ext_resource type="Script" path="res://scripts/quest_domain/mall_challenge_round_definition.gd" id="2_round"]
+[ext_resource type="Script" path="res://scripts/quest_domain/mall_challenge_approach_definition.gd" id="3_approach"]
+
+[sub_resource type="Resource" id="ApproachKneel"]
+script = ExtResource("3_approach")
+title_text_key = &"expedition.room.spaceship_library_city.kneel.title"
+prompt_text_key = &"expedition.room.spaceship_library_city.kneel.prompt"
+success_text_key = &"expedition.room.spaceship_library_city.kneel.success"
+failure_text_key = &"expedition.room.spaceship_library_city.kneel.failure"
+required_persona_shape_id = &"dream"
+required_shape_ids = Array[StringName]([&"dream"])
+shape_total_required = 5
+feedback_primary_shape_id = &"dream"
+
+[sub_resource type="Resource" id="ApproachInvestigate"]
+script = ExtResource("3_approach")
+title_text_key = &"expedition.room.spaceship_library_city.investigate.title"
+prompt_text_key = &"expedition.room.spaceship_library_city.investigate.prompt"
+success_text_key = &"expedition.room.spaceship_library_city.investigate.success"
+failure_text_key = &"expedition.room.spaceship_library_city.investigate.failure"
+required_all_type_ids = Array[StringName]([&"book"])
+required_shape_ids = Array[StringName]([&"light"])
+shape_total_required = 5
+feedback_primary_shape_id = &"light"
+
+[sub_resource type="Resource" id="ChallengeRound"]
+script = ExtResource("2_round")
+challenge_text_keys = Array[StringName]([&"expedition.room.spaceship_library_city.challenge.1", &"expedition.room.spaceship_library_city.challenge.2"])
+approaches = Array[Resource]([SubResource("ApproachKneel"), SubResource("ApproachInvestigate")])
 
 [resource]
 script = ExtResource("1_room")
 id = &"spaceship_library_city"
 display_name_key = &"expedition.room.spaceship_library_city.name"
+image_path = "res://resources/background/expedition/spaceship-library-city.png"
 intro_text_keys = Array[StringName]([&"expedition.room.spaceship_library_city.intro.1", &"expedition.room.spaceship_library_city.intro.2"])
-challenge_text_keys = Array[StringName]([&"expedition.room.common.challenge.1", &"expedition.room.common.challenge.2"])
-approach_title_keys = Array[StringName]([&"expedition.approach.observe.title", &"expedition.approach.advance.title"])
-approach_text_keys = Array[StringName]([&"expedition.approach.observe.text", &"expedition.approach.advance.text"])
-post_choice_text_key = &"expedition.room.common.post_choice"
-success_text_key = &"expedition.room.common.success"
-failure_text_key = &"expedition.room.common.failure"
-required_shape_ids = Array[StringName]([&"light"])
-shape_total_required = 5
+challenge_rounds = Array[Resource]([SubResource("ChallengeRound")])
+reward_item_id = &"concrete_city_vol_2"
 slot_count = 2

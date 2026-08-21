@@ -5,6 +5,17 @@ extends RefCounted
 static func can_place(rule: CardSlotRule, item: CardItemDefinition) -> bool:
 	if rule == null or item == null:
 		return false
+	if item.id in rule.rejected_item_ids:
+		return false
+	if item.id in rule.accepted_item_ids:
+		return true
+	var has_property_route := not (
+		rule.required_all.is_empty()
+		and rule.allowed_any.is_empty()
+		and rule.forbidden_any.is_empty()
+	)
+	if not rule.accepted_item_ids.is_empty() and not has_property_route:
+		return false
 	for tag in rule.required_all:
 		if not item.has_property(tag):
 			return false
@@ -19,7 +30,7 @@ static func can_place(rule: CardSlotRule, item: CardItemDefinition) -> bool:
 	for tag in rule.forbidden_any:
 		if item.has_property(tag):
 			return false
-	return rule.accepted_item_ids.is_empty() or item.id in rule.accepted_item_ids
+	return true
 
 
 static func can_execute(rule: CardSlotRule, item: CardItemDefinition) -> bool:
@@ -60,6 +71,11 @@ static func evaluate(rule: CardSlotRule, item: CardItemDefinition) -> Dictionary
 			forbidden_matches.append(tag)
 
 	var placement_allowed := can_place(rule, item)
+	var has_property_route := not (
+		rule.required_all.is_empty()
+		and rule.allowed_any.is_empty()
+		and rule.forbidden_any.is_empty()
+	)
 	for raw_requirement in rule.value_requirements:
 		var requirement := raw_requirement as SlotValueRequirement
 		if requirement == null:
@@ -82,5 +98,13 @@ static func evaluate(rule: CardSlotRule, item: CardItemDefinition) -> Dictionary
 		"allowed_matches": allowed_matches,
 		"forbidden_matches": forbidden_matches,
 		"insufficient_values": insufficient_values,
-		"item_id_allowed": rule.accepted_item_ids.is_empty() or item.id in rule.accepted_item_ids,
+		"item_id_allowed": (
+			item.id not in rule.rejected_item_ids
+			and (
+				rule.accepted_item_ids.is_empty()
+				or item.id in rule.accepted_item_ids
+				or has_property_route
+			)
+		),
+		"item_id_rejected": item.id in rule.rejected_item_ids,
 	}

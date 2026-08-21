@@ -1,7 +1,7 @@
 class_name GameContentManifest
 extends Resource
 
-@export_range(0, 20, 1) var initial_money := 0
+@export_range(0, 9999, 1) var initial_money := 0
 @export_range(1, 999, 1) var maximum_item_price := 20
 @export_range(1, 8, 1) var maximum_properties_per_item := 4
 @export_range(1, 4, 1) var maximum_shapes_per_item := 2
@@ -15,6 +15,7 @@ extends Resource
 @export var store_unlocks: Array[Resource] = []
 @export var owners: Array[Resource] = []
 @export var expedition_rooms: Array[Resource] = []
+@export var archive_entries: Array[Resource] = []
 
 
 func validation_errors() -> PackedStringArray:
@@ -26,6 +27,7 @@ func validation_errors() -> PackedStringArray:
 	var stores_by_id := _resources_by_id(stores, "store", errors)
 	var unlocks_by_id := _resources_by_id(store_unlocks, "store unlock", errors)
 	_resources_by_id(expedition_rooms, "mall room", errors)
+	_resources_by_id(archive_entries, "archive entry", errors)
 	for item_id in starting_item_ids:
 		if not items_by_id.has(item_id):
 			errors.append("Starting inventory references missing item %s." % item_id)
@@ -42,6 +44,7 @@ func validation_errors() -> PackedStringArray:
 	_validate_resources(store_unlocks, errors)
 	_validate_resources(owners, errors)
 	_validate_resources(expedition_rooms, errors)
+	_validate_resources(archive_entries, errors)
 	for raw_item in items:
 		var item := raw_item as QuestItemDefinition
 		if item == null:
@@ -147,6 +150,35 @@ func validation_errors() -> PackedStringArray:
 					"Owner %s requires missing purchase %s."
 					% [owner.id, owner.request_required_purchased_item_id]
 				)
+	for raw_room in expedition_rooms:
+		var room := raw_room as MallRoomDefinition
+		if room == null:
+			continue
+		if not room.reward_item_id.is_empty() and not items_by_id.has(room.reward_item_id):
+			errors.append(
+				"Mall room %s references missing reward item %s."
+				% [room.id, room.reward_item_id]
+			)
+		for raw_round in room.challenge_rounds:
+			var challenge_round := raw_round as MallChallengeRoundDefinition
+			if challenge_round == null:
+				continue
+			for raw_approach in challenge_round.approaches:
+				var approach := raw_approach as MallChallengeApproachDefinition
+				if approach == null:
+					continue
+				for type_id in (
+					approach.required_all_type_ids + approach.required_any_type_ids
+				):
+					var type_definition := properties_by_id.get(type_id) as PropertyDefinition
+					if (
+						type_definition == null
+						or type_definition.value_kind != PropertyDefinition.ValueKind.TAG
+					):
+						errors.append(
+							"Mall room %s challenge references invalid Type %s."
+							% [room.id, type_id]
+						)
 	return errors
 
 
@@ -194,6 +226,9 @@ func _validate_slot_rules(
 		for item_id in rule.accepted_item_ids:
 			if not items_by_id.has(item_id):
 				errors.append("Slot %s accepts unknown item %s." % [rule.id, item_id])
+		for item_id in rule.rejected_item_ids:
+			if not items_by_id.has(item_id):
+				errors.append("Slot %s rejects unknown item %s." % [rule.id, item_id])
 		for raw_requirement in rule.value_requirements:
 			var requirement := raw_requirement as SlotValueRequirement
 			if requirement == null:

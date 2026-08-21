@@ -26,10 +26,12 @@ const EXPEDITION_SUCCESS_ITEM_ID := &"expedition_salvage"
 const EXPEDITION_FAILURE_ITEM_ID := &"expedition_wound"
 const EXPEDITION_WHITE_FLOWER_ITEM_ID := &"white_flower"
 const DISEASE_LIMIT := 3
-const DISEASE_OPPOSITES := {
-	EXPEDITION_FAILURE_ITEM_ID: EXPEDITION_WHITE_FLOWER_ITEM_ID,
-	EXPEDITION_WHITE_FLOWER_ITEM_ID: EXPEDITION_FAILURE_ITEM_ID,
-}
+const INITIAL_PERSONA_ALLOCATION_POINTS := 5
+const INITIAL_PERSONA_ALLOCATION_MAX := 3
+const DISEASE_IDS := [
+	EXPEDITION_FAILURE_ITEM_ID,
+	EXPEDITION_WHITE_FLOWER_ITEM_ID,
+]
 
 var day := 1
 var wallet := PlayerWallet.new(0)
@@ -125,6 +127,30 @@ func reset() -> void:
 
 func bgm_playback_position(track_id: StringName) -> float:
 	return maxf(0.0, float(bgm_playback_positions.get(track_id, 0.0)))
+
+
+func apply_initial_persona_allocation(levels: Dictionary) -> Dictionary:
+	var total := 0
+	for shape_id in CardPropertySet.SHAPES:
+		var amount := int(levels.get(shape_id, 0))
+		if amount < 0 or amount > INITIAL_PERSONA_ALLOCATION_MAX:
+			return _result(false, RESULT_REJECTED)
+		total += amount
+	if total != INITIAL_PERSONA_ALLOCATION_POINTS:
+		return _result(false, RESULT_REJECTED)
+
+	_begin_change_batch()
+	clear_synthesis_draft()
+	PersonaCardCatalog.sync_selection(&"")
+	for shape_id in CardPropertySet.SHAPES:
+		protagonist_shape_levels[shape_id] = int(levels.get(shape_id, 0))
+	pending_persona_reveal_shape_ids.clear()
+	story_flags[&"initial_persona_allocation_complete"] = &"true"
+	_mark_state_changed(
+		QuestStateDelta.new().mark_full_reconcile(&"initial_persona_allocation")
+	)
+	_end_change_batch()
+	return _result(true, RESULT_OK)
 
 
 func remember_bgm_playback_position(track_id: StringName, position: float) -> void:
@@ -703,7 +729,7 @@ func grant_item(
 
 
 func gain_disease(disease_id: StringName, amount: int = 1) -> Dictionary:
-	if disease_id not in DISEASE_OPPOSITES or amount <= 0:
+	if disease_id not in DISEASE_IDS or amount <= 0:
 		return _result(false, RESULT_REJECTED)
 	_begin_change_batch()
 	var delta := QuestStateDelta.new()
@@ -722,15 +748,16 @@ func _gain_disease_in_batch(
 ) -> Dictionary:
 	var granted_instance_ids: Array[int] = []
 	var removed_instance_ids: Array[int] = []
-	var opposite_id := StringName(DISEASE_OPPOSITES[disease_id])
 	for _index in amount:
 		var granted := grant_item(disease_id, &"expedition_disease")
 		if granted == null:
 			continue
 		granted_instance_ids.append(granted.instance_id)
+		if disease_id != EXPEDITION_FAILURE_ITEM_ID:
+			continue
 		var opposite_card: CardItemState
 		for candidate in inventory:
-			if candidate.definition_id == opposite_id:
+			if candidate.definition_id == EXPEDITION_WHITE_FLOWER_ITEM_ID:
 				opposite_card = candidate
 				break
 		if opposite_card == null:
@@ -1295,23 +1322,30 @@ func evaluate_expedition_challenge_round(
 	round_index: int = 0,
 ) -> Dictionary:
 	var room := QuestArcCatalog.mall_room_by_id(room_id)
+	var challenge_round := room.challenge_round_at(round_index) if room != null else null
+	var approach := (
+		challenge_round.approach_at(approach_index)
+		if challenge_round != null
+		else null
+	)
 	if (
 		room == null
 		or room.category not in [
 			MallRoomDefinition.Category.CHALLENGE,
 			MallRoomDefinition.Category.BOSS,
 		]
-		or approach_index < 0
-		or approach_index >= room.approach_title_keys.size()
+		or approach == null
 		or round_index < 0
-		or round_index >= room.boss_round_count
+		or round_index >= room.challenge_round_count()
 		or card_instance_ids.size() + persona_shape_ids.size() > room.slot_count
 	):
 		return _result(false, RESULT_NOT_READY)
 	var resolved := _expedition_input_definitions(card_instance_ids, persona_shape_ids)
 	if not bool(resolved.ok):
 		return resolved
-	var evaluation := MallChallengeRules.evaluate(room, resolved.definitions)
+	var evaluation := MallChallengeRules.evaluate(
+		approach, resolved.definitions, persona_shape_ids
+	)
 	var roll := _expedition_challenge_roll(
 		room_id,
 		card_instance_ids,
@@ -1342,6 +1376,7 @@ func complete_expedition_room(
 	var money_gained := 0
 	var reward_item_id: StringName
 	var white_flower_amount := 0
+	var cleared_wound := false
 	var room_success := true
 	var boss_failed := false
 	var demo_complete := false
@@ -1357,9 +1392,7 @@ func complete_expedition_room(
 			room_success = bool(challenge_result.success)
 			boss_failed = room.category == MallRoomDefinition.Category.BOSS and not room_success
 			demo_complete = room.category == MallRoomDefinition.Category.BOSS and room_success
-			reward_item_id = (
-				EXPEDITION_SUCCESS_ITEM_ID if room_success else EXPEDITION_FAILURE_ITEM_ID
-			)
+			reward_item_id = room.reward_item_id if room_success else EXPEDITION_FAILURE_ITEM_ID
 		MallRoomDefinition.Category.REST:
 			var rest_result := _resolve_expedition_rest_submission(
 				room, card_instance_ids, persona_shape_ids
@@ -1369,16 +1402,8 @@ func complete_expedition_room(
 			consumed_ids = _int_array_from_variant(rest_result.consumed_card_ids)
 			shape_growth = rest_result.shape_growth
 			money_gained = int(rest_result.money_gained)
-			if (
-				room.rest_mode == MallRoomDefinition.RestMode.PERSONA_GROWTH
-				and not persona_shape_ids.is_empty()
-			):
-				white_flower_amount = 2
-			elif (
-				room.rest_mode == MallRoomDefinition.RestMode.ITEM_GROWTH
-				and not consumed_ids.is_empty()
-			):
-				white_flower_amount = 1
+			white_flower_amount = int(rest_result.get("white_flower_amount", 0))
+			cleared_wound = bool(rest_result.get("cleared_wound", false))
 		MallRoomDefinition.Category.WORK:
 			if not card_instance_ids.is_empty() or not persona_shape_ids.is_empty():
 				return _result(false, RESULT_REJECTED)
@@ -1441,6 +1466,8 @@ func complete_expedition_room(
 		"shape_growth": shape_growth,
 		"new_persona_shape_ids": [],
 		"disease_changes": disease_changes,
+		"white_flower_amount": white_flower_amount,
+		"cleared_wound": cleared_wound,
 		"door_ids": expedition.current_door_ids.duplicate(),
 	}
 
@@ -1456,28 +1483,66 @@ func expedition_card_can_be_used(card: CardItemState) -> bool:
 	)
 
 
+func expedition_room_slot_rule(room_id: StringName) -> CardSlotRule:
+	var room := QuestArcCatalog.mall_room_by_id(room_id)
+	if room == null or room.category == MallRoomDefinition.Category.WORK:
+		return null
+	var rule := CardSlotRule.new()
+	rule.id = StringName("expedition_%s_input" % room.id)
+	rule.detail_title_key = &"expedition.ui.slot.rule"
+	rule.required_label_key = &"expedition.ui.slot.accepts"
+	rule.allowed_label_key = &"expedition.ui.slot.accepts"
+	rule.forbidden_label_key = &"expedition.ui.slot.rejects"
+	match room.category:
+		MallRoomDefinition.Category.CHALLENGE, MallRoomDefinition.Category.BOSS:
+			rule.forbidden_any = [
+				CardPropertySet.PROPERTY_DISEASE,
+				CardPropertySet.PROPERTY_KEEPSAKE,
+			]
+		MallRoomDefinition.Category.REST:
+			match room.rest_mode:
+				MallRoomDefinition.RestMode.PERSONA_GROWTH:
+					rule.required_all = [CardPropertySet.PROPERTY_PERSONA]
+				MallRoomDefinition.RestMode.ITEM_GROWTH:
+					if room.allowed_type_ids.is_empty():
+						rule.forbidden_any = [
+							CardPropertySet.PROPERTY_KEEPSAKE,
+							CardPropertySet.PROPERTY_PERSONA,
+						]
+					else:
+						rule.allowed_any = room.allowed_type_ids.duplicate()
+				MallRoomDefinition.RestMode.SALVAGE:
+					rule.detail_title_key = &"expedition.ui.slot.salvage_rule"
+					rule.forbidden_any = [
+						CardPropertySet.PROPERTY_DISEASE,
+						CardPropertySet.PROPERTY_KEEPSAKE,
+						CardPropertySet.PROPERTY_PERSONA,
+					]
+	return rule
+
+
 func expedition_room_accepts_card(
 	room_id: StringName,
 	card: CardItemState,
 	shape_id: StringName = &"",
 ) -> bool:
 	var room := QuestArcCatalog.mall_room_by_id(room_id)
-	if room == null:
-		return false
-	if not shape_id.is_empty():
-		return (
-			int(protagonist_shape_levels.get(shape_id, 0)) > 0
-			and (
-				room.category in [
-					MallRoomDefinition.Category.CHALLENGE,
-					MallRoomDefinition.Category.BOSS,
-				]
-				or room.rest_mode == MallRoomDefinition.RestMode.PERSONA_GROWTH
-			)
-		)
-	if not expedition_card_can_be_used(card):
+	var slot_rule := expedition_room_slot_rule(room_id)
+	if room == null or slot_rule == null:
 		return false
 	var definition := definition_for_card(card)
+	if not shape_id.is_empty():
+		var shape_level := int(protagonist_shape_levels.get(shape_id, 0))
+		if definition == null:
+			definition = PersonaCardCatalog.definition_for_shape(shape_id, shape_level)
+		return (
+			shape_level > 0
+			and CardRuleEvaluator.can_place(slot_rule, definition)
+		)
+	if is_disease_definition(definition) or not expedition_card_can_be_used(card):
+		return false
+	if not CardRuleEvaluator.can_place(slot_rule, definition):
+		return false
 	if room.category in [
 		MallRoomDefinition.Category.CHALLENGE,
 		MallRoomDefinition.Category.BOSS,
@@ -1487,16 +1552,14 @@ func expedition_room_accepts_card(
 		return definition != null and definition.can_recycle
 	if room.rest_mode != MallRoomDefinition.RestMode.ITEM_GROWTH:
 		return false
-	return room.allowed_type_ids.is_empty() or room.allowed_type_ids.any(
-		func(type_id: StringName) -> bool: return definition.has_property(type_id)
-	)
+	return true
 
 
 func _resolve_expedition_challenge_submission(
 	room: MallRoomDefinition,
 	challenge_rounds: Array[Dictionary],
 ) -> Dictionary:
-	if challenge_rounds.is_empty() or challenge_rounds.size() > room.boss_round_count:
+	if challenge_rounds.is_empty() or challenge_rounds.size() > room.challenge_round_count():
 		return _result(false, RESULT_NOT_READY)
 	if room.category == MallRoomDefinition.Category.CHALLENGE and challenge_rounds.size() != 1:
 		return _result(false, RESULT_NOT_READY)
@@ -1523,7 +1586,7 @@ func _resolve_expedition_challenge_submission(
 			all_success = false
 			break
 	if room.category == MallRoomDefinition.Category.BOSS:
-		all_success = all_success and challenge_rounds.size() == room.boss_round_count
+		all_success = all_success and challenge_rounds.size() == room.challenge_round_count()
 	return {
 		"ok": true,
 		"reason": RESULT_OK,
@@ -1540,8 +1603,14 @@ func _resolve_expedition_rest_submission(
 	if card_instance_ids.size() + persona_shape_ids.size() > room.slot_count:
 		return _result(false, RESULT_REJECTED)
 	if room.rest_mode == MallRoomDefinition.RestMode.PERSONA_GROWTH:
-		if card_instance_ids.size() > 0 or persona_shape_ids.size() > 1:
+		if (
+			card_instance_ids.size() > 1
+			or persona_shape_ids.size() > 1
+			or (not card_instance_ids.is_empty() and not persona_shape_ids.is_empty())
+		):
 			return _result(false, RESULT_NOT_READY)
+		if not card_instance_ids.is_empty():
+			return _result(false, RESULT_REJECTED)
 		if persona_shape_ids.is_empty():
 			return {
 				"ok": true,
@@ -1549,6 +1618,8 @@ func _resolve_expedition_rest_submission(
 				"consumed_card_ids": [],
 				"shape_growth": {},
 				"money_gained": EXPEDITION_EMPTY_REST_REWARD,
+				"white_flower_amount": 0,
+				"cleared_wound": false,
 			}
 		var shape_id := persona_shape_ids[0]
 		if int(protagonist_shape_levels.get(shape_id, 0)) <= 0:
@@ -1559,6 +1630,8 @@ func _resolve_expedition_rest_submission(
 			"consumed_card_ids": [],
 			"shape_growth": {shape_id: 1},
 			"money_gained": 0,
+			"white_flower_amount": 1,
+			"cleared_wound": false,
 		}
 	if not persona_shape_ids.is_empty():
 		return _result(false, RESULT_REJECTED)
@@ -1585,6 +1658,8 @@ func _resolve_expedition_rest_submission(
 			"consumed_card_ids": card_instance_ids.duplicate(),
 			"shape_growth": {},
 			"money_gained": total,
+			"white_flower_amount": 0,
+			"cleared_wound": false,
 		}
 	if resolved_cards.is_empty():
 		return {
@@ -1593,6 +1668,8 @@ func _resolve_expedition_rest_submission(
 			"consumed_card_ids": [],
 			"shape_growth": {},
 			"money_gained": EXPEDITION_EMPTY_REST_REWARD,
+			"white_flower_amount": 0,
+			"cleared_wound": false,
 		}
 	var growth: Dictionary = {}
 	var definition := definition_for_card(resolved_cards[0])
@@ -1601,13 +1678,37 @@ func _resolve_expedition_rest_submission(
 			protagonist_shape_levels.get(shape_id, 0)
 		):
 			growth[shape_id] = 1
+	var consumed_card_ids := card_instance_ids.duplicate()
+	var cleared_wound := false
+	if growth.is_empty():
+		for candidate in inventory:
+			if candidate.definition_id != EXPEDITION_FAILURE_ITEM_ID:
+				continue
+			consumed_card_ids.append(candidate.instance_id)
+			cleared_wound = true
+			break
 	return {
 		"ok": true,
 		"reason": RESULT_OK,
-		"consumed_card_ids": card_instance_ids.duplicate(),
+		"consumed_card_ids": consumed_card_ids,
 		"shape_growth": growth,
 		"money_gained": 0,
+		"white_flower_amount": 0 if growth.is_empty() else 1,
+		"cleared_wound": cleared_wound,
 	}
+
+
+func preview_expedition_rest_submission(
+	room_id: StringName,
+	card_instance_ids: Array[int] = [],
+	persona_shape_ids: Array[StringName] = [],
+) -> Dictionary:
+	if not expedition.active or not expedition.has_current_door(room_id):
+		return _result(false, RESULT_NOT_READY)
+	var room := QuestArcCatalog.mall_room_by_id(room_id)
+	if room == null or room.category != MallRoomDefinition.Category.REST:
+		return _result(false, RESULT_NOT_READY)
+	return _resolve_expedition_rest_submission(room, card_instance_ids, persona_shape_ids)
 
 
 func _expedition_input_definitions(
@@ -1622,10 +1723,16 @@ func _expedition_input_definitions(
 			return _result(false, RESULT_REJECTED)
 		seen_card_ids[card_id] = true
 		definitions.append(definition_for_card(card))
+	var seen_persona_shape_ids: Dictionary = {}
 	for shape_id in persona_shape_ids:
 		var amount := int(protagonist_shape_levels.get(shape_id, 0))
-		if shape_id not in CardPropertySet.SHAPES or amount <= 0:
+		if (
+			seen_persona_shape_ids.has(shape_id)
+			or shape_id not in CardPropertySet.SHAPES
+			or amount <= 0
+		):
 			return _result(false, RESULT_REJECTED)
+		seen_persona_shape_ids[shape_id] = true
 		definitions.append(_expedition_persona_definition(shape_id, amount))
 	return {"ok": true, "reason": RESULT_OK, "definitions": definitions}
 

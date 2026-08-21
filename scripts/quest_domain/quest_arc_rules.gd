@@ -79,6 +79,10 @@ static func store_unlock_accepts(
 		and item != null
 		and not item.has_property(CardPropertySet.PROPERTY_DISEASE)
 		and not item.has_property(CardPropertySet.PROPERTY_KEEPSAKE)
+		and (
+			not definition.consume_item
+			or not item.has_property(CardPropertySet.PROPERTY_PERSONA)
+		)
 		and CardRuleEvaluator.can_execute(definition.slot_rule, item)
 	)
 

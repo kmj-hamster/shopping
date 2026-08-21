@@ -5,7 +5,7 @@ signal rule_focused(rule: CardSlotRule)
 signal item_inspected(definition: CardItemDefinition)
 
 const RECEIPT_WIDTH := 264.0
-const RECEIPT_COLLAPSED_HEIGHT := 172.0
+const RECEIPT_COLLAPSED_HEIGHT := 192.0
 const RECEIPT_EXPANDED_HEIGHT := 477.0
 const TASKS_PER_PAGE := 5
 const TASK_LINE_HEIGHT := 33.0
@@ -15,6 +15,10 @@ const TASK_HOVER_COLOR := Color("446979")
 const TASK_GLOW_COLOR := Color("789cab", 0.55)
 const NIGHT_VALUE_COLOR := Color("47496f")
 const MONEY_VALUE_COLOR := Color("805c36")
+const STATUS_FONT_SIZE := 15
+const STATUS_TEXT_VERTICAL_SHIFT := -STATUS_FONT_SIZE * 1.0
+const NIGHT_LABEL_RECT := Rect2(18, 39 + STATUS_TEXT_VERTICAL_SHIFT, 78, 50)
+const MONEY_LABEL_RECT := Rect2(103, 39 + STATUS_TEXT_VERTICAL_SHIFT, 82, 50)
 const TODO_EXPANDED_PATH := "res://resources/ui/shell/todo-expanded.png"
 const TODO_COLLAPSED_PATH := "res://resources/ui/shell/todo-collapsed.png"
 const PAGER_ARROW_TEXTURE := preload("res://resources/ui/quest/pager-arrow.png")
@@ -31,10 +35,14 @@ var page_previous_button: TextureButton
 var page_next_button: TextureButton
 var popup_host: Control
 var task_window: QuestTaskWindow
+var archive_window: QuestArchiveWindow
 var open_task_instance_id := 0
+var open_archive_entry_id: StringName
 var bookmark_buttons: Dictionary = {}
+var archive_buttons: Dictionary = {}
 var task_windows: Dictionary = {}
 var ordered_task_instance_ids: Array[int] = []
+var ordered_entry_buttons: Array[Button] = []
 var task_page_index := 0
 var is_expanded := false
 
@@ -72,22 +80,22 @@ func _ready() -> void:
 
 	receipt_day_label = Label.new()
 	receipt_day_label.name = "TodoReceiptDayValue"
-	receipt_day_label.position = Vector2(24, 60)
-	receipt_day_label.size = Vector2(64, 30)
+	receipt_day_label.position = NIGHT_LABEL_RECT.position
+	receipt_day_label.size = NIGHT_LABEL_RECT.size
 	receipt_day_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	receipt_day_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	receipt_day_label.add_theme_font_size_override("font_size", 18)
+	receipt_day_label.add_theme_font_size_override("font_size", STATUS_FONT_SIZE)
 	receipt_day_label.add_theme_color_override("font_color", NIGHT_VALUE_COLOR)
 	receipt_day_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	receipt_host.add_child(receipt_day_label)
 
 	receipt_money_label = Label.new()
 	receipt_money_label.name = "TodoReceiptMoney"
-	receipt_money_label.position = Vector2(126, 60)
-	receipt_money_label.size = Vector2(72, 30)
+	receipt_money_label.position = MONEY_LABEL_RECT.position
+	receipt_money_label.size = MONEY_LABEL_RECT.size
 	receipt_money_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	receipt_money_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	receipt_money_label.add_theme_font_size_override("font_size", 18)
+	receipt_money_label.add_theme_font_size_override("font_size", STATUS_FONT_SIZE)
 	receipt_money_label.add_theme_color_override("font_color", MONEY_VALUE_COLOR)
 	receipt_money_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	receipt_host.add_child(receipt_money_label)
@@ -157,6 +165,12 @@ func refresh() -> void:
 		if bookmark.get_index() != index:
 			bookmark_column.move_child(bookmark, index)
 	ordered_task_instance_ids = desired_ids
+	ordered_entry_buttons.clear()
+	for task in active_tasks:
+		var task_button := bookmark_buttons.get(task.instance_id) as Button
+		if task_button != null:
+			ordered_entry_buttons.append(task_button)
+	_refresh_archive_buttons()
 	_refresh_task_page()
 	_reconcile_task_windows(desired_ids)
 	if open_task_instance_id > 0:
@@ -170,11 +184,27 @@ func refresh() -> void:
 func _refresh_money() -> void:
 	if state == null or receipt_money_label == null:
 		return
-	receipt_day_label.text = str(state.day)
-	receipt_money_label.text = str(state.wallet.money)
+	receipt_day_label.text = (
+		TranslationServer.translate(&"quest.ui.todo.night") % state.day
+	)
+	receipt_money_label.text = (
+		TranslationServer.translate(&"quest.ui.todo.money") % state.wallet.money
+	)
 
 
 func _create_bookmark(instance_id: int) -> Button:
+	var bookmark := _create_entry_button(true)
+	bookmark.pressed.connect(_toggle_task.bind(instance_id))
+	return bookmark
+
+
+func _create_archive_bookmark(entry_id: StringName) -> Button:
+	var bookmark := _create_entry_button(false)
+	bookmark.pressed.connect(_toggle_archive.bind(entry_id))
+	return bookmark
+
+
+func _create_entry_button(underlined: bool) -> Button:
 	var bookmark := Button.new()
 	bookmark.custom_minimum_size = Vector2(0, TASK_HIT_HEIGHT)
 	bookmark.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -190,7 +220,20 @@ func _create_bookmark(instance_id: int) -> Button:
 	_set_bookmark_hovered(bookmark, false)
 	bookmark.mouse_entered.connect(_set_bookmark_hovered.bind(bookmark, true))
 	bookmark.mouse_exited.connect(_set_bookmark_hovered.bind(bookmark, false))
-	bookmark.pressed.connect(_toggle_task.bind(instance_id))
+	if underlined:
+		var underline := ColorRect.new()
+		underline.name = "QuestUnderline"
+		underline.anchor_left = 0.0
+		underline.anchor_top = 1.0
+		underline.anchor_right = 1.0
+		underline.anchor_bottom = 1.0
+		underline.offset_left = 2.0
+		underline.offset_top = -2.0
+		underline.offset_right = -2.0
+		underline.offset_bottom = -1.0
+		underline.color = UiPalette.INK_COLOR
+		underline.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		bookmark.add_child(underline)
 	bookmark_column.add_child(bookmark)
 	return bookmark
 
@@ -199,6 +242,33 @@ func _update_bookmark(bookmark: Button, task: TaskInstanceState) -> void:
 	var definition := QuestArcCatalog.task_by_id(task.definition_id)
 	bookmark.text = TranslationServer.translate(definition.display_name_key)
 	_resize_bookmark_to_text(bookmark)
+
+
+func _refresh_archive_buttons() -> void:
+	var entries := QuestArcCatalog.archive_entries()
+	var desired_ids: Array[StringName] = []
+	for entry in entries:
+		desired_ids.append(entry.id)
+	for raw_entry_id in archive_buttons.keys().duplicate():
+		var entry_id := StringName(raw_entry_id)
+		if desired_ids.has(entry_id):
+			continue
+		var obsolete := archive_buttons[raw_entry_id] as Button
+		archive_buttons.erase(raw_entry_id)
+		if obsolete != null:
+			obsolete.visible = false
+			obsolete.queue_free()
+	for entry in entries:
+		var bookmark := archive_buttons.get(entry.id) as Button
+		if bookmark == null:
+			bookmark = _create_archive_bookmark(entry.id)
+			archive_buttons[entry.id] = bookmark
+		bookmark.text = entry.localized_title()
+		_resize_bookmark_to_text(bookmark)
+		var desired_index := ordered_entry_buttons.size()
+		if bookmark.get_index() != desired_index:
+			bookmark_column.move_child(bookmark, desired_index)
+		ordered_entry_buttons.append(bookmark)
 
 
 func _resize_bookmark_to_text(bookmark: Button) -> void:
@@ -230,6 +300,9 @@ func _set_bookmark_hovered(bookmark: Button, hovered: bool) -> void:
 		TASK_GLOW_COLOR if hovered else Color.TRANSPARENT,
 	)
 	bookmark.add_theme_constant_override("outline_size", 3 if hovered else 0)
+	var underline := bookmark.get_node_or_null("QuestUnderline") as ColorRect
+	if underline != null:
+		underline.color = text_color
 
 
 func _create_page_button(flip_h: bool) -> TextureButton:
@@ -249,13 +322,12 @@ func _create_page_button(flip_h: bool) -> TextureButton:
 
 
 func _refresh_task_page() -> void:
-	var page_count := maxi(1, ceili(float(ordered_task_instance_ids.size()) / TASKS_PER_PAGE))
+	var page_count := maxi(1, ceili(float(ordered_entry_buttons.size()) / TASKS_PER_PAGE))
 	task_page_index = clampi(task_page_index, 0, page_count - 1)
 	var first_index := task_page_index * TASKS_PER_PAGE
-	var last_index := mini(first_index + TASKS_PER_PAGE, ordered_task_instance_ids.size())
-	for index in ordered_task_instance_ids.size():
-		var instance_id := ordered_task_instance_ids[index]
-		var bookmark := bookmark_buttons.get(instance_id) as Button
+	var last_index := mini(first_index + TASKS_PER_PAGE, ordered_entry_buttons.size())
+	for index in ordered_entry_buttons.size():
+		var bookmark := ordered_entry_buttons[index]
 		if bookmark == null:
 			continue
 		var visible_on_page := index >= first_index and index < last_index
@@ -281,7 +353,7 @@ func _on_previous_page_pressed() -> void:
 
 
 func _on_next_page_pressed() -> void:
-	var page_count := maxi(1, ceili(float(ordered_task_instance_ids.size()) / TASKS_PER_PAGE))
+	var page_count := maxi(1, ceili(float(ordered_entry_buttons.size()) / TASKS_PER_PAGE))
 	if task_page_index >= page_count - 1:
 		return
 	task_page_index += 1
@@ -326,8 +398,9 @@ func _set_expanded(expanded: bool) -> void:
 		if is_expanded
 		else TODO_COLLAPSED_PATH
 	) as Texture2D
-	receipt_day_label.visible = is_expanded
-	receipt_money_label.visible = is_expanded
+	# Both receipt states expose the same I-shaped status frame in the new art.
+	receipt_day_label.visible = true
+	receipt_money_label.visible = true
 	bookmark_column.visible = is_expanded
 	page_navigation.visible = is_expanded
 	receipt_toggle_icon.position = Vector2(125.5, 399.5 if is_expanded else 113.5)
@@ -338,6 +411,7 @@ func _toggle_task(instance_id: int) -> void:
 	if open_task_instance_id == instance_id:
 		_close_task()
 		return
+	_close_archive()
 	_close_task()
 	open_task_instance_id = instance_id
 	task_window = task_windows.get(instance_id) as QuestTaskWindow
@@ -356,6 +430,24 @@ func _toggle_task(instance_id: int) -> void:
 	task_window.visible = true
 
 
+func _toggle_archive(entry_id: StringName) -> void:
+	if open_archive_entry_id == entry_id and archive_window != null:
+		_close_archive()
+		return
+	_close_archive()
+	_close_task()
+	var definition := QuestArcCatalog.archive_entry_by_id(entry_id)
+	if definition == null:
+		return
+	open_archive_entry_id = entry_id
+	archive_window = QuestArchiveWindow.new()
+	archive_window.setup(definition)
+	archive_window.closed.connect(_close_archive)
+	var host := popup_host if popup_host != null else self
+	host.add_child(archive_window)
+	archive_window.set_drag_bounds_control(host)
+
+
 func _close_task() -> void:
 	var closing_instance_id := open_task_instance_id
 	var closing_window := task_window
@@ -371,6 +463,17 @@ func _close_task() -> void:
 func close_open_task() -> void:
 	if open_task_instance_id > 0 or task_window != null:
 		_close_task()
+	if archive_window != null:
+		_close_archive()
+
+
+func _close_archive() -> void:
+	open_archive_entry_id = &""
+	var closing_window := archive_window
+	archive_window = null
+	if closing_window != null and is_instance_valid(closing_window):
+		closing_window.visible = false
+		closing_window.queue_free()
 
 
 func _reconcile_task_windows(desired_ids: Array[int]) -> void:

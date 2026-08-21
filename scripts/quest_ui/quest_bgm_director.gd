@@ -79,6 +79,11 @@ func capture_active_position() -> void:
 	_remember_position(active_track_id, active_player.get_playback_position())
 
 
+func set_playback_paused(paused: bool) -> void:
+	for player in players:
+		player.stream_paused = paused
+
+
 func _inactive_player(outgoing: AudioStreamPlayer) -> AudioStreamPlayer:
 	if outgoing == null or outgoing == players[1]:
 		return players[0]

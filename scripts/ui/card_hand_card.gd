@@ -21,6 +21,9 @@ const TITLE_AVAILABLE_WIDTH := 74.0
 const ITEM_IMAGE_HEIGHT := 70.0
 const SHELF_IMAGE_HEIGHT := 64.0
 const SHAPE_ICON_INSET := 8.0
+const SHAPE_BACKGROUND_INSET := 4.0
+const DISEASE_ICON_INSET := 10.0
+const DISEASE_BACKGROUND_INSET := 6.0
 
 var card: CardItemState
 var definition: CardItemDefinition
@@ -43,6 +46,7 @@ var drag_origin_mouse_filter := Control.MOUSE_FILTER_PASS
 var drag_origin_visible := true
 var drag_origin_global_position := Vector2.ZERO
 var drag_grab_position := Vector2.ZERO
+var drag_visual_hidden := false
 var click_candidate := false
 var rule_match_highlighted := false
 var return_animation_seconds := 0.18
@@ -56,6 +60,7 @@ func setup(
 	item_definition: CardItemDefinition,
 	can_drag: bool = true,
 ) -> void:
+	_reset_completed_drag_visual_for_reuse()
 	card = item_state
 	definition = item_definition
 	drag_enabled = can_drag
@@ -121,10 +126,7 @@ func _ready() -> void:
 	shape_icon_background = Panel.new()
 	shape_icon_background.name = "ShapeIconColor"
 	shape_icon_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shape_icon_background.offset_left = 4.0
-	shape_icon_background.offset_top = 4.0
-	shape_icon_background.offset_right = -4.0
-	shape_icon_background.offset_bottom = -4.0
+	_set_icon_background_inset(SHAPE_BACKGROUND_INSET)
 	shape_icon_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	image_host.add_child(shape_icon_background)
 	item_image = TextureRect.new()
@@ -191,6 +193,7 @@ func _refresh() -> void:
 		return
 	title_label.text = definition.localized_name()
 	var is_persona_card := _is_persona_card()
+	var is_disease_card := _is_disease_card()
 	_apply_adaptive_title_layout(title_label.text, is_persona_card)
 	var shape_id := _shape_id() if is_persona_card else &""
 	item_image.texture = (
@@ -200,11 +203,14 @@ func _refresh() -> void:
 	)
 	item_image.self_modulate = Color.BLACK if is_persona_card else Color.WHITE
 	persona_glass.visible = is_persona_card
-	shape_icon_background.visible = is_persona_card
+	shape_icon_background.visible = is_persona_card or is_disease_card
 	card_background.self_modulate = (
 		Color(1.0, 1.0, 1.0, PERSONA_PAPER_ALPHA) if is_persona_card else Color.WHITE
 	)
-	_apply_persona_visuals(shape_id)
+	if is_persona_card:
+		_apply_persona_visuals(shape_id)
+	elif is_disease_card:
+		_apply_disease_visuals()
 	value_label.visible = is_persona_card
 	title_label.add_theme_color_override(
 		"font_color", Color("f4f7f2") if is_persona_card else UiPalette.INK_COLOR
@@ -225,6 +231,10 @@ func _is_persona_card() -> bool:
 	return definition != null and definition.has_property(CardPropertySet.PROPERTY_PERSONA)
 
 
+func _is_disease_card() -> bool:
+	return definition != null and definition.has_property(CardPropertySet.PROPERTY_DISEASE)
+
+
 func _apply_presentation_layout(is_persona_card: bool) -> void:
 	if title_label == null or title_host == null or image_host == null or item_image == null:
 		return
@@ -236,6 +246,11 @@ func _apply_presentation_layout(is_persona_card: bool) -> void:
 		item_image.offset_top = SHAPE_ICON_INSET
 		item_image.offset_right = -SHAPE_ICON_INSET
 		item_image.offset_bottom = -SHAPE_ICON_INSET
+	elif _is_disease_card():
+		item_image.offset_left = DISEASE_ICON_INSET
+		item_image.offset_top = DISEASE_ICON_INSET
+		item_image.offset_right = -DISEASE_ICON_INSET
+		item_image.offset_bottom = -DISEASE_ICON_INSET
 	elif shelf_presentation:
 		item_image.offset_left = 2.0
 		item_image.offset_top = 0.0
@@ -300,7 +315,13 @@ func _shape_id() -> StringName:
 	if definition == null:
 		return &""
 	for shape_id in CardPropertySet.SHAPES:
-		if definition.has_property(shape_id):
+		if (
+			definition.has_property(shape_id)
+			or (
+				definition.property_set != null
+				and definition.property_set.values.has(shape_id)
+			)
+		):
 			return shape_id
 	return &""
 
@@ -310,6 +331,7 @@ func _apply_persona_visuals(shape_id: StringName) -> void:
 		return
 	if shape_id.is_empty():
 		return
+	_set_icon_background_inset(SHAPE_BACKGROUND_INSET)
 	var shape_color := ShapeVisuals.color(shape_id)
 	var icon_style := StyleBoxFlat.new()
 	icon_style.bg_color = shape_color
@@ -327,6 +349,28 @@ func _apply_persona_visuals(shape_id: StringName) -> void:
 		)
 
 
+func _apply_disease_visuals() -> void:
+	_set_icon_background_inset(DISEASE_BACKGROUND_INSET)
+	var icon_style := StyleBoxFlat.new()
+	icon_style.bg_color = Color.BLACK
+	icon_style.border_color = Color(1.0, 1.0, 1.0, 0.18)
+	icon_style.set_border_width_all(1)
+	icon_style.corner_radius_top_left = 5
+	icon_style.corner_radius_top_right = 5
+	icon_style.corner_radius_bottom_left = 5
+	icon_style.corner_radius_bottom_right = 5
+	shape_icon_background.add_theme_stylebox_override("panel", icon_style)
+
+
+func _set_icon_background_inset(inset: float) -> void:
+	if shape_icon_background == null:
+		return
+	shape_icon_background.offset_left = inset
+	shape_icon_background.offset_top = inset
+	shape_icon_background.offset_right = -inset
+	shape_icon_background.offset_bottom = -inset
+
+
 func _update_persona_glass_size() -> void:
 	if persona_glass == null or not (persona_glass.material is ShaderMaterial):
 		return
@@ -336,11 +380,12 @@ func _update_persona_glass_size() -> void:
 
 
 func _border_color() -> Color:
-	if definition.has_property(CardPropertySet.SHAPE_LIGHT):
+	var shape_id := _shape_id()
+	if shape_id == CardPropertySet.SHAPE_LIGHT:
 		return Color("d5b66f")
-	if definition.has_property(CardPropertySet.SHAPE_TEAR):
+	if shape_id == CardPropertySet.SHAPE_TEAR:
 		return Color("7ca9bd")
-	if definition.has_property(CardPropertySet.SHAPE_DREAM):
+	if shape_id == CardPropertySet.SHAPE_DREAM:
 		return Color("9a82bb")
 	return Color("bd8fa5")
 
@@ -450,6 +495,7 @@ func _begin_drag_visual(grab_position: Vector2 = size * 0.5) -> void:
 	drag_origin_visible = visible
 	drag_origin_global_position = get_global_rect().position
 	drag_grab_position = grab_position
+	drag_visual_hidden = true
 	var transparent := self_modulate
 	transparent.a = 0.0
 	self_modulate = transparent
@@ -502,6 +548,19 @@ func _restore_after_drag() -> void:
 	self_modulate = drag_origin_self_modulate
 	mouse_filter = drag_origin_mouse_filter
 	visible = drag_origin_visible
+	drag_visual_hidden = false
+
+
+func _reset_completed_drag_visual_for_reuse() -> void:
+	# Successful moves deliberately leave the old source view hidden while its
+	# owner reconciles the layout. Some slots and reward reveals reuse that same
+	# node later, so restore only the transient opacity when a new binding begins.
+	# Visibility and input remain the owning container's responsibility.
+	if drag_in_progress or return_animation_active or not drag_visual_hidden:
+		return
+	self_modulate = drag_origin_self_modulate
+	drag_visual_hidden = false
+	click_candidate = false
 
 
 func _card_remained_at_drag_origin() -> bool:

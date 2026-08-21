@@ -115,6 +115,33 @@ func test_disease_recipe_growth_and_game_over_checkpoint_are_persisted() -> void
 	assert_true(restored.expedition.current_door_ids.is_empty())
 
 
+func test_previous_night_checkpoint_is_not_overwritten_by_a_lethal_night() -> void:
+	var primary := QuestSaveRepository.new("user://test_primary_rewind_save.json")
+	var previous := QuestSaveRepository.new("user://test_previous_night_save.json")
+	primary.erase()
+	previous.erase()
+	var manager := DemoGameState.new()
+	autofree(manager)
+	manager.autosave_enabled = false
+	manager.save_repository = primary
+	manager.previous_night_repository = previous
+	manager.reset_game()
+	manager.quest_state.day = 4
+	manager.quest_state.wallet.money = 17
+	assert_true(manager.capture_previous_night_checkpoint())
+
+	manager.quest_state.day = 5
+	manager.quest_state.wallet.money = 99
+	manager.quest_state.gain_disease(&"expedition_wound", 3)
+	assert_false(manager.capture_previous_night_checkpoint())
+	assert_true(manager.restore_previous_night_checkpoint())
+	assert_eq(manager.quest_state.day, 4)
+	assert_eq(manager.quest_state.wallet.money, 17)
+	assert_eq(manager.quest_state.disease_count(&"expedition_wound"), 0)
+	primary.erase()
+	previous.erase()
+
+
 func test_owner_request_history_and_partially_shown_settlement_are_persisted() -> void:
 	var source := QuestGameState.new()
 	source.store_unlock_days[&"toy"] = 1

@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="GameContentManifest" load_steps=92 format=3]
+[gd_resource type="Resource" script_class="GameContentManifest" load_steps=93 format=3]
 
 [ext_resource type="Script" path="res://scripts/quest_domain/game_content_manifest.gd" id="1_manifest"]
 [ext_resource type="Script" path="res://scripts/quest_domain/property_definition.gd" id="2_property"]
@@ -75,6 +75,7 @@
 [ext_resource type="Resource" path="res://data/quest_arc/tasks/owner_bookstore_concrete_city.tres" id="108_task"]
 [ext_resource type="Resource" path="res://data/quest_arc/owners/opening_record_owner.tres" id="109_owner"]
 [ext_resource type="Resource" path="res://data/quest_arc/owners/opening_bookstore_owner.tres" id="110_owner"]
+[ext_resource type="Resource" path="res://data/quest_arc/archives/room_001_mall.tres" id="111_archive"]
 
 [sub_resource type="Resource" id="PropertyFood"]
 script = ExtResource("2_property")
@@ -193,7 +194,7 @@ is_shape_value = true
 
 [resource]
 script = ExtResource("1_manifest")
-initial_money = 0
+initial_money = 40
 maximum_item_price = 84
 maximum_properties_per_item = 4
 maximum_shapes_per_item = 2
@@ -207,3 +208,4 @@ stores = Array[Resource]([ExtResource("66_store"), ExtResource("67_store"), ExtR
 store_unlocks = Array[Resource]([ExtResource("71_unlock"), ExtResource("72_unlock"), ExtResource("73_unlock"), ExtResource("74_unlock"), ExtResource("75_unlock")])
 owners = Array[Resource]([ExtResource("76_owner"), ExtResource("77_owner"), ExtResource("78_owner"), ExtResource("109_owner"), ExtResource("110_owner")])
 expedition_rooms = Array[Resource]([ExtResource("82_room"), ExtResource("83_room"), ExtResource("84_room"), ExtResource("87_room"), ExtResource("90_room"), ExtResource("91_room"), ExtResource("92_room"), ExtResource("94_room"), ExtResource("95_room")])
+archive_entries = Array[Resource]([ExtResource("111_archive")])

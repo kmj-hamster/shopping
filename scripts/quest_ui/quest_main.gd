@@ -7,10 +7,10 @@ signal arc_reward_reveal_advanced
 signal persona_reveals_completed
 
 const ZH_UI_THEME: Theme = preload("res://resources/fonts/shancha_ui_theme.tres")
-const EN_UI_THEME: Theme = preload("res://resources/fonts/baker_ui_theme.tres")
-const EN_UI_FONT: FontFile = preload("res://resources/fonts/baker-signet-bt.ttf")
+const EN_UI_THEME: Theme = preload("res://resources/fonts/zpix_ui_theme.tres")
+const EN_UI_FONT: FontFile = preload("res://resources/fonts/zpix.woff2")
 const ZH_FALLBACK_FONT: FontFile = preload("res://resources/fonts/zpix.woff2")
-const ENGLISH_TRACKING_RATIO := 0.06
+const ENGLISH_TRACKING_RATIO := 0.03
 const ENGLISH_FONT_META := &"quest_english_font_override"
 const FONT_COLOR_STATES: Array[StringName] = [
 	&"font_color",
@@ -72,7 +72,10 @@ var debug_button_layer: CanvasLayer
 var debug_button_row: HBoxContainer
 var language_button: Button
 var clear_save_button: Button
-var synthesis_background_button: Button
+var opening_rules_button: Button
+var opening_rules_screen: QuestOpeningRulesScreen
+var persona_allocation_button: Button
+var persona_allocation_screen: QuestPersonaAllocationScreen
 var forbidden_cursor_texture: Texture2D
 var next_day_blocked_dialog: AcceptDialog
 var screen_transition_layer: CanvasLayer
@@ -89,6 +92,8 @@ var arc_store_background: TextureRect
 var arc_owner_portrait: TextureRect
 var arc_used_card: CardHandCard
 var arc_reward_label: Label
+var arc_persona_growth_rows: VBoxContainer
+var arc_displayed_reward_entry: Dictionary = {}
 var arc_cursor_label: Label
 var arc_cursor_tween: Tween
 var arc_reward_reveal_overlay: ColorRect
@@ -99,7 +104,6 @@ var arc_reward_reveal_flipped := false
 var transition_in_progress := false
 var focused_rule: CardSlotRule
 var synthesis_highlight_role: StringName
-var synthesis_uses_image_background := false
 var arc_fade_seconds := 0.35
 var arc_typewriter_char_seconds := 0.028
 var arc_typing := false
@@ -263,13 +267,21 @@ func _build_shell() -> void:
 	next_day_button.tooltip_text = ""
 	next_day_button.pressed.connect(_on_next_day_pressed)
 	debug_button_row.add_child(next_day_button)
-	synthesis_background_button = Button.new()
-	synthesis_background_button.name = "SynthesisBackgroundButton"
-	synthesis_background_button.custom_minimum_size = Vector2(78, 0)
-	synthesis_background_button.add_theme_font_size_override("font_size", 11)
-	synthesis_background_button.tooltip_text = ""
-	synthesis_background_button.pressed.connect(_on_synthesis_background_pressed)
-	debug_button_row.add_child(synthesis_background_button)
+	opening_rules_button = Button.new()
+	opening_rules_button.name = "OpeningRulesTestButton"
+	opening_rules_button.custom_minimum_size = Vector2(68, 0)
+	opening_rules_button.add_theme_font_size_override("font_size", 11)
+	opening_rules_button.tooltip_text = ""
+	opening_rules_button.pressed.connect(_show_opening_rules_test)
+	debug_button_row.add_child(opening_rules_button)
+	persona_allocation_button = Button.new()
+	persona_allocation_button.name = "PersonaAllocationTestButton"
+	persona_allocation_button.custom_minimum_size = Vector2(76, 0)
+	persona_allocation_button.add_theme_font_size_override("font_size", 11)
+	persona_allocation_button.tooltip_text = ""
+	persona_allocation_button.pressed.connect(_show_persona_allocation_test)
+	debug_button_row.add_child(persona_allocation_button)
+	debug_button_row.anchor_right = 0.41
 
 	next_day_blocked_dialog = AcceptDialog.new()
 	next_day_blocked_dialog.ok_button_text = TranslationServer.translate(&"demo.ui.confirm")
@@ -577,7 +589,6 @@ func _show_synthesis_immediate() -> void:
 		protagonist_button,
 		debug_button_row,
 	])
-	synthesis_interface.set_image_background_enabled(synthesis_uses_image_background)
 	_activate_screen(synthesis_interface)
 	synthesis_interface.refresh()
 	_on_rule_focused(null)
@@ -811,6 +822,7 @@ func _start_expedition() -> void:
 		_run_arc()
 		return
 	if not state.expedition.active:
+		GameState.capture_previous_night_checkpoint()
 		var result := state.begin_mall_expedition()
 		if not result.ok:
 			return
@@ -850,10 +862,14 @@ func _show_expedition_immediate() -> void:
 	expedition_screen.expedition_finished.connect(_on_expedition_finished)
 	expedition_screen.checkpoint_reached.connect(_on_expedition_checkpoint_reached)
 	expedition_screen.demo_completed.connect(_on_expedition_checkpoint_reached)
+	expedition_screen.previous_night_requested.connect(_on_previous_night_requested)
 	expedition_screen.persona_reveal_requested.connect(_run_pending_persona_reveals)
 	persona_reveals_completed.connect(expedition_screen.on_persona_reveals_completed)
 	add_child(expedition_screen)
 	expedition_screen.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	expedition_screen.previous_night_button.disabled = (
+		not GameState.has_previous_night_checkpoint()
+	)
 	debug_button_row.visible = true
 	if not state.pending_persona_reveal_shape_ids.is_empty():
 		call_deferred("_run_pending_persona_reveals")
@@ -878,17 +894,87 @@ func _on_expedition_checkpoint_reached() -> void:
 	GameState.save_game_now()
 
 
+func _on_previous_night_requested() -> void:
+	if transition_in_progress:
+		return
+	transition_in_progress = true
+	if not GameState.restore_previous_night_checkpoint():
+		transition_in_progress = false
+		return
+	get_tree().reload_current_scene()
+
+
 func _on_clear_save_pressed() -> void:
 	clear_save_button.disabled = true
 	GameState.start_new_game()
 	get_tree().reload_current_scene()
 
 
-func _on_synthesis_background_pressed() -> void:
-	synthesis_uses_image_background = not synthesis_uses_image_background
-	if synthesis_interface != null:
-		synthesis_interface.set_image_background_enabled(synthesis_uses_image_background)
-	_refresh_synthesis_background_button_text()
+func _show_persona_allocation_test() -> void:
+	if persona_allocation_screen != null and is_instance_valid(persona_allocation_screen):
+		return
+	if opening_rules_screen != null and is_instance_valid(opening_rules_screen):
+		return
+	bgm_director.play_track(QuestBgmDirector.TRACK_EMPTY)
+	_close_detail_popups()
+	_deactivate_current_screen()
+	art_canvas.visible = false
+	persona_allocation_screen = QuestPersonaAllocationScreen.new()
+	persona_allocation_screen.name = "QuestPersonaAllocationScreen"
+	persona_allocation_screen.z_index = 70
+	persona_allocation_screen.allocation_confirmed.connect(
+		_on_persona_allocation_confirmed
+	)
+	add_child(persona_allocation_screen)
+	persona_allocation_screen.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_activate_screen(persona_allocation_screen)
+	_set_persona_allocation_test_controls_active(true)
+
+
+func _on_persona_allocation_confirmed(levels: Dictionary) -> void:
+	var result := state.apply_initial_persona_allocation(levels)
+	if not bool(result.ok):
+		return
+	GameState.save_game_now()
+	var completed_screen := persona_allocation_screen
+	persona_allocation_screen = null
+	art_canvas.visible = true
+	_set_persona_allocation_test_controls_active(false)
+	_show_map_immediate()
+	if completed_screen != null and is_instance_valid(completed_screen):
+		completed_screen.queue_free()
+
+
+func _set_persona_allocation_test_controls_active(active: bool) -> void:
+	if persona_allocation_button != null:
+		persona_allocation_button.disabled = active
+	if next_day_button != null:
+		next_day_button.disabled = active
+	if opening_rules_button != null:
+		opening_rules_button.disabled = active
+
+
+func _show_opening_rules_test() -> void:
+	if opening_rules_screen != null and is_instance_valid(opening_rules_screen):
+		return
+	if detail_popup != null:
+		detail_popup.close()
+	if rule_detail_popup != null:
+		rule_detail_popup.close()
+	debug_button_row.visible = false
+	bgm_director.set_playback_paused(true)
+	opening_rules_screen = QuestOpeningRulesScreen.new()
+	opening_rules_screen.name = "QuestOpeningRulesScreen"
+	opening_rules_screen.finished.connect(_on_opening_rules_finished)
+	add_child(opening_rules_screen)
+
+
+func _on_opening_rules_finished() -> void:
+	if opening_rules_screen != null and is_instance_valid(opening_rules_screen):
+		opening_rules_screen.queue_free()
+	opening_rules_screen = null
+	debug_button_row.visible = true
+	bgm_director.set_playback_paused(false)
 
 
 func _prepare_for_arc_display() -> void:
@@ -937,8 +1023,14 @@ func _run_arc() -> void:
 			GameState.save_game_now()
 		arc_money_label.text = TranslationServer.translate(&"demo.ui.money") % state.wallet.money
 		var reward_text := _arc_reward_text(entry)
-		if not reward_text.is_empty():
-			arc_reward_label.text = reward_text
+		arc_displayed_reward_entry = entry
+		arc_reward_label.text = reward_text
+		var persona_reward_count := ShapeVisuals.rebuild_persona_growth_rows(
+			arc_persona_growth_rows,
+			entry.get("reward_stats", {}) as Dictionary,
+			20,
+		)
+		if not reward_text.is_empty() or persona_reward_count > 0:
 			await _wait_for_arc_advance()
 		var reward_item_ids := entry.get("reward_item_ids", []) as Array
 		for raw_item_id in reward_item_ids:
@@ -958,6 +1050,7 @@ func _run_arc() -> void:
 	fade_out.tween_property(arc_overlay, "modulate:a", 0.0, arc_fade_seconds)
 	await fade_out.finished
 	arc_overlay.visible = false
+	arc_displayed_reward_entry = {}
 	transition_in_progress = false
 	_show_expedition_immediate()
 
@@ -1116,6 +1209,11 @@ func _build_arc_overlay() -> void:
 	arc_reward_label.add_theme_font_size_override("font_size", 20)
 	arc_reward_label.add_theme_color_override("font_color", Color("e4c978"))
 	text_column.add_child(arc_reward_label)
+	arc_persona_growth_rows = VBoxContainer.new()
+	arc_persona_growth_rows.name = "ArcPersonaGrowthRows"
+	arc_persona_growth_rows.add_theme_constant_override("separation", 3)
+	arc_persona_growth_rows.visible = false
+	text_column.add_child(arc_persona_growth_rows)
 	arc_cursor_label = Label.new()
 	arc_cursor_label.text = "◆"
 	arc_cursor_label.custom_minimum_size = Vector2(0, 20)
@@ -1172,6 +1270,8 @@ func _prepare_arc_entry(entry: Dictionary) -> void:
 	arc_owner_portrait.texture = QuestStoreVisuals.owner_texture(store_id)
 	arc_used_card.visible = false
 	arc_reward_label.text = ""
+	arc_displayed_reward_entry = {}
+	ShapeVisuals.rebuild_persona_growth_rows(arc_persona_growth_rows, {})
 	_set_arc_task_source(StringName(entry.get("task_definition_id", "")))
 	var item_ids := entry.get("item_definition_ids", []) as Array
 	if not item_ids.is_empty():
@@ -1186,32 +1286,10 @@ func _prepare_arc_entry(entry: Dictionary) -> void:
 
 
 func _arc_reward_text(entry: Dictionary) -> String:
-	var reward_parts: Array[String] = []
 	var reward_money := int(entry.get("reward_money", 0))
 	if reward_money > 0:
-		reward_parts.append(
-			TranslationServer.translate(&"demo.ui.arc.money_reward") % reward_money
-		)
-	var reward_stats := entry.get("reward_stats", {}) as Dictionary
-	for raw_stat_id in reward_stats:
-		var stat_id := StringName(raw_stat_id)
-		var property := QuestArcCatalog.property_by_id(stat_id)
-		var fallback_name_key := (
-			property.display_name_key
-			if property != null
-			else StringName("demo.stat.%s.name" % stat_id)
-		)
-		var stat_name_key := StringName(
-			PersonaCardCatalog.PERSONA_NAME_KEYS.get(stat_id, fallback_name_key)
-		)
-		var stat_name := TranslationServer.translate(stat_name_key)
-		reward_parts.append(
-			TranslationServer.translate(&"demo.ui.arc.stat_reward") % [
-				stat_name,
-				int(reward_stats[raw_stat_id]),
-			]
-		)
-	return "  ·  ".join(reward_parts)
+		return TranslationServer.translate(&"demo.ui.arc.money_reward") % reward_money
+	return ""
 
 
 func _wait_for_arc_advance() -> void:
@@ -1372,24 +1450,24 @@ func _refresh_global_text() -> void:
 	if clear_save_button != null:
 		clear_save_button.text = TranslationServer.translate(&"demo.ui.clear_save")
 		clear_save_button.tooltip_text = TranslationServer.translate(&"demo.ui.clear_save.tooltip")
-	_refresh_synthesis_background_button_text()
+	if opening_rules_button != null:
+		opening_rules_button.text = TranslationServer.translate(&"debug.ui.opening_rules")
+	if persona_allocation_button != null:
+		persona_allocation_button.text = TranslationServer.translate(
+			&"debug.ui.persona_allocation"
+		)
 	if arc_task_source_tag_label != null:
 		arc_task_source_tag_label.text = TranslationServer.translate(&"quest.ui.arc.task_source")
 	if arc_task_source_name_label != null and not arc_task_source_name_key.is_empty():
 		arc_task_source_name_label.text = TranslationServer.translate(arc_task_source_name_key)
+	if not arc_displayed_reward_entry.is_empty():
+		arc_reward_label.text = _arc_reward_text(arc_displayed_reward_entry)
+		ShapeVisuals.rebuild_persona_growth_rows(
+			arc_persona_growth_rows,
+			arc_displayed_reward_entry.get("reward_stats", {}) as Dictionary,
+			20,
+		)
 	next_day_blocked_dialog.ok_button_text = TranslationServer.translate(&"demo.ui.confirm")
-
-
-func _refresh_synthesis_background_button_text() -> void:
-	if synthesis_background_button == null:
-		return
-	var key := (
-		&"debug.ui.synthesis_background.bag"
-		if synthesis_uses_image_background
-		else &"debug.ui.synthesis_background.blue"
-	)
-	synthesis_background_button.text = TranslationServer.translate(key)
-
 
 func _refresh_hud_state() -> void:
 	if state == null:
@@ -1457,7 +1535,7 @@ func _apply_locale_typography_to_control(control: Control) -> void:
 
 
 func _english_font_for_size(font_size: int) -> FontVariation:
-	var tracking_pixels := maxi(1, roundi(font_size * ENGLISH_TRACKING_RATIO))
+	var tracking_pixels := maxi(0, roundi(font_size * ENGLISH_TRACKING_RATIO))
 	if english_font_by_size.has(tracking_pixels):
 		return english_font_by_size[tracking_pixels] as FontVariation
 	var tracked_font := FontVariation.new()

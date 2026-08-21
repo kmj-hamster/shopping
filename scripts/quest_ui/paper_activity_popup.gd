@@ -3,16 +3,27 @@ extends PanelContainer
 
 signal closed
 
-const BODY_HEIGHT := 112.0
+const BODY_HEIGHT := 136.0
 const LETTER_BODY_HEIGHT := 144.0
 const BODY_FONT_SIZE := 15
-const BODY_MAX_LINES := 5
-const LETTER_BODY_MAX_LINES := 7
+const BODY_EN_FONT_SIZE := 13
+const BODY_MAX_LINES := 8
+const LETTER_BODY_MAX_LINES := 8
+const BODY_HORIZONTAL_INSET := 8
+const BODY_HORIZONTAL_SHIFT := 4
+const BODY_VERTICAL_INSET := 15
 const PAPER_ANCHOR_LEFT := 0.167
 const PAPER_ANCHOR_TOP := 0.064
 const PAPER_ANCHOR_RIGHT := 0.652
 const PAPER_ANCHOR_BOTTOM := 0.691
 const PAPER_SIZE := Vector2(531, 344)
+# The visible outline in task-paper.png is x=116..444, y=143..413 in
+# its 797x516 source. These rounded UI coordinates keep layout tied to art.
+const LETTER_PANEL_POSITION := Vector2(77, 95)
+const LETTER_PANEL_SIZE := Vector2(219, 180)
+const PAPER_INITIAL_OFFSET := Vector2(8, 0)
+const BODY_PAGER_POSITION := Vector2(44, 160)
+const BODY_PAGER_SIZE := Vector2(278, 49)
 const INTERACTION_POSITION := Vector2(333, 112)
 const INTERACTION_SEPARATION := 4
 const ACTION_GAP_HEIGHT := 28.0
@@ -29,6 +40,7 @@ var paper_background: TextureRect
 var close_button: TextureButton
 var content_row: Control
 var letter_panel: PanelContainer
+var letter_margin: MarginContainer
 var text_column: VBoxContainer
 var interaction_column: VBoxContainer
 var interaction_footer_row: HBoxContainer
@@ -119,17 +131,23 @@ func _ready() -> void:
 
 	letter_panel = PanelContainer.new()
 	letter_panel.name = "PopupLetterPanel"
-	letter_panel.position = Vector2(76, 95)
-	letter_panel.size = Vector2(220, 180)
+	letter_panel.position = LETTER_PANEL_POSITION
+	letter_panel.size = LETTER_PANEL_SIZE
 	letter_panel.mouse_filter = Control.MOUSE_FILTER_PASS
 	letter_panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	content_row.add_child(letter_panel)
-	var letter_margin := MarginContainer.new()
+	letter_margin = MarginContainer.new()
 	letter_margin.mouse_filter = Control.MOUSE_FILTER_PASS
-	letter_margin.add_theme_constant_override("margin_left", 14)
-	letter_margin.add_theme_constant_override("margin_right", 14)
-	letter_margin.add_theme_constant_override("margin_top", 10)
-	letter_margin.add_theme_constant_override("margin_bottom", 6)
+	letter_margin.add_theme_constant_override(
+		"margin_left",
+		BODY_HORIZONTAL_INSET + BODY_HORIZONTAL_SHIFT,
+	)
+	letter_margin.add_theme_constant_override(
+		"margin_right",
+		BODY_HORIZONTAL_INSET - BODY_HORIZONTAL_SHIFT,
+	)
+	letter_margin.add_theme_constant_override("margin_top", BODY_VERTICAL_INSET)
+	letter_margin.add_theme_constant_override("margin_bottom", BODY_VERTICAL_INSET)
 	letter_panel.add_child(letter_margin)
 	text_column = VBoxContainer.new()
 	text_column.name = "PopupLetterColumn"
@@ -157,6 +175,8 @@ func _ready() -> void:
 	body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	body_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	body_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	body_label.add_theme_font_size_override("font_size", BODY_FONT_SIZE)
 	body_label.add_theme_color_override("font_color", Color("4d4437"))
 	body_margin.add_child(body_label)
@@ -171,8 +191,8 @@ func _ready() -> void:
 	text_column.add_child(footer_label)
 	body_page_row = HBoxContainer.new()
 	body_page_row.name = "PopupBodyPager"
-	body_page_row.position = Vector2(30, 142)
-	body_page_row.size = Vector2(292, 49)
+	body_page_row.position = BODY_PAGER_POSITION
+	body_page_row.size = BODY_PAGER_SIZE
 	body_page_row.mouse_filter = Control.MOUSE_FILTER_PASS
 	body_page_row.add_theme_constant_override("separation", 0)
 	content_row.add_child(body_page_row)
@@ -329,7 +349,7 @@ func _apply_preferred_size() -> void:
 		local_position = Vector2(
 			bounds.size.x * PAPER_ANCHOR_LEFT,
 			bounds.size.y * PAPER_ANCHOR_TOP,
-		)
+		) + PAPER_INITIAL_OFFSET
 		preferred_position_initialized = true
 	var anchored_size := Vector2(
 		bounds.size.x * (PAPER_ANCHOR_RIGHT - PAPER_ANCHOR_LEFT),
@@ -443,7 +463,10 @@ func set_body_copy(text: String, height: float, maximum_lines: int) -> void:
 	set_body_height(height)
 	body_max_lines = maximum_lines
 	body_full_text = text
-	body_label.add_theme_font_size_override("font_size", BODY_FONT_SIZE)
+	body_label.add_theme_font_size_override(
+		"font_size",
+		BODY_EN_FONT_SIZE if LocaleManager.current_locale == LocaleManager.LOCALE_EN else BODY_FONT_SIZE,
+	)
 	body_label.max_lines_visible = body_max_lines
 	if content_changed:
 		body_page_index = 0

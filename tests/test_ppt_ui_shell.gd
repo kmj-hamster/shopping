@@ -85,9 +85,10 @@ func test_main_uses_the_centered_art_shell_and_unified_hand() -> void:
 	assert_eq(main.language_button.get_parent(), main.debug_button_row)
 	assert_eq(main.clear_save_button.get_parent(), main.debug_button_row)
 	assert_eq(main.next_day_button.get_parent(), main.debug_button_row)
-	assert_eq(main.synthesis_background_button.get_parent(), main.debug_button_row)
+	assert_null(main.find_child("SynthesisBackgroundButton", true, false))
+	assert_eq(main.opening_rules_button.get_parent(), main.debug_button_row)
 	assert_eq(main.next_day_button.custom_minimum_size.x, 64.0)
-	assert_eq(main.synthesis_background_button.custom_minimum_size.x, 78.0)
+	assert_eq(main.opening_rules_button.custom_minimum_size.x, 68.0)
 	assert_eq(main.next_day_button.get_theme_font_size("font_size"), 11)
 	assert_lt(main.debug_button_row.anchor_left, 0.02)
 	assert_gt(main.debug_button_row.anchor_top, 0.90)
@@ -98,8 +99,8 @@ func test_main_uses_the_centered_art_shell_and_unified_hand() -> void:
 	assert_true(main.next_day_button.pressed.is_connected(
 		Callable(main, "_on_next_day_pressed")
 	))
-	assert_true(main.synthesis_background_button.pressed.is_connected(
-		Callable(main, "_on_synthesis_background_pressed")
+	assert_true(main.opening_rules_button.pressed.is_connected(
+		Callable(main, "_show_opening_rules_test")
 	))
 	assert_not_null(main.forbidden_cursor_texture)
 	assert_eq(main.global_frame.texture.resource_path, QuestMain.FRAME_TEXTURE_PATHS[&"map"])
@@ -124,18 +125,30 @@ func test_main_uses_the_centered_art_shell_and_unified_hand() -> void:
 	var map_background := main.current_screen.get_node("MapBackground") as TextureRect
 	_assert_background_overscans_frame(map_background)
 	assert_eq((main.current_screen as QuestMapScreen).store_hotspots.size(), 2)
-	assert_eq(main.task_dock.bookmark_column.get_child_count(), 4)
+	assert_eq(main.task_dock.bookmark_column.get_child_count(), 5)
+	assert_eq(
+		QuestTaskDock.STATUS_TEXT_VERTICAL_SHIFT,
+		-float(QuestTaskDock.STATUS_FONT_SIZE),
+	)
 	assert_eq(
 		main.task_dock.receipt_day_label.get_theme_color("font_color"),
 		QuestTaskDock.NIGHT_VALUE_COLOR,
 	)
 	assert_eq(
 		main.task_dock.receipt_day_label.text,
-		str(main.state.day),
+		TranslationServer.translate(&"quest.ui.todo.night") % main.state.day,
 	)
 	assert_eq(
 		main.task_dock.receipt_money_label.text,
-		str(main.state.wallet.money),
+		TranslationServer.translate(&"quest.ui.todo.money") % main.state.wallet.money,
+	)
+	assert_eq(main.task_dock.receipt_day_label.position, QuestTaskDock.NIGHT_LABEL_RECT.position)
+	assert_eq(main.task_dock.receipt_day_label.size, QuestTaskDock.NIGHT_LABEL_RECT.size)
+	assert_eq(main.task_dock.receipt_money_label.position, QuestTaskDock.MONEY_LABEL_RECT.position)
+	assert_eq(main.task_dock.receipt_money_label.size, QuestTaskDock.MONEY_LABEL_RECT.size)
+	assert_eq(
+		main.task_dock.receipt_day_label.get_theme_font_size("font_size"),
+		QuestTaskDock.STATUS_FONT_SIZE,
 	)
 	assert_eq(
 		main.task_dock.receipt_money_label.horizontal_alignment,
@@ -146,6 +159,12 @@ func test_main_uses_the_centered_art_shell_and_unified_hand() -> void:
 		QuestTaskDock.TODO_COLLAPSED_PATH,
 	)
 	assert_false(main.task_dock.is_expanded)
+	assert_eq(
+		main.task_dock.receipt_background.size,
+		Vector2(QuestTaskDock.RECEIPT_WIDTH, QuestTaskDock.RECEIPT_COLLAPSED_HEIGHT),
+	)
+	assert_true(main.task_dock.receipt_day_label.visible)
+	assert_true(main.task_dock.receipt_money_label.visible)
 	assert_false(main.task_dock.bookmark_column.visible)
 	assert_false(main.task_dock.page_navigation.visible)
 	assert_null(main.task_dock.find_child("TodoTaskScroll", true, false))
@@ -157,6 +176,11 @@ func test_main_uses_the_centered_art_shell_and_unified_hand() -> void:
 		assert_eq(bookmark_button.get_theme_color("font_color"), UiPalette.INK_COLOR)
 		assert_true(bookmark_button.get_theme_stylebox("normal") is StyleBoxEmpty)
 		assert_lt(bookmark_button.size.y, QuestTaskDock.TASK_LINE_HEIGHT)
+	for task_button in main.task_dock.bookmark_buttons.values():
+		assert_not_null((task_button as Button).get_node_or_null("QuestUnderline"))
+	var archive_button := main.task_dock.archive_buttons[&"room_001_mall"] as Button
+	assert_same(archive_button.get_parent(), main.task_dock.bookmark_column)
+	assert_null(archive_button.get_node_or_null("QuestUnderline"))
 	assert_eq(main.hand_bar.card_views.size(), 10)
 	var fries_card := main.hand_bar.card_views.values()[0] as CardHandCard
 	assert_eq(fries_card.definition.id, &"fries")
@@ -165,7 +189,7 @@ func test_main_uses_the_centered_art_shell_and_unified_hand() -> void:
 	assert_eq(fries_card.custom_minimum_size, CardHandCard.CARD_SIZE)
 
 
-func test_english_locale_uses_baker_signet_with_six_percent_tracking_live() -> void:
+func test_english_locale_uses_zpix_with_three_percent_tracking_live() -> void:
 	var main := await _spawn_main()
 	var task := main.state.task_instance_for_definition(&"girl_order")
 	main.task_dock._toggle_task(task.instance_id)
@@ -175,25 +199,53 @@ func test_english_locale_uses_baker_signet_with_six_percent_tracking_live() -> v
 	LocaleManager.set_locale(LocaleManager.LOCALE_EN, false)
 	await get_tree().process_frame
 	assert_eq(main.theme, QuestMain.EN_UI_THEME)
-	assert_eq(main.task_dock.receipt_money_label.text, str(main.state.wallet.money))
+	assert_eq(
+		main.task_dock.receipt_money_label.text,
+		"Money %d" % main.state.wallet.money,
+	)
 	var theme_font := main.theme.default_font as FontVariation
 	assert_not_null(theme_font)
-	assert_eq(theme_font.base_font.resource_path, "res://resources/fonts/baker-signet-bt.ttf")
+	assert_eq(
+		theme_font.base_font.resource_path,
+		"res://resources/fonts/zpix.woff2",
+	)
 	var title_font := popup.title_label.get_theme_font("font") as FontVariation
 	assert_not_null(title_font)
-	assert_eq(title_font.base_font.resource_path, "res://resources/fonts/baker-signet-bt.ttf")
+	assert_eq(
+		title_font.base_font.resource_path,
+		"res://resources/fonts/zpix.woff2",
+	)
 	assert_eq(
 		title_font.spacing_glyph,
-		maxi(1, roundi(
+		maxi(0, roundi(
 			popup.title_label.get_theme_font_size("font_size")
 			* QuestMain.ENGLISH_TRACKING_RATIO
 		)),
 	)
+	var body_font := popup.body_label.get_theme_font("font") as FontVariation
+	assert_not_null(body_font)
+	assert_eq(body_font.spacing_glyph, 0)
 
 	LocaleManager.set_locale(LocaleManager.LOCALE_ZH, false)
 	await get_tree().process_frame
 	assert_eq(main.theme, QuestMain.ZH_UI_THEME)
 	assert_false(popup.title_label.has_theme_font_override("font"))
+
+
+func test_archive_and_quest_entries_replace_each_others_popup() -> void:
+	var main := await _spawn_main()
+	var task := main.state.active_tasks()[0] as TaskInstanceState
+	var task_button := main.task_dock.bookmark_buttons[task.instance_id] as Button
+	var archive_button := main.task_dock.archive_buttons[&"room_001_mall"] as Button
+	task_button.pressed.emit()
+	assert_not_null(main.task_dock.task_window)
+	assert_null(main.task_dock.archive_window)
+	archive_button.pressed.emit()
+	assert_null(main.task_dock.task_window)
+	assert_not_null(main.task_dock.archive_window)
+	task_button.pressed.emit()
+	assert_not_null(main.task_dock.task_window)
+	assert_null(main.task_dock.archive_window)
 
 
 func test_dynamic_pure_black_text_is_replaced_with_night_ink() -> void:
@@ -228,9 +280,10 @@ func test_flower_shop_starts_as_scene_and_opens_shelf_on_request() -> void:
 		main.task_dock.receipt_host.get_global_rect().end.x + 16.0,
 	)
 	assert_lt(shop.owner_portrait.anchor_right, shop.navigation_column.anchor_left)
-	assert_almost_eq(shop.owner_portrait.anchor_left, 0.595, 0.001)
-	assert_almost_eq(shop.owner_portrait.anchor_top, 0.18, 0.001)
-	assert_almost_eq(shop.owner_portrait.anchor_bottom, 1.035, 0.001)
+	assert_almost_eq(shop.owner_portrait.anchor_left, 0.562, 0.001)
+	assert_almost_eq(shop.owner_portrait.anchor_top, 0.17, 0.001)
+	assert_almost_eq(shop.owner_portrait.anchor_right, 0.879, 0.001)
+	assert_almost_eq(shop.owner_portrait.anchor_bottom, 1.13, 0.001)
 	assert_gt(main.global_frame.z_index, shop.owner_portrait.z_index)
 	assert_eq(shop.shelf_nav_button.custom_minimum_size, Vector2(82, 38))
 	assert_almost_eq(shop.dialogue_panel.anchor_right, 0.865, 0.001)
@@ -364,7 +417,7 @@ func test_shop_dialogue_click_finishes_then_starts_the_next_line() -> void:
 	assert_gt(shop.owner_dialogue_generation, completed_generation)
 
 
-func test_shop_dialogue_uses_fixed_two_line_pages() -> void:
+func test_shop_dialogue_uses_fixed_four_line_pages() -> void:
 	var main := await _spawn_main()
 	main._show_shop(&"flower")
 	await get_tree().process_frame
@@ -372,9 +425,10 @@ func test_shop_dialogue_uses_fixed_two_line_pages() -> void:
 	var panel_height := shop.dialogue_panel.size.y
 	shop.owner_dialogue_char_seconds = 10.0
 	shop._present_owner_dialogue(
-		"这是一段用于验证店主对白固定为两行并在内容过长时等待玩家点击后翻页的长文本。".repeat(5),
+		"这是一段用于验证店主对白固定为四行并在内容过长时等待玩家点击后翻页的长文本。".repeat(5),
 		true,
 	)
+	assert_eq(QuestShopScreen.DIALOGUE_MAX_VISIBLE_LINES, 4)
 	assert_eq(
 		shop.owner_dialogue_label.max_lines_visible,
 		QuestShopScreen.DIALOGUE_MAX_VISIBLE_LINES,
@@ -400,6 +454,17 @@ func test_shop_dialogue_uses_fixed_two_line_pages() -> void:
 		QuestShopScreen.DIALOGUE_MAX_VISIBLE_LINES,
 	)
 	assert_almost_eq(shop.dialogue_panel.size.y, panel_height, 0.01)
+
+
+func test_shop_dialogue_preserves_authored_speech_marks() -> void:
+	var main := await _spawn_main()
+	main._show_shop(&"flower")
+	await get_tree().process_frame
+	var shop := main.current_screen as QuestShopScreen
+	var authored_copy := "“以后明确写入的引号，应当原样显示。”"
+	shop._present_owner_dialogue(authored_copy, true)
+	assert_eq(shop.owner_dialogue_full_text, authored_copy)
+	assert_eq(shop.owner_dialogue_label.text, authored_copy)
 
 
 func test_each_shop_owner_can_configure_dialogue_voice_assets() -> void:
@@ -492,9 +557,31 @@ func test_leaving_shop_clears_pending_checkout_state() -> void:
 	assert_true(transaction.has_selection())
 	assert_true(shop.checkout_button.visible)
 	assert_false(shop.owner_dialogue_override_key.is_empty())
+	var dialogue_generation_before_leave := shop.owner_dialogue_generation
 	shop.leave_requested.emit()
 	await get_tree().process_frame
 	assert_true(main.current_screen is QuestMapScreen)
+	assert_false(transaction.has_selection())
+	assert_eq(shop.owner_dialogue_generation, dialogue_generation_before_leave + 1)
+	assert_false(shop.owner_dialogue_is_typing)
+	for voice_player in shop.owner_dialogue_voice_players:
+		assert_false(voice_player.playing)
+
+
+func test_checkout_keeps_the_shelf_open() -> void:
+	var main := await _spawn_main()
+	main.state.wallet.money = 100
+	main._show_shop(&"flower")
+	await get_tree().process_frame
+	var shop := main.current_screen as QuestShopScreen
+	var transaction := main.state.transaction_for_store(&"flower")
+	shop._toggle_shelf_popup()
+	assert_true(shop.shelf_popup.visible)
+	assert_true(shop.shelf_back_buffer.visible)
+	shop._on_shelf_pressed(transaction.shelf_slots[0].slot_id)
+	shop._on_checkout_pressed()
+	assert_true(shop.shelf_popup.visible)
+	assert_true(shop.shelf_back_buffer.visible)
 	assert_false(transaction.has_selection())
 
 
@@ -547,6 +634,12 @@ func test_locked_location_uses_confirmed_popup_then_enters_shop() -> void:
 	assert_almost_eq(map.location_popup.anchor_right, PaperActivityPopup.PAPER_ANCHOR_RIGHT, 0.001)
 	assert_almost_eq(map.location_popup.anchor_top, PaperActivityPopup.PAPER_ANCHOR_TOP, 0.001)
 	assert_almost_eq(map.location_popup.anchor_bottom, PaperActivityPopup.PAPER_ANCHOR_BOTTOM, 0.001)
+	assert_almost_eq(
+		map.location_popup.position.x,
+		map.size.x * PaperActivityPopup.PAPER_ANCHOR_LEFT
+			+ PaperActivityPopup.PAPER_INITIAL_OFFSET.x,
+		0.5,
+	)
 	assert_almost_eq(
 		map.location_popup.position.y,
 		map.size.y * PaperActivityPopup.PAPER_ANCHOR_TOP,
@@ -706,7 +799,7 @@ func test_task_rule_panel_shows_written_bonus_only() -> void:
 	assert_true(required_icon.get_child(0) is TextureRect)
 	assert_eq(
 		(required_icon.get_child(0) as TextureRect).texture,
-		load("res://resources/ui/property-food.png"),
+		load("res://resources/ui/type/food.png"),
 	)
 	var bonus_chip := main.rule_detail_popup.bonus_row.get_child(0) as HBoxContainer
 	var bonus_icon := bonus_chip.get_child(0) as Button
@@ -787,6 +880,12 @@ func test_task_popup_uses_horizontal_letter_and_slot_columns() -> void:
 	assert_almost_eq(popup.anchor_top, PaperActivityPopup.PAPER_ANCHOR_TOP, 0.001)
 	assert_almost_eq(popup.anchor_bottom, PaperActivityPopup.PAPER_ANCHOR_BOTTOM, 0.001)
 	assert_almost_eq(
+		popup.position.x,
+		main.task_popup_layer.size.x * PaperActivityPopup.PAPER_ANCHOR_LEFT
+			+ PaperActivityPopup.PAPER_INITIAL_OFFSET.x,
+		0.5,
+	)
+	assert_almost_eq(
 		popup.position.y,
 		main.task_popup_layer.size.y * PaperActivityPopup.PAPER_ANCHOR_TOP,
 		0.5,
@@ -807,8 +906,11 @@ func test_task_popup_uses_horizontal_letter_and_slot_columns() -> void:
 	assert_eq(popup.title_label.horizontal_alignment, HORIZONTAL_ALIGNMENT_LEFT)
 	assert_eq(popup.body_label.horizontal_alignment, HORIZONTAL_ALIGNMENT_LEFT)
 	assert_eq(popup.body_label.vertical_alignment, VERTICAL_ALIGNMENT_TOP)
+	assert_eq(popup.body_label.size_flags_vertical, Control.SIZE_SHRINK_BEGIN)
 	assert_same(popup.letter_panel.get_parent(), popup.content_row)
 	assert_true(popup.letter_panel.is_ancestor_of(popup.text_column))
+	assert_eq(popup.letter_panel.position, PaperActivityPopup.LETTER_PANEL_POSITION)
+	assert_eq(popup.letter_panel.size, PaperActivityPopup.LETTER_PANEL_SIZE)
 	assert_same(popup.interaction_column.get_parent(), popup.content_row)
 	assert_lt(popup.letter_panel.global_position.x, popup.interaction_column.global_position.x)
 	assert_eq(popup.interaction_column.position, PaperActivityPopup.INTERACTION_POSITION)
@@ -818,10 +920,49 @@ func test_task_popup_uses_horizontal_letter_and_slot_columns() -> void:
 	)
 	assert_same(popup.body_viewport.get_parent(), popup.text_column)
 	assert_same(popup.slots_row.get_parent(), popup.interaction_column)
+	assert_eq(
+		popup.letter_margin.get_theme_constant("margin_left"),
+		PaperActivityPopup.BODY_HORIZONTAL_INSET + PaperActivityPopup.BODY_HORIZONTAL_SHIFT,
+	)
+	assert_eq(
+		popup.letter_margin.get_theme_constant("margin_right"),
+		PaperActivityPopup.BODY_HORIZONTAL_INSET - PaperActivityPopup.BODY_HORIZONTAL_SHIFT,
+	)
+	assert_eq(
+		popup.letter_margin.get_theme_constant("margin_top"),
+		PaperActivityPopup.BODY_VERTICAL_INSET,
+	)
+	assert_eq(
+		popup.letter_margin.get_theme_constant("margin_bottom"),
+		PaperActivityPopup.BODY_VERTICAL_INSET,
+	)
 	assert_eq(popup.body_margin.get_theme_constant("margin_left"), 0)
 	assert_eq(popup.body_margin.get_theme_constant("margin_right"), 0)
+	assert_almost_eq(
+		popup.body_label.global_position.x,
+		popup.letter_panel.global_position.x
+			+ PaperActivityPopup.BODY_HORIZONTAL_INSET
+			+ PaperActivityPopup.BODY_HORIZONTAL_SHIFT,
+		0.5,
+	)
+	assert_almost_eq(
+		popup.body_label.global_position.y,
+		popup.letter_panel.global_position.y + PaperActivityPopup.BODY_VERTICAL_INSET,
+		0.5,
+	)
+	assert_lte(
+		popup.body_viewport.get_global_rect().end.y,
+		popup.letter_panel.get_global_rect().end.y - PaperActivityPopup.BODY_VERTICAL_INSET + 0.5,
+	)
 	assert_true(popup.body_viewport.clip_contents)
 	assert_same(popup.body_page_row.get_parent(), popup.content_row)
+	assert_eq(popup.body_page_row.position, PaperActivityPopup.BODY_PAGER_POSITION)
+	assert_eq(popup.body_page_row.size, PaperActivityPopup.BODY_PAGER_SIZE)
+	assert_gt(popup.body_page_row.position.x, 30.0)
+	assert_gt(
+		popup.body_previous_button.get_global_rect().get_center().y,
+		popup.letter_panel.global_position.y + popup.letter_panel.size.y * 0.45,
+	)
 	assert_null(popup.get_node_or_null("BodyPageLabel"))
 	assert_eq(popup.body_page_spacer.size_flags_horizontal, Control.SIZE_EXPAND_FILL)
 	assert_almost_eq(
@@ -930,6 +1071,28 @@ func test_shared_paper_popup_pages_long_body_without_growing_the_window() -> voi
 	assert_ne(popup.body_label.text, first_page)
 	assert_false(popup.body_previous_button.disabled)
 	assert_almost_eq(popup.size.y, initial_height, 0.5)
+
+
+func test_paper_popup_uses_smaller_english_body_copy_live() -> void:
+	var original_locale := LocaleManager.current_locale
+	var main := await _spawn_main()
+	var task := main.state.task_instance_for_definition(&"girl_order")
+	main.task_dock._toggle_task(task.instance_id)
+	await get_tree().process_frame
+	var popup := main.task_dock.task_window
+	LocaleManager.set_locale(LocaleManager.LOCALE_EN, false)
+	await get_tree().process_frame
+	assert_eq(
+		popup.body_label.get_theme_font_size("font_size"),
+		PaperActivityPopup.BODY_EN_FONT_SIZE,
+	)
+	LocaleManager.set_locale(LocaleManager.LOCALE_ZH, false)
+	await get_tree().process_frame
+	assert_eq(
+		popup.body_label.get_theme_font_size("font_size"),
+		PaperActivityPopup.BODY_FONT_SIZE,
+	)
+	LocaleManager.set_locale(original_locale, false)
 
 
 func _assert_background_overscans_frame(background: TextureRect) -> void:
@@ -1252,12 +1415,39 @@ func test_fries_detail_uses_ppt_food_and_salty_icons() -> void:
 	var salty_button := main.detail_popup.property_buttons[&"salty"] as Button
 	assert_eq(
 		(food_button.get_child(0) as TextureRect).texture,
-		load("res://resources/ui/property-food.png"),
+		load("res://resources/ui/type/food.png"),
 	)
 	assert_eq(
 		(salty_button.get_child(0) as TextureRect).texture,
 		load("res://resources/ui/property-salty.png"),
 	)
+
+
+func test_formal_type_icons_use_transparent_art_over_black_ui_tiles() -> void:
+	var expected_paths := {
+		&"food": "res://resources/ui/type/food.png",
+		&"drink": "res://resources/ui/type/drink.png",
+		&"flower": "res://resources/ui/type/flower.png",
+		&"toy": "res://resources/ui/type/toy.png",
+		&"book": "res://resources/ui/type/book.png",
+		&"cassette": "res://resources/ui/type/cassette.png",
+		&"persona": "res://resources/ui/type/persona.png",
+		&"disease": "res://resources/ui/type/disease.png",
+	}
+	for type_id in expected_paths:
+		var texture := ItemDetailPopup.property_icon_texture(type_id)
+		assert_not_null(texture, type_id)
+		assert_eq(texture.resource_path, expected_paths[type_id], type_id)
+		var image := texture.get_image()
+		assert_eq(image.get_size(), Vector2i(512, 512), type_id)
+		assert_eq(image.get_pixel(0, 0).a, 0.0, type_id)
+		var button := ItemDetailPopup.make_property_icon_button(type_id, 53)
+		var normal_style := button.get_theme_stylebox("normal") as StyleBoxFlat
+		assert_not_null(normal_style, type_id)
+		assert_eq(normal_style.bg_color, Color.BLACK, type_id)
+		var icon_image := button.get_child(0) as TextureRect
+		assert_eq(icon_image.offset_left, 2.0, type_id)
+		button.free()
 
 
 func test_clicking_the_same_item_card_toggles_its_popup() -> void:
@@ -1605,33 +1795,17 @@ func test_synthesis_is_a_material_first_dedicated_space() -> void:
 	assert_eq(main.state.synthesis_base_instance_id, 0)
 
 
-func test_debug_button_toggles_synthesis_bag_and_deep_blue_backgrounds() -> void:
+func test_synthesis_always_uses_bag_background_without_a_debug_toggle() -> void:
 	var main := await _spawn_main()
 	main._show_synthesis_immediate()
 	var synthesis := main.current_screen as QuestSynthesisInterface
-	assert_false(main.synthesis_uses_image_background)
-	assert_false(synthesis.background_image.visible)
-	assert_true(synthesis.star_chart.background_visible)
-	assert_eq(
-		main.synthesis_background_button.text,
-		TranslationServer.translate(&"debug.ui.synthesis_background.blue")
-	)
-	main.synthesis_background_button.pressed.emit()
-	assert_true(main.synthesis_uses_image_background)
+	assert_null(main.find_child("SynthesisBackgroundButton", true, false))
 	assert_true(synthesis.background_image.visible)
 	assert_false(synthesis.star_chart.background_visible)
 	assert_eq(
 		synthesis.background_image.texture.resource_path,
 		QuestSynthesisInterface.BAG_BACKGROUND_PATH,
 	)
-	assert_eq(
-		main.synthesis_background_button.text,
-		TranslationServer.translate(&"debug.ui.synthesis_background.bag")
-	)
-	main.synthesis_background_button.pressed.emit()
-	assert_false(main.synthesis_uses_image_background)
-	assert_false(synthesis.background_image.visible)
-	assert_true(synthesis.star_chart.background_visible)
 
 
 func test_synthesis_result_flip_reuses_views_without_freeing_signal_emitter() -> void:
@@ -1868,6 +2042,22 @@ func test_switching_spaces_clears_location_popup_draft() -> void:
 	assert_true(main.hand_bar.temporarily_hidden_card_ids.is_empty())
 	assert_eq(jasmine.location, CardItemState.Location.HAND)
 	assert_false(main.state.is_store_unlocked(&"record"))
+
+
+func test_opening_rules_debug_entry_pauses_bgm_and_restores_the_debug_row() -> void:
+	var main := await _spawn_main()
+	assert_true(main.debug_button_row.visible)
+	assert_not_null(main.bgm_director.active_player)
+	main._show_opening_rules_test()
+	await get_tree().process_frame
+	assert_not_null(main.opening_rules_screen)
+	assert_false(main.debug_button_row.visible)
+	assert_eq(main.opening_rules_screen.layer, QuestOpeningRulesScreen.SCREEN_LAYER)
+	assert_true(main.bgm_director.active_player.stream_paused)
+	main.opening_rules_screen.finished.emit()
+	assert_null(main.opening_rules_screen)
+	assert_true(main.debug_button_row.visible)
+	assert_false(main.bgm_director.active_player.stream_paused)
 
 
 func _spawn_main() -> QuestMain:

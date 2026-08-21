@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="ArchiveEntryDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/quest_domain/archive_entry_definition.gd" id="1_archive"]
+
+[resource]
+script = ExtResource("1_archive")
+id = &"room_001_mall"
+title_key = &"archive.room_001.title"
+body_key = &"archive.room_001.body"

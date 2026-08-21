@@ -56,15 +56,21 @@ func test_runtime_art_assets_exist() -> void:
 		"pager-arrow.png",
 	]:
 		assert_true(FileAccess.file_exists("res://resources/ui/quest/%s" % quest_asset))
+	for archive_asset in ["archive-paper.png", "archive-close.png"]:
+		assert_true(FileAccess.file_exists("res://resources/ui/archive/%s" % archive_asset))
 	assert_true(FileAccess.file_exists("res://resources/shaders/frosted_dialogue.gdshader"))
+	for title_asset in ["title-background.png", "title-logo.png", "title-exit.png"]:
+		assert_true(FileAccess.file_exists("res://resources/ui/title/%s" % title_asset))
 	assert_eq(ProjectSettings.get_setting("display/window/stretch/aspect"), "keep")
 
 
-func test_player_facing_shop_scene_is_the_main_scene() -> void:
+func test_player_facing_title_scene_is_the_main_scene() -> void:
 	assert_eq(
 		ProjectSettings.get_setting("application/run/main_scene"),
-		"res://scenes/main/main.tscn"
+		"res://scenes/title/title.tscn"
 	)
+	var title_scene := load("res://scenes/title/title.tscn") as PackedScene
+	assert_not_null(title_scene)
 	var scene := load("res://scenes/main/main.tscn") as PackedScene
 	assert_not_null(scene)
 

@@ -11,7 +11,7 @@ var card: CardItemState
 var shape_id: StringName
 var holder: CenterContainer
 var empty_label: Label
-var card_view: CardHandCard
+var card_view: QuestExpeditionSlotCard
 var drop_highlighted := false
 
 
@@ -40,16 +40,21 @@ func _ready() -> void:
 	add_child(holder)
 	empty_label = Label.new()
 	empty_label.text = "+"
+	empty_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	empty_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	empty_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	empty_label.add_theme_font_size_override("font_size", 38)
 	empty_label.add_theme_color_override("font_color", Color("77908f"))
 	empty_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	holder.add_child(empty_label)
-	card_view = CardHandCard.new()
+	card_view = QuestExpeditionSlotCard.new()
 	card_view.inspect_requested.connect(item_inspected.emit)
 	card_view.drag_started.connect(_on_card_drag_started)
 	holder.add_child(card_view)
 	card_view.visible = false
 	card_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	gui_input.connect(_on_gui_input)
 	_apply_style()
 	refresh()
 
@@ -113,3 +118,14 @@ func _apply_style() -> void:
 func _on_card_drag_started(_dragged_card: CardItemState) -> void:
 	if controller != null:
 		controller.unstage_slot(slot_index)
+
+
+func _on_gui_input(event: InputEvent) -> void:
+	var click := event as InputEventMouseButton
+	if (
+		click != null
+		and click.button_index == MOUSE_BUTTON_LEFT
+		and click.pressed
+		and controller != null
+	):
+		controller.focus_slot_rule(slot_index)

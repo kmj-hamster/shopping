@@ -8,7 +8,7 @@ signal background_pressed
 
 const DIALOGUE_SILENT_CHARACTERS := " \t\r\n，。！？、；：,.!?;:…—-（）()“”\"'"
 const DIALOGUE_VOICE_PLAYER_COUNT := 3
-const DIALOGUE_MAX_VISIBLE_LINES := 2
+const DIALOGUE_MAX_VISIBLE_LINES := 4
 const SHELF_LABEL_FONT_SIZE := 13
 const SHELF_ZH_LABEL_FONT_SIZE := 15
 const DIALOGUE_TEXT_COLOR := Color("edf2ee")
@@ -22,6 +22,14 @@ const FROSTED_DIALOGUE_SHADER: Shader = preload(
 	"res://resources/shaders/frosted_dialogue.gdshader"
 )
 const LOWERED_OWNER_STORES: Array[StringName] = [&"fast_food", &"record", &"bookstore"]
+const OWNER_PORTRAIT_RECTS := {
+	# Ratty keeps the shared scale but sits slightly lower so the actual artwork,
+	# not only its Control, reaches beneath the lower frame.
+	&"fast_food": Rect2(0.595, 0.205, 0.275, 0.92),
+	# Mr. Sunflower's source is proportionally smaller in the shared rect. Widen
+	# it while lowering its center so the head stays composed and the hem is cut.
+	&"flower": Rect2(0.562, 0.17, 0.317, 0.96),
+}
 
 var state: QuestGameState
 var store_id: StringName
@@ -67,6 +75,7 @@ var owner_dialogue_timer: Timer
 var owner_dialogue_character_index := 0
 var owner_dialogue_voiced_character_count := 0
 var background_input: Control
+var selection_dialogue_refresh_suppressed := false
 
 
 func setup(game_state: QuestGameState, selected_store_id: StringName) -> void:
@@ -137,10 +146,11 @@ func _build_interface() -> void:
 	owner_portrait = TextureRect.new()
 	owner_portrait.name = "StoreOwnerPortrait"
 	owner_portrait.texture = _owner_texture()
-	owner_portrait.anchor_left = 0.595
-	owner_portrait.anchor_top = 0.18
-	owner_portrait.anchor_right = 0.87
-	owner_portrait.anchor_bottom = 1.10 if store_id in LOWERED_OWNER_STORES else 1.035
+	var portrait_rect := _owner_portrait_rect()
+	owner_portrait.anchor_left = portrait_rect.position.x
+	owner_portrait.anchor_top = portrait_rect.position.y
+	owner_portrait.anchor_right = portrait_rect.end.x
+	owner_portrait.anchor_bottom = portrait_rect.end.y
 	owner_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	owner_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	owner_portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -627,7 +637,8 @@ func _on_selection_changed(previous_slot_id: StringName, selected_slot_id: Strin
 		if view_index >= 0:
 			_apply_shelf_highlight(shelf_views[view_index], slot)
 	_refresh_checkout_state()
-	_refresh_owner_dialogue()
+	if not selection_dialogue_refresh_suppressed:
+		_refresh_owner_dialogue()
 
 
 func _on_owner_pressed() -> void:
@@ -650,7 +661,11 @@ func cancel_pending_purchase() -> void:
 	owner_dialogue_override_key = &""
 	owner_dialogue_item_name = ""
 	if transaction != null:
+		# Leaving a shop is state cleanup, not a new player selection. Keep the
+		# visual selection signal, but do not let it restart the owner's idle line.
+		selection_dialogue_refresh_suppressed = true
 		transaction.clear_selection()
+		selection_dialogue_refresh_suppressed = false
 	if feedback_label != null:
 		feedback_label.text = ""
 	_set_shelf_popup_visible(false)
@@ -921,7 +936,6 @@ func _on_checkout_pressed() -> void:
 		else &"quest.ui.shop.empty"
 	)
 	if result.ok:
-		_set_shelf_popup_visible(false)
 		checkout_completed.emit()
 		_refresh_shelf()
 		talk_request_dot.visible = state.owner_request_notice_visible(store_id)
@@ -930,6 +944,17 @@ func _on_checkout_pressed() -> void:
 
 func _owner_texture() -> Texture2D:
 	return QuestStoreVisuals.owner_texture(store_id)
+
+
+func _owner_portrait_rect() -> Rect2:
+	if OWNER_PORTRAIT_RECTS.has(store_id):
+		return OWNER_PORTRAIT_RECTS[store_id] as Rect2
+	return Rect2(
+		0.595,
+		0.18,
+		0.275,
+		0.92 if store_id in LOWERED_OWNER_STORES else 0.855,
+	)
 
 
 func _store_background_texture() -> Texture2D:

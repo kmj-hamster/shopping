@@ -1,7 +1,8 @@
-[gd_resource type="Resource" script_class="QuestItemDefinition" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="QuestItemDefinition" load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/quest_domain/quest_item_definition.gd" id="1_item"]
 [ext_resource type="Script" path="res://scripts/slot_domain/card_property_set.gd" id="2_properties"]
+[ext_resource type="Texture2D" path="res://resources/items/white_flower.png" id="3_image"]
 
 [sub_resource type="Resource" id="Properties"]
 script = ExtResource("2_properties")
@@ -12,6 +13,7 @@ script = ExtResource("1_item")
 id = &"white_flower"
 display_name_key = &"expedition.disease.white_flower.name"
 description_key = &"expedition.disease.white_flower.description"
+image = ExtResource("3_image")
 store_id = &"expedition"
 can_recycle = false
 can_be_synthesis_base = true

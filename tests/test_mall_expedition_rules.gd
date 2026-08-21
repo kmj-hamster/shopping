@@ -53,32 +53,155 @@ func test_formal_manifest_has_rooms_owner_requests_and_tin_frog_in_hand() -> voi
 
 
 func test_challenge_feedback_uses_category_presence_then_total_deficit() -> void:
-	var room := _challenge_room([&"light"], 5)
-	var enough := MallChallengeRules.evaluate(room, [_item({&"light": 5})])
+	var approach := _challenge_approach([&"light"], 5)
+	var enough := MallChallengeRules.evaluate(approach, [_item({&"light": 5})])
 	assert_eq(enough.feedback_tier, MallChallengeRules.FEEDBACK_ENOUGH)
 	assert_eq(enough.success_probability, 100)
-	var one_short := MallChallengeRules.evaluate(room, [_item({&"light": 4})])
+	var one_short := MallChallengeRules.evaluate(approach, [_item({&"light": 4})])
 	assert_eq(one_short.feedback_tier, MallChallengeRules.FEEDBACK_MAYBE)
 	assert_eq(one_short.success_probability, 50)
-	var two_short := MallChallengeRules.evaluate(room, [_item({&"light": 3})])
+	var two_short := MallChallengeRules.evaluate(approach, [_item({&"light": 3})])
 	assert_eq(two_short.success_probability, 20)
-	var hopeless := MallChallengeRules.evaluate(room, [_item({&"light": 2})])
+	var hopeless := MallChallengeRules.evaluate(approach, [_item({&"light": 2})])
 	assert_eq(hopeless.feedback_tier, MallChallengeRules.FEEDBACK_HOPELESS)
 	assert_eq(hopeless.success_probability, 0)
 
 
 func test_multi_shape_requirement_needs_each_category_and_uses_sum() -> void:
-	var room := _challenge_room([&"light", &"tear"], 7)
+	var approach := _challenge_approach([&"light", &"tear"], 7)
 	var missing_category := MallChallengeRules.evaluate(
-		room, [_item({&"light": 7})]
+		approach, [_item({&"light": 7})]
 	)
 	assert_false(missing_category.shapes_met)
 	assert_eq(missing_category.success_probability, 0)
 	var ready := MallChallengeRules.evaluate(
-		room, [_item({&"light": 6, &"tear": 1})]
+		approach, [_item({&"light": 6, &"tear": 1})]
 	)
 	assert_true(ready.shapes_met)
 	assert_eq(ready.success_probability, 100)
+
+
+func test_feedback_shape_prefers_missing_then_lower_then_primary_shape() -> void:
+	var approach := _challenge_approach([&"tear", &"sleep"], 6)
+	approach.feedback_primary_shape_id = &"tear"
+	var missing := MallChallengeRules.evaluate(
+		approach, [_item({&"tear": 4})]
+	)
+	assert_eq(missing.feedback_shape_id, &"sleep")
+	var lower := MallChallengeRules.evaluate(
+		approach, [_item({&"tear": 3, &"sleep": 1})]
+	)
+	assert_eq(lower.feedback_shape_id, &"sleep")
+	var enough := MallChallengeRules.evaluate(
+		approach, [_item({&"tear": 3, &"sleep": 3})]
+	)
+	assert_eq(enough.feedback_shape_id, &"tear")
+
+
+func test_specific_persona_and_any_type_are_independent_requirements() -> void:
+	var persona_approach := _challenge_approach([&"dream"], 5)
+	persona_approach.required_persona_shape_id = &"dream"
+	var item_only := MallChallengeRules.evaluate(
+		persona_approach, [_item({&"dream": 5})]
+	)
+	assert_false(item_only.persona_met)
+	assert_false(item_only.required_inputs_met)
+	var combined := MallChallengeRules.evaluate(
+		persona_approach,
+		[_item({&"dream": 1}), _item({&"dream": 4})],
+		[&"dream"],
+	)
+	assert_true(combined.persona_met)
+	assert_true(combined.required_inputs_met)
+	assert_eq(combined.success_probability, 100)
+
+	var gift_approach := _challenge_approach([&"tear", &"sleep"], 4)
+	gift_approach.required_any_type_ids = [&"toy", &"flower"]
+	var gift := _item({&"tear": 2, &"sleep": 2})
+	assert_false(MallChallengeRules.evaluate(gift_approach, [gift]).required_inputs_met)
+	gift.property_set.tags = [&"flower"]
+	var gift_ready := MallChallengeRules.evaluate(gift_approach, [gift])
+	assert_true(gift_ready.types_met)
+	assert_true(gift_ready.required_inputs_met)
+
+
+func test_formal_rooms_keep_distinct_approach_rules_and_fixed_rewards() -> void:
+	var spaceship := QuestArcCatalog.mall_room_by_id(&"spaceship_library_city")
+	assert_eq(
+		spaceship.image_path,
+		"res://resources/background/expedition/spaceship-library-city.png",
+	)
+	assert_true(ResourceLoader.exists(spaceship.image_path))
+	var spaceship_round := spaceship.challenge_round_at(0)
+	assert_eq(spaceship.reward_item_id, &"concrete_city_vol_2")
+	assert_eq(spaceship_round.approach_at(0).required_persona_shape_id, &"dream")
+	assert_eq(spaceship_round.approach_at(0).shape_total_required, 5)
+	assert_eq(spaceship_round.approach_at(1).required_all_type_ids, [&"book"])
+	assert_eq(spaceship_round.approach_at(1).required_shape_ids, [&"light"])
+
+	var gray := QuestArcCatalog.mall_room_by_id(&"gray_hall")
+	var gray_round := gray.challenge_round_at(0)
+	assert_eq(gray.reward_item_id, &"nocturne_published")
+	assert_eq(gray_round.approach_at(0).required_all_type_ids, [&"cassette"])
+	assert_eq(gray_round.approach_at(0).shape_total_required, 4)
+	assert_eq(gray_round.approach_at(1).required_persona_shape_id, &"tear")
+
+	var birthday := QuestArcCatalog.mall_room_by_id(&"birthday_party")
+	var birthday_round := birthday.challenge_round_at(0)
+	assert_eq(birthday.reward_item_id, &"birthday_cake")
+	assert_eq(birthday_round.approach_at(0).required_any_type_ids, [&"toy", &"flower"])
+	assert_eq(birthday_round.approach_at(0).required_shape_ids, [&"tear", &"sleep"])
+	assert_eq(birthday_round.approach_at(1).required_persona_shape_id, &"sleep")
+
+	var scanner := QuestArcCatalog.mall_room_by_id(&"scanner")
+	assert_eq(scanner.challenge_round_count(), 2)
+	assert_eq(scanner.challenge_round_at(0).approach_at(0).shape_total_required, 6)
+	assert_eq(scanner.challenge_round_at(1).approach_at(0).required_persona_shape_id, &"sleep")
+	assert_eq(scanner.challenge_round_at(1).approach_at(1).required_all_type_ids, [&"flower"])
+	assert_eq(scanner.challenge_round_at(1).approach_at(1).feedback_primary_shape_id, &"dream")
+
+
+func test_each_normal_challenge_grants_its_story_reward() -> void:
+	var cases: Array[Dictionary] = [
+		{
+			"room_id": &"spaceship_library_city",
+			"shape_id": &"dream",
+			"amount": 5,
+			"reward_id": &"concrete_city_vol_2",
+		},
+		{
+			"room_id": &"gray_hall",
+			"shape_id": &"tear",
+			"amount": 5,
+			"reward_id": &"nocturne_published",
+		},
+		{
+			"room_id": &"birthday_party",
+			"shape_id": &"sleep",
+			"amount": 3,
+			"reward_id": &"birthday_cake",
+		},
+	]
+	for case in cases:
+		var state := QuestGameState.new()
+		var shape_id := StringName(case.shape_id)
+		state.protagonist_shape_levels[shape_id] = int(case.amount)
+		state.expedition.begin_night(1, 700)
+		state.expedition.current_door_ids = [StringName(case.room_id)]
+		var result := state.complete_expedition_room(
+			StringName(case.room_id),
+			[],
+			[],
+			[{
+				"approach_index": 0 if shape_id == &"dream" else 1,
+				"card_instance_ids": [],
+				"persona_shape_ids": [shape_id],
+			}],
+		)
+		assert_true(result.ok, case.room_id)
+		assert_true(result.success, case.room_id)
+		assert_eq(result.reward_item_id, case.reward_id, case.room_id)
+		assert_eq(state.inventory[-1].definition_id, case.reward_id, case.room_id)
 
 
 func test_boss_chance_grows_by_thirds_and_only_runs_for_second_selection() -> void:
@@ -200,7 +323,7 @@ func test_failed_challenge_commits_wound_discovery_and_next_checkpoint() -> void
 
 func test_successful_challenge_uses_persona_without_consuming_it() -> void:
 	var state := QuestGameState.new()
-	state.protagonist_shape_levels[&"light"] = 5
+	state.protagonist_shape_levels[&"sleep"] = 3
 	state.expedition.begin_night(state.day, 17)
 	state.expedition.current_door_ids = [&"birthday_party"]
 	var inventory_count := state.inventory.size()
@@ -211,14 +334,14 @@ func test_successful_challenge_uses_persona_without_consuming_it() -> void:
 		[{
 			"approach_index": 1,
 			"card_instance_ids": [],
-			"persona_shape_ids": [&"light"],
+			"persona_shape_ids": [&"sleep"],
 		}],
 	)
 	assert_true(result.ok)
 	assert_true(result.success)
 	assert_true(state.expedition.is_first_cleared(&"birthday_party"))
 	assert_eq(state.inventory.size(), inventory_count + 1)
-	assert_eq(state.inventory[-1].definition_id, &"expedition_salvage")
+	assert_eq(state.inventory[-1].definition_id, &"birthday_cake")
 
 
 func test_rest_growth_consumes_item_and_increases_each_stronger_shape_once() -> void:
@@ -244,7 +367,7 @@ func test_work_room_pays_twenty_and_does_not_add_wage_to_hand() -> void:
 	var result := state.complete_expedition_room(&"shelf_shift")
 	assert_true(result.ok)
 	assert_eq(result.money_gained, 20)
-	assert_eq(state.wallet.money, 20)
+	assert_eq(state.wallet.money, 60)
 	assert_eq(state.inventory.size(), inventory_count)
 
 
@@ -293,7 +416,7 @@ func test_rest_room_type_filters_and_rainforest_shape_growth() -> void:
 	var result := state.complete_expedition_room(&"rainforest", [], [&"light"])
 	assert_true(result.ok)
 	assert_eq(state.protagonist_shape_levels[&"light"], shape_before + 1)
-	assert_eq(state.disease_count(&"white_flower"), 2)
+	assert_eq(state.disease_count(&"white_flower"), 1)
 	assert_true(state.inventory.has(frog))
 	assert_true(state.inventory.has(food))
 
@@ -304,30 +427,38 @@ func test_three_reward_rooms_enforce_their_confirmed_card_categories() -> void:
 	var food := state.grant_item(&"fries", &"test")
 	var drink := state.grant_item(&"milkshake", &"test")
 	var wound := state.grant_item(&"expedition_wound", &"test")
+	var white_flower := state.grant_item(&"white_flower", &"test")
 	assert_true(state.expedition_room_accepts_card(&"retro_restaurant", food))
 	assert_true(state.expedition_room_accepts_card(&"retro_restaurant", drink))
 	assert_false(state.expedition_room_accepts_card(&"retro_restaurant", toy))
+	assert_false(state.expedition_room_accepts_card(&"retro_restaurant", wound))
+	assert_false(state.expedition_room_accepts_card(&"retro_restaurant", white_flower))
 	assert_true(state.expedition_room_accepts_card(&"home", toy))
 	assert_false(state.expedition_room_accepts_card(&"home", wound))
+	assert_false(state.expedition_room_accepts_card(&"home", white_flower))
 	assert_true(
 		state.expedition_room_accepts_card(&"rainforest", null, &"light")
 	)
+	assert_false(state.expedition_room_accepts_card(&"rainforest", wound))
+	assert_false(state.expedition_room_accepts_card(&"rainforest", white_flower))
 	assert_false(state.expedition_room_accepts_card(&"rainforest", toy))
 
 
 func test_each_reward_room_can_be_left_empty_for_twenty_without_white_flower() -> void:
 	for room_id in [&"home", &"rainforest", &"retro_restaurant"]:
 		var state := QuestGameState.new()
+		state.gain_disease(&"expedition_wound")
 		state.expedition.begin_night(1, 35)
 		state.expedition.current_door_ids = [room_id]
 		var result := state.complete_expedition_room(room_id)
 		assert_true(result.ok, room_id)
 		assert_eq(result.money_gained, 20, room_id)
-		assert_eq(state.wallet.money, 20, room_id)
+		assert_eq(state.wallet.money, 60, room_id)
 		assert_eq(state.disease_count(&"white_flower"), 0, room_id)
+		assert_eq(state.disease_count(&"expedition_wound"), 1, room_id)
 
 
-func test_used_rest_item_with_no_growth_is_consumed_and_still_grants_white_flower() -> void:
+func test_used_rest_item_with_no_growth_is_consumed_without_a_white_flower() -> void:
 	var state := QuestGameState.new()
 	state.protagonist_shape_levels[&"light"] = 5
 	var frog := state.inventory[0]
@@ -336,9 +467,11 @@ func test_used_rest_item_with_no_growth_is_consumed_and_still_grants_white_flowe
 	var result := state.complete_expedition_room(&"home", [frog.instance_id])
 	assert_true(result.ok)
 	assert_true(result.shape_growth.is_empty())
+	assert_false(result.cleared_wound)
 	assert_eq(result.money_gained, 0)
 	assert_null(state.card_by_instance_id(frog.instance_id))
-	assert_eq(state.disease_count(&"white_flower"), 1)
+	assert_eq(result.white_flower_amount, 0)
+	assert_eq(state.disease_count(&"white_flower"), 0)
 
 
 func test_salvage_room_sells_up_to_three_items_at_full_recorded_value() -> void:
@@ -352,7 +485,7 @@ func test_salvage_room_sells_up_to_three_items_at_full_recorded_value() -> void:
 	)
 	assert_true(result.ok)
 	assert_eq(result.money_gained, 32)
-	assert_eq(state.wallet.money, 32)
+	assert_eq(state.wallet.money, 72)
 	assert_null(state.card_by_instance_id(fries.instance_id))
 	assert_null(state.card_by_instance_id(gardenia.instance_id))
 	assert_eq(state.disease_count(&"white_flower"), 0)
@@ -387,7 +520,7 @@ func test_rest_growth_from_zero_no_longer_queues_a_persona_reveal() -> void:
 	assert_eq(state.disease_count(&"white_flower"), 1)
 
 
-func test_diseases_are_gained_then_remove_one_opposite_per_card() -> void:
+func test_wounds_remove_white_flowers_but_white_flowers_do_not_remove_wounds() -> void:
 	var state := QuestGameState.new()
 	assert_true(state.gain_disease(&"white_flower", 2).ok)
 	assert_eq(state.disease_count(&"white_flower"), 2)
@@ -397,10 +530,34 @@ func test_diseases_are_gained_then_remove_one_opposite_per_card() -> void:
 	assert_eq(state.disease_count(&"expedition_wound"), 1)
 	assert_true(state.gain_disease(&"white_flower").ok)
 	assert_eq(state.disease_count(&"white_flower"), 2)
-	assert_eq(state.disease_count(&"expedition_wound"), 0)
+	assert_eq(state.disease_count(&"expedition_wound"), 1)
 
 
-func test_disease_cards_only_enter_the_synthesis_base_slot() -> void:
+func test_item_rest_without_growth_heals_exactly_one_wound() -> void:
+	for room_id in [&"home", &"retro_restaurant"]:
+		var state := QuestGameState.new()
+		for shape_id in CardPropertySet.SHAPES:
+			state.protagonist_shape_levels[shape_id] = 10
+		state.gain_disease(&"expedition_wound", 2)
+		var rest_item := (
+			state.inventory[0]
+			if room_id == &"home"
+			else state.grant_item(&"fries", &"test")
+		)
+		state.expedition.begin_night(1, 70)
+		state.expedition.current_door_ids = [room_id]
+		var result := state.complete_expedition_room(room_id, [rest_item.instance_id])
+		assert_true(result.ok, room_id)
+		assert_true(result.cleared_wound, room_id)
+		assert_true(result.shape_growth.is_empty(), room_id)
+		assert_eq(result.money_gained, 0, room_id)
+		assert_eq(result.white_flower_amount, 0, room_id)
+		assert_null(state.card_by_instance_id(rest_item.instance_id), room_id)
+		assert_eq(state.disease_count(&"expedition_wound"), 1, room_id)
+		assert_eq(state.disease_count(&"white_flower"), 0, room_id)
+
+
+func test_disease_cards_only_enter_the_synthesis_base() -> void:
 	var state := QuestGameState.new()
 	var wound_id := int(state.gain_disease(&"expedition_wound").granted_instance_ids[0])
 	var wound_card := state.card_by_instance_id(wound_id)
@@ -452,8 +609,8 @@ func test_shopping_card_contributes_all_four_shapes_without_being_a_type() -> vo
 		assert_eq(definition.property_value(shape_id), 2, shape_id)
 	assert_true(state.expedition_card_can_be_used(shopping_card))
 
-	var room := _challenge_room([&"light", &"tear"], 4)
-	var evaluation := MallChallengeRules.evaluate(room, [definition])
+	var approach := _challenge_approach([&"light", &"tear"], 4)
+	var evaluation := MallChallengeRules.evaluate(approach, [definition])
 	assert_eq(evaluation.feedback_tier, MallChallengeRules.FEEDBACK_ENOUGH)
 	assert_eq(evaluation.success_probability, 100)
 
@@ -504,16 +661,21 @@ func test_outputless_disease_recipe_consumes_inputs_and_only_grows_used_path() -
 
 func test_boss_requires_two_successful_rounds_and_then_completes_demo() -> void:
 	var state := QuestGameState.new()
-	state.protagonist_shape_levels[&"light"] = 5
+	state.protagonist_shape_levels[&"light"] = 6
+	state.protagonist_shape_levels[&"sleep"] = 6
 	state.expedition.begin_night(1, 12)
 	state.expedition.current_door_ids = [&"scanner"]
 	var rounds: Array[Dictionary] = []
-	for index in 2:
-		rounds.append({
-			"approach_index": index % 2,
-			"card_instance_ids": [],
-			"persona_shape_ids": [&"light"],
-		})
+	rounds.append({
+		"approach_index": 0,
+		"card_instance_ids": [],
+		"persona_shape_ids": [&"light"],
+	})
+	rounds.append({
+		"approach_index": 0,
+		"card_instance_ids": [],
+		"persona_shape_ids": [&"sleep"],
+	})
 	var result := state.complete_expedition_room(&"scanner", [], [], rounds)
 	assert_true(result.ok)
 	assert_true(result.demo_complete)
@@ -540,21 +702,14 @@ func test_boss_failure_grants_wound_and_immediately_ends_the_night() -> void:
 	assert_true(state.expedition.is_discovered(&"scanner"))
 
 
-func _challenge_room(
+func _challenge_approach(
 	shapes: Array[StringName],
 	threshold: int,
-) -> MallRoomDefinition:
-	var room := MallRoomDefinition.new()
-	room.id = &"test_room"
-	room.display_name_key = &"test.room"
-	room.category = MallRoomDefinition.Category.CHALLENGE
-	room.required_shape_ids = shapes
-	room.shape_total_required = threshold
-	room.approach_title_keys = [&"a", &"b"]
-	room.approach_text_keys = [&"a", &"b"]
-	room.intro_text_keys = [&"intro"]
-	room.challenge_text_keys = [&"challenge"]
-	return room
+) -> MallChallengeApproachDefinition:
+	var approach := MallChallengeApproachDefinition.new()
+	approach.required_shape_ids = shapes
+	approach.shape_total_required = threshold
+	return approach
 
 
 func _item(values: Dictionary) -> CardItemDefinition:

@@ -19,7 +19,7 @@ const PROPERTY_VALUE_MIN_WIDTH := 30
 const PROPERTY_ICON_VALUE_GAP := 8
 const PROPERTY_GROUP_GAP := 3
 const POPUP_BACKGROUND := Color("020304", 0.5)
-const DEFAULT_ICON_BACKGROUND := Color("090b0c", 0.995)
+const DEFAULT_ICON_BACKGROUND := Color.BLACK
 const DEFAULT_ICON_BORDER := Color("8c7a52", 0.86)
 const SHAPE_ICON_INK := Color.BLACK
 const LARGE_ICON_SIDE := 78.0
@@ -32,6 +32,18 @@ const SHAPE_POPUP_ICON_PATHS := {
 	&"dream": "res://resources/ui/synthesis/shape/dream.png",
 	&"sleep": "res://resources/ui/synthesis/shape/sleep.png",
 }
+const BLACK_BACKED_PROPERTY_IDS: Array[StringName] = [
+	&"food",
+	&"drink",
+	&"flower",
+	&"plant",
+	&"toy",
+	&"book",
+	&"cd",
+	&"cassette",
+	&"persona",
+	&"disease",
+]
 
 var current_definition: CardItemDefinition
 var primary_property_id: StringName
@@ -464,7 +476,7 @@ func _ensure_property_view(tag: StringName) -> Dictionary:
 func _ordered_property_tags(properties: CardPropertySet) -> Array[StringName]:
 	var result: Array[StringName] = []
 	for shape_id in CardPropertySet.SHAPES:
-		if properties.has(shape_id):
+		if properties.has(shape_id) or properties.values.has(shape_id):
 			result.append(shape_id)
 	var remaining: Array[StringName] = []
 	for raw_tag in properties.property_ids():
@@ -600,7 +612,12 @@ static func make_property_icon_button(tag: StringName, side: int = 30) -> Button
 	button.add_theme_font_size_override("font_size", maxi(13, int(side / 2)))
 	button.add_theme_color_override("font_color", UiPalette.INK_COLOR)
 	var is_shape := _is_shape_id(tag)
-	var normal_color := ShapeVisuals.color(tag) if is_shape else Color("f1eee5")
+	var uses_black_background := tag in BLACK_BACKED_PROPERTY_IDS
+	var normal_color := (
+		ShapeVisuals.color(tag)
+		if is_shape
+		else (Color.BLACK if uses_black_background else Color("f1eee5"))
+	)
 	var normal_border := Color("101315", 0.72) if is_shape else Color("8c7a52")
 	button.add_theme_stylebox_override("normal", panel_style(normal_color, normal_border, 1))
 	button.add_theme_stylebox_override(
@@ -612,14 +629,15 @@ static func make_property_icon_button(tag: StringName, side: int = 30) -> Button
 		panel_style(normal_color.lightened(0.06), normal_border.lightened(0.12), 2),
 	)
 	if texture != null:
+		var icon_inset := 2.0 if uses_black_background else 4.0
 		var icon_image := TextureRect.new()
 		icon_image.texture = texture
 		icon_image.anchor_right = 1.0
 		icon_image.anchor_bottom = 1.0
-		icon_image.offset_left = 4.0
-		icon_image.offset_top = 4.0
-		icon_image.offset_right = -4.0
-		icon_image.offset_bottom = -4.0
+		icon_image.offset_left = icon_inset
+		icon_image.offset_top = icon_inset
+		icon_image.offset_right = -icon_inset
+		icon_image.offset_bottom = -icon_inset
 		icon_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon_image.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -640,7 +658,10 @@ static func _definition_shape_id(definition: CardItemDefinition) -> StringName:
 	):
 		return &""
 	for shape_id in CardPropertySet.SHAPES:
-		if definition.property_set.has(shape_id):
+		if (
+			definition.property_set.has(shape_id)
+			or definition.property_set.values.has(shape_id)
+		):
 			return shape_id
 	return &""
 
@@ -671,20 +692,24 @@ static func property_description_key(tag: StringName) -> StringName:
 
 static func property_icon_texture(tag: StringName) -> Texture2D:
 	var paths := {
-		&"food": "res://resources/ui/property-food.png",
+		&"food": "res://resources/ui/type/food.png",
 		&"salty": "res://resources/ui/property-salty.png",
 		&"light": "res://resources/ui/shape/light.png",
 		&"tear": "res://resources/ui/shape/tear.png",
 		&"dream": "res://resources/ui/shape/dream.png",
 		&"sleep": "res://resources/ui/shape/sleep.png",
-		&"plant": "res://resources/ui/property-plant.png",
-		&"flower": "res://resources/ui/property-plant.png",
+		&"plant": "res://resources/ui/type/flower.png",
+		&"flower": "res://resources/ui/type/flower.png",
 		&"rose": "res://resources/item-midnight-rose.svg",
-		&"toy": "res://resources/item-toy-block.svg",
+		&"toy": "res://resources/ui/type/toy.png",
 		&"teddy_bear": "res://resources/item-worn-teddy.svg",
-		&"drink": "res://resources/ui/property-drink.png",
+		&"drink": "res://resources/ui/type/drink.png",
+		&"book": "res://resources/ui/type/book.png",
+		&"cd": "res://resources/ui/type/cassette.png",
+		&"cassette": "res://resources/ui/type/cassette.png",
+		&"disease": "res://resources/ui/type/disease.png",
 		&"tool": "res://resources/ui/property-tool.png",
-		&"persona": "res://resources/ui/property-persona.svg",
+		&"persona": "res://resources/ui/type/persona.png",
 	}
 	var path := String(paths.get(tag, ""))
 	return load(path) as Texture2D if not path.is_empty() and ResourceLoader.exists(path) else null
@@ -704,7 +729,10 @@ static func popup_item_texture(definition: CardItemDefinition) -> Texture2D:
 		and definition.property_set.has(CardPropertySet.PROPERTY_PERSONA)
 	):
 		for shape_id in CardPropertySet.SHAPES:
-			if definition.property_set.has(shape_id):
+			if (
+				definition.property_set.has(shape_id)
+				or definition.property_set.values.has(shape_id)
+			):
 				return popup_property_icon_texture(shape_id)
 	return definition.image if definition != null else null
 

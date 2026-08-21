@@ -15,8 +15,10 @@ const POPUP_SAFE_RECT := Rect2(860, 0, 420, 132)
 const PAIR_TRACK_CURVE_SEGMENTS := 32
 const PAIR_TRACK_CONTROL_PULL := 0.78
 const SHAPE_ICON_POSITIONS := {
-	CardPropertySet.SHAPE_LIGHT: Vector2(32, 40),
-	CardPropertySet.SHAPE_TEAR: Vector2(32, 380),
+	# The left icons mirror the confirmed right-side composition around
+	# FIELD_CENTER, keeping paired axes equal in height and usable length.
+	CardPropertySet.SHAPE_LIGHT: Vector2(84, 142),
+	CardPropertySet.SHAPE_TEAR: Vector2(84, 380),
 	CardPropertySet.SHAPE_DREAM: Vector2(1066, 142),
 	CardPropertySet.SHAPE_SLEEP: Vector2(1066, 380),
 }
